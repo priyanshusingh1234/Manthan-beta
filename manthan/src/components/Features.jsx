@@ -17,6 +17,16 @@ export default function Features() {
   return (
     <section className="section" id="features">
       <div className="container">
+        <div className="trusted">
+          <div className="trusted__inner">
+            <span className="trusted__label">Trusted by teams</span>
+            <div className="trusted__logos">
+              <img className="trusted__logo" src="/vite.svg" alt="Vite" />
+              <img className="trusted__logo" src="/vite.svg" alt="Vite" />
+              <img className="trusted__logo" src="/vite.svg" alt="Vite" />
+            </div>
+          </div>
+        </div>
         <h2 className="section__title">Features</h2>
         <p className="section__subtitle">
           Thoughtful building blocks that feel fast, clear, and modern.

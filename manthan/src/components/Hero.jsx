@@ -4,6 +4,7 @@ export default function Hero() {
       <div className="hero__bg" aria-hidden="true" />
       <div className="container hero__inner">
         <div className="hero__copy">
+          <div className="hero__eyebrow">New • Powerful comparisons</div>
           <h1 className="hero__title">
             Discover, Compare, and Decide — all in one place
           </h1>
@@ -18,8 +19,22 @@ export default function Hero() {
             <div className="badge">No signup needed</div>
             <div className="badge">Free to try</div>
           </div>
+          <div className="hero__stats">
+            <div className="stat">
+              <div className="stat__value">10k+</div>
+              <div className="stat__label">Comparisons made</div>
+            </div>
+            <div className="stat">
+              <div className="stat__value">98%</div>
+              <div className="stat__label">User satisfaction</div>
+            </div>
+            <div className="stat">
+              <div className="stat__value"><span aria-hidden>⚡</span> Fast</div>
+              <div className="stat__label">No sign up</div>
+            </div>
+          </div>
         </div>
-        {/* Intentionally no right column content; visual handled by background */}
+        {/* Visual handled by background */}
       </div>
     </section>
   )
