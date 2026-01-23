@@ -1,22 +1,31 @@
 import './App.css'
-import Navbar from './components/Navbar.jsx'
-import Hero from './components/Hero.jsx'
-import Features from './components/Features.jsx'
-import Showcase from './components/Showcase.jsx'
-import CTA from './components/CTA.jsx'
-import Footer from './components/Footer.jsx'
+import Header from './components/Header.jsx'
+import HeroSearch from './components/HeroSearch.jsx'
+import LiveWarFeed from './components/LiveWarFeed.jsx'
+import TopBrains from './components/TopBrains.jsx'
+import BottomBanner from './components/BottomBanner.jsx'
 
 function App() {
   return (
-    <div className="page">
-      <Navbar />
-      <main>
-        <Hero />
-        <Features />
-        <Showcase />
-        <CTA />
+    <div className="min-h-screen bg-white text-gray-900">
+      {/* Header with background and logo */}
+      <Header />
+
+      {/* Hero/Search */}
+      <HeroSearch />
+
+      {/* Main content grid */}
+      <main className="mx-auto mt-6 grid max-w-6xl grid-cols-1 gap-6 px-4 pb-28 sm:px-6 lg:grid-cols-3 lg:px-8">
+        <div className="lg:col-span-2">
+          <LiveWarFeed />
+        </div>
+        <div className="lg:col-span-1">
+          <TopBrains />
+        </div>
       </main>
-      <Footer />
+
+      {/* Sticky bottom banner */}
+      <BottomBanner />
     </div>
   )
 }
