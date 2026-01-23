@@ -1,6 +1,7 @@
 export default function Hero() {
   return (
     <section className="hero" id="home">
+      <div className="hero__bg" aria-hidden="true" />
       <div className="container hero__inner">
         <div className="hero__copy">
           <h1 className="hero__title">
@@ -18,15 +19,7 @@ export default function Hero() {
             <div className="badge">Free to try</div>
           </div>
         </div>
-        <div className="hero__visual" aria-hidden="true">
-          <div className="hero__card-grid">
-            <div className="card card--accent"/>
-            <div className="card"/>
-            <div className="card"/>
-            <div className="card card--accent"/>
-          </div>
-          <div className="hero__glow"/>
-        </div>
+        {/* Intentionally no right column content; visual handled by background */}
       </div>
     </section>
   )
