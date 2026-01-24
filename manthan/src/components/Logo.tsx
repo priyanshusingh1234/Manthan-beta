@@ -1,8 +1,22 @@
+import React from 'react';
+
+/**
+ * LogoProps interface defines the props for the Logo component
+ */
 interface LogoProps {
+  /** Width of the logo in pixels (default: 200) */
   width?: number;
+  /** Height of the logo in pixels (default: 200) */
   height?: number;
 }
 
+/**
+ * Logo component displays the Manthan custom shield-shaped logo
+ * with circuit board design elements.
+ * 
+ * @param {LogoProps} props - Component props
+ * @returns {JSX.Element} SVG logo element
+ */
 const Logo: React.FC<LogoProps> = ({ width = 200, height = 200 }) => {
   return (
     <svg width={width} height={height} viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
