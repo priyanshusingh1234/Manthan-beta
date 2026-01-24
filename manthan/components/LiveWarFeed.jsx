@@ -1,3 +1,5 @@
+'use client';
+
 import { Flame, TrendingUp, Trophy, Zap } from 'lucide-react'
 
 const feed = [

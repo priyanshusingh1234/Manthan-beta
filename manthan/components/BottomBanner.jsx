@@ -1,3 +1,5 @@
+'use client';
+
 import { BadgeCheck, Sparkles } from 'lucide-react'
 
 export default function BottomBanner() {
