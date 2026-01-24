@@ -1,12 +1,37 @@
 'use client';
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Menu, X } from 'lucide-react'
 import Logo from './Logo'
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // Close menu on escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && menuOpen) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [menuOpen])
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [menuOpen])
+
   return (
     <header className="relative isolate overflow-hidden">
       {/* Animated gradient background */}
@@ -42,6 +67,8 @@ export default function Header() {
             onClick={() => setMenuOpen(!menuOpen)}
             className="lg:hidden inline-flex items-center justify-center rounded-xl p-2 text-white/90 hover:bg-white/20 transition-all duration-300 hover:shadow-lg hover:scale-105"
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
           >
             {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -75,16 +102,20 @@ export default function Header() {
           </nav>
 
           <button className="inline-flex items-center justify-center rounded-full p-1 hover:scale-110 transition-transform duration-300">
-            <img
+            <Image
               src="/avatar.png"
-              onError={(e) => (e.currentTarget.src = 'https://placehold.co/32')}
               alt="User avatar"
-              className="h-8 w-8 rounded-full border-2 border-white/80 object-cover shadow-lg"
+              width={32}
+              height={32}
+              className="rounded-full border-2 border-white/80 object-cover shadow-lg"
+              onError={(e) => {
+                e.currentTarget.src = 'https://placehold.co/32'
+              }}
             />
           </button>
         </div>
 
-        {/* Overlay for mobile menu */}
+        {/* Overlay for mobile menu - z-index below drawer but above content */}
         {menuOpen && (
           <div 
             className="lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
@@ -93,11 +124,13 @@ export default function Header() {
           />
         )}
 
-        {/* Mobile slide-out drawer menu */}
+        {/* Mobile slide-out drawer menu - z-index above backdrop */}
         <div 
+          id="mobile-menu"
           className={`lg:hidden fixed top-0 left-0 bottom-0 w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
             menuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
+          aria-hidden={!menuOpen}
         >
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             <span className="text-lg font-bold text-gray-900">Menu</span>

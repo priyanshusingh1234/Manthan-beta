@@ -48,6 +48,7 @@ export default function TopBrains() {
                 <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold shadow-md ${getMedalColor(u.rank)}`}>
                   {medal || u.rank}
                 </span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={`/avatars/${u.name.toLowerCase()}.png`}
                   onError={(e) => (e.currentTarget.src = 'https://placehold.co/32')}

@@ -25,7 +25,7 @@ export default function AboutPage() {
             <div>
               <p className="text-gray-600 leading-relaxed">
                 Our mission is to make education engaging and fun while fostering healthy competition 
-                and collaboration. Through Manthan, students don't just learn—they compete, conquer 
+                and collaboration. Through Manthan, students don&apos;t just learn—they compete, conquer 
                 challenges, and celebrate victories together.
               </p>
             </div>

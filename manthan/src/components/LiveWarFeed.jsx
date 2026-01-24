@@ -92,6 +92,7 @@ export default function LiveWarFeed() {
             )}
             
             <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`/avatars/${item.user.toLowerCase()}.png`}
                 onError={(e) => (e.currentTarget.src = 'https://placehold.co/50')}
