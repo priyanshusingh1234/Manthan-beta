@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, FormEvent } from 'react'
-import Header from '@/components/Header'
 
 export default function ContactPage() {
   const [name, setName] = useState('')
@@ -28,8 +27,6 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      <Header />
-      
       <main className="mx-auto mt-6 max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
         <div className="max-w-2xl mx-auto animate-fadeIn">
           {/* Page heading */}

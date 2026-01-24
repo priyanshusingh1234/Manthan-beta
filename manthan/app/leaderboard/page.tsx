@@ -1,5 +1,3 @@
-import Header from '@/components/Header'
-
 // Sample data for the leaderboard
 const leaderboardData = [
   { rank: 1, name: 'Aarav Sharma', school: 'Delhi Public School', score: 2850 },
@@ -15,8 +13,6 @@ const leaderboardData = [
 export default function LeaderboardPage() {
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      <Header />
-      
       <main className="mx-auto mt-6 max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
         <div className="animate-fadeIn">
           {/* Page heading */}
