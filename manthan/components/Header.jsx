@@ -99,33 +99,52 @@ export default function Header() {
             >
               About
             </Link>
+            <Link 
+              href="/signup"
+              className="text-white/90 hover:text-white font-medium transition-colors duration-200 hover:underline underline-offset-4"
+            >
+              Sign Up
+            </Link>
+            <Link 
+              href="/login"
+              className="text-white/90 hover:text-white font-medium transition-colors duration-200 hover:underline underline-offset-4"
+            >
+              Sign In
+            </Link>
           </nav>
 
-          <button className="inline-flex items-center justify-center rounded-full p-1 hover:scale-110 transition-transform duration-300">
+          <Link 
+            href="/profile"
+            className="inline-flex items-center justify-center rounded-full p-1 hover:scale-110 transition-transform duration-300"
+            aria-label="Go to profile"
+          >
             <Image
               src="/avatar.png"
               alt="User avatar"
               width={32}
               height={32}
               className="rounded-full border-2 border-white/80 object-cover shadow-lg"
+              onError={(e) => {
+                e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23e5e7eb'/%3E%3Cpath d='M16 16a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.42 0-8 2.91-8 6.5V28h16v-3.5c0-3.59-3.58-6.5-8-6.5z' fill='%239ca3af'/%3E%3C/svg%3E";
+              }}
             />
-          </button>
+          </Link>
         </div>
 
-        {/* Overlay for mobile menu - z-index below drawer but above content */}
+        {/* Overlay backdrop for mobile menu - z-index below slider but above content */}
         {menuOpen && (
           <div 
-            className="lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
+            className="lg:hidden fixed inset-0 bg-black/40 z-40 transition-opacity duration-300"
             onClick={() => setMenuOpen(false)}
             aria-hidden="true"
           />
         )}
 
-        {/* Mobile slide-out drawer menu - z-index above backdrop */}
+        {/* Mobile top-down slider menu - z-index above backdrop */}
         <div 
           id="mobile-menu"
-          className={`lg:hidden fixed top-0 left-0 bottom-0 w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
-            menuOpen ? 'translate-x-0' : '-translate-x-full'
+          className={`lg:hidden fixed top-0 left-0 right-0 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+            menuOpen ? 'translate-y-0' : '-translate-y-full'
           }`}
           aria-hidden={!menuOpen}
         >
@@ -167,6 +186,20 @@ export default function Header() {
               className="block px-6 py-3 text-gray-900 hover:bg-blue-50 transition-colors duration-200 font-medium"
             >
               About
+            </Link>
+            <Link 
+              href="/signup"
+              onClick={() => setMenuOpen(false)}
+              className="block px-6 py-3 text-gray-900 hover:bg-blue-50 transition-colors duration-200 font-medium"
+            >
+              Sign Up
+            </Link>
+            <Link 
+              href="/login"
+              onClick={() => setMenuOpen(false)}
+              className="block px-6 py-3 text-gray-900 hover:bg-blue-50 transition-colors duration-200 font-medium"
+            >
+              Sign In
             </Link>
           </nav>
         </div>
