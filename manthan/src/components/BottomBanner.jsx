@@ -3,7 +3,7 @@ import { BadgeCheck, Sparkles } from 'lucide-react'
 export default function BottomBanner() {
   return (
     <div className="fixed inset-x-0 bottom-3 z-50 px-4 sm:px-6 lg:px-8 animate-slideUp">
-      <div className="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-gradient-to-r from-sky-400 via-blue-500 to-purple-500 p-4 shadow-2xl ring-1 ring-white/20 animate-gradient" style={{ backgroundSize: '200% 200%' }}>
+      <div className="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-gradient-to-r from-sky-400 via-blue-500 to-purple-500 p-4 shadow-2xl ring-1 ring-white/20 animate-gradient" style={{ backgroundSize: '150% 150%' }}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-yellow-400 text-yellow-900 shadow-lg animate-pulse-soft">

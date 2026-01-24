@@ -40,7 +40,7 @@ export default function TopBrains() {
           return (
             <li 
               key={u.rank} 
-              className="flex flex-col gap-2 py-3 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-all duration-300 hover:shadow-md"
+              className="flex flex-col gap-2 py-3 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-all duration-300 hover:shadow-md overflow-hidden"
             >
               <div className="flex items-center gap-3">
                 <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold shadow-md ${getMedalColor(u.rank)}`}>
@@ -75,7 +75,7 @@ export default function TopBrains() {
                 </div>
               </div>
               {/* Progress Bar */}
-              <div className="ml-11 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+              <div className="ml-11 h-1.5 max-w-full overflow-hidden rounded-full bg-gray-100">
                 <div 
                   className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
                   style={{ width: `${percentage}%` }}

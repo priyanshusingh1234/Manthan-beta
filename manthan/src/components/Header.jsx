@@ -6,7 +6,7 @@ export default function Header() {
       {/* Animated gradient background */}
       <div 
         className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-blue-800 animate-gradient" 
-        style={{ backgroundSize: '200% 200%' }}
+        style={{ backgroundSize: '150% 150%' }}
         aria-hidden="true" 
       />
       {/* Glowing overlay effect */}
@@ -49,7 +49,7 @@ export default function Header() {
           <div className="flex items-center gap-3 animate-fadeIn">
             <div className="relative h-9 w-9 animate-pulse-soft">
               {/* Glow effect behind brain */}
-              <div className="absolute inset-0 h-9 w-9 rounded-full bg-white/20 blur-md"></div>
+              <div className="absolute inset-0 h-9 w-9 rounded-full bg-white/20 blur-sm"></div>
               {/* Left half white stroke */}
               <Brain className="absolute inset-0 h-9 w-9 text-white drop-shadow-lg" style={{ clipPath: 'inset(0 50% 0 0)' }} />
               {/* Right half orange stroke */}
