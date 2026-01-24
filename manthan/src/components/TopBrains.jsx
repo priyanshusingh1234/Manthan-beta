@@ -1,3 +1,5 @@
+'use client';
+
 import { Trophy, Flame } from 'lucide-react'
 
 const topBrains = [
