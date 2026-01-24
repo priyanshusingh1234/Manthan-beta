@@ -1,32 +1,36 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Github, Chrome, BookOpen, Brain, Sparkles, Trophy, Users } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Github, Chrome, BookOpen, Brain, Sparkles, Trophy, Users, User, Building2 } from 'lucide-react';
 import Logo from './Logo';
 
 /**
- * Login component with split-screen layout
- * Left side: Login form
+ * Signup component with split-screen layout
+ * Left side: Signup form
  * Right side: Creative branding section
  */
-interface LoginProps {
-  onNavigateToSignup?: () => void;
+interface SignupProps {
+  onNavigateToLogin?: () => void;
   onNavigateToHome?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onNavigateToSignup, onNavigateToHome }) => {
+const Signup: React.FC<SignupProps> = ({ onNavigateToLogin, onNavigateToHome }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [school, setSchool] = useState('');
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login submitted:', { email, rememberMe });
-    // Add actual login logic here
+    console.log('Signup submitted:', { fullName, email, school, agreeToTerms });
+    // Add actual signup logic here
   };
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left Side - Login Form */}
+      {/* Left Side - Signup Form */}
       <div className="flex-1 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-white">
         <div className="w-full max-w-md space-y-8 animate-slideUp">
           {/* Mobile Logo - Only show on small screens */}
@@ -37,16 +41,41 @@ const Login: React.FC<LoginProps> = ({ onNavigateToSignup, onNavigateToHome }) =
           {/* Header */}
           <div className="text-center">
             <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              Welcome back, Brain!
+              Start Your Journey
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              Ready to continue your knowledge battle?
+              Join the Brain Battle and become a Knowledge Champion
             </p>
           </div>
 
-          {/* Login Form */}
+          {/* Signup Form */}
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
+              {/* Full Name Input */}
+              <div className="group">
+                <label htmlFor="fullName" className="sr-only">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+                  </div>
+                  <input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    autoComplete="name"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:border-slate-400"
+                    placeholder="Full Name"
+                  />
+                  {/* Gradient border on focus */}
+                  <div className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 blur-sm transition-opacity duration-300 group-focus-within:opacity-100"></div>
+                </div>
+              </div>
+
               {/* Email Input */}
               <div className="group">
                 <label htmlFor="email" className="sr-only">
@@ -85,7 +114,7 @@ const Login: React.FC<LoginProps> = ({ onNavigateToSignup, onNavigateToHome }) =
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -107,41 +136,97 @@ const Login: React.FC<LoginProps> = ({ onNavigateToSignup, onNavigateToHome }) =
                   <div className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 blur-sm transition-opacity duration-300 group-focus-within:opacity-100"></div>
                 </div>
               </div>
-            </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all duration-200 cursor-pointer"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-700 cursor-pointer">
-                  Remember me
+              {/* Confirm Password Input */}
+              <div className="group">
+                <label htmlFor="confirmPassword" className="sr-only">
+                  Confirm Password
                 </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+                  </div>
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="block w-full pl-10 pr-12 py-3 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:border-slate-400"
+                    placeholder="Confirm Password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center hover:scale-110 transition-transform duration-200"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                    )}
+                  </button>
+                  {/* Gradient border on focus */}
+                  <div className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 blur-sm transition-opacity duration-300 group-focus-within:opacity-100"></div>
+                </div>
               </div>
 
-              <div className="text-sm">
+              {/* School/Institution Input (Optional) */}
+              <div className="group">
+                <label htmlFor="school" className="sr-only">
+                  School/Institution (Optional)
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Building2 className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+                  </div>
+                  <input
+                    id="school"
+                    name="school"
+                    type="text"
+                    autoComplete="organization"
+                    value={school}
+                    onChange={(e) => setSchool(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:border-slate-400"
+                    placeholder="School/Institution (Optional)"
+                  />
+                  {/* Gradient border on focus */}
+                  <div className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 blur-sm transition-opacity duration-300 group-focus-within:opacity-100"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Terms & Conditions */}
+            <div className="flex items-center">
+              <input
+                id="terms"
+                name="terms"
+                type="checkbox"
+                checked={agreeToTerms}
+                onChange={(e) => setAgreeToTerms(e.target.checked)}
+                required
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all duration-200 cursor-pointer"
+              />
+              <label htmlFor="terms" className="ml-2 block text-sm text-slate-700 cursor-pointer">
+                I agree to{' '}
                 <a
                   href="#"
                   className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200"
                 >
-                  Forgot password?
+                  Terms & Conditions
                 </a>
-              </div>
+              </label>
             </div>
 
-            {/* Login Button */}
+            {/* Signup Button */}
             <div>
               <button
                 type="submit"
                 className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-base font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
               >
-                Sign in to Manthan
+                Create Account
               </button>
             </div>
 
@@ -151,11 +236,11 @@ const Login: React.FC<LoginProps> = ({ onNavigateToSignup, onNavigateToHome }) =
                 <div className="w-full border-t border-slate-300"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-slate-500">Or continue with</span>
+                <span className="px-2 bg-white text-slate-500">Or sign up with</span>
               </div>
             </div>
 
-            {/* Social Login */}
+            {/* Social Signup */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -173,19 +258,19 @@ const Login: React.FC<LoginProps> = ({ onNavigateToSignup, onNavigateToHome }) =
               </button>
             </div>
 
-            {/* Sign Up Link */}
+            {/* Sign In Link */}
             <div className="text-center">
               <p className="text-sm text-slate-600">
-                Don't have an account?{' '}
+                Already have an account?{' '}
                 <a
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    onNavigateToSignup?.();
+                    onNavigateToLogin?.();
                   }}
                   className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200"
                 >
-                  Sign up
+                  Sign in
                 </a>
               </p>
             </div>
@@ -213,10 +298,10 @@ const Login: React.FC<LoginProps> = ({ onNavigateToSignup, onNavigateToHome }) =
           {/* Welcome Message */}
           <div className="text-center space-y-4 mb-12">
             <h1 className="text-4xl font-extrabold tracking-tight drop-shadow-lg">
-              Join the Knowledge Battle
+              Become a Knowledge Champion
             </h1>
             <p className="text-xl text-blue-100 max-w-md">
-              Compete, learn, and conquer challenges with students from across schools!
+              Start your journey, compete with peers, and master subjects through epic battles!
             </p>
           </div>
 
@@ -278,4 +363,4 @@ const Login: React.FC<LoginProps> = ({ onNavigateToSignup, onNavigateToHome }) =
   );
 };
 
-export default Login;
+export default Signup;
