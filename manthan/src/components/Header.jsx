@@ -1,3 +1,5 @@
+'use client';
+
 import { Menu, User } from 'lucide-react'
 import Logo from './Logo'
 
