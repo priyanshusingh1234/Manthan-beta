@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Menu, X } from 'lucide-react'
@@ -8,6 +9,7 @@ import Logo from './Logo'
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const pathname = usePathname()
 
   // Close menu on escape key
   useEffect(() => {
@@ -31,6 +33,14 @@ export default function Header() {
       document.body.style.overflow = ''
     }
   }, [menuOpen])
+
+  // Skip rendering full header on login/signup pages
+  if (pathname === '/login' || pathname === '/signup') {
+    return null
+  }
+
+  // Helper function to determine if a link is active
+  const isActive = (path) => pathname === path
 
   return (
     <header className="relative isolate overflow-hidden">
@@ -77,37 +87,49 @@ export default function Header() {
           <nav className="hidden lg:flex items-center gap-6">
             <Link 
               href="/" 
-              className="text-white/90 hover:text-white font-medium transition-colors duration-200 hover:underline underline-offset-4"
+              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+                isActive('/') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
+              }`}
             >
               Home
             </Link>
             <Link 
               href="/leaderboard"
-              className="text-white/90 hover:text-white font-medium transition-colors duration-200 hover:underline underline-offset-4"
+              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+                isActive('/leaderboard') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
+              }`}
             >
               Leaderboard
             </Link>
             <Link 
               href="/contact"
-              className="text-white/90 hover:text-white font-medium transition-colors duration-200 hover:underline underline-offset-4"
+              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+                isActive('/contact') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
+              }`}
             >
               Contact
             </Link>
             <Link 
               href="/about"
-              className="text-white/90 hover:text-white font-medium transition-colors duration-200 hover:underline underline-offset-4"
+              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+                isActive('/about') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
+              }`}
             >
               About
             </Link>
             <Link 
               href="/signup"
-              className="text-white/90 hover:text-white font-medium transition-colors duration-200 hover:underline underline-offset-4"
+              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+                isActive('/signup') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
+              }`}
             >
               Sign Up
             </Link>
             <Link 
               href="/login"
-              className="text-white/90 hover:text-white font-medium transition-colors duration-200 hover:underline underline-offset-4"
+              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+                isActive('/login') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
+              }`}
             >
               Sign In
             </Link>
@@ -134,7 +156,7 @@ export default function Header() {
         {/* Overlay backdrop for mobile menu - z-index below slider but above content */}
         {menuOpen && (
           <div 
-            className="lg:hidden fixed inset-0 bg-black/40 z-40 transition-opacity duration-300"
+            className="lg:hidden fixed inset-0 bg-black/40 z-50 transition-opacity duration-300"
             onClick={() => setMenuOpen(false)}
             aria-hidden="true"
           />
@@ -143,7 +165,7 @@ export default function Header() {
         {/* Mobile top-down slider menu - z-index above backdrop */}
         <div 
           id="mobile-menu"
-          className={`lg:hidden fixed top-0 left-0 right-0 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+          className={`lg:hidden fixed top-0 left-0 right-0 h-screen bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out ${
             menuOpen ? 'translate-y-0' : '-translate-y-full'
           }`}
           aria-hidden={!menuOpen}
@@ -162,42 +184,54 @@ export default function Header() {
             <Link 
               href="/" 
               onClick={() => setMenuOpen(false)}
-              className="block px-6 py-3 text-gray-900 hover:bg-blue-50 transition-colors duration-200 font-medium"
+              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                isActive('/') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+              }`}
             >
               Home
             </Link>
             <Link 
               href="/leaderboard"
               onClick={() => setMenuOpen(false)}
-              className="block px-6 py-3 text-gray-900 hover:bg-blue-50 transition-colors duration-200 font-medium"
+              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                isActive('/leaderboard') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+              }`}
             >
               Leaderboard
             </Link>
             <Link 
               href="/contact"
               onClick={() => setMenuOpen(false)}
-              className="block px-6 py-3 text-gray-900 hover:bg-blue-50 transition-colors duration-200 font-medium"
+              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                isActive('/contact') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+              }`}
             >
               Contact
             </Link>
             <Link 
               href="/about"
               onClick={() => setMenuOpen(false)}
-              className="block px-6 py-3 text-gray-900 hover:bg-blue-50 transition-colors duration-200 font-medium"
+              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                isActive('/about') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+              }`}
             >
               About
             </Link>
             <Link 
               href="/signup"
               onClick={() => setMenuOpen(false)}
-              className="block px-6 py-3 text-gray-900 hover:bg-blue-50 transition-colors duration-200 font-medium"
+              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                isActive('/signup') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+              }`}
             >
               Sign Up
             </Link>
             <Link 
               href="/login"
               onClick={() => setMenuOpen(false)}
-              className="block px-6 py-3 text-gray-900 hover:bg-blue-50 transition-colors duration-200 font-medium"
+              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                isActive('/login') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+              }`}
             >
               Sign In
             </Link>

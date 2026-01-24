@@ -1,4 +1,3 @@
-import Header from '@/components/Header'
 import HeroSearch from '@/components/HeroSearch'
 import LiveWarFeed from '@/components/LiveWarFeed'
 import TopBrains from '@/components/TopBrains'
@@ -7,9 +6,6 @@ import BottomBanner from '@/components/BottomBanner'
 export default function Home() {
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      {/* Header with background and logo */}
-      <Header />
-
       {/* Hero/Search */}
       <HeroSearch />
 
