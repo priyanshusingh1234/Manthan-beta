@@ -108,9 +108,6 @@ export default function Header() {
               width={32}
               height={32}
               className="rounded-full border-2 border-white/80 object-cover shadow-lg"
-              onError={(e) => {
-                e.currentTarget.src = 'https://placehold.co/32'
-              }}
             />
           </button>
         </div>
