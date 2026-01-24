@@ -11,10 +11,9 @@ import Logo from './Logo';
  */
 interface SignupProps {
   onNavigateToLogin?: () => void;
-  onNavigateToHome?: () => void;
 }
 
-const Signup: React.FC<SignupProps> = ({ onNavigateToLogin, onNavigateToHome }) => {
+const Signup: React.FC<SignupProps> = ({ onNavigateToLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fullName, setFullName] = useState('');

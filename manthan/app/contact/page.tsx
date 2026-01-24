@@ -40,14 +40,14 @@ export default function ContactPage() {
           {/* Explanatory copy */}
           <p className="text-gray-600 mb-8">
             Have questions about Manthan? Want to partner with us or report an issue? 
-            We'd love to hear from you! Fill out the form below and we'll get back to you soon.
+            We&apos;d love to hear from you! Fill out the form below and we&apos;ll get back to you soon.
           </p>
 
           {/* Success message */}
           {showSuccess && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl animate-slideUp">
               <p className="text-green-800 font-medium">
-                ✓ Thank you for your message! We'll get back to you soon.
+                ✓ Thank you for your message! We&apos;ll get back to you soon.
               </p>
             </div>
           )}

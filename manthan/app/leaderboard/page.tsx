@@ -42,7 +42,7 @@ export default function LeaderboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {leaderboardData.map((entry, index) => (
+                {leaderboardData.map((entry) => (
                   <tr 
                     key={entry.rank} 
                     className="hover:bg-gray-50 transition-colors duration-200"

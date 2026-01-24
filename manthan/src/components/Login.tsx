@@ -11,10 +11,9 @@ import Logo from './Logo';
  */
 interface LoginProps {
   onNavigateToSignup?: () => void;
-  onNavigateToHome?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onNavigateToSignup, onNavigateToHome }) => {
+const Login: React.FC<LoginProps> = ({ onNavigateToSignup }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -178,7 +177,7 @@ const Login: React.FC<LoginProps> = ({ onNavigateToSignup, onNavigateToHome }) =
             {/* Sign Up Link */}
             <div className="text-center">
               <p className="text-sm text-slate-600">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <a
                   href="#"
                   onClick={(e) => {
