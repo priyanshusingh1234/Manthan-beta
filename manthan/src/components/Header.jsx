@@ -1,4 +1,5 @@
-import { Menu, User, Brain } from 'lucide-react'
+import { Menu, User } from 'lucide-react'
+import Logo from './Logo'
 
 export default function Header() {
   return (
@@ -48,12 +49,9 @@ export default function Header() {
         <div className="flex items-center justify-center py-6">
           <div className="flex items-center gap-3 animate-fadeIn">
             <div className="relative h-9 w-9 animate-pulse-soft">
-              {/* Glow effect behind brain */}
+              {/* Glow effect behind logo */}
               <div className="absolute inset-0 h-9 w-9 rounded-full bg-white/20 blur-sm"></div>
-              {/* Left half white stroke */}
-              <Brain className="absolute inset-0 h-9 w-9 text-white drop-shadow-lg" style={{ clipPath: 'inset(0 50% 0 0)' }} />
-              {/* Right half orange stroke */}
-              <Brain className="absolute inset-0 h-9 w-9 text-orange-300 drop-shadow-lg" style={{ clipPath: 'inset(0 0 0 50%)' }} />
+              <Logo width={36} height={36} />
             </div>
             <span className="text-2xl font-extrabold tracking-wide text-white drop-shadow-lg">MANTHAN</span>
           </div>
