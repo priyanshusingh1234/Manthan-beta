@@ -165,7 +165,7 @@ export default function Header() {
         {/* Mobile top-down slider menu - z-index above backdrop */}
         <div 
           id="mobile-menu"
-          className={`lg:hidden fixed top-0 left-0 right-0 h-screen bg-white shadow-2xl z-60 transform transition-transform duration-300 ease-in-out ${
+          className={`lg:hidden fixed top-0 left-0 right-0 h-screen bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out ${
             menuOpen ? 'translate-y-0' : '-translate-y-full'
           }`}
           aria-hidden={!menuOpen}
