@@ -34,7 +34,7 @@ export default function LiveWarFeed() {
   return (
     <section className="animate-fadeIn">
       {/* Battle Statistics Banner */}
-      <div className="mb-4 overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 p-4 shadow-lg animate-gradient" style={{ backgroundSize: '200% 200%' }}>
+      <div className="mb-4 overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 p-4 shadow-lg animate-gradient" style={{ backgroundSize: '150% 150%' }}>
         <div className="flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 animate-float" />
@@ -78,7 +78,7 @@ export default function LiveWarFeed() {
         {feed.map((item) => (
           <article 
             key={item.id} 
-            className="snap-start min-w-[280px] rounded-2xl bg-white p-4 shadow ring-1 ring-black/5 hover:shadow-xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 animate-popIn"
+            className="snap-start min-w-[280px] max-w-[320px] rounded-2xl bg-white p-4 shadow ring-1 ring-black/5 hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 transition-all duration-300 animate-popIn"
           >
             {/* Battle Heat Indicator */}
             {item.heat && (

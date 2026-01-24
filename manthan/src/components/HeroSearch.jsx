@@ -18,7 +18,7 @@ export default function HeroSearch() {
           />
         </div>
         <div className="mt-4 flex justify-center">
-          <button className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-3 text-white font-semibold shadow-lg hover:shadow-xl hover:scale-105 hover:from-blue-700 hover:to-blue-800 transition-all duration-300 active:scale-95">
+          <button className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-3 text-white font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] hover:from-blue-700 hover:to-blue-800 transition-all duration-300 active:scale-95">
             Ask Now
           </button>
         </div>
