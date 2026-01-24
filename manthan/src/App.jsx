@@ -6,13 +6,19 @@ import LiveWarFeed from './components/LiveWarFeed.jsx'
 import TopBrains from './components/TopBrains.jsx'
 import BottomBanner from './components/BottomBanner.jsx'
 import Login from './components/Login'
+import Signup from './components/Signup'
 
 function App() {
-  const [showLogin, setShowLogin] = useState(false)
+  const [currentPage, setCurrentPage] = useState('home') // 'home', 'login', 'signup'
 
   // If login page is active, show only login
-  if (showLogin) {
-    return <Login />
+  if (currentPage === 'login') {
+    return <Login onNavigateToSignup={() => setCurrentPage('signup')} onNavigateToHome={() => setCurrentPage('home')} />
+  }
+
+  // If signup page is active, show only signup
+  if (currentPage === 'signup') {
+    return <Signup onNavigateToLogin={() => setCurrentPage('login')} onNavigateToHome={() => setCurrentPage('home')} />
   }
 
   return (
@@ -36,14 +42,23 @@ function App() {
       {/* Sticky bottom banner */}
       <BottomBanner />
       
-      {/* Temporary button to toggle login page - can be removed when routing is added */}
-      <button
-        onClick={() => setShowLogin(true)}
-        className="fixed bottom-4 right-4 z-50 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 font-semibold"
-        title="View Login Page"
-      >
-        View Login Page
-      </button>
+      {/* Temporary buttons to toggle login/signup pages - can be removed when routing is added */}
+      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+        <button
+          onClick={() => setCurrentPage('login')}
+          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 font-semibold"
+          title="View Login Page"
+        >
+          View Login Page
+        </button>
+        <button
+          onClick={() => setCurrentPage('signup')}
+          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 font-semibold"
+          title="View Signup Page"
+        >
+          View Signup Page
+        </button>
+      </div>
     </div>
   )
 }
