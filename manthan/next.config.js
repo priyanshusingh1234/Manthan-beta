@@ -8,11 +8,8 @@ const nextConfig = {
     domains: ['placehold.co'],
   },
   // Prefer Babel fallback for this environment where SWC binary fails to load
-  swcMinify: false,
-  experimental: {
-    // Ensure Next uses the non-SWC transform path
-    forceSwcTransforms: false,
-  },
+  // Use Next's SWC compiler/minifier (recommended for Vercel)
+  swcMinify: true,
 }
 
 
