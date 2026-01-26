@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { Menu, X } from 'lucide-react'
 import Logo from './Logo'
 
-export default function Header() {
+export default function Header({ isAndroid = false }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const pathname = usePathname()
 
@@ -42,6 +42,7 @@ export default function Header() {
   // Helper function to determine if a link is active
   const isActive = (path) => pathname === path
 
+  // Hide mobile slider nav if Android/mobile
   return (
     <header className="relative isolate overflow-hidden">
       {/* Animated gradient background */}
@@ -72,16 +73,18 @@ export default function Header() {
       <div className="relative z-10">
         {/* Top nav */}
         <div className="flex items-center justify-between px-4 pt-4 sm:px-6 lg:px-8">
-          {/* Mobile menu button - hidden on desktop */}
-          <button 
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="lg:hidden inline-flex items-center justify-center rounded-xl p-2 text-white/90 hover:bg-white/20 transition-all duration-300 hover:shadow-lg hover:scale-105"
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={menuOpen}
-            aria-controls="mobile-menu"
-          >
-            {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          {/* Mobile menu button - hidden on desktop and on Android/mobile */}
+          {!isAndroid && (
+            <button 
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="lg:hidden inline-flex items-center justify-center rounded-xl p-2 text-white/90 hover:bg-white/20 transition-all duration-300 hover:shadow-lg hover:scale-105"
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+            >
+              {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          )}
           
           {/* Desktop navigation - inline horizontal links */}
           <nav className="hidden lg:flex items-center gap-6">
@@ -153,90 +156,90 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* Overlay backdrop for mobile menu - z-index below slider but above content */}
-        {menuOpen && (
+        {/* Overlay and slider menu hidden on Android/mobile */}
+        {!isAndroid && menuOpen && (
           <div 
             className="lg:hidden fixed inset-0 bg-black/40 z-50 transition-opacity duration-300"
             onClick={() => setMenuOpen(false)}
             aria-hidden="true"
           />
         )}
-
-        {/* Mobile top-down slider menu - z-index above backdrop */}
-        <div 
-          id="mobile-menu"
-          className={`lg:hidden fixed top-0 left-0 right-0 h-screen bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out ${
-            menuOpen ? 'translate-y-0' : '-translate-y-full'
-          }`}
-          aria-hidden={!menuOpen}
-        >
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <span className="text-lg font-bold text-gray-900">Menu</span>
-            <button 
-              onClick={() => setMenuOpen(false)}
-              className="inline-flex items-center justify-center rounded-lg p-2 text-gray-600 hover:bg-gray-100 transition-colors duration-200"
-              aria-label="Close menu"
-            >
-              <X className="h-5 w-5" />
-            </button>
+        {!isAndroid && (
+          <div 
+            id="mobile-menu"
+            className={`lg:hidden fixed top-0 left-0 right-0 h-screen bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out ${
+              menuOpen ? 'translate-y-0' : '-translate-y-full'
+            }`}
+            aria-hidden={!menuOpen}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <span className="text-lg font-bold text-gray-900">Menu</span>
+              <button 
+                onClick={() => setMenuOpen(false)}
+                className="inline-flex items-center justify-center rounded-lg p-2 text-gray-600 hover:bg-gray-100 transition-colors duration-200"
+                aria-label="Close menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="py-4">
+              <Link 
+                href="/" 
+                onClick={() => setMenuOpen(false)}
+                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                  isActive('/') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+                }`}
+              >
+                Home
+              </Link>
+              <Link 
+                href="/leaderboard"
+                onClick={() => setMenuOpen(false)}
+                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                  isActive('/leaderboard') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+                }`}
+              >
+                Leaderboard
+              </Link>
+              <Link 
+                href="/contact"
+                onClick={() => setMenuOpen(false)}
+                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                  isActive('/contact') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+                }`}
+              >
+                Contact
+              </Link>
+              <Link 
+                href="/about"
+                onClick={() => setMenuOpen(false)}
+                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                  isActive('/about') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+                }`}
+              >
+                About
+              </Link>
+              <Link 
+                href="/signup"
+                onClick={() => setMenuOpen(false)}
+                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                  isActive('/signup') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+                }`}
+              >
+                Sign Up
+              </Link>
+              <Link 
+                href="/login"
+                onClick={() => setMenuOpen(false)}
+                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
+                  isActive('/login') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
+                }`}
+              >
+                Sign In
+              </Link>
+            </nav>
           </div>
-          <nav className="py-4">
-            <Link 
-              href="/" 
-              onClick={() => setMenuOpen(false)}
-              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                isActive('/') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-              }`}
-            >
-              Home
-            </Link>
-            <Link 
-              href="/leaderboard"
-              onClick={() => setMenuOpen(false)}
-              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                isActive('/leaderboard') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-              }`}
-            >
-              Leaderboard
-            </Link>
-            <Link 
-              href="/contact"
-              onClick={() => setMenuOpen(false)}
-              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                isActive('/contact') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-              }`}
-            >
-              Contact
-            </Link>
-            <Link 
-              href="/about"
-              onClick={() => setMenuOpen(false)}
-              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                isActive('/about') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-              }`}
-            >
-              About
-            </Link>
-            <Link 
-              href="/signup"
-              onClick={() => setMenuOpen(false)}
-              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                isActive('/signup') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-              }`}
-            >
-              Sign Up
-            </Link>
-            <Link 
-              href="/login"
-              onClick={() => setMenuOpen(false)}
-              className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                isActive('/login') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-              }`}
-            >
-              Sign In
-            </Link>
-          </nav>
-        </div>
+        )}
 
         {/* Centered logo with pulse effect */}
         <div className="flex items-center justify-center py-3">
