@@ -45,17 +45,17 @@ export default function Header({ isAndroid = false }) {
   // Hide mobile slider nav if Android/mobile
   return (
     <header className="relative isolate overflow-hidden">
-      {/* Animated gradient background */}
+      {/* More vibrant animated gradient background */}
       <div 
-        className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-blue-800 animate-gradient" 
-        style={{ backgroundSize: '150% 150%' }}
+        className="absolute inset-0 bg-gradient-to-br from-fuchsia-600 via-blue-500 to-cyan-400 animate-gradient-slow blur-[1px] opacity-90" 
+        style={{ backgroundSize: '200% 200%' }}
         aria-hidden="true" 
       />
       {/* Glowing overlay effect */}
       <div 
-        className="absolute inset-0 opacity-30"
+        className="absolute inset-0 opacity-40"
         style={{
-          background: 'radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.2) 0%, transparent 50%)'
+          background: 'radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.3) 0%, transparent 60%)'
         }}
         aria-hidden="true"
       />

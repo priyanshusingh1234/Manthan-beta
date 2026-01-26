@@ -5,32 +5,42 @@ import { BadgeCheck, Sparkles, X } from 'lucide-react'
 
 export default function BottomBanner() {
   const [showModal, setShowModal] = useState(false)
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (showModal) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [showModal])
-
-  // Close modal on escape key
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && showModal) {
-        setShowModal(false)
-      }
-    }
-    if (showModal) {
-      document.addEventListener('keydown', handleEscape)
-    }
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [showModal])
-
+  const [showBanner, setShowBanner] = useState(true)
+  if (!showBanner) return null;
+  return (
+    <>
+      <div className="fixed inset-x-0 bottom-3 z-[60] px-4 sm:px-6 lg:px-8 animate-slideUp">
+        <div className="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-gradient-to-r from-sky-400 via-blue-500 to-purple-500 p-4 shadow-2xl ring-1 ring-white/20 animate-gradient relative" style={{ backgroundSize: '150% 150%' }}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-yellow-400 text-yellow-900 shadow-lg animate-pulse-soft">
+                <BadgeCheck className="h-6 w-6" />
+              </span>
+              <div>
+                <p className="text-sm font-bold text-white flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Go Pro for ₹49/month
+                </p>
+                <p className="text-xs text-white/90">No Ads • Verified Badge • Priority Support</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowModal(true)}
+              className="inline-flex items-center justify-center rounded-full bg-white px-6 py-2 text-sm font-semibold text-blue-600 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 active:scale-95"
+            >
+              Upgrade Now
+            </button>
+            {/* Cross button to hide banner */}
+            <button
+              onClick={() => setShowBanner(false)}
+              className="absolute top-2 right-2 p-1 rounded-full text-white/80 hover:text-white bg-black/20 hover:bg-black/40 transition-colors z-10"
+              aria-label="Close banner"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
   return (
     <>
       <div className="fixed inset-x-0 bottom-3 z-[60] px-4 sm:px-6 lg:px-8 animate-slideUp">
