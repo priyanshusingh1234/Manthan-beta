@@ -1,11 +1,22 @@
 'use client';
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BadgeCheck, Sparkles, X } from 'lucide-react'
 
 export default function BottomBanner() {
   const [showModal, setShowModal] = useState(false)
   const [showBanner, setShowBanner] = useState(true)
+
+  // Persist dismissal in localStorage so banner stays hidden
+  useEffect(() => {
+    try {
+      const hidden = localStorage.getItem('manthan_premium_banner_hidden')
+      if (hidden === '1') setShowBanner(false)
+    } catch {
+      // ignore (SSR or privacy)
+    }
+  }, [])
+
   if (!showBanner) return null;
   return (
     <>
@@ -32,7 +43,10 @@ export default function BottomBanner() {
             </button>
             {/* Cross button to hide banner */}
             <button
-              onClick={() => setShowBanner(false)}
+              onClick={() => {
+                  try { localStorage.setItem('manthan_premium_banner_hidden', '1') } catch {}
+                  setShowBanner(false)
+                }}
               className="absolute top-2 right-2 p-1 rounded-full text-white/80 hover:text-white bg-black/20 hover:bg-black/40 transition-colors z-10"
               aria-label="Close banner"
             >
