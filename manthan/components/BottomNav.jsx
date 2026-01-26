@@ -6,14 +6,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 
-// War in center, Settings as regular item
-const navItems = [
-  { href: '/', icon: <Home />, label: 'Home' },
-  { href: '/leaderboard', icon: <Trophy />, label: 'Leaderboard' },
-  { href: '/war', icon: <Sword />, label: 'War', center: true },
-  { href: '/feed', icon: <Rss />, label: 'Feed' },
-  { href: '/settings', icon: <Settings />, label: 'Settings' },
-];
 
 export default function BottomNav() {
   const pathname = usePathname();

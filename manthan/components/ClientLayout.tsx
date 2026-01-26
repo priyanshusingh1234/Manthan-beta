@@ -5,11 +5,8 @@ import dynamic from 'next/dynamic';
 
 const BottomNav = dynamic(() => import('@/components/BottomNav'), { ssr: false });
 
-import { usePathname } from 'next/navigation';
-
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const [isAndroid, setIsAndroid] = useState(false);
-  const pathname = usePathname();
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const ua = window.navigator.userAgent.toLowerCase();
