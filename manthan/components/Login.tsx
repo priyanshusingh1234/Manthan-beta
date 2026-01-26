@@ -1,7 +1,9 @@
-'use client';
+"use client";
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 import { Mail, Lock, Eye, EyeOff, Github, Chrome, BookOpen, Brain, Sparkles, Trophy, Users } from 'lucide-react';
 import Logo from './Logo';
 
@@ -16,10 +18,24 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login submitted:', { email, rememberMe });
-    // Add actual login logic here
+    setLoading(true)
+    setError('')
+        supabase.auth.signInWithPassword({ email, password })
+          .then(({ error }) => {
+            if (error) {
+              setError(error.message)
+            } else {
+              router.push('/profile')
+            }
+          })
+      .catch((err) => setError(String(err)))
+      .finally(() => setLoading(false))
   };
 
   return (
@@ -137,11 +153,14 @@ const Login: React.FC = () => {
             <div>
               <button
                 type="submit"
-                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-base font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                disabled={loading}
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-base font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-95 disabled:opacity-60"
               >
-                Sign in to Manthan
+                {loading ? 'Signing in…' : 'Sign in to Manthan'}
               </button>
             </div>
+
+            {error && <div className="text-sm text-red-600">{error}</div>}
 
             {/* Divider */}
             <div className="relative">
@@ -157,6 +176,7 @@ const Login: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
+                onClick={() => supabase.auth.signInWithOAuth({ provider: 'google' })}
                 className="flex items-center justify-center px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 hover:shadow-md"
               >
                 <Chrome className="h-5 w-5 mr-2" />
@@ -164,6 +184,7 @@ const Login: React.FC = () => {
               </button>
               <button
                 type="button"
+                onClick={() => supabase.auth.signInWithOAuth({ provider: 'github' })}
                 className="flex items-center justify-center px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 hover:shadow-md"
               >
                 <Github className="h-5 w-5 mr-2" />

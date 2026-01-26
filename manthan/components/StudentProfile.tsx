@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 import { Trophy, Target, Award, Zap, BookOpen, Users, TrendingUp, Star, Medal, Brain, Sword, Shield } from 'lucide-react';
 import Logo from './Logo';
 
@@ -9,17 +10,36 @@ import Logo from './Logo';
  * Shows user information, achievements, and statistics
  */
 const StudentProfile: React.FC = () => {
-  // Mock user data - replace with actual data from API/state management
-  const userData = {
-    name: 'Priyanshu Singh',
-    school: 'Delhi Public School',
-    grade: 'Class 10',
-    bio: 'Knowledge seeker and competitive learner. Passionate about science and mathematics.',
-    avatar: '🧠', // Could be an image URL
-    rank: 'Gold',
-    rankNumber: 42,
-    totalRank: 1247,
-  };
+  const [userData, setUserData] = useState({
+    name: 'Guest',
+    school: '',
+    grade: '',
+    bio: '',
+    avatar: '🧠',
+    rank: '',
+    rankNumber: '',
+    totalRank: '',
+  })
+
+  useEffect(() => {
+    let mounted = true
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!mounted) return
+      if (!user) {
+        setUserData((s) => ({ ...s, name: 'Guest' }))
+        return
+      }
+      const meta = user.user_metadata || {}
+      setUserData((s) => ({
+        ...s,
+        name: meta.fullName || user.email || 'User',
+        school: meta.school || s.school,
+        grade: meta.classGrade || s.grade,
+        bio: meta.bio || s.bio,
+      }))
+    })
+    return () => { mounted = false }
+  }, [])
 
   const stats = [
     { icon: Trophy, label: 'Battles Won', value: '127', color: 'text-yellow-500', bgColor: 'bg-yellow-50' },

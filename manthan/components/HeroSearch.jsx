@@ -15,7 +15,7 @@ export default function HeroSearch() {
           <input
             id="doubt"
             type="text"
-            placeholder="Type your doubt here (Maths, Science, SST)..."
+            placeholder="Find subject you are interested..."
             className="w-full rounded-full border-0 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0"
           />
         </div>

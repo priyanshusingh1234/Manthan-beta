@@ -3,13 +3,32 @@
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Menu, X } from 'lucide-react'
 import Logo from './Logo'
+import { supabase } from '@/lib/supabaseClient'
+import { useRouter } from 'next/navigation'
 
 export default function Header({ isAndroid = false }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const pathname = usePathname()
+
+  // Auth state (hooks must run unconditionally)
+  const [user, setUser] = useState(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    let mounted = true
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (mounted) setUser(user)
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) setUser(session?.user ?? null)
+    })
+    return () => {
+      mounted = false
+      listener?.subscription.unsubscribe()
+    }
+  }, [])
 
   // Close menu on escape key
   useEffect(() => {
@@ -38,6 +57,7 @@ export default function Header({ isAndroid = false }) {
   if (pathname === '/login' || pathname === '/signup') {
     return null
   }
+
 
   // Helper function to determine if a link is active
   const isActive = (path) => pathname === path
@@ -120,40 +140,57 @@ export default function Header({ isAndroid = false }) {
             >
               About
             </Link>
-            <Link 
-              href="/signup"
-              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
-                isActive('/signup') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
-              }`}
-            >
-              Sign Up
-            </Link>
-            <Link 
-              href="/login"
-              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
-                isActive('/login') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
-              }`}
-            >
-              Sign In
-            </Link>
+            {!user ? (
+              <>
+                <Link 
+                  href="/signup"
+                  className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+                    isActive('/signup') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
+                  }`}
+                >
+                  Sign Up
+                </Link>
+                <Link 
+                  href="/login"
+                  className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+                    isActive('/login') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
+                  }`}
+                >
+                  Sign In
+                </Link>
+              </>
+            ) : (
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut()
+                  setUser(null)
+                  router.push('/')
+                }}
+                className="font-medium text-white/90 hover:text-white"
+              >
+                Sign out
+              </button>
+            )}
           </nav>
 
-          <Link 
-            href="/profile"
-            className="inline-flex items-center justify-center rounded-full p-1 hover:scale-110 transition-transform duration-300"
-            aria-label="Go to profile"
-          >
-            <Image
-              src="/avatar.png"
-              alt="User avatar"
-              width={32}
-              height={32}
-              className="rounded-full border-2 border-white/80 object-cover shadow-lg"
-              onError={(e) => {
-                e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23e5e7eb'/%3E%3Cpath d='M16 16a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-4.42 0-8 2.91-8 6.5V28h16v-3.5c0-3.59-3.58-6.5-8-6.5z' fill='%239ca3af'/%3E%3C/svg%3E";
-              }}
-            />
-          </Link>
+          <div className="inline-flex items-center gap-3">
+            {user ? (
+              <>
+                <Link href="/profile" className="text-white/90 font-medium">{user.user_metadata?.fullName || user.email}</Link>
+                <button
+                  onClick={async () => { await supabase.auth.signOut(); setUser(null); router.push('/') }}
+                  className="text-white/90 hover:text-white"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/signup" className="text-white/90 hover:text-white">Sign up</Link>
+                <Link href="/login" className="text-white/90 hover:text-white">Sign in</Link>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Overlay and slider menu hidden on Android/mobile */}
