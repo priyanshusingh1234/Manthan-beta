@@ -17,8 +17,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // Hide BottomNav on homepage only
-  const showBottomNav = isAndroid && pathname !== '/';
+  // Show BottomNav on all pages for Android/mobile devices
+  const showBottomNav = isAndroid;
 
   return (
     <>
