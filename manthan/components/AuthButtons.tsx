@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import React from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import type { User } from '@supabase/supabase-js'
 
 export default function AuthButtons() {
-  const [user, setUser] = React.useState(null)
+  const [user, setUser] = React.useState<User | null>(null)
 
   React.useEffect(() => {
     let mounted = true
