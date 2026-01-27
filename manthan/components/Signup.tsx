@@ -58,7 +58,7 @@ const Signup: React.FC = () => {
   const router = useRouter()
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row pb-32">
       {/* Left Side - Signup Form */}
       <div className="flex-1 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-white">
         <div className="w-full max-w-md space-y-8 animate-slideUp">

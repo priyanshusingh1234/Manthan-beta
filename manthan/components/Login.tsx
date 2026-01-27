@@ -72,12 +72,7 @@ const Login: React.FC = () => {
             <p className="mt-2 text-sm text-slate-600">
               Ready to continue your knowledge battle?
             </p>
-            {/* Mobile quick sign-up button (fixes signup being too low on Android) */}
-            <div className="lg:hidden mt-3">
-              <Link href="/signup" className="inline-block w-full text-center py-2 px-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium shadow-md hover:opacity-95">
-                Create an account
-              </Link>
-            </div>
+            {/* Mobile quick sign-up button removed per layout request */}
           </div>
 
           {/* Login Form */}
