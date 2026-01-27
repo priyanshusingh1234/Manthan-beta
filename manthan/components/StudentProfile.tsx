@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js'
-import { Trophy, Target, Award, Zap, BookOpen, Users, TrendingUp, Star, Medal, Brain, Sword, Shield } from 'lucide-react';
+import { Trophy, Target, Award, Zap, BookOpen, Users, TrendingUp, Star, Medal, Brain, Sword, Shield, Pencil, Check, X } from 'lucide-react';
 // Logo not required on profile page
 import Image from 'next/image'
 
@@ -191,16 +191,16 @@ const StudentProfile: React.FC = () => {
                 )}
                 <div className="flex items-center gap-3">
                   {editingName ? (
-                    <>
-                      <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} className="border rounded-md px-3 py-1" />
-                      <button onClick={saveName} className="px-3 py-1 bg-blue-600 text-white rounded-md">Save</button>
-                      <button onClick={() => { setEditingName(false); setNameInput(userData.name) }} className="px-3 py-1 rounded-md">Cancel</button>
-                    </>
+                    <div className="flex items-center gap-2">
+                      <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} className="border rounded-md px-3 py-1 max-w-xs" />
+                      <button onClick={saveName} className="p-2 rounded-md bg-blue-600 text-white" aria-label="save"><Check className="w-4 h-4" /></button>
+                      <button onClick={() => { setEditingName(false); setNameInput(userData.name) }} className="p-2 rounded-md bg-gray-100" aria-label="cancel"><X className="w-4 h-4" /></button>
+                    </div>
                   ) : (
-                    <>
-                      <h1 className="text-3xl font-extrabold text-slate-900 mb-1">{userData.name}</h1>
-                      <button onClick={() => setEditingName(true)} className="text-sm text-blue-600 underline ml-2">Edit</button>
-                    </>
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-3xl font-extrabold text-slate-900 mb-1 truncate max-w-[70%]">{userData.name}</h1>
+                      <button onClick={() => setEditingName(true)} className="p-2 rounded-md bg-white border" aria-label="edit"><Pencil className="w-4 h-4 text-slate-700" /></button>
+                    </div>
                   )}
                 </div>
                 <p className="text-slate-600 mb-2">{userData.school} • {userData.grade}</p>
