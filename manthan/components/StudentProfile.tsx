@@ -166,9 +166,6 @@ const StudentProfile: React.FC = () => {
       if (!blob) throw new Error('Crop failed')
       const file = blobToFile(blob, `${cropType}_${Date.now()}.png`)
       setShowCrop(false)
-      // free object URL
-      if (imageSrc) URL.revokeObjectURL(imageSrc)
-      setImageSrc(null)
       setSelectedFile(null)
       await performUpload(file, cropType)
     } catch (err) {
@@ -177,6 +174,14 @@ const StudentProfile: React.FC = () => {
       setShowCrop(false)
     }
   }
+
+  // cleanup object URL when modal is closed
+  useEffect(() => {
+    if (!showCrop && imageSrc) {
+      try { URL.revokeObjectURL(imageSrc) } catch { /* ignore */ }
+      setImageSrc(null)
+    }
+  }, [showCrop, imageSrc])
 
   const handleAvatarChange = async (f: File | null) => {
     if (!f || !currentUser) return
@@ -207,7 +212,7 @@ const StudentProfile: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {showCrop && imageSrc && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/50" onClick={() => { setShowCrop(false); if (imageSrc) URL.revokeObjectURL(imageSrc); setImageSrc(null); setSelectedFile(null); }} />
+            <div className="absolute inset-0 bg-black/50" onClick={() => { setShowCrop(false); }} />
             <div className="relative bg-white rounded-lg shadow-lg w-full max-w-3xl h-[70vh] p-4">
               <div className="h-[70%] bg-gray-100 relative">
                 <Cropper
@@ -226,7 +231,7 @@ const StudentProfile: React.FC = () => {
                   <input type="range" min={1} max={3} step={0.01} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => { setShowCrop(false); if (imageSrc) URL.revokeObjectURL(imageSrc); setImageSrc(null); setSelectedFile(null); }} className="px-4 py-2 bg-gray-100 rounded">Cancel</button>
+                  <button onClick={() => { setShowCrop(false); }} className="px-4 py-2 bg-gray-100 rounded">Cancel</button>
                   <button onClick={onCropSave} className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
                 </div>
               </div>
