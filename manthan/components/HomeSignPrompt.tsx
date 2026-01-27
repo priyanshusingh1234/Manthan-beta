@@ -3,9 +3,10 @@
 import React from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabaseClient'
+import type { User } from '@supabase/supabase-js'
 
 export default function HomeSignPrompt() {
-  const [user, setUser] = React.useState(null)
+  const [user, setUser] = React.useState<User | null>(null)
 
   React.useEffect(() => {
     let mounted = true
