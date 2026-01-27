@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js'
+import Cropper, { type Area } from 'react-easy-crop'
+import { getCroppedImg, blobToFile } from '@/utils/cropImage'
 import { Trophy, Target, Award, Zap, BookOpen, Users, TrendingUp, Star, Medal, Brain, Sword, Shield, Pencil, Check, X } from 'lucide-react';
 // Logo not required on profile page
 import Image from 'next/image'
@@ -94,41 +96,96 @@ const StudentProfile: React.FC = () => {
     const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
     if (error) throw error
     const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(data.path)
-    return publicData.publicUrl
+    return { publicUrl: publicData.publicUrl, path: data.path }
+  }
+
+  // cropping modal state
+  const [showCrop, setShowCrop] = useState(false)
+  const [imageSrc, setImageSrc] = useState<string | null>(null)
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
+  const [cropType, setCropType] = useState<'avatar' | 'banner'>('avatar')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+  const onCropComplete = useCallback((_: Area, croppedAreaPixelsLocal: Area) => {
+    setCroppedAreaPixels(croppedAreaPixelsLocal)
+  }, [])
+
+  const openCropForFile = async (f: File, type: 'avatar' | 'banner') => {
+    if (!f) return
+    if (f.size > 8 * 1024 * 1024) { setMessage('File must be <= 8MB'); return }
+    const url = URL.createObjectURL(f)
+    setSelectedFile(f)
+    setImageSrc(url)
+    setCropType(type)
+    setShowCrop(true)
+  }
+
+  const performUpload = async (fileToUpload: File, type: 'avatar' | 'banner') => {
+    if (!currentUser) return
+    const bucket = type === 'avatar' ? 'avatars' : 'banners'
+    const path = `${type}s/${currentUser.id}/${type}_${Date.now()}.png`
+    const oldPath = currentUser.user_metadata?.[`${type}_path`]
+    try {
+      if (type === 'avatar') setAvatarUploading(true)
+      else setBannerUploading(true)
+
+      const { publicUrl, path: newPath } = await uploadToStorage(bucket, path, fileToUpload) as { publicUrl: string, path: string }
+
+      // update user metadata with both url and path
+      const updateData: Record<string, unknown> = {}
+      updateData[`${type}_url`] = publicUrl
+      updateData[`${type}_path`] = newPath
+
+      await supabase.auth.updateUser({ data: updateData })
+
+      // update UI
+      if (type === 'avatar') setUserData((s) => ({ ...s, avatar: publicUrl }))
+      else setUserData((s) => ({ ...s }))
+      setMessage(`${type[0].toUpperCase() + type.slice(1)} updated`)
+
+      // delete old file if present
+      if (oldPath) {
+        const { error: removeErr } = await supabase.storage.from(bucket).remove([oldPath])
+        if (removeErr) console.warn('Failed to remove old storage file:', removeErr.message || removeErr)
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setMessage(msg || 'Upload failed')
+    } finally {
+      setAvatarUploading(false)
+      setBannerUploading(false)
+    }
+  }
+
+  const onCropSave = async () => {
+    if (!imageSrc || !croppedAreaPixels || !selectedFile) return
+    try {
+      const blob = await getCroppedImg(imageSrc, croppedAreaPixels)
+      if (!blob) throw new Error('Crop failed')
+      const file = blobToFile(blob, `${cropType}_${Date.now()}.png`)
+      setShowCrop(false)
+      // free object URL
+      if (imageSrc) URL.revokeObjectURL(imageSrc)
+      setImageSrc(null)
+      setSelectedFile(null)
+      await performUpload(file, cropType)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setMessage(msg || 'Crop/upload failed')
+      setShowCrop(false)
+    }
   }
 
   const handleAvatarChange = async (f: File | null) => {
-    if (!currentUser) return
-    if (!f) return
-    if (f.size > 4 * 1024 * 1024) { setMessage('Avatar must be <= 4MB'); return }
-    try {
-      setAvatarUploading(true)
-      const path = `avatars/${currentUser.id}/avatar_${Date.now()}`
-      const url = await uploadToStorage('avatars', path, f)
-      await supabase.auth.updateUser({ data: { avatar_url: url } })
-      setUserData((s) => ({ ...s, avatar: url }))
-      setMessage('Avatar updated')
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setMessage(msg || 'Upload failed')
-    } finally { setAvatarUploading(false) }
+    if (!f || !currentUser) return
+    await openCropForFile(f, 'avatar')
   }
 
   const handleBannerChange = async (f: File | null) => {
-    if (!currentUser) return
-    if (!f) return
-    if (f.size > 4 * 1024 * 1024) { setMessage('Banner must be <= 4MB'); return }
-    try {
-      setBannerUploading(true)
-      const path = `banners/${currentUser.id}/banner_${Date.now()}`
-      const url = await uploadToStorage('banners', path, f)
-      await supabase.auth.updateUser({ data: { banner_url: url } })
-      setUserData((s) => ({ ...s }))
-      setMessage('Banner updated')
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setMessage(msg || 'Upload failed')
-    } finally { setBannerUploading(false) }
+    if (!f || !currentUser) return
+    await openCropForFile(f, 'banner')
   }
 
   const saveName = async () => {
@@ -148,6 +205,34 @@ const StudentProfile: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {showCrop && imageSrc && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50" onClick={() => { setShowCrop(false); if (imageSrc) URL.revokeObjectURL(imageSrc); setImageSrc(null); setSelectedFile(null); }} />
+            <div className="relative bg-white rounded-lg shadow-lg w-full max-w-3xl h-[70vh] p-4">
+              <div className="h-[70%] bg-gray-100 relative">
+                <Cropper
+                  image={imageSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={cropType === 'avatar' ? 1 / 1 : 16 / 6}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onCropComplete}
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <label className="text-sm text-slate-700">Zoom</label>
+                  <input type="range" min={1} max={3} step={0.01} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => { setShowCrop(false); if (imageSrc) URL.revokeObjectURL(imageSrc); setImageSrc(null); setSelectedFile(null); }} className="px-4 py-2 bg-gray-100 rounded">Cancel</button>
+                  <button onClick={onCropSave} className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Profile Header Section */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8 animate-slideUp">
           <div className="h-32 sm:h-40 relative">
