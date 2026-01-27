@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import type { User } from '@supabase/supabase-js'
 import { Trophy, Target, Award, Zap, BookOpen, Users, TrendingUp, Star, Medal, Brain, Sword, Shield } from 'lucide-react';
-import Logo from './Logo';
+// Logo not required on profile page
+import Image from 'next/image'
 
 /**
  * StudentProfile component - Responsive profile page for students
@@ -63,40 +65,141 @@ const StudentProfile: React.FC = () => {
     { opponent: 'Vikram Singh', subject: 'History', result: 'Lost', score: '78/100', date: '2 days ago' },
   ];
 
+  // Client-side editable profile: avatar/banner upload and name edit
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [bannerUploading, setBannerUploading] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState('')
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!mounted) return
+      setCurrentUser(user || null)
+      if (user) {
+        const meta = (user.user_metadata || {}) as Record<string, unknown>
+        setNameInput(meta.fullName || user.email || '')
+        setUserData((s) => ({ ...s, avatar: meta.avatar_url || s.avatar, bio: meta.bio || s.bio }))
+      }
+    })
+    return () => { mounted = false }
+  }, [])
+
+  const uploadToStorage = async (bucket: string, path: string, file: File) => {
+    const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
+    if (error) throw error
+    const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(data.path)
+    return publicData.publicUrl
+  }
+
+  const handleAvatarChange = async (f: File | null) => {
+    if (!currentUser) return
+    if (!f) return
+    if (f.size > 4 * 1024 * 1024) { setMessage('Avatar must be <= 4MB'); return }
+    try {
+      setAvatarUploading(true)
+      const path = `avatars/${currentUser.id}/avatar_${Date.now()}`
+      const url = await uploadToStorage('avatars', path, f)
+      await supabase.auth.updateUser({ data: { avatar_url: url } })
+      setUserData((s) => ({ ...s, avatar: url }))
+      setMessage('Avatar updated')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setMessage(msg || 'Upload failed')
+    } finally { setAvatarUploading(false) }
+  }
+
+  const handleBannerChange = async (f: File | null) => {
+    if (!currentUser) return
+    if (!f) return
+    if (f.size > 4 * 1024 * 1024) { setMessage('Banner must be <= 4MB'); return }
+    try {
+      setBannerUploading(true)
+      const path = `banners/${currentUser.id}/banner_${Date.now()}`
+      const url = await uploadToStorage('banners', path, f)
+      await supabase.auth.updateUser({ data: { banner_url: url } })
+      setUserData((s) => ({ ...s }))
+      setMessage('Banner updated')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setMessage(msg || 'Upload failed')
+    } finally { setBannerUploading(false) }
+  }
+
+  const saveName = async () => {
+    if (!currentUser) return
+    try {
+      setMessage('Saving name...')
+      await supabase.auth.updateUser({ data: { fullName: nameInput } })
+      setUserData((s) => ({ ...s, name: nameInput }))
+      setEditingName(false)
+      setMessage('Name updated')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setMessage(msg || 'Update failed')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
-      {/* Header/Navigation Bar */}
-      <header className="bg-white shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Logo width={80} height={80} showTagline={false} />
-            <nav className="hidden md:flex space-x-6">
-              <a href="/" className="text-slate-600 hover:text-blue-600 transition-colors duration-200">Home</a>
-              <a href="/battles" className="text-slate-600 hover:text-blue-600 transition-colors duration-200">Battles</a>
-              <a href="/leaderboard" className="text-slate-600 hover:text-blue-600 transition-colors duration-200">Leaderboard</a>
-              <a href="/profile" className="text-blue-600 font-medium">Profile</a>
-            </nav>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header Section */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8 animate-slideUp">
-          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 h-32 sm:h-40"></div>
+          <div className="h-32 sm:h-40 relative">
+            {currentUser?.user_metadata?.banner_url ? (
+              <div className="absolute inset-0">
+                <Image src={currentUser.user_metadata.banner_url} alt="banner" fill className="object-cover" />
+              </div>
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600" />
+            )}
+            <div className="absolute right-4 top-4">
+              <label className="inline-flex items-center gap-2 cursor-pointer px-3 py-1 bg-white/80 rounded-lg text-sm"> 
+                <input id="banner-upload" accept="image/*" type="file" className="hidden" onChange={(ev) => handleBannerChange(ev.target.files?.[0] ?? null)} />
+                {bannerUploading ? 'Uploading…' : 'Edit Banner'}
+              </label>
+            </div>
+          </div>
           <div className="px-6 pb-6">
             <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 sm:-mt-20">
               {/* Avatar */}
-              <div className="flex-shrink-0 mb-4 sm:mb-0">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 border-4 border-white shadow-xl flex items-center justify-center text-6xl animate-float">
-                  {userData.avatar}
+              <div className="flex-shrink-0 mb-4 sm:mb-0 relative">
+                <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-xl flex items-center justify-center bg-white">
+                  {typeof userData.avatar === 'string' && userData.avatar.startsWith('http') ? (
+                    <Image src={userData.avatar} alt="avatar" width={128} height={128} className="object-cover" />
+                  ) : (
+                    <div className="text-6xl">{userData.avatar}</div>
+                  )}
+                </div>
+                <div className="absolute left-0 bottom-0 transform translate-y-2">
+                  <label className="inline-flex items-center gap-2 cursor-pointer px-3 py-1 bg-white rounded-full text-sm">
+                    <input id="avatar-upload" accept="image/*" type="file" className="hidden" onChange={(ev) => handleAvatarChange(ev.target.files?.[0] ?? null)} />
+                    {avatarUploading ? 'Uploading…' : 'Edit'}
+                  </label>
                 </div>
               </div>
               
               {/* User Info */}
               <div className="flex-1 sm:ml-6 text-center sm:text-left">
-                <h1 className="text-3xl font-extrabold text-slate-900 mb-1">{userData.name}</h1>
+                {message && (
+                  <div className="mb-2 text-sm text-emerald-600">{message}</div>
+                )}
+                <div className="flex items-center gap-3">
+                  {editingName ? (
+                    <>
+                      <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} className="border rounded-md px-3 py-1" />
+                      <button onClick={saveName} className="px-3 py-1 bg-blue-600 text-white rounded-md">Save</button>
+                      <button onClick={() => { setEditingName(false); setNameInput(userData.name) }} className="px-3 py-1 rounded-md">Cancel</button>
+                    </>
+                  ) : (
+                    <>
+                      <h1 className="text-3xl font-extrabold text-slate-900 mb-1">{userData.name}</h1>
+                      <button onClick={() => setEditingName(true)} className="text-sm text-blue-600 underline ml-2">Edit</button>
+                    </>
+                  )}
+                </div>
                 <p className="text-slate-600 mb-2">{userData.school} • {userData.grade}</p>
                 <p className="text-slate-700 max-w-2xl">{userData.bio}</p>
               </div>
