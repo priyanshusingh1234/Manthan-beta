@@ -80,8 +80,11 @@ const StudentProfile: React.FC = () => {
       setCurrentUser(user || null)
       if (user) {
         const meta = (user.user_metadata || {}) as Record<string, unknown>
-        setNameInput(meta.fullName || user.email || '')
-        setUserData((s) => ({ ...s, avatar: meta.avatar_url || s.avatar, bio: meta.bio || s.bio }))
+        const metaFullName = typeof meta.fullName === 'string' ? meta.fullName : undefined
+        const metaAvatar = typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined
+        const metaBio = typeof meta.bio === 'string' ? meta.bio : undefined
+        setNameInput(metaFullName || user.email || '')
+        setUserData((s) => ({ ...s, avatar: metaAvatar || s.avatar, bio: metaBio || s.bio }))
       }
     })
     return () => { mounted = false }
