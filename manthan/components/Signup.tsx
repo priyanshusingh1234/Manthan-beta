@@ -329,6 +329,9 @@ const Signup: React.FC = () => {
                   Sign in
                 </Link>
               </p>
+              <div className="mt-3">
+                <Link href="/teacher/apply" className="inline-block text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 px-3 py-2 rounded-lg">Register as teacher</Link>
+              </div>
             </div>
           </form>
         </div>
