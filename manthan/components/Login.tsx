@@ -35,7 +35,7 @@ const Login: React.FC = () => {
               try {
                 if (rememberMe) localStorage.setItem('manthan_remember_email', email)
                 else localStorage.removeItem('manthan_remember_email')
-              } catch (e) {}
+              } catch (err) { void err }
               router.push('/profile')
             }
           })
@@ -51,7 +51,7 @@ const Login: React.FC = () => {
         setEmail(saved)
         setRememberMe(true)
       }
-    } catch (e) {}
+    } catch (err) { void err }
   }, [])
 
   return (

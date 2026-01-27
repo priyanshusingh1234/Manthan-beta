@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
@@ -179,10 +180,12 @@ export default function Header({ isAndroid = false }) {
                 <Link href="/profile" className="flex items-center gap-2 text-white/90 font-medium">
                   <span className="inline-block h-9 w-9 rounded-full overflow-hidden bg-white/20 border border-white/30">
                     {user.user_metadata?.avatar_url ? (
-                      <img
+                      <Image
                         src={user.user_metadata.avatar_url}
                         alt="avatar"
-                        className="h-9 w-9 object-cover rounded-full"
+                        width={36}
+                        height={36}
+                        className="rounded-full object-cover"
                         referrerPolicy="no-referrer"
                       />
                     ) : (

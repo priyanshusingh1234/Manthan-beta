@@ -14,7 +14,7 @@ export default function Privacy() {
         </section>
         <section className="mb-6">
           <h2 className="text-xl font-semibold">Third Parties</h2>
-          <p className="text-sm text-slate-700">We use Supabase for authentication and database services. Review Supabase's privacy policy for details.</p>
+          <p className="text-sm text-slate-700">We use Supabase for authentication and database services. Review Supabase&apos;s privacy policy for details.</p>
         </section>
         <section className="mb-6">
           <h2 className="text-xl font-semibold">Your Choices</h2>
