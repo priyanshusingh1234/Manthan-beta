@@ -1,4 +1,5 @@
 import HeroSearch from '@/components/HeroSearch'
+import AuthButtons from '@/components/AuthButtons'
 import LiveWarFeed from '@/components/LiveWarFeed'
 import TopBrains from '@/components/TopBrains'
 import BottomBanner from '@/components/BottomBanner'
@@ -8,6 +9,7 @@ export default function Home() {
     <div className="min-h-screen bg-white text-gray-900">
       {/* Hero/Search */}
       <HeroSearch />
+      <AuthButtons />
 
       {/* Main content grid */}
       <main className="mx-auto mt-6 grid max-w-6xl grid-cols-1 gap-6 px-4 pb-28 sm:px-6 lg:grid-cols-3 lg:px-8">

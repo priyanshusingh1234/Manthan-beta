@@ -25,6 +25,10 @@ const Signup: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreeToTerms) {
+      setError('You must agree to the terms and privacy policy')
+      return
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match')
       return
@@ -267,12 +271,7 @@ const Signup: React.FC = () => {
               />
               <label htmlFor="terms" className="ml-2 block text-sm text-slate-700 cursor-pointer">
                 I agree to{' '}
-                <a
-                  href="#"
-                  className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200"
-                >
-                  Terms & Conditions
-                </a>
+                <Link href="/privacy" className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200">Privacy Policy</Link>
               </label>
             </div>
 

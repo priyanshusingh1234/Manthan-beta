@@ -31,12 +31,28 @@ const Login: React.FC = () => {
             if (error) {
               setError(error.message)
             } else {
+              // Persist email if requested
+              try {
+                if (rememberMe) localStorage.setItem('manthan_remember_email', email)
+                else localStorage.removeItem('manthan_remember_email')
+              } catch (e) {}
               router.push('/profile')
             }
           })
       .catch((err) => setError(String(err)))
       .finally(() => setLoading(false))
   };
+
+  // Load remembered email on mount
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('manthan_remember_email')
+      if (saved) {
+        setEmail(saved)
+        setRememberMe(true)
+      }
+    } catch (e) {}
+  }, [])
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -56,6 +72,12 @@ const Login: React.FC = () => {
             <p className="mt-2 text-sm text-slate-600">
               Ready to continue your knowledge battle?
             </p>
+            {/* Mobile quick sign-up button (fixes signup being too low on Android) */}
+            <div className="lg:hidden mt-3">
+              <Link href="/signup" className="inline-block w-full text-center py-2 px-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium shadow-md hover:opacity-95">
+                Create an account
+              </Link>
+            </div>
           </div>
 
           {/* Login Form */}

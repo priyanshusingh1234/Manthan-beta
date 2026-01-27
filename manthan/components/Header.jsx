@@ -176,7 +176,23 @@ export default function Header({ isAndroid = false }) {
           <div className="inline-flex items-center gap-3">
             {user ? (
               <>
-                <Link href="/profile" className="text-white/90 font-medium">{user.user_metadata?.fullName || user.email}</Link>
+                <Link href="/profile" className="flex items-center gap-2 text-white/90 font-medium">
+                  <span className="inline-block h-9 w-9 rounded-full overflow-hidden bg-white/20 border border-white/30">
+                    {user.user_metadata?.avatar_url ? (
+                      <img
+                        src={user.user_metadata.avatar_url}
+                        alt="avatar"
+                        className="h-9 w-9 object-cover rounded-full"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="flex items-center justify-center h-full w-full text-lg font-bold text-blue-700 bg-white/60 rounded-full">
+                        {user.user_metadata?.fullName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                      </span>
+                    )}
+                  </span>
+                  <span className="hidden sm:inline">Profile</span>
+                </Link>
                 <button
                   onClick={async () => { await supabase.auth.signOut(); setUser(null); router.push('/') }}
                   className="text-white/90 hover:text-white"
