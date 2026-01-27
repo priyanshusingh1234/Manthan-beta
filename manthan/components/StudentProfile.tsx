@@ -126,7 +126,18 @@ const StudentProfile: React.FC = () => {
     if (!currentUser) return
     const bucket = type === 'avatar' ? 'avatars' : 'banners'
     const path = `${type}s/${currentUser.id}/${type}_${Date.now()}.png`
-    const oldPath = currentUser.user_metadata?.[`${type}_path`]
+    let oldPath = currentUser.user_metadata?.[`${type}_path`]
+    // fallback: try to parse storage path from public URL if _path isn't set
+    const urlKey = `${type}_url`
+    const maybeUrl = currentUser.user_metadata?.[urlKey] as string | undefined
+    if (!oldPath && maybeUrl && typeof maybeUrl === 'string') {
+      try {
+        const m = maybeUrl.match(/\/storage\/v1\/object\/public\/(?:[^\/]+)\/(.+)$/)
+        if (m && m[1]) oldPath = decodeURIComponent(m[1])
+      } catch {
+        // ignore parse errors
+      }
+    }
     try {
       if (type === 'avatar') setAvatarUploading(true)
       else setBannerUploading(true)
@@ -145,10 +156,21 @@ const StudentProfile: React.FC = () => {
       else setUserData((s) => ({ ...s }))
       setMessage(`${type[0].toUpperCase() + type.slice(1)} updated`)
 
-      // delete old file if present
+      // delete old file if present (best-effort)
       if (oldPath) {
         const { error: removeErr } = await supabase.storage.from(bucket).remove([oldPath])
-        if (removeErr) console.warn('Failed to remove old storage file:', removeErr.message || removeErr)
+        if (removeErr) {
+          console.warn('Failed to remove old storage file:', removeErr.message || removeErr)
+          setMessage(`Updated ${type} but failed to remove old file: ${removeErr.message || removeErr}`)
+        }
+      }
+
+      // refresh local currentUser metadata to reflect new values
+      try {
+        const { data: refreshed } = await supabase.auth.getUser()
+        setCurrentUser(refreshed.user || null)
+      } catch (e) {
+        console.warn('Failed to refresh user after upload', e)
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
