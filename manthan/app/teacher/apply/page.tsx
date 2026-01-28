@@ -11,6 +11,8 @@ export default function TeacherApplyPage() {
   const [school, setSchool] = useState('')
   const [social, setSocial] = useState('')
   const [proofFile, setProofFile] = useState<File | null>(null)
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -62,11 +64,15 @@ export default function TeacherApplyPage() {
         status: 'pending'
       }
 
-      // if no signed-in user, require email field from the form
-      if (!user) {
-        if (!emailInput) { setMessage('Please provide an email to submit application'); setLoading(false); return }
-        body.email = emailInput
-      }
+        // if no signed-in user, require email and password field from the form
+        if (!user) {
+          if (!emailInput) { setMessage('Please provide an email to submit application'); setLoading(false); return }
+          if (!password || password.length < 6) { setMessage('Please provide a password (min 6 chars)'); setLoading(false); return }
+          if (password !== confirmPassword) { setMessage('Passwords do not match'); setLoading(false); return }
+          body.email = emailInput
+          // include password to let server create the teacher account
+          body.password = password
+        }
 
       const res = await fetch('/api/teacher/apply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (!res.ok) throw new Error(await res.text())
@@ -79,12 +85,16 @@ export default function TeacherApplyPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div className="max-w-3xl mx-auto p-6 min-h-screen pb-24">
       <h1 className="text-2xl font-bold mb-4">Teacher Application</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="w-full p-3 border rounded" />
         {!currentUser && (
-          <input id="apply-email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} placeholder="Email" className="w-full p-3 border rounded" />
+          <>
+            <input id="apply-email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} placeholder="Email" className="w-full p-3 border rounded" />
+            <input id="apply-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (for your teacher account)" className="w-full p-3 border rounded mt-2" />
+            <input id="apply-confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" className="w-full p-3 border rounded mt-2" />
+          </>
         )}
         <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Main subject" className="w-full p-3 border rounded" />
         <input value={school} onChange={(e) => setSchool(e.target.value)} placeholder="School (optional)" className="w-full p-3 border rounded" />

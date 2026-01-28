@@ -7,8 +7,11 @@ const nextConfig = {
   images: {
     domains: ['placehold.co', 'ivkrupsksxibaibmiibk.supabase.co'],
   },
-  // Prefer Babel fallback for this environment where SWC binary fails to load
-  // Use Next's SWC compiler/minifier (recommended for Vercel)
+  // Force SWC transforms and avoid native SWC minifier to use WASM on ARM
+  experimental: {
+    // removed forceSwcTransforms to allow native SWC where available
+  },
+  // Enable native SWC minification by default
   swcMinify: true,
 }
 
