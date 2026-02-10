@@ -86,8 +86,14 @@ const Login: React.FC = () => {
       console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseKey ? 'Present' : 'Missing');
       setError('Configuration error: Supabase not properly configured');
     } else {
-      console.log('Supabase URL configured:', supabaseUrl.split('//')[1]?.split('.')[0] + '.supabase.co');
-      console.log('Supabase key present:', !!supabaseKey);
+      try {
+        const url = new URL(supabaseUrl);
+        console.log('Supabase URL configured:', url.hostname);
+        console.log('Supabase key present:', !!supabaseKey);
+      } catch {
+        console.error('Invalid Supabase URL format');
+        setError('Configuration error: Invalid Supabase URL');
+      }
     }
   }, [])
 

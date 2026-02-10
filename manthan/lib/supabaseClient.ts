@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Use placeholder values only for build purposes (when neither var is set)
+// This allows the build to succeed in CI/CD and for public repos
+const isBuildTime = !process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
@@ -13,7 +16,12 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
     console.warn('  - NEXT_PUBLIC_SUPABASE_ANON_KEY is missing');
   }
   console.warn('  Authentication features will not work properly.');
-  console.warn('  Using placeholder values for build purposes.');
+  
+  if (isBuildTime) {
+    console.warn('  Using placeholder values for build purposes.');
+  } else {
+    console.error('  ❌ Application is running with incomplete Supabase configuration!');
+  }
 } else {
   // Validate URL format
   try {
