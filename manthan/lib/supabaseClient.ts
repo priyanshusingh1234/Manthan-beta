@@ -1,12 +1,32 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+// Use minimal build-time fallbacks that allow builds to pass but will fail at runtime
+// This is necessary because Next.js static generation requires valid URL format
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://127.0.0.1'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'missing-key'
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  // In dev we allow startup even if envs are empty; runtime operations will fail clearly.
-  // You can also throw here to enforce presence.
-  console.warn('Supabase env vars are not set: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY')
+// Validation with warnings but NO real placeholder replacement
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  console.error('❌ Supabase environment variables are not configured:');
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    console.error('  - NEXT_PUBLIC_SUPABASE_URL is missing');
+  }
+  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.error('  - NEXT_PUBLIC_SUPABASE_ANON_KEY is missing');
+  }
+  console.error('  Authentication will not work. Check Vercel environment variables.');
+} else {
+  // Validate URL format
+  try {
+    const url = new URL(supabaseUrl);
+    if (url.hostname.includes('supabase')) {
+      console.log('✓ Supabase client initialized:', url.hostname);
+    } else {
+      console.warn('⚠️ URL may not be a valid Supabase URL:', url.hostname);
+    }
+  } catch {
+    console.error('❌ Invalid NEXT_PUBLIC_SUPABASE_URL format');
+  }
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
