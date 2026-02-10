@@ -29,6 +29,12 @@ const Login: React.FC = () => {
         supabase.auth.signInWithPassword({ email, password })
           .then(({ error }) => {
             if (error) {
+              console.error('Login error from Supabase:', {
+                name: error?.name,
+                message: error?.message,
+                status: error?.status,
+                fullError: error
+              });
               setError(error.message)
             } else {
               // Persist email if requested
@@ -39,7 +45,31 @@ const Login: React.FC = () => {
               router.push('/profile')
             }
           })
-      .catch((err) => setError(String(err)))
+      .catch((err) => {
+        console.error('Login error details:', {
+          name: err?.name,
+          message: err?.message,
+          stack: err?.stack,
+          fullError: err
+        });
+        
+        let userMessage = 'Login failed';
+        const errorMessage = err?.message?.toLowerCase() || '';
+        
+        if (errorMessage.includes('fetch') || errorMessage.includes('failed to fetch')) {
+          userMessage += ' - Network error. Please check your connection or try again later.';
+        } else if (errorMessage.includes('invalid login credentials')) {
+          userMessage += ' - Invalid email or password.';
+        } else if (errorMessage.includes('supabase') || errorMessage.includes('configuration')) {
+          userMessage += ' - Service configuration error. Please contact support.';
+        } else if (err?.message) {
+          userMessage += ` - ${err.message}`;
+        } else {
+          userMessage += '. Please try again.';
+        }
+        
+        setError(userMessage);
+      })
       .finally(() => setLoading(false))
   };
 
