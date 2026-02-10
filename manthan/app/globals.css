@@ -9,6 +9,16 @@ body {
 }
 img { max-width: 100%; display: block; height: auto; }
 
+/* Safe area support for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 /* ========================================
    Custom Animations & Battle Theme Styles
    ======================================== */
@@ -103,6 +113,18 @@ img { max-width: 100%; display: block; height: auto; }
   }
 }
 
+@keyframes gradientSlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 /* Utility Classes */
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-in-out;
@@ -135,6 +157,11 @@ img { max-width: 100%; display: block; height: auto; }
 .animate-gradient {
   background-size: 150% 150%;
   animation: gradientShift 8s ease infinite;
+}
+
+.animate-gradient-slow {
+  background-size: 200% 200%;
+  animation: gradientSlow 12s ease-in-out infinite;
 }
 
 /* Prefers Reduced Motion Support */
