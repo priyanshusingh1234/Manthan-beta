@@ -53,16 +53,19 @@ const Login: React.FC = () => {
           fullError: err
         });
         
-        let userMessage = 'Login failed. ';
+        let userMessage = 'Login failed';
+        const errorMessage = err?.message?.toLowerCase() || '';
         
-        if (err?.message?.includes('fetch') || err?.message?.includes('Failed to fetch')) {
-          userMessage += 'Network error - please check your connection or try again later.';
-        } else if (err?.message?.includes('Invalid login credentials')) {
-          userMessage += 'Invalid email or password.';
-        } else if (err?.message?.includes('supabase') || err?.message?.includes('configuration')) {
-          userMessage += 'Service configuration error. Please contact support.';
+        if (errorMessage.includes('fetch') || errorMessage.includes('failed to fetch')) {
+          userMessage += ' - Network error. Please check your connection or try again later.';
+        } else if (errorMessage.includes('invalid login credentials')) {
+          userMessage += ' - Invalid email or password.';
+        } else if (errorMessage.includes('supabase') || errorMessage.includes('configuration')) {
+          userMessage += ' - Service configuration error. Please contact support.';
+        } else if (err?.message) {
+          userMessage += ` - ${err.message}`;
         } else {
-          userMessage += err?.message || 'Please try again.';
+          userMessage += '. Please try again.';
         }
         
         setError(userMessage);

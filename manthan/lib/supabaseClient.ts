@@ -19,7 +19,10 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
   // Validate URL format
   try {
     const url = new URL(supabaseUrl);
-    if (url.hostname.includes('supabase')) {
+    // Warn if using localhost/invalid URLs
+    if (url.hostname === '127.0.0.1' || url.hostname === 'localhost') {
+      console.warn('⚠️ Using localhost URL - Supabase will not work. Check environment variables.');
+    } else if (url.hostname.includes('supabase')) {
       console.log('✓ Supabase client initialized:', url.hostname);
     } else {
       console.warn('⚠️ URL may not be a valid Supabase URL:', url.hostname);
