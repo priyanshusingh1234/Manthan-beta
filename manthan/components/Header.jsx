@@ -9,7 +9,7 @@ import Logo from './Logo'
 import { supabase } from '@/lib/supabaseClient'
 import { useRouter } from 'next/navigation'
 
-export default function Header({ isAndroid = false }) {
+export default function Header({ isMobile = false }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const pathname = usePathname()
 
@@ -94,11 +94,11 @@ export default function Header({ isAndroid = false }) {
       <div className="relative z-10">
         {/* Top nav */}
         <div className="flex items-center justify-between px-4 pt-4 sm:px-6 lg:px-8">
-          {/* Mobile menu button - hidden on desktop and on Android/mobile */}
-          {!isAndroid && (
+          {/* Mobile menu button - hidden on mobile devices that have bottom nav */}
+          {!isMobile && (
             <button 
               onClick={() => setMenuOpen(!menuOpen)}
-              className="lg:hidden inline-flex items-center justify-center rounded-xl p-2 text-white/90 hover:bg-white/20 transition-all duration-300 hover:shadow-lg hover:scale-105"
+              className="lg:hidden inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-xl p-2 text-white/90 hover:bg-white/20 transition-all duration-300 hover:shadow-lg hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={menuOpen}
               aria-controls="mobile-menu"
@@ -108,10 +108,10 @@ export default function Header({ isAndroid = false }) {
           )}
           
           {/* Desktop navigation - inline horizontal links */}
-          <nav className="hidden lg:flex items-center gap-6">
+          <nav className="hidden lg:flex items-center gap-6" aria-label="Primary navigation">
             <Link 
               href="/" 
-              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-2 py-1 ${
                 isActive('/') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
               }`}
             >
@@ -119,7 +119,7 @@ export default function Header({ isAndroid = false }) {
             </Link>
             <Link 
               href="/leaderboard"
-              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-2 py-1 ${
                 isActive('/leaderboard') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
               }`}
             >
@@ -127,7 +127,7 @@ export default function Header({ isAndroid = false }) {
             </Link>
             <Link 
               href="/contact"
-              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-2 py-1 ${
                 isActive('/contact') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
               }`}
             >
@@ -135,49 +135,22 @@ export default function Header({ isAndroid = false }) {
             </Link>
             <Link 
               href="/about"
-              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
+              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-2 py-1 ${
                 isActive('/about') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
               }`}
             >
               About
             </Link>
-            {!user ? (
-              <>
-                <Link 
-                  href="/signup"
-                  className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
-                    isActive('/signup') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
-                  }`}
-                >
-                  Sign Up
-                </Link>
-                <Link 
-                  href="/login"
-                  className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 ${
-                    isActive('/login') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
-                  }`}
-                >
-                  Sign In
-                </Link>
-              </>
-            ) : (
-              <button
-                onClick={async () => {
-                  await supabase.auth.signOut()
-                  setUser(null)
-                  router.push('/')
-                }}
-                className="font-medium text-white/90 hover:text-white"
-              >
-                Sign out
-              </button>
-            )}
           </nav>
 
           <div className="inline-flex items-center gap-3">
             {user ? (
               <>
-                <Link href="/profile" className="flex items-center gap-2 text-white/90 font-medium">
+                <Link 
+                  href="/profile" 
+                  className="flex items-center gap-2 text-white/90 font-medium hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-2 py-1"
+                  aria-label="View profile"
+                >
                   <span className="inline-block h-9 w-9 rounded-full overflow-hidden bg-white/20 border border-white/30">
                     {user.user_metadata?.avatar_url ? (
                       <Image
@@ -198,29 +171,40 @@ export default function Header({ isAndroid = false }) {
                 </Link>
                 <button
                   onClick={async () => { await supabase.auth.signOut(); setUser(null); router.push('/') }}
-                  className="text-white/90 hover:text-white"
+                  className="text-white/90 hover:text-white transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-3 py-1.5"
+                  aria-label="Sign out of your account"
                 >
                   Sign out
                 </button>
               </>
             ) : (
               <>
-                <Link href="/signup" className="text-white/90 hover:text-white">Sign up</Link>
-                <Link href="/login" className="text-white/90 hover:text-white">Sign in</Link>
+                <Link 
+                  href="/signup" 
+                  className="text-white/90 hover:text-white transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-3 py-1.5"
+                >
+                  Sign up
+                </Link>
+                <Link 
+                  href="/login" 
+                  className="text-white/90 hover:text-white transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-3 py-1.5"
+                >
+                  Sign in
+                </Link>
               </>
             )}
           </div>
         </div>
 
-        {/* Overlay and slider menu hidden on Android/mobile */}
-        {!isAndroid && menuOpen && (
+        {/* Overlay and slider menu hidden on mobile devices with bottom nav */}
+        {!isMobile && menuOpen && (
           <div 
             className="lg:hidden fixed inset-0 bg-black/40 z-50 transition-opacity duration-300"
             onClick={() => setMenuOpen(false)}
             aria-hidden="true"
           />
         )}
-        {!isAndroid && (
+        {!isMobile && (
           <div 
             id="mobile-menu"
             className={`lg:hidden fixed top-0 left-0 right-0 h-screen bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out ${
@@ -232,13 +216,13 @@ export default function Header({ isAndroid = false }) {
               <span className="text-lg font-bold text-gray-900">Menu</span>
               <button 
                 onClick={() => setMenuOpen(false)}
-                className="inline-flex items-center justify-center rounded-lg p-2 text-gray-600 hover:bg-gray-100 transition-colors duration-200"
+                className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg p-2 text-gray-600 hover:bg-gray-100 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <nav className="py-4">
+            <nav className="py-4" aria-label="Mobile navigation">
               <Link 
                 href="/" 
                 onClick={() => setMenuOpen(false)}
