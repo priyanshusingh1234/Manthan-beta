@@ -29,6 +29,10 @@ const Login: React.FC = () => {
         supabase.auth.signInWithPassword({ email, password })
           .then(({ error }) => {
             if (error) {
+              console.error('Login error details:', error);
+              console.error('Error name:', error?.name);
+              console.error('Error message:', error?.message);
+              
               setError(error.message)
             } else {
               // Persist email if requested
@@ -39,7 +43,24 @@ const Login: React.FC = () => {
               router.push('/profile')
             }
           })
-      .catch((err) => setError(String(err)))
+      .catch((err) => {
+        console.error('Login error details:', err);
+        console.error('Error name:', err?.name);
+        console.error('Error message:', err?.message);
+        console.error('Error stack:', err?.stack);
+        
+        let userMessage = 'Login failed. ';
+        
+        if (err?.message?.includes('fetch')) {
+          userMessage += 'Network error - please check your connection or try again later.';
+        } else if (err?.message?.includes('Invalid')) {
+          userMessage += 'Invalid email or password.';
+        } else {
+          userMessage += err?.message || 'Please try again.';
+        }
+        
+        setError(userMessage);
+      })
       .finally(() => setLoading(false))
   };
 
@@ -52,6 +73,22 @@ const Login: React.FC = () => {
         setRememberMe(true)
       }
     } catch (err) { void err }
+  }, [])
+
+  // Validate environment variables on mount
+  React.useEffect(() => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase environment variables');
+      console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'Present' : 'Missing');
+      console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseKey ? 'Present' : 'Missing');
+      setError('Configuration error: Supabase not properly configured');
+    } else {
+      console.log('Supabase URL configured:', supabaseUrl.split('//')[1]?.split('.')[0] + '.supabase.co');
+      console.log('Supabase key present:', !!supabaseKey);
+    }
   }, [])
 
   return (
@@ -178,6 +215,16 @@ const Login: React.FC = () => {
             </div>
 
             {error && <div className="text-sm text-red-600">{error}</div>}
+
+            {/* Development Debug Panel */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+                <p className="font-semibold mb-1">Debug Info:</p>
+                <p>Supabase URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? '✓ Configured' : '✗ Missing'}</p>
+                <p>Anon Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✓ Present' : '✗ Missing'}</p>
+                <p>Environment: {process.env.NODE_ENV}</p>
+              </div>
+            )}
 
             {/* Divider */}
             <div className="relative">
