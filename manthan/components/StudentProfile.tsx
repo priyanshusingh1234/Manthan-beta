@@ -2,17 +2,19 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import type { User } from '@supabase/supabase-js'
-import Cropper, { type Area } from 'react-easy-crop'
-import { getCroppedImg, blobToFile } from '@/utils/cropImage'
-import { Trophy, Target, Award, Zap, BookOpen, Users, TrendingUp, Star, Medal, Brain, Sword, Shield, Pencil, Check, X } from 'lucide-react';
-// Logo not required on profile page
-import Image from 'next/image'
+import type { User } from '@supabase/supabase-js';
+import Cropper, { type Area } from 'react-easy-crop';
+import { getCroppedImg, blobToFile } from '@/utils/cropImage';
+import { compressImage } from '@/utils/compressImage';
+import {
+  Trophy, Target, Award, Zap, BookOpen, Users, TrendingUp,
+  Star, Medal, Brain, Sword, Shield, Pencil, Check, X
+} from 'lucide-react';
+import Image from 'next/image';
+import TeacherBadge from '@/ticks/teacher';
+import FollowButton from '@/components/FollowButton';
 
-/**
- * StudentProfile component - Responsive profile page for students
- * Shows user information, achievements, and statistics
- */
+
 const StudentProfile: React.FC = () => {
   const [userData, setUserData] = useState({
     name: 'Guest',
@@ -23,33 +25,20 @@ const StudentProfile: React.FC = () => {
     rank: '',
     rankNumber: '',
     totalRank: '',
-  })
+    username: '',
+    usernameUpdates: [] as number[],
+    totalPoints: 0,
+    battlesAttempted: 0,
+    battlesWon: 0,
+  });
 
-  useEffect(() => {
-    let mounted = true
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!mounted) return
-      if (!user) {
-        setUserData((s) => ({ ...s, name: 'Guest' }))
-        return
-      }
-      const meta = user.user_metadata || {}
-      setUserData((s) => ({
-        ...s,
-        name: meta.fullName || user.email || 'User',
-        school: meta.school || s.school,
-        grade: meta.classGrade || s.grade,
-        bio: meta.bio || s.bio,
-      }))
-    })
-    return () => { mounted = false }
-  }, [])
+  const winRate = userData.battlesAttempted > 0 ? Math.round((userData.battlesWon / userData.battlesAttempted) * 100) : 0;
 
   const stats = [
-    { icon: Trophy, label: 'Battles Won', value: '127', color: 'text-yellow-500', bgColor: 'bg-yellow-50' },
-    { icon: Target, label: 'Win Rate', value: '78%', color: 'text-green-500', bgColor: 'bg-green-50' },
-    { icon: Zap, label: 'Current Streak', value: '12 Days', color: 'text-orange-500', bgColor: 'bg-orange-50' },
-    { icon: Star, label: 'Points', value: '8,543', color: 'text-blue-500', bgColor: 'bg-blue-50' },
+    { icon: Trophy, label: 'Battles Won', value: userData.battlesWon.toString(), color: 'text-yellow-500', bgColor: 'bg-yellow-50 dark:bg-yellow-900/20' },
+    { icon: Target, label: 'Win Rate', value: `${winRate}%`, color: 'text-green-500', bgColor: 'bg-green-50 dark:bg-green-900/20' },
+    { icon: Zap, label: 'Battles Taken', value: userData.battlesAttempted.toString(), color: 'text-orange-500', bgColor: 'bg-orange-50 dark:bg-orange-900/20' },
+    { icon: Star, label: 'Points', value: userData.totalPoints.toLocaleString(), color: 'text-blue-500', bgColor: 'bg-blue-50 dark:bg-blue-900/20' },
   ];
 
   const achievements = [
@@ -67,264 +56,529 @@ const StudentProfile: React.FC = () => {
     { opponent: 'Vikram Singh', subject: 'History', result: 'Lost', score: '78/100', date: '2 days ago' },
   ];
 
-  // Client-side editable profile: avatar/banner upload and name edit
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [avatarUploading, setAvatarUploading] = useState(false)
-  const [bannerUploading, setBannerUploading] = useState(false)
-  const [editingName, setEditingName] = useState(false)
-  const [nameInput, setNameInput] = useState('')
-  const [message, setMessage] = useState('')
+  // Editable profile state
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', username: '', school: '', grade: '', bio: '' });
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    let mounted = true
+    let mounted = true;
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!mounted) return
-      setCurrentUser(user || null)
+      if (!mounted) return;
+      setCurrentUser(user || null);
       if (user) {
-        const meta = (user.user_metadata || {}) as Record<string, unknown>
-        const metaFullName = typeof meta.fullName === 'string' ? meta.fullName : undefined
-        const metaAvatar = typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined
-        const metaBio = typeof meta.bio === 'string' ? meta.bio : undefined
-        setNameInput(metaFullName || user.email || '')
-        setUserData((s) => ({ ...s, avatar: metaAvatar || s.avatar, bio: metaBio || s.bio }))
+        const meta = user.user_metadata || {};
+        const metaFullName = typeof meta.fullName === 'string' ? meta.fullName : undefined;
+        const metaUsername = typeof meta.username === 'string' ? meta.username : '';
+        const metaAvatar = typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined;
+        const metaBio = typeof meta.bio === 'string' ? meta.bio : undefined;
+
+        setEditForm({
+          name: metaFullName || user.email || '',
+          username: metaUsername,
+          school: meta.school || '',
+          grade: meta.classGrade || '',
+          bio: meta.bio || ''
+        });
+
+        setUserData((s) => ({
+          ...s,
+          name: metaFullName || user.email || 'User',
+          school: meta.school || s.school,
+          grade: meta.classGrade || s.grade,
+          bio: meta.bio || s.bio,
+          avatar: metaAvatar || s.avatar,
+          username: metaUsername,
+          usernameUpdates: Array.isArray(meta.username_updates) ? meta.username_updates : [],
+          totalPoints: Number(meta.totalPoints) || 0,
+          battlesAttempted: Number(meta.battlesAttempted) || 0,
+          battlesWon: Number(meta.battlesWon) || 0,
+        }));
       }
-    })
-    return () => { mounted = false }
-  }, [])
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const uploadToStorage = async (bucket: string, path: string, file: File) => {
-    const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
-    if (error) throw error
-    const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(data.path)
-    return { publicUrl: publicData.publicUrl, path: data.path }
-  }
+    const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+    if (error) throw error;
+    const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    return { publicUrl: publicData.publicUrl, path: data.path };
+  };
 
-  // cropping modal state
-  const [showCrop, setShowCrop] = useState(false)
-  const [imageSrc, setImageSrc] = useState<string | null>(null)
-  const [crop, setCrop] = useState({ x: 0, y: 0 })
-  const [zoom, setZoom] = useState(1)
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
-  const [cropType, setCropType] = useState<'avatar' | 'banner'>('avatar')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  // Cropping modal state
+  const [showCrop, setShowCrop] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [cropType, setCropType] = useState<'avatar' | 'banner'>('avatar');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const onCropComplete = useCallback((_: Area, croppedAreaPixelsLocal: Area) => {
-    setCroppedAreaPixels(croppedAreaPixelsLocal)
-  }, [])
+    setCroppedAreaPixels(croppedAreaPixelsLocal);
+  }, []);
 
   const openCropForFile = async (f: File, type: 'avatar' | 'banner') => {
-    if (!f) return
-    if (f.size > 8 * 1024 * 1024) { setMessage('File must be <= 8MB'); return }
-    const url = URL.createObjectURL(f)
-    setSelectedFile(f)
-    setImageSrc(url)
-    setCropType(type)
-    setShowCrop(true)
-  }
+    if (!f) return;
+    if (f.size > 8 * 1024 * 1024) {
+      setMessage('File must be <= 8MB');
+      return;
+    }
+    const url = URL.createObjectURL(f);
+    setSelectedFile(f);
+    setImageSrc(url);
+    setCropType(type);
+    setShowCrop(true);
+  };
 
   const performUpload = async (fileToUpload: File, type: 'avatar' | 'banner') => {
-    if (!currentUser) return
-    const bucket = type === 'avatar' ? 'avatars' : 'banners'
-    const path = `${type}s/${currentUser.id}/${type}_${Date.now()}.png`
-    let oldPath = currentUser.user_metadata?.[`${type}_path`]
-    // fallback: try to parse storage path from public URL if _path isn't set
-    const urlKey = `${type}_url`
-    const maybeUrl = currentUser.user_metadata?.[urlKey] as string | undefined
+    if (!currentUser) return;
+    const bucket = type === 'avatar' ? 'avatars' : 'banners';
+    const path = `${type}s/${currentUser.id}/${type}_${Date.now()}.webp`;
+    let oldPath = currentUser.user_metadata?.[`${type}_path`];
+    const urlKey = `${type}_url`;
+    const maybeUrl = currentUser.user_metadata?.[urlKey] as string | undefined;
     if (!oldPath && maybeUrl && typeof maybeUrl === 'string') {
       try {
-        const m = maybeUrl.match(/\/storage\/v1\/object\/public\/(?:[^\/]+)\/(.+)$/)
-        if (m && m[1]) oldPath = decodeURIComponent(m[1])
+        const m = maybeUrl.match(/\/storage\/v1\/object\/public\/(?:[^\/]+)\/(.+)$/);
+        if (m && m[1]) oldPath = decodeURIComponent(m[1]);
       } catch {
         // ignore parse errors
       }
     }
     try {
-      if (type === 'avatar') setAvatarUploading(true)
-      else setBannerUploading(true)
+      if (type === 'avatar') setAvatarUploading(true);
+      else setBannerUploading(true);
 
-      const { publicUrl, path: newPath } = await uploadToStorage(bucket, path, fileToUpload) as { publicUrl: string, path: string }
+      // Compress before uploading
+      const compressed = await compressImage(fileToUpload, type === 'avatar' ? 'avatar' : 'banner');
 
-      // update user metadata with both url and path
-      const updateData: Record<string, unknown> = {}
-      updateData[`${type}_url`] = publicUrl
-      updateData[`${type}_path`] = newPath
+      const { publicUrl, path: newPath } = (await uploadToStorage(
+        bucket,
+        path,
+        compressed
+      )) as { publicUrl: string; path: string };
 
-      await supabase.auth.updateUser({ data: updateData })
+      const updateData: Record<string, unknown> = {};
+      updateData[`${type}_url`] = publicUrl;
+      updateData[`${type}_path`] = newPath;
 
-      // update UI
-      if (type === 'avatar') setUserData((s) => ({ ...s, avatar: publicUrl }))
-      else setUserData((s) => ({ ...s }))
-      setMessage(`${type[0].toUpperCase() + type.slice(1)} updated`)
+      await supabase.auth.updateUser({ data: updateData });
 
-      // delete old file if present (best-effort)
+      if (type === 'avatar') setUserData((s) => ({ ...s, avatar: publicUrl }));
+      else setUserData((s) => ({ ...s }));
+      setMessage(`${type[0].toUpperCase() + type.slice(1)} updated`);
+
       if (oldPath) {
-        const { error: removeErr } = await supabase.storage.from(bucket).remove([oldPath])
+        const { error: removeErr } = await supabase.storage.from(bucket).remove([oldPath]);
         if (removeErr) {
-          console.warn('Failed to remove old storage file:', removeErr.message || removeErr)
-          setMessage(`Updated ${type} but failed to remove old file: ${removeErr.message || removeErr}`)
+          console.warn('Failed to remove old storage file:', removeErr.message || removeErr);
+          setMessage(`Updated ${type} but failed to remove old file: ${removeErr.message || removeErr}`);
         }
       }
 
-      // refresh local currentUser metadata to reflect new values
       try {
-        const { data: refreshed } = await supabase.auth.getUser()
-        setCurrentUser(refreshed.user || null)
+        const { data: refreshed } = await supabase.auth.getUser();
+        setCurrentUser(refreshed.user || null);
       } catch (e) {
-        console.warn('Failed to refresh user after upload', e)
+        console.warn('Failed to refresh user after upload', e);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setMessage(msg || 'Upload failed')
+      const msg = err instanceof Error ? err.message : String(err);
+      setMessage(msg || 'Upload failed');
     } finally {
-      setAvatarUploading(false)
-      setBannerUploading(false)
+      setAvatarUploading(false);
+      setBannerUploading(false);
     }
-  }
+  };
 
   const onCropSave = async () => {
-    if (!imageSrc || !croppedAreaPixels || !selectedFile) return
+    if (!imageSrc || !croppedAreaPixels || !selectedFile) return;
     try {
-      const blob = await getCroppedImg(imageSrc, croppedAreaPixels)
-      if (!blob) throw new Error('Crop failed')
-      const file = blobToFile(blob, `${cropType}_${Date.now()}.png`)
-      setShowCrop(false)
-      setSelectedFile(null)
-      await performUpload(file, cropType)
+      const blob = await getCroppedImg(imageSrc, croppedAreaPixels);
+      if (!blob) throw new Error('Crop failed');
+      const file = blobToFile(blob, `${cropType}_${Date.now()}.png`);
+      setShowCrop(false);
+      setSelectedFile(null);
+      await performUpload(file, cropType);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setMessage(msg || 'Crop/upload failed')
-      setShowCrop(false)
+      const msg = err instanceof Error ? err.message : String(err);
+      setMessage(msg || 'Crop/upload failed');
+      setShowCrop(false);
     }
-  }
+  };
 
-  // cleanup object URL when modal is closed
   useEffect(() => {
     if (!showCrop && imageSrc) {
-      try { URL.revokeObjectURL(imageSrc) } catch { /* ignore */ }
-      setImageSrc(null)
+      try {
+        URL.revokeObjectURL(imageSrc);
+      } catch {
+        /* ignore */
+      }
+      setImageSrc(null);
     }
-  }, [showCrop, imageSrc])
+  }, [showCrop, imageSrc]);
 
   const handleAvatarChange = async (f: File | null) => {
-    if (!f || !currentUser) return
-    await openCropForFile(f, 'avatar')
-  }
+    if (!f || !currentUser) return;
+    await openCropForFile(f, 'avatar');
+  };
 
   const handleBannerChange = async (f: File | null) => {
-    if (!f || !currentUser) return
-    await openCropForFile(f, 'banner')
-  }
+    if (!f || !currentUser) return;
+    await openCropForFile(f, 'banner');
+  };
 
-  const saveName = async () => {
-    if (!currentUser) return
-    try {
-      setMessage('Saving name...')
-      await supabase.auth.updateUser({ data: { fullName: nameInput } })
-      setUserData((s) => ({ ...s, name: nameInput }))
-      setEditingName(false)
-      setMessage('Name updated')
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setMessage(msg || 'Update failed')
+  const saveProfile = async () => {
+    if (!currentUser) return;
+
+    let newUsernameUpdates = userData.usernameUpdates;
+
+    if (editForm.username !== userData.username) {
+      if (editForm.username.length < 3) {
+        setMessage('Username must be at least 3 characters');
+        return;
+      }
+      if (/[A-Z]/.test(editForm.username)) {
+        setMessage('Username cannot contain uppercase letters');
+        return;
+      }
+      if (/\s/.test(editForm.username)) {
+        setMessage('Username cannot contain spaces');
+        return;
+      }
+
+      const updates = (userData.usernameUpdates || []) as number[];
+      const now = Date.now();
+      const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+      const recentUpdates = updates.filter(ts => ts > thirtyDaysAgo);
+
+      if (recentUpdates.length >= 4) {
+        setMessage('Limit reached: 4 username updates/month');
+        return;
+      }
+
+      setMessage('Checking username availability...');
+      const uniqueCheckRes = await fetch(`/api/check-username?username=${encodeURIComponent(editForm.username)}`);
+      if (uniqueCheckRes.ok) {
+        const uniqueCheckData = await uniqueCheckRes.json();
+        if (!uniqueCheckData.isUnique) {
+          setMessage('Username is already taken');
+          return;
+        }
+      }
+      newUsernameUpdates = [...recentUpdates, now];
     }
-  }
+
+    try {
+      setMessage('Saving profile...');
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          fullName: editForm.name,
+          username: editForm.username,
+          username_updates: newUsernameUpdates,
+          school: editForm.school,
+          classGrade: editForm.grade,
+          bio: editForm.bio
+        }
+      });
+
+      if (error) throw error;
+
+      setUserData((s) => ({
+        ...s,
+        name: editForm.name,
+        username: editForm.username,
+        usernameUpdates: newUsernameUpdates,
+        school: editForm.school,
+        grade: editForm.grade,
+        bio: editForm.bio
+      }));
+      setShowEditProfile(false);
+      setMessage('Profile updated successfully');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setMessage(msg || 'Update failed');
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 relative pb-20">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-20 pointer-events-none" />
+
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Crop Modal */}
         {showCrop && imageSrc && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/50" onClick={() => { setShowCrop(false); }} />
-            <div className="relative bg-white rounded-lg shadow-lg w-full max-w-3xl h-[70vh] p-4">
-              <div className="h-[70%] bg-gray-100 relative">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCrop(false)} />
+            <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl h-[70vh] p-6">
+              <div className="h-[60%] bg-slate-100 dark:bg-slate-700 rounded-xl overflow-hidden relative">
                 <Cropper
                   image={imageSrc}
                   crop={crop}
                   zoom={zoom}
-                  aspect={cropType === 'avatar' ? 1 / 1 : 16 / 6}
+                  aspect={cropType === 'avatar' ? 1 : 16 / 6}
                   onCropChange={setCrop}
                   onZoomChange={setZoom}
                   onCropComplete={onCropComplete}
                 />
               </div>
-              <div className="mt-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <label className="text-sm text-slate-700">Zoom</label>
-                  <input type="range" min={1} max={3} step={0.01} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} />
+              <div className="mt-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Zoom</label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={3}
+                    step={0.01}
+                    value={zoom}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className="w-40 accent-blue-600"
+                  />
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => { setShowCrop(false); }} className="px-4 py-2 bg-gray-100 rounded">Cancel</button>
-                  <button onClick={onCropSave} className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCrop(false)}
+                    className="px-5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={onCropSave}
+                    className="px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium hover:from-blue-700 hover:to-purple-700 transition shadow-md"
+                  >
+                    Save
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         )}
-        {/* Profile Header Section */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8 animate-slideUp">
-          <div className="h-32 sm:h-40 relative">
-            {currentUser?.user_metadata?.banner_url ? (
-              <div className="absolute inset-0">
-                <Image src={currentUser.user_metadata.banner_url} alt="banner" fill className="object-cover" />
+
+        {/* Edit Profile Modal */}
+        {showEditProfile && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowEditProfile(false)} />
+            <div className="relative bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
+              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Edit Profile</h3>
+                <button
+                  onClick={() => setShowEditProfile(false)}
+                  className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                >
+                  <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                </button>
               </div>
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600" />
-            )}
-            <div className="absolute right-4 top-4">
-              <label className="inline-flex items-center gap-2 cursor-pointer px-3 py-1 bg-white/80 rounded-lg text-sm"> 
-                <input id="banner-upload" accept="image/*" type="file" className="hidden" onChange={(ev) => handleBannerChange(ev.target.files?.[0] ?? null)} />
-                {bannerUploading ? 'Uploading…' : 'Edit Banner'}
-              </label>
+              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                {message && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl text-sm font-medium">
+                    {message}
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Full Name</label>
+                  <input
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors font-medium text-slate-800 dark:text-slate-200"
+                    placeholder="E.g. Elon Musk"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">
+                    <span>Username</span>
+                    <span className="text-xs font-normal opacity-70">Max 3 updates/month</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">@</span>
+                    <input
+                      value={editForm.username}
+                      onChange={(e) => setEditForm({ ...editForm, username: e.target.value.toLowerCase().replace(/\s/g, '') })}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-4 py-3 outline-none focus:border-indigo-500 transition-colors font-mono font-medium text-slate-800 dark:text-slate-200"
+                      placeholder="username"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">School</label>
+                    <input
+                      value={editForm.school}
+                      onChange={(e) => setEditForm({ ...editForm, school: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors font-medium text-slate-800 dark:text-slate-200"
+                      placeholder="High School"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Grade / Class</label>
+                    <input
+                      value={editForm.grade}
+                      onChange={(e) => setEditForm({ ...editForm, grade: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors font-medium text-slate-800 dark:text-slate-200"
+                      placeholder="10th"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Bio</label>
+                  <textarea
+                    value={editForm.bio}
+                    onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors font-medium text-slate-800 dark:text-slate-200 min-h-[100px] resize-none"
+                    placeholder="A little about yourself..."
+                  />
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+                <button
+                  onClick={saveProfile}
+                  className="w-full bg-slate-900 dark:bg-indigo-600 text-white font-bold px-4 py-4 rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-500 transition-all shadow-md active:translate-y-0.5"
+                >
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
-          <div className="px-6 pb-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end -mt-16 sm:-mt-20">
-              {/* Avatar */}
-              <div className="flex-shrink-0 mb-4 sm:mb-0 relative">
-                <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-xl flex items-center justify-center bg-white">
-                  {typeof userData.avatar === 'string' && userData.avatar.startsWith('http') ? (
-                    <Image src={userData.avatar} alt="avatar" width={128} height={128} className="object-cover" />
-                  ) : (
-                    <div className="text-6xl">{userData.avatar}</div>
-                  )}
-                </div>
-                <div className="absolute left-0 bottom-0 transform translate-y-2">
-                  <label className="inline-flex items-center gap-2 cursor-pointer px-3 py-1 bg-white rounded-full text-sm">
-                    <input id="avatar-upload" accept="image/*" type="file" className="hidden" onChange={(ev) => handleAvatarChange(ev.target.files?.[0] ?? null)} />
-                    {avatarUploading ? 'Uploading…' : 'Edit'}
-                  </label>
-                </div>
+        )}
+
+        {/* Profile Header */}
+        <div className="relative z-20 mt-16 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] overflow-hidden mb-12 border border-slate-100 dark:border-slate-800">
+          <div className="h-44 sm:h-64 relative group shadow-inner">
+            {currentUser?.user_metadata?.banner_url ? (
+              <div className="absolute inset-0">
+                <Image
+                  src={currentUser.user_metadata.banner_url}
+                  alt="banner"
+                  fill
+                  className="object-cover"
+                />
               </div>
-              
-              {/* User Info */}
-              <div className="flex-1 sm:ml-6 text-center sm:text-left">
-                {message && (
-                  <div className="mb-2 text-sm text-emerald-600">{message}</div>
-                )}
-                <div className="flex items-center gap-3">
-                  {editingName ? (
-                    <div className="flex items-center gap-2">
-                      <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} className="border rounded-md px-3 py-1 max-w-xs" />
-                      <button onClick={saveName} className="p-2 rounded-md bg-blue-600 text-white" aria-label="save"><Check className="w-4 h-4" /></button>
-                      <button onClick={() => { setEditingName(false); setNameInput(userData.name) }} className="p-2 rounded-md bg-gray-100" aria-label="cancel"><X className="w-4 h-4" /></button>
-                    </div>
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
+            )}
+
+            {/* subtle divider/shadow at banner bottom to separate from card */}
+            <div className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none bg-gradient-to-b from-transparent to-white/90 dark:to-slate-900/60" />
+
+            <label className="absolute right-4 top-4 cursor-pointer opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 shadow-lg hover:bg-white dark:hover:bg-slate-700">
+                {bannerUploading ? 'Uploading…' : 'Change Banner'}
+              </span>
+              <input
+                id="banner-upload"
+                accept="image/*"
+                type="file"
+                className="hidden"
+                onChange={(ev) => handleBannerChange(ev.target.files?.[0] ?? null)}
+              />
+            </label>
+          </div>
+
+          <div className="px-6 sm:px-8 pb-8 relative">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-6 sm:gap-8">
+              {/* Avatar */}
+              <div className="relative group shrink-0 -mt-16 sm:-mt-20 mx-auto sm:mx-0 z-10 w-fit">
+                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-[6px] border-white dark:border-slate-900 shadow-2xl bg-white dark:bg-slate-800">
+                  {typeof userData.avatar === 'string' && userData.avatar.startsWith('http') ? (
+                    <Image
+                      src={userData.avatar}
+                      alt="avatar"
+                      width={144}
+                      height={144}
+                      className="object-cover w-full h-full"
+                    />
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-3xl font-extrabold text-slate-900 mb-1 truncate max-w-[70%]">{userData.name}</h1>
-                      <button onClick={() => setEditingName(true)} className="p-2 rounded-md bg-white border" aria-label="edit"><Pencil className="w-4 h-4 text-slate-700" /></button>
+                    <div className="w-full h-full flex items-center justify-center text-6xl">
+                      {userData.avatar}
                     </div>
                   )}
                 </div>
-                <p className="text-slate-600 mb-2">{userData.school} • {userData.grade}</p>
-                <p className="text-slate-700 max-w-2xl">{userData.bio}</p>
+                <label className="absolute -bottom-2 left-1/2 -translate-x-1/2 cursor-pointer opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                  <span className="inline-flex items-center gap-1 px-4 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-xs font-bold shadow-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                    {avatarUploading ? '…' : <Pencil className="w-3 h-3" />}
+                    Edit
+                  </span>
+                  <input
+                    id="avatar-upload"
+                    accept="image/*"
+                    type="file"
+                    className="hidden"
+                    onChange={(ev) => handleAvatarChange(ev.target.files?.[0] ?? null)}
+                  />
+                </label>
+              </div>
+
+              {/* User Info */}
+              <div className="flex-1 sm:pt-3 text-center sm:text-left z-10">
+                {message && (
+                  <div className="mb-4 inline-block px-4 py-1.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-lg text-sm font-bold shadow-sm">
+                    {message}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-center sm:justify-start gap-3 flex-wrap">
+                  {/* Name Display */}
+                  <div className="w-full sm:w-auto">
+                    <div className="flex items-center justify-between sm:justify-start gap-3 mb-1 w-full">
+                      <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tighter flex items-center gap-3">
+                        <span>{userData.name}</span>
+                        {currentUser?.user_metadata?.isTeacher && (
+                          <span className="inline-flex items-center" title="Verified teacher">
+                            <TeacherBadge />
+                          </span>
+                        )}
+                      </h1>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-slate-500 text-sm font-medium w-full">
+                      <span>@{userData.username || 'username'}</span>
+                    </div>
+                  </div>
+
+                </div>
+
+                <p className="text-slate-600 dark:text-slate-400 mt-2">
+                  {userData.school || 'No school'} • {userData.grade || 'No grade'}
+                </p>
+                <p className="text-slate-700 dark:text-slate-300 max-w-2xl mt-3">
+                  {userData.bio || 'No bio yet.'}
+                </p>
+
+                <div className="mt-5 flex flex-wrap justify-center sm:justify-start gap-3">
+                  <button
+                    onClick={() => setShowEditProfile(true)}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-slate-900/20 active:scale-95"
+                  >
+                    <Pencil className="w-4 h-4 text-slate-300" /> Edit Profile
+                  </button>
+                  {currentUser && <FollowButton profileUserId={currentUser.id} />}
+                </div>
               </div>
 
               {/* Rank Badge */}
-              <div className="mt-4 sm:mt-0 sm:ml-6">
-                <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 text-white px-6 py-3 rounded-xl shadow-lg text-center animate-glow">
-                  <div className="text-sm font-medium">Current Rank</div>
-                  <div className="text-2xl font-extrabold">{userData.rank}</div>
-                  <div className="text-xs">#{userData.rankNumber} of {userData.totalRank}</div>
+              <div className="mt-8 sm:mt-0 perspective-1000 shrink-0">
+                <div className="relative group perspective-1000">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 rounded-3xl blur-sm opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                  <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 text-white px-8 py-6 rounded-3xl shadow-xl text-center min-w-[200px] transform transition-transform group-hover:-translate-y-1">
+                    <div className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">Global Match</div>
+                    <div className="w-8 h-1 bg-gradient-to-r from-amber-400 to-orange-500 mx-auto rounded-full mb-4"></div>
+                    <div className="text-xs font-medium text-slate-400 bg-slate-800/80 py-1.5 px-4 rounded-full inline-block border border-slate-700">
+                      #{userData.rankNumber || '?'} / ?
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -332,59 +586,60 @@ const StudentProfile: React.FC = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 relative z-10">
           {stats.map((stat, index) => (
             <div
               key={index}
-              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all duration-300 hover:scale-105 animate-slideUp"
+              className="relative bg-white dark:bg-slate-900 rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-2xl"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
-              <div className={`${stat.bgColor} ${stat.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
-                <stat.icon className="w-6 h-6" />
+              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-gradient-to-br from-slate-100 to-transparent dark:from-slate-800 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity"></div>
+
+              <div className={`${stat.bgColor} w-14 h-14 rounded-2xl flex items-center justify-center mb-5 border border-white/20 shadow-sm relative z-10 group-hover:scale-110 transition-transform`}>
+                <stat.icon className={`w-7 h-7 ${stat.color} drop-shadow-sm`} />
               </div>
-              <div className="text-2xl font-extrabold text-slate-900 mb-1">{stat.value}</div>
-              <div className="text-sm text-slate-600">{stat.label}</div>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-1 relative z-10 drop-shadow-sm">{stat.value}</div>
+              <div className="text-sm font-bold text-slate-500 dark:text-slate-400 tracking-wide uppercase relative z-10">{stat.label}</div>
             </div>
           ))}
         </div>
 
-        {/* Two Column Layout - Achievements & Recent Battles */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Achievements Section */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 animate-slideUp" style={{ animationDelay: '0.5s' }}>
-            <div className="flex items-center mb-6">
-              <Award className="w-6 h-6 text-blue-600 mr-2" />
-              <h2 className="text-2xl font-extrabold text-slate-900">Achievements</h2>
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
+          {/* Achievements */}
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+            <div className="flex items-center gap-4 mb-8">
+              <div className="p-3.5 bg-blue-50 dark:bg-blue-900/40 rounded-2xl border border-blue-100 dark:border-blue-800 shadow-inner group-hover:scale-110 transition-transform">
+                <Award className="w-6 h-6 text-blue-600 dark:text-blue-400 drop-shadow-sm" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Achievements</h2>
             </div>
             <div className="space-y-4">
               {achievements.map((achievement, index) => (
                 <div
                   key={index}
-                  className={`flex items-center p-4 rounded-xl border-2 transition-all duration-300 ${
-                    achievement.earned
-                      ? 'border-blue-200 bg-blue-50 hover:bg-blue-100'
-                      : 'border-slate-200 bg-slate-50 opacity-60'
-                  }`}
+                  className={`flex items-center p-5 rounded-2xl border transition-all duration-300 ${achievement.earned
+                    ? 'border-transparent bg-slate-50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-black/50 hover:-translate-y-1'
+                    : 'border-slate-100 dark:border-slate-800 bg-transparent opacity-60'
+                    }`}
                 >
                   <div
-                    className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${
-                      achievement.earned
-                        ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white'
-                        : 'bg-slate-200 text-slate-400'
-                    }`}
+                    className={`shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center mr-5 shadow-sm ${achievement.earned
+                      ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-blue-500/30'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                      }`}
                   >
-                    <achievement.icon className="w-6 h-6" />
+                    <achievement.icon className="w-7 h-7 drop-shadow-sm" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-slate-900">{achievement.title}</h3>
-                    <p className="text-sm text-slate-600">{achievement.description}</p>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-lg text-slate-900 dark:text-white truncate">{achievement.title}</h3>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 truncate">{achievement.description}</p>
                   </div>
                   {achievement.earned && (
-                    <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
+                    <div className="shrink-0 ml-4">
+                      <div className="w-8 h-8 bg-emerald-100 border border-emerald-200 rounded-full flex items-center justify-center shadow-sm">
+                        <Check className="w-5 h-5 text-emerald-600" />
                       </div>
                     </div>
                   )}
@@ -393,77 +648,94 @@ const StudentProfile: React.FC = () => {
             </div>
           </div>
 
-          {/* Recent Battles Section */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 animate-slideUp" style={{ animationDelay: '0.6s' }}>
-            <div className="flex items-center mb-6">
-              <Sword className="w-6 h-6 text-blue-600 mr-2" />
-              <h2 className="text-2xl font-extrabold text-slate-900">Recent Battles</h2>
+          {/* Recent Battles */}
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 via-pink-500 to-rose-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+            <div className="flex items-center gap-4 mb-8">
+              <div className="p-3.5 bg-purple-50 dark:bg-purple-900/40 rounded-2xl border border-purple-100 dark:border-purple-800 shadow-inner group-hover:scale-110 transition-transform">
+                <Sword className="w-6 h-6 text-purple-600 dark:text-purple-400 drop-shadow-sm" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Recent Battles</h2>
             </div>
+
             <div className="space-y-4">
               {recentBattles.map((battle, index) => (
                 <div
                   key={index}
-                  className="p-4 rounded-xl border-2 border-slate-200 hover:border-blue-200 hover:bg-blue-50 transition-all duration-300"
+                  className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 group/battle cursor-pointer"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gradient-to-br from-slate-400 to-slate-600 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-slate-800 to-slate-900 rounded-full flex items-center justify-center text-white font-black text-lg shadow-inner group-hover/battle:scale-105 transition-transform">
                         {battle.opponent.charAt(0)}
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900">{battle.opponent}</h3>
-                        <p className="text-sm text-slate-600">{battle.subject}</p>
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-white group-hover/battle:text-purple-600 transition-colors">{battle.opponent}</h3>
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{battle.subject}</p>
                       </div>
                     </div>
                     <div
-                      className={`px-3 py-1 rounded-full text-sm font-bold ${
-                        battle.result === 'Won'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
+                      className={`px-4 py-1.5 rounded-full text-sm font-black tracking-wide uppercase ${battle.result === 'Won'
+                        ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50'
+                        : 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400 border border-rose-200/50'
+                        }`}
                     >
                       {battle.result}
                     </div>
                   </div>
-                  <div className="flex items-center justify-between text-sm text-slate-600">
-                    <span>Score: {battle.score}</span>
+                  <div className="flex items-center justify-between text-sm font-bold text-slate-400 dark:text-slate-500 pt-3 border-t border-slate-50 dark:border-slate-800/50">
+                    <span className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 px-3 py-1 rounded-lg">Score: {battle.score}</span>
                     <span>{battle.date}</span>
                   </div>
                 </div>
               ))}
             </div>
-            <button className="w-full mt-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] shadow-md hover:shadow-lg">
+            <button className="w-full mt-8 py-4 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-black rounded-2xl transition-all duration-300 active:scale-95 border border-slate-200 dark:border-slate-700 shadow-sm">
               View All Battles
             </button>
           </div>
         </div>
 
-        {/* Activity/Progress Section */}
-        <div className="mt-8 bg-white rounded-2xl shadow-lg p-6 animate-slideUp" style={{ animationDelay: '0.7s' }}>
-          <div className="flex items-center mb-6">
-            <TrendingUp className="w-6 h-6 text-blue-600 mr-2" />
-            <h2 className="text-2xl font-extrabold text-slate-900">Progress Overview</h2>
+        {/* Progress Overview */}
+        <div className="mt-8 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 sm:p-10 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-colors pointer-events-none"></div>
+
+          <div className="flex items-center gap-4 mb-8">
+            <div className="p-3.5 bg-emerald-50 dark:bg-emerald-900/40 rounded-2xl border border-emerald-100 dark:border-emerald-800 shadow-inner group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400 drop-shadow-sm" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Progress Overview</h2>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-              <BookOpen className="w-8 h-8 text-blue-600 mb-3" />
-              <h3 className="font-bold text-slate-900 mb-2">Subjects Mastered</h3>
-              <div className="text-3xl font-extrabold text-blue-600">8/12</div>
-              <div className="mt-3 bg-white rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '67%' }}></div>
+            <div className="p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/40 dark:shadow-none hover:-translate-y-1 transition-transform group/card">
+              <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-6 border border-blue-100 dark:border-blue-800 group-hover/card:scale-110 transition-transform">
+                <BookOpen className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Subjects Mastered</h3>
+              <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">8<span className="text-2xl text-slate-400">/12</span></div>
+              <div className="mt-6 bg-slate-100 dark:bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full w-[67%]" />
               </div>
             </div>
-            <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
-              <Users className="w-8 h-8 text-green-600 mb-3" />
-              <h3 className="font-bold text-slate-900 mb-2">School Ranking</h3>
-              <div className="text-3xl font-extrabold text-green-600">#2</div>
-              <p className="text-sm text-slate-600 mt-2">Out of 156 students</p>
+
+            <div className="p-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl border border-emerald-400 shadow-xl shadow-emerald-500/30 hover:-translate-y-1 transition-transform group/card text-white relative overflow-hidden">
+              <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
+              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6 border border-white/30 group-hover/card:scale-110 transition-transform backdrop-blur-sm">
+                <Users className="w-7 h-7 text-white drop-shadow-sm" />
+              </div>
+              <h3 className="font-bold text-emerald-100 uppercase tracking-widest text-xs mb-2">School Ranking</h3>
+              <div className="text-5xl font-black text-white tracking-tight">#2</div>
+              <p className="text-sm font-medium text-emerald-50 mt-4 bg-black/20 px-4 py-2 rounded-xl inline-block border border-white/10 backdrop-blur-md">Out of 156 students</p>
             </div>
-            <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
-              <Brain className="w-8 h-8 text-purple-600 mb-3" />
-              <h3 className="font-bold text-slate-900 mb-2">Knowledge Points</h3>
-              <div className="text-3xl font-extrabold text-purple-600">8,543</div>
-              <p className="text-sm text-slate-600 mt-2">+234 this week</p>
+
+            <div className="p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/40 dark:shadow-none hover:-translate-y-1 transition-transform group/card">
+              <div className="w-14 h-14 bg-purple-50 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mb-6 border border-purple-100 dark:border-purple-800 group-hover/card:scale-110 transition-transform">
+                <Brain className="w-7 h-7 text-purple-600 dark:text-purple-400" />
+              </div>
+              <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Knowledge Points</h3>
+              <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-slate-700">8,543</div>
+              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-4 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-2 rounded-xl inline-block border border-emerald-100 dark:border-emerald-800">+234 this week</p>
             </div>
           </div>
         </div>

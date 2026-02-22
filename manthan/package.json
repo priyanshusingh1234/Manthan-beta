@@ -9,7 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.91.1",
+    "@google/genai": "^1.42.0",
+    "@supabase/supabase-js": "^2.97.0",
+    "browser-image-compression": "^2.0.2",
+    "dotenv": "^17.3.1",
+    "https-proxy-agent": "^7.0.6",
     "lucide-react": "^0.563.0",
     "next": "^14.2.0",
     "react": "^18.3.1",
@@ -27,6 +31,5 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.3.3"
-  },
-  "optionalDependencies": {}
+  }
 }

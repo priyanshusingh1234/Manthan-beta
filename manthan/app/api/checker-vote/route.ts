@@ -1,0 +1,437 @@
+import { NextResponse } from "next/server";
+import { GoogleGenAI } from "@google/genai";
+import supabaseAdmin from "@/lib/supabaseAdmin";
+import { leaderboardCache } from "@/lib/leaderboardCache";
+
+async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
+    if (!authHeader) return null;
+    try {
+        const token = authHeader.replace(/^Bearer\s+/i, "");
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+        if (error || !user) return null;
+        return user.id;
+    } catch {
+        return null;
+    }
+}
+
+const CHECKER_REWARD_POINTS = 2;
+const CHECKER_CORRECT_REWARD_POINTS = 1;
+const SPAMMER_PENALTY = 1;
+const STUDENT_EXTRA_PENALTY = 3;
+
+// Initialize Gemini
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+type AIVerdict = { isCorrect: boolean; breakdown: string; raw: string };
+
+async function verifyWithGemini(userImageUrl: string, questionText: string, modelAnswerUrl: string | null): Promise<AIVerdict | null> {
+    try {
+        // In a real production scenario with image URLs, you would first fetch the image arrayBuffers
+        // and send them via inlineData, or download and convert to base64.
+        // For this V1 iteration, we will just send the public URLs and hope the model can access them,
+        // or we can instruct the AI to do its best. Gemini 1.5 Pro natively supports URL fetches if enabled, 
+        // but typically it needs Base64.
+
+        // Since we are uploading to Supabase, we can fetch the image buffer to send to Gemini:
+        let studentImagePart: any = undefined;
+        try {
+            const resp = await fetch(userImageUrl, { signal: AbortSignal.timeout(20000) });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const arrayBuffer = await resp.arrayBuffer();
+            const base64 = Buffer.from(arrayBuffer).toString('base64');
+            const mimeType = resp.headers.get('content-type') || 'image/jpeg';
+            studentImagePart = { inlineData: { data: base64, mimeType } };
+        } catch (e) {
+            console.error("Failed to fetch student image for AI", e);
+            return null; // Fatal error, AI cannot proceed
+        }
+
+        let teacherImagePart: any = undefined;
+        if (modelAnswerUrl) {
+            try {
+                const resp = await fetch(modelAnswerUrl, { signal: AbortSignal.timeout(20000) });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const arrayBuffer = await resp.arrayBuffer();
+                const base64 = Buffer.from(arrayBuffer).toString('base64');
+                const mimeType = resp.headers.get('content-type') || 'image/jpeg';
+                teacherImagePart = { inlineData: { data: base64, mimeType } };
+            } catch (e) {
+                console.error("Failed to fetch teacher image for AI", e);
+            }
+        }
+
+        const prompt = `You are a teacher grading a student's answer. 
+Question Text: ${questionText}
+${teacherImagePart ? "Teacher's Model Answer is provided as an image reference. " : ""}
+Student's Answer is provided as an image.
+
+Task:
+Determine if the student's actual final answer is correct. They do not need to perfectly show every step exactly as the teacher if their main conclusion and technique are right. 
+IMPORTANT LIMITATION: Do not blindly fail a student for using alternative math formulas or different problem-solving techniques. Check their work intelligently to see if it is mathematically and logically sound on its own merit.
+
+Respond ONLY with a valid JSON object matching this schema (no markdown formatting):
+{
+  "verdict": "correct" or "wrong",
+  "breakdown": "A clear, encouraging 3-4 sentence explanation addressing the student directly. Explain exactly where their math/logic fails, or why it was graded correctly despite using a different format."
+}`;
+
+        const contents = [];
+        contents.push(prompt);
+        if (teacherImagePart) contents.push(teacherImagePart);
+        if (studentImagePart) contents.push(studentImagePart);
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            // @ts-ignore
+            contents: contents,
+            config: {
+                responseMimeType: "application/json",
+            }
+        });
+
+        let text = response.text || "{}";
+        // Strip markdown backticks if Gemini accidentally includes them despite mimeType
+        text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+        const json = JSON.parse(text);
+
+        return {
+            isCorrect: json.verdict?.toLowerCase() === "correct",
+            breakdown: json.breakdown || "No detailed breakdown was provided.",
+            raw: text
+        };
+    } catch (err) {
+        console.error("Gemini Verification Error:", err);
+        return null; // Fatal error
+    }
+}
+
+// POST: Submit a checker vote
+export async function POST(req: Request) {
+    try {
+        const auth = req.headers.get("authorization");
+        const checkerId = await getVerifiedUserId(auth);
+        if (!checkerId) {
+            return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+        }
+
+        // Checkers cannot be teachers
+        const { data: checkerData } = await supabaseAdmin.auth.admin.getUserById(checkerId);
+        if (checkerData?.user?.user_metadata?.isTeacher) {
+            return NextResponse.json({ error: "Teachers cannot act as checkers" }, { status: 403 });
+        }
+
+        const { submissionId, vote } = await req.json();
+        if (!submissionId || !["correct", "wrong"].includes(vote)) {
+            return NextResponse.json({ error: "Invalid vote or missing submissionId" }, { status: 400 });
+        }
+
+        // Fetch submission
+        const { data: sub, error: subErr } = await supabaseAdmin
+            .from("written_submissions")
+            .select("*, questions(points)")
+            .eq("id", submissionId)
+            .single();
+
+        if (subErr || !sub) {
+            return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+        }
+
+        // Cannot vote on your own submission
+        if (sub.student_id === checkerId) {
+            return NextResponse.json({ error: "You cannot check your own submission" }, { status: 403 });
+        }
+
+        const currentStatus = sub.status;
+
+        // Only allow voting on pending_check
+        if (currentStatus !== "pending_check") {
+            return NextResponse.json({ error: "This submission has already been fully checked" }, { status: 400 });
+        }
+
+        // Check for duplicate vote
+        const { data: existingVote } = await supabaseAdmin
+            .from("checker_votes")
+            .select("id")
+            .eq("submission_id", submissionId)
+            .eq("checker_id", checkerId)
+            .maybeSingle();
+
+        if (existingVote) {
+            return NextResponse.json({ error: "You have already voted on this submission" }, { status: 403 });
+        }
+
+        // Record the vote
+        await supabaseAdmin.from("checker_votes").insert({
+            submission_id: submissionId,
+            checker_id: checkerId,
+            vote,
+        });
+
+        // Count votes
+        const { data: allVotes } = await supabaseAdmin
+            .from("checker_votes")
+            .select("checker_id, vote")
+            .eq("submission_id", submissionId);
+
+        const votes = allVotes || [];
+        const correctVotes = votes.filter(v => v.vote === "correct");
+        const wrongVotes = votes.filter(v => v.vote === "wrong");
+
+        let newStatus = currentStatus;
+        let message = "Vote recorded";
+
+        // TRIGGER A: 2 Correct Votes -> Lock in points, student is safe
+        if (correctVotes.length >= 2) {
+            newStatus = "auto_approved";
+            await supabaseAdmin
+                .from("written_submissions")
+                .update({ status: "auto_approved", updated_at: new Date().toISOString() })
+                .eq("id", submissionId);
+
+            message = "Community verified the answer as Correct. Submission closed.";
+
+            // Reward Checkers +1 point
+            for (const cv of correctVotes) {
+                const { data: voterData } = await supabaseAdmin.auth.admin.getUserById(cv.checker_id);
+                const voterMeta = voterData?.user?.user_metadata || {};
+                const voterPoints = (Number(voterMeta.totalPoints) || 0) + CHECKER_CORRECT_REWARD_POINTS;
+                await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
+                    user_metadata: { ...voterMeta, totalPoints: voterPoints },
+                });
+            }
+        }
+
+        // TRIGGER B: 2 Wrong Votes -> Trigger AI Verification
+        else if (wrongVotes.length >= 2) {
+            newStatus = "flagged_for_ai";
+            await supabaseAdmin
+                .from("written_submissions")
+                .update({ status: "flagged_for_ai", updated_at: new Date().toISOString() })
+                .eq("id", submissionId);
+
+            // Fetch teacher solution if available
+            const { data: teacherSol } = await supabaseAdmin
+                .from("teacher_solutions")
+                .select("solution_url")
+                .eq("question_id", sub.question_id)
+                .maybeSingle();
+
+            const questionText = (sub.questions as any)?.body || (sub.questions as any)?.title || "Solve this.";
+
+            // Run AI Verification with a generous 45-second timeout
+            let aiResult: AIVerdict | null = null;
+            try {
+                const startTime = Date.now();
+                aiResult = await Promise.race([
+                    verifyWithGemini(sub.submission_url, questionText, teacherSol?.solution_url || null),
+                    new Promise<AIVerdict | null>((_, reject) => setTimeout(() => reject(new Error("AI Verification Timeout")), 45000))
+                ]);
+                console.log(`[AI VERIFICATION COMPLETION SUCCESS]: took ${Date.now() - startTime}ms`);
+            } catch (timeoutErr) {
+                console.error("AI Verification failed or timed out:", timeoutErr);
+                aiResult = null; // Mark as catastrophic failure
+            }
+
+            // If the AI completely failed (timeout or network crash), abort the entire transaction
+            if (aiResult === null) {
+                // Rollback the vote so they can try again or wait for system to recover
+                await supabaseAdmin.from("checker_votes").delete().eq("checker_id", checkerId).eq("submission_id", submissionId);
+                await supabaseAdmin.from("written_submissions").update({ status: "pending_check" }).eq("id", submissionId);
+                return NextResponse.json({ error: "AI Verification service is currently overloaded. Please try flagging again in a moment." }, { status: 503 });
+            }
+
+            // Save the AI breakdown to storage
+            try {
+                const breakdownBuf = Buffer.from(JSON.stringify({
+                    verdict: aiResult.isCorrect ? "correct" : "wrong",
+                    breakdown: aiResult.breakdown,
+                    raw: aiResult.raw,
+                    timestamp: new Date().toISOString()
+                }), "utf8");
+                await supabaseAdmin.storage
+                    .from("written-answers")
+                    .upload(`ai-reviews/${submissionId}.json`, breakdownBuf, {
+                        contentType: "application/json",
+                        upsert: true
+                    });
+            } catch (uploadErr) {
+                console.error("Failed to upload AI breakdown to tracking bucket:", uploadErr);
+            }
+
+            if (aiResult.isCorrect === true) {
+                // Checkers lied / trolled
+                await supabaseAdmin
+                    .from("written_submissions")
+                    .update({ status: "ai_confirmed_correct", updated_at: new Date().toISOString() })
+                    .eq("id", submissionId);
+
+                newStatus = "ai_confirmed_correct";
+                message = "AI Verified: Answer was actually correct. Spam Checkers penalized.";
+
+                // Penalize the spam checkers -1 point
+                for (const cv of wrongVotes) {
+                    const { data: voterData } = await supabaseAdmin.auth.admin.getUserById(cv.checker_id);
+                    const voterMeta = voterData?.user?.user_metadata || {};
+                    const voterPoints = Math.max(0, (Number(voterMeta.totalPoints) || 0) - SPAMMER_PENALTY);
+                    await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
+                        user_metadata: { ...voterMeta, totalPoints: voterPoints },
+                    });
+                }
+                // Bust leaderboard cache so TopBrains updates immediately
+                leaderboardCache.invalidate();
+            } else {
+                // Checkers correctly caught a bad assignment
+                await supabaseAdmin
+                    .from("written_submissions")
+                    .update({ status: "ai_confirmed_wrong", updated_at: new Date().toISOString() })
+                    .eq("id", submissionId);
+
+                newStatus = "ai_confirmed_wrong";
+                message = "AI Verified: Answer is wrong. Checkers rewarded, student penalized.";
+
+                // 1. Penalize Student
+                const { data: studentData } = await supabaseAdmin.auth.admin.getUserById(sub.student_id);
+                const studentMeta = studentData?.user?.user_metadata || {};
+                const currentPoints = Number(studentMeta.totalPoints) || 0;
+                const questionPoints = Number((sub.questions as any)?.points || 0);
+
+                let totalDeduction = Number(sub.points_awarded || 0); // Undo provisional points
+                if (currentPoints > 0) {
+                    const standardPenalty = Math.floor(questionPoints / 5);
+                    totalDeduction += standardPenalty + STUDENT_EXTRA_PENALTY;
+                }
+                const newStudentTotal = Math.max(0, currentPoints - totalDeduction);
+
+                // Fix stats (remove falsely claimed win)
+                const battlesWon = Math.max(0, (Number(studentMeta.battlesWon) || 0) - 1);
+
+                await supabaseAdmin.auth.admin.updateUserById(sub.student_id, {
+                    user_metadata: {
+                        ...studentMeta,
+                        totalPoints: newStudentTotal,
+                        battlesWon,
+                    },
+                });
+
+                // 2. Reward Checkers +2 points
+                for (const cv of wrongVotes) {
+                    const { data: voterData } = await supabaseAdmin.auth.admin.getUserById(cv.checker_id);
+                    const voterMeta = voterData?.user?.user_metadata || {};
+                    const voterPoints = (Number(voterMeta.totalPoints) || 0) + CHECKER_REWARD_POINTS;
+                    await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
+                        user_metadata: { ...voterMeta, totalPoints: voterPoints },
+                    });
+                }
+                // Bust leaderboard cache so TopBrains updates immediately
+                leaderboardCache.invalidate();
+            }
+        }
+
+        return NextResponse.json({
+            success: true,
+            vote,
+            status: newStatus,
+            message,
+        });
+    } catch (err: any) {
+        console.error(err);
+        return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
+    }
+}
+
+export async function GET(req: Request) {
+    try {
+        const auth = req.headers.get("authorization");
+        const checkerId = await getVerifiedUserId(auth);
+        if (!checkerId) {
+            return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+        }
+
+        const now = new Date();
+
+        // Fetch ONLY pending_check submissions
+        const { data: submissions, error } = await supabaseAdmin
+            .from("written_submissions")
+            .select(`
+        id,
+        question_id,
+        student_id,
+        submission_url,
+        status,
+        created_at,
+        questions (
+          id,
+          title,
+          body,
+          points,
+          subject,
+          class_grade
+        )
+      `)
+            .eq("status", "pending_check")
+            .neq("student_id", checkerId)
+            .order("created_at", { ascending: true });
+
+        if (error) {
+            console.error("[checker-vote GET] DB error fetching submissions:", error);
+            return NextResponse.json({ error: "Failed to fetch submissions" }, { status: 500 });
+        }
+
+        console.log(`[checker-vote GET] checker=${checkerId} found ${submissions?.length ?? 0} open submissions`);
+
+        // Filter out submissions this checker already voted on
+        const { data: myVotes } = await supabaseAdmin
+            .from("checker_votes")
+            .select("submission_id")
+            .eq("checker_id", checkerId);
+
+        const votedIds = new Set((myVotes || []).map((v: any) => v.submission_id));
+        const available = (submissions || []).filter((s: any) => !votedIds.has(s.id));
+
+        // Enrich each submission
+        const enriched = await Promise.all(
+            available.map(async (sub: any) => {
+                // Teacher model answer
+                const { data: teacherSol } = await supabaseAdmin
+                    .from("teacher_solutions")
+                    .select("solution_url")
+                    .eq("question_id", sub.question_id)
+                    .maybeSingle();
+
+                // Student first name (anonymized)
+                const { data: studentData } = await supabaseAdmin.auth.admin.getUserById(sub.student_id);
+                const studentMeta = studentData?.user?.user_metadata || {};
+                const firstName = (studentMeta.fullName || studentMeta.name || "Student").split(" ")[0];
+
+                // Count both correct and wrong votes
+                const { data: voteInfo } = await supabaseAdmin
+                    .from("checker_votes")
+                    .select("vote")
+                    .eq("submission_id", sub.id);
+
+                const wCount = (voteInfo || []).filter(v => v.vote === "wrong").length;
+                const cCount = (voteInfo || []).filter(v => v.vote === "correct").length;
+
+                // Effective status is pure
+                const effectiveStatus = sub.status;
+
+                return {
+                    ...sub,
+                    status: effectiveStatus,
+                    studentFirstName: firstName,
+                    teacherSolutionUrl: teacherSol?.solution_url || null,
+                    wrongVotes: wCount,
+                    correctVotes: cCount,
+                    requiredToFlag: 2,
+                    windowOpen: true, // Legacy field for component support
+                };
+            })
+        );
+
+        return NextResponse.json(enriched);
+    } catch (err: any) {
+        console.error(err);
+        return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });
+    }
+}

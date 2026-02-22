@@ -1,0 +1,408 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+import TeacherBadge from "@/ticks/teacher";
+
+export default function SolveQuestionClient({ question }: { question: any }) {
+    const router = useRouter();
+    const [selectedOption, setSelectedOption] = useState<number | null>(null);
+    const [timeLeft, setTimeLeft] = useState<number>(question.time_limit * 60);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [result, setResult] = useState<{ isCorrect: boolean, newTotal: number, correctOption: number, pointsChange: number } | null>(null);
+    const [startedAt] = useState(() => new Date().toISOString());
+
+    const [authChecked, setAuthChecked] = useState(false);
+    const [alreadyAttempted, setAlreadyAttempted] = useState<any>(null);
+    const [rating, setRating] = useState<number>(0);
+    const [hoverRating, setHoverRating] = useState<number>(0);
+    const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
+    useEffect(() => {
+        let mounted = true;
+        const checkAuthAndAttempt = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                if (mounted) router.push("/login");
+                return;
+            }
+
+            if (session.user.user_metadata?.isTeacher) {
+                if (mounted) router.push("/");
+                return;
+            }
+
+            // Check if already attempted query via RLS or direct
+            const { data, error } = await supabase
+                .from("question_attempts")
+                .select("is_correct, selected_option, time_taken")
+                .eq("user_id", session.user.id)
+                .eq("question_id", question.id)
+                .maybeSingle();
+
+            if (mounted) {
+                if (data) setAlreadyAttempted(data);
+                setAuthChecked(true);
+            }
+        };
+        checkAuthAndAttempt();
+        return () => { mounted = false; };
+    }, [question.id, router]);
+
+    const publicUrl = question.image_url || (question.image_path ? supabase.storage.from("question-images").getPublicUrl(question.image_path).data.publicUrl : null);
+
+    const handleSubmit = useCallback(async (forcedOption?: number | null) => {
+        if (isSubmitting || result) return;
+        setIsSubmitting(true);
+
+        const optionToSend = forcedOption !== undefined ? forcedOption : selectedOption;
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const res = await fetch("/api/solve", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    questionId: question.id,
+                    selectedOption: optionToSend ?? null,
+                    startedAt,
+                    timeTaken: Math.max(0, question.time_limit * 60 - timeLeft),
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || "Failed to submit answer");
+                setIsSubmitting(false);
+                return;
+            }
+
+            setResult(data);
+        } catch (err: any) {
+            alert("Network error: " + err.message);
+            setIsSubmitting(false);
+        }
+    }, [isSubmitting, result, selectedOption, startedAt, question, timeLeft]);
+
+    // Timer effect
+    useEffect(() => {
+        if (!authChecked || alreadyAttempted || result || isSubmitting) return;
+
+        if (timeLeft <= 0) {
+            handleSubmit(selectedOption);
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [timeLeft, authChecked, alreadyAttempted, result, isSubmitting, handleSubmit, selectedOption]);
+
+    const formatTime = (secs: number) => {
+        const mins = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${mins}:${s.toString().padStart(2, "0")}`;
+    };
+
+    const difficultyColor = (difficulty?: string) => {
+        switch (difficulty?.toLowerCase()) {
+            case "easy": return "bg-emerald-100 text-emerald-800 border-emerald-200";
+            case "medium":
+            case "moderate": return "bg-amber-100 text-amber-800 border-amber-200";
+            case "hard": return "bg-red-100 text-red-800 border-red-200";
+            default: return "bg-slate-100 text-slate-800 border-slate-200";
+        }
+    };
+
+    const handleReviewSubmit = async () => {
+        if (rating === 0) return;
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const res = await fetch("/api/reviews", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    questionId: question.id,
+                    teacherId: question.created_by,
+                    rating
+                })
+            });
+
+            if (res.ok) {
+                setReviewSubmitted(true);
+            } else {
+                const errorData = await res.json();
+                alert(errorData.error || "Failed to submit review");
+            }
+        } catch (error) {
+            console.error("Review Error:", error);
+            alert("Error submitting review");
+        }
+    };
+
+    const renderTeacherProfile = () => {
+        const tLink = question.teacherUsername ? `/teacher/${question.teacherUsername}` : "#";
+        return (
+            <div className="flex items-center gap-4 p-4 mb-6 bg-slate-50 border border-slate-100 rounded-2xl">
+                <a href={tLink} className="relative block shrink-0">
+                    {question.teacherAvatar ? (
+                        <img src={question.teacherAvatar} alt="Teacher" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+                    ) : (
+                        <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 font-bold flex items-center justify-center border-2 border-white shadow-sm">
+                            {String(question.teacherName?.[0] || 'T').toUpperCase()}
+                        </div>
+                    )}
+                </a>
+                <div className="flex flex-col">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-0.5">Posted By</span>
+                    <a href={tLink} className="font-bold flex items-center text-slate-800 hover:text-indigo-600 transition-colors">
+                        {question.teacherName || "Verified Teacher"}
+                        <TeacherBadge />
+                    </a>
+                </div>
+            </div>
+        );
+    };
+
+    if (!authChecked) {
+        return (
+            <div className="flex flex-col items-center justify-center p-20 text-slate-400 space-y-4">
+                <Loader2 className="w-10 h-10 animate-spin" />
+                <p className="font-medium animate-pulse">Loading battle arena...</p>
+            </div>
+        );
+    }
+
+    if (alreadyAttempted) {
+        return (
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 text-center space-y-6 animate-in fade-in zoom-in-95">
+                <div className="flex justify-center">
+                    {alreadyAttempted.is_correct ? (
+                        <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                            <CheckCircle2 className="w-10 h-10" />
+                        </div>
+                    ) : (
+                        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                            <XCircle className="w-10 h-10" />
+                        </div>
+                    )}
+                </div>
+                <h2 className="text-3xl font-black text-slate-900">
+                    You have already attempted this question.
+                </h2>
+
+                <p className="text-lg text-slate-600 max-w-md mx-auto">
+                    Your answer was <span className="font-bold">{alreadyAttempted.is_correct ? "Correct" : "Incorrect"}</span>.
+                </p>
+                <div className="pt-6">
+                    <button
+                        onClick={() => router.push("/")}
+                        className="bg-slate-900 text-white font-bold px-8 py-3 rounded-full hover:bg-slate-800 transition"
+                    >
+                        Back to Dashboard
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (result) {
+        return (
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 text-center space-y-6 animate-in fade-in zoom-in-95">
+                <div className="flex justify-center">
+                    {result.isCorrect ? (
+                        <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                            <CheckCircle2 className="w-10 h-10" />
+                        </div>
+                    ) : (
+                        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                            <XCircle className="w-10 h-10" />
+                        </div>
+                    )}
+                </div>
+                <h2 className="text-3xl font-black text-slate-900">
+                    {result.isCorrect ? "Correct!" : "Incorrect!"}
+                </h2>
+
+                <p className="text-lg text-slate-600 max-w-md mx-auto">
+                    {result.isCorrect
+                        ? `Brilliant job! You earned ${result.pointsChange} points.`
+                        : `Keep learning! You lost ${Math.abs(result.pointsChange)} points.`
+                    }
+                </p>
+
+                <div className="p-6 bg-slate-50 rounded-2xl inline-block w-full max-w-sm border border-slate-200">
+                    <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Total Points</div>
+                    <div className="text-4xl font-black text-indigo-600">{result.newTotal}</div>
+                </div>
+
+                {!result.isCorrect && question.options && result.correctOption !== undefined && result.correctOption !== null && (
+                    <div className="mt-6 text-sm">
+                        <span className="text-slate-500 font-medium">The correct answer was: </span>
+                        <strong className="text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded">
+                            {question.options[result.correctOption]}
+                        </strong>
+                    </div>
+                )}
+
+                <div className="pt-6 border-t border-slate-100 mt-6 max-w-md mx-auto">
+                    {!reviewSubmitted ? (
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                            <h3 className="font-bold text-slate-800 mb-2">Rate this Question</h3>
+                            <p className="text-sm text-slate-500 mb-4">Help us identify the best content from our teachers.</p>
+                            <div className="flex justify-center gap-2 mb-4">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        onMouseEnter={() => setHoverRating(star)}
+                                        onMouseLeave={() => setHoverRating(0)}
+                                        onClick={() => setRating(star)}
+                                        className="focus:outline-none transition-transform hover:scale-110"
+                                    >
+                                        <Star
+                                            className={`w-8 h-8 transition-colors ${(hoverRating || rating) >= star
+                                                ? "fill-amber-400 text-amber-400"
+                                                : "fill-slate-200 text-slate-200"
+                                                }`}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={handleReviewSubmit}
+                                disabled={rating === 0}
+                                className="flex items-center justify-center gap-2 w-full bg-indigo-600 text-white font-bold py-2.5 rounded-xl hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Send className="w-4 h-4" /> Submit Rating
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl border border-emerald-100 font-medium flex items-center justify-center gap-2">
+                            <CheckCircle2 className="w-5 h-5" /> Thanks for your feedback!
+                        </div>
+                    )}
+
+                    <div className="mt-6">
+                        <button
+                            onClick={() => router.push("/")}
+                            className="w-full bg-slate-900 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-slate-800 transition shadow-lg shadow-slate-900/20"
+                        >
+                            Back to Dashboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-5">
+            {/* Top Bar: Timer & Points */}
+            <div className="flex items-center justify-between bg-white/95 backdrop-blur-md px-5 py-3 rounded-2xl border border-gray-200 shadow-sm sticky top-4 z-40">
+                <div className={`flex items-center gap-2 font-mono text-lg font-medium px-4 py-1.5 rounded-full ${timeLeft <= 30 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-100/80 text-gray-700'}`}>
+                    <Clock className="w-4 h-4" />
+                    {formatTime(timeLeft)}
+                </div>
+
+                <div className="flex items-center gap-2">
+                    {/* Penalty Badge */}
+                    <div className="hidden sm:flex items-center gap-1 text-gray-500 px-3 py-1.5 rounded-full border border-gray-100 bg-gray-50 text-xs font-medium cursor-help" title="Penalty if answered incorrectly">
+                        <span>- {Math.floor((question.points || 0) / 5)} pts if wrong</span>
+                    </div>
+
+                    {/* Reward Badge */}
+                    <div className="flex items-center gap-1.5 bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-medium shadow-sm transition-transform hover:scale-105 cursor-help" title="Reward if correct">
+                        <span className="font-semibold">{question.points || 0} points</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Card */}
+            <div className="bg-white rounded-[2rem] p-6 sm:p-12 shadow-sm border border-gray-200 relative overflow-hidden">
+                {renderTeacherProfile()}
+
+                <div className="mb-8 flex flex-wrap gap-2">
+                    {question.class_grade && (
+                        <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium tracking-wide">Class {question.class_grade}</span>
+                    )}
+                    {question.subject && (
+                        <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium tracking-wide">{question.subject}</span>
+                    )}
+                    {question.difficulty && (
+                        <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium capitalize tracking-wide">
+                            {question.difficulty}
+                        </span>
+                    )}
+                </div>
+
+                <h1 className="text-2xl sm:text-4xl font-semibold text-gray-900 mb-6 leading-relaxed tracking-tight">
+                    {question.title}
+                </h1>
+
+                {question.body && (
+                    <p className="text-gray-600 leading-relaxed text-lg sm:text-xl mb-10 whitespace-pre-wrap font-light">
+                        {question.body}
+                    </p>
+                )}
+
+                {publicUrl && (
+                    <div className="mb-12 rounded-[1.5rem] overflow-hidden bg-gray-50/50 flex items-center justify-center p-6 border border-gray-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={publicUrl} alt="Question Attachment" className="max-h-[400px] object-contain rounded-xl drop-shadow-sm" />
+                    </div>
+                )}
+
+                {/* Options */}
+                {question.options && question.options.length > 0 && (
+                    <div className="grid gap-3 mt-8">
+                        {question.options.map((opt: string, idx: number) => {
+                            const isSelected = selectedOption === idx;
+                            return (
+                                <button
+                                    key={idx}
+                                    onClick={() => setSelectedOption(idx)}
+                                    className={`relative p-5 sm:p-6 text-left rounded-2xl border transition-all duration-200 flex items-center gap-4 group ${isSelected
+                                        ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500 z-10"
+                                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/80 text-gray-700"
+                                        }`}
+                                >
+                                    <div className={`shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+                                        }`}>
+                                        {String.fromCharCode(65 + idx)}
+                                    </div>
+                                    <span className={`text-base sm:text-lg transition-colors ${isSelected ? "text-blue-900 font-medium" : "text-gray-700"}`}>{opt}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Footer sticky submit integrated inside card */}
+                <div className="mt-12 pt-8 border-t border-gray-100 flex justify-end">
+                    <button
+                        onClick={() => handleSubmit()}
+                        disabled={selectedOption === null || isSubmitting}
+                        className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-medium text-lg px-10 py-4 rounded-full transition-all w-full sm:w-auto justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                    >
+                        {isSubmitting ? "Submitting..." : "Submit Answer"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}

@@ -1,301 +1,324 @@
 'use client';
 
-import { useState, useEffect } from 'react'
-import Image from 'next/image'
-import { usePathname } from 'next/navigation'
-import Link from 'next/link'
-import { Menu, X } from 'lucide-react'
-import Logo from './Logo'
-import { supabase } from '@/lib/supabaseClient'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import Image from 'next/image';
+import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield } from 'lucide-react';
+import Logo from './Logo';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function Header({ isMobile = false }) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const pathname = usePathname()
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const pathname = usePathname();
+  const dropdownRef = useRef(null);
+  const avatarButtonRef = useRef(null);
+  const portalRef = useRef(null);
+  const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0 });
 
-  // Auth state (hooks must run unconditionally)
-  const [user, setUser] = useState(null)
-  const router = useRouter()
+  const [user, setUser] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
-    let mounted = true
+    let mounted = true;
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (mounted) setUser(user)
-    })
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) setUser(session?.user ?? null)
-    })
-    return () => {
-      mounted = false
-      listener?.subscription.unsubscribe()
-    }
-  }, [])
+      if (mounted) setUser(user);
+    });
 
-  // Close menu on escape key
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) setUser(session?.user ?? null);
+    });
+
+    return () => {
+      mounted = false;
+      listener?.subscription.unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && menuOpen) {
-        setMenuOpen(false)
+    function handleClickOutside(event) {
+      const clickedInsideHost = dropdownRef.current && dropdownRef.current.contains(event.target);
+      const clickedInsidePortal = portalRef.current && portalRef.current.contains(event.target);
+      if (!clickedInsideHost && !clickedInsidePortal) {
+        setDropdownOpen(false);
       }
     }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [menuOpen])
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  // Prevent body scroll when menu is open
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [menuOpen, dropdownOpen]);
+
   useEffect(() => {
     if (menuOpen) {
-      document.body.style.overflow = 'hidden'
+      document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = ''
+      document.body.style.overflow = '';
     }
     return () => {
-      document.body.style.overflow = ''
-    }
-  }, [menuOpen])
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
 
-  // Skip rendering full header on login/signup pages
+  useEffect(() => {
+    function updatePosition() {
+      const btn = avatarButtonRef.current;
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      const dropdownWidth = 224; // 14rem for the new dropdown
+      const left = Math.max(8, rect.right - dropdownWidth);
+      const top = rect.bottom + window.scrollY + 12; // Gap of 12px
+      setDropdownCoords({ top, left });
+    }
+
+    if (dropdownOpen) {
+      updatePosition();
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition, true);
+      return () => {
+        window.removeEventListener('resize', updatePosition);
+        window.removeEventListener('scroll', updatePosition, true);
+      };
+    }
+  }, [dropdownOpen]);
+
   if (pathname === '/login' || pathname === '/signup') {
-    return null
+    return null;
   }
 
+  const isActive = (path) => pathname === path;
 
-  // Helper function to determine if a link is active
-  const isActive = (path) => pathname === path
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setDropdownOpen(false);
+    router.push('/');
+  };
 
-  // Hide mobile slider nav if Android/mobile
+  const UserAvatar = () => (
+    <span className="inline-block h-10 w-10 sm:h-11 sm:w-11 rounded-full overflow-hidden border-[3px] border-white/40 hover:border-white transition-all shadow-lg hover:shadow-white/20">
+      {user.user_metadata?.avatar_url ? (
+        <Image
+          src={user.user_metadata.avatar_url}
+          alt="avatar"
+          width={44}
+          height={44}
+          className="object-cover w-full h-full"
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <span className="flex items-center justify-center h-full w-full text-xl font-bold text-indigo-700 bg-white shadow-inner">
+          {user.user_metadata?.fullName?.[0]?.toUpperCase() ||
+            user.email?.[0]?.toUpperCase() ||
+            'U'}
+        </span>
+      )}
+    </span>
+  );
+
+  // Map pathname to a Title and Icon for the dynamic central banner
+  const getPageInfo = () => {
+    if (!pathname || pathname === '/') return null; // Home page doesn't show a title in header
+    if (pathname.startsWith('/profile')) return { title: 'User Profile', icon: User };
+    if (pathname.startsWith('/questions/create')) return { title: 'Create Custom Question', icon: PlusCircle };
+    if (pathname.startsWith('/questions')) return { title: 'Solve Question', icon: FileQuestion };
+    if (pathname.startsWith('/leaderboard')) return { title: 'Global Leaderboard', icon: Trophy };
+    if (pathname.startsWith('/contact')) return { title: 'Contact Us', icon: Mail };
+    if (pathname.startsWith('/about')) return { title: 'About Manthan', icon: Info };
+    if (pathname.startsWith('/teacher')) return { title: 'Teacher Profile', icon: GraduationCap };
+    if (pathname.startsWith('/subject')) return { title: 'Subject Hub', icon: BookOpen };
+    if (pathname.startsWith('/docs')) return { title: 'Documentation', icon: HelpCircle };
+    if (pathname.startsWith('/privacy')) return { title: 'Privacy Policy', icon: Shield };
+
+    const fallbackTitle = pathname.split('/')[1] || '';
+    return { title: fallbackTitle.charAt(0).toUpperCase() + fallbackTitle.slice(1) || 'Page', icon: Sparkles };
+  };
+
+  const pageInfo = getPageInfo();
+
   return (
-    <header className="relative isolate overflow-hidden">
-      {/* More vibrant animated gradient background */}
-      <div 
-        className="absolute inset-0 bg-gradient-to-br from-fuchsia-600 via-blue-500 to-cyan-400 animate-gradient-slow blur-[1px] opacity-90" 
-        style={{ backgroundSize: '200% 200%' }}
-        aria-hidden="true" 
-      />
-      {/* Glowing overlay effect */}
-      <div 
-        className="absolute inset-0 opacity-40"
-        style={{
-          background: 'radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.3) 0%, transparent 60%)'
-        }}
-        aria-hidden="true"
-      />
-      {/* Orange curved shape top-right with animation */}
-      <div
-        className="absolute right-0 top-0 h-40 w-2/3 bg-orange-400 transition-all duration-700"
-        style={{
-          clipPath: 'path("M0,0 C120,0 220,40 320,90 L320,0 Z")',
-          WebkitClipPath: 'path("M0,0 C120,0 220,40 320,90 L320,0 Z")',
-          opacity: 0.95,
-        }}
-        aria-hidden="true"
-      />
+    <header className="relative isolate z-50">
+      {/* Dynamic Main Header Background */}
+      <div className="absolute inset-0 overflow-hidden -z-10 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-xl pointer-events-none rounded-b-[2rem] border-b border-white/10">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/30 via-blue-500/30 to-cyan-400/30 animate-gradient-slow blur-[2px]" />
 
-      <div className="relative z-10">
-        {/* Top nav */}
-        <div className="flex items-center justify-between px-4 pt-4 sm:px-6 lg:px-8">
-          {/* Mobile menu button - hidden on mobile devices that have bottom nav */}
-          {!isMobile && (
-            <button 
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="lg:hidden inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-xl p-2 text-white/90 hover:bg-white/20 transition-all duration-300 hover:shadow-lg hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-              aria-expanded={menuOpen}
-              aria-controls="mobile-menu"
-            >
-              {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
-          )}
-          
-          {/* Desktop navigation - inline horizontal links */}
-          <nav className="hidden lg:flex items-center gap-6" aria-label="Primary navigation">
-            <Link 
-              href="/" 
-              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-2 py-1 ${
-                isActive('/') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
-              }`}
-            >
-              Home
-            </Link>
-            <Link 
-              href="/leaderboard"
-              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-2 py-1 ${
-                isActive('/leaderboard') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
-              }`}
-            >
-              Leaderboard
-            </Link>
-            <Link 
-              href="/contact"
-              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-2 py-1 ${
-                isActive('/contact') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
-              }`}
-            >
-              Contact
-            </Link>
-            <Link 
-              href="/about"
-              className={`font-medium transition-colors duration-200 hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-2 py-1 ${
-                isActive('/about') ? 'text-white font-semibold' : 'text-white/90 hover:text-white'
-              }`}
-            >
-              About
-            </Link>
-          </nav>
+        {/* Animated glowing orbs */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/20 rounded-full mix-blend-overlay filter blur-3xl animate-float" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-fuchsia-400/20 rounded-full mix-blend-overlay filter blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+      </div>
 
-          <div className="inline-flex items-center gap-3">
+      <div className="px-4 py-3 sm:px-6 lg:px-8 mx-auto xl:max-w-screen-2xl">
+        <div className="flex items-center justify-between">
+
+          {/* Top Left: Logo */}
+          <Link href="/" className="flex items-center gap-3 shrink-0 hover:scale-[1.03] active:scale-95 transition-all duration-300 relative group">
+            <div className="relative h-11 w-11 flex items-center justify-center bg-white/10 rounded-2xl backdrop-blur-md border border-white/20 shadow-lg group-hover:bg-white/20 transition-all">
+              <Logo width={30} height={30} />
+            </div>
+          </Link>
+
+          {/* Top Center: Title & Page Info */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:flex items-center gap-2 px-6 py-2.5 bg-white/10 backdrop-blur-xl rounded-full border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.12)] animate-slideUp overflow-hidden group hover:bg-white/15 transition-colors">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+            <span className="text-sm sm:text-base font-extrabold tracking-[0.15em] text-white drop-shadow-md">
+              MANTHAN
+            </span>
+            {pageInfo && (
+              <>
+                <span className="text-white/40 text-[10px] sm:text-xs font-bold px-0.5">•</span>
+                <pageInfo.icon className="w-5 h-5 text-indigo-100 animate-pulse hidden sm:block" />
+                <span className="text-[10px] sm:text-sm font-bold text-white tracking-widest uppercase truncate max-w-[200px] lg:max-w-[400px]">
+                  {pageInfo.title}
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Mobile Centered Title */}
+          <div className="flex md:hidden flex-1 justify-center px-2">
+            <div className="flex flex-col items-center">
+              <span className="text-base font-extrabold tracking-[0.15em] text-white drop-shadow-md">
+                MANTHAN
+              </span>
+              {pageInfo && (
+                <div className="flex items-center gap-1 opacity-90">
+                  <pageInfo.icon className="w-3 h-3 text-indigo-100" />
+                  <span className="text-[10px] font-bold text-white tracking-widest uppercase truncate max-w-[120px]">
+                    {pageInfo.title}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top Right: Actions & Auth */}
+          <div className="flex items-center gap-3 shrink-0">
+
+
+
             {user ? (
               <>
-                <Link 
-                  href="/profile" 
-                  className="flex items-center gap-2 text-white/90 font-medium hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-2 py-1"
-                  aria-label="View profile"
-                >
-                  <span className="inline-block h-9 w-9 rounded-full overflow-hidden bg-white/20 border border-white/30">
-                    {user.user_metadata?.avatar_url ? (
-                      <Image
-                        src={user.user_metadata.avatar_url}
-                        alt="avatar"
-                        width={36}
-                        height={36}
-                        className="rounded-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <span className="flex items-center justify-center h-full w-full text-lg font-bold text-blue-700 bg-white/60 rounded-full">
-                        {user.user_metadata?.fullName?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-                      </span>
-                    )}
-                  </span>
-                  <span className="hidden sm:inline">Profile</span>
+                {/* Mobile Icons */}
+                {user?.user_metadata?.isTeacher && (
+                  <Link
+                    href="/questions/create"
+                    className="lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-full text-white bg-blue-500/40 border border-white/30 hover:bg-blue-500/60 transition-all shadow-md active:scale-95"
+                  >
+                    <PlusCircle className="h-5 w-5" />
+                  </Link>
+                )}
+
+                <Link href="/profile" className="lg:hidden active:scale-95 transition-transform">
+                  <UserAvatar />
                 </Link>
-                <button
-                  onClick={async () => { await supabase.auth.signOut(); setUser(null); router.push('/') }}
-                  className="text-white/90 hover:text-white transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-3 py-1.5"
-                  aria-label="Sign out of your account"
-                >
-                  Sign out
-                </button>
+
+                {/* Desktop Icons */}
+                <div className="hidden lg:flex items-center gap-4">
+                  {user?.user_metadata?.isTeacher && (
+                    <Link
+                      href="/questions/create"
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 border border-white/30 rounded-xl text-white font-semibold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                    >
+                      <PlusCircle className="h-5 w-5" />
+                      <span>Post Question</span>
+                    </Link>
+                  )}
+
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      ref={avatarButtonRef}
+                      onClick={() => setDropdownOpen(!dropdownOpen)}
+                      className="group flex items-center gap-2 outline-none"
+                    >
+                      <div className="relative transition-transform duration-300 group-hover:scale-105 group-hover:-translate-y-0.5">
+                        <UserAvatar />
+                        {/* Glow ring on hover */}
+                        <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:animate-ping mix-blend-overlay" />
+                      </div>
+                    </button>
+
+                    {/* Portal Dropdown Menu */}
+                    {dropdownOpen && typeof window !== 'undefined' && createPortal(
+                      <div
+                        ref={portalRef}
+                        className="bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-popIn w-56 flex flex-col"
+                        style={{ position: 'absolute', top: dropdownCoords.top, left: dropdownCoords.left, zIndex: 9999 }}
+                      >
+                        <div className="px-5 py-5 bg-gradient-to-br from-indigo-50 to-purple-50 border-b border-gray-100">
+                          <p className="text-xs font-extrabold text-indigo-500 uppercase tracking-widest mb-1 shadow-sm">Account</p>
+                          <p className="text-sm font-bold text-gray-800 truncate">
+                            {user.email}
+                          </p>
+                        </div>
+
+                        <div className="p-2 space-y-1 bg-white">
+                          <Link
+                            href="/profile"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 hover:shadow-sm border border-transparent hover:border-indigo-100 transition-all"
+                          >
+                            <User className="h-5 w-5" />
+                            <span>My Profile</span>
+                          </Link>
+
+                          <Link
+                            href="/docs"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 hover:shadow-sm border border-transparent hover:border-indigo-100 transition-all"
+                          >
+                            <HelpCircle className="h-5 w-5" />
+                            <span>Help &amp; Docs</span>
+                          </Link>
+
+                          <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 hover:shadow-sm border border-transparent hover:border-red-100 transition-all"
+                          >
+                            <LogOut className="h-5 w-5" />
+                            <span>Sign out</span>
+                          </button>
+                        </div>
+                      </div>,
+                      document.body
+                    )}
+                  </div>
+                </div>
               </>
             ) : (
-              <>
-                <Link 
-                  href="/signup" 
-                  className="text-white/90 hover:text-white transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-3 py-1.5"
-                >
-                  Sign up
-                </Link>
-                <Link 
-                  href="/login" 
-                  className="text-white/90 hover:text-white transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 rounded px-3 py-1.5"
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/login"
+                  className="hidden sm:inline-block text-white font-semibold hover:text-blue-100 transition-colors px-4 py-2 text-sm"
                 >
                   Sign in
                 </Link>
-              </>
+                <Link
+                  href="/signup"
+                  className="hidden sm:inline-block text-indigo-900 bg-white hover:bg-blue-50 transition-all font-bold rounded-xl px-5 py-2.5 shadow-[0_4px_14px_0_rgba(255,255,255,0.39)] hover:shadow-[0_6px_20px_rgba(255,255,255,0.23)] hover:-translate-y-[1px]"
+                >
+                  Join Manthan
+                </Link>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Overlay and slider menu hidden on mobile devices with bottom nav */}
-        {!isMobile && menuOpen && (
-          <div 
-            className="lg:hidden fixed inset-0 bg-black/40 z-50 transition-opacity duration-300"
-            onClick={() => setMenuOpen(false)}
-            aria-hidden="true"
-          />
-        )}
-        {!isMobile && (
-          <div 
-            id="mobile-menu"
-            className={`lg:hidden fixed top-0 left-0 right-0 h-screen bg-white shadow-2xl z-[60] transform transition-transform duration-300 ease-in-out ${
-              menuOpen ? 'translate-y-0' : '-translate-y-full'
-            }`}
-            aria-hidden={!menuOpen}
-          >
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <span className="text-lg font-bold text-gray-900">Menu</span>
-              <button 
-                onClick={() => setMenuOpen(false)}
-                className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg p-2 text-gray-600 hover:bg-gray-100 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                aria-label="Close menu"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <nav className="py-4" aria-label="Mobile navigation">
-              <Link 
-                href="/" 
-                onClick={() => setMenuOpen(false)}
-                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                  isActive('/') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-                }`}
-              >
-                Home
-              </Link>
-              <Link 
-                href="/leaderboard"
-                onClick={() => setMenuOpen(false)}
-                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                  isActive('/leaderboard') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-                }`}
-              >
-                Leaderboard
-              </Link>
-              <Link 
-                href="/contact"
-                onClick={() => setMenuOpen(false)}
-                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                  isActive('/contact') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-                }`}
-              >
-                Contact
-              </Link>
-              <Link 
-                href="/about"
-                onClick={() => setMenuOpen(false)}
-                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                  isActive('/about') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-                }`}
-              >
-                About
-              </Link>
-              <Link 
-                href="/signup"
-                onClick={() => setMenuOpen(false)}
-                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                  isActive('/signup') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-                }`}
-              >
-                Sign Up
-              </Link>
-              <Link 
-                href="/login"
-                onClick={() => setMenuOpen(false)}
-                className={`block px-6 py-3 hover:bg-blue-50 transition-colors duration-200 font-medium ${
-                  isActive('/login') ? 'text-blue-600 font-semibold bg-blue-50' : 'text-gray-900'
-                }`}
-              >
-                Sign In
-              </Link>
-            </nav>
-          </div>
-        )}
-
-        {/* Centered logo with pulse effect */}
-        <div className="flex items-center justify-center py-3">
-          <Link href="/" className="flex items-center gap-3 animate-fadeIn hover:scale-105 transition-transform duration-300">
-            <div className="relative h-9 w-9 animate-pulse-soft">
-              {/* Glow effect behind logo */}
-              <div className="absolute inset-0 h-9 w-9 rounded-full bg-white/20 blur-sm"></div>
-              <Logo width={36} height={36} />
-            </div>
-            <span className="text-2xl font-extrabold tracking-wide text-white drop-shadow-lg">MANTHAN</span>
-          </Link>
-        </div>
       </div>
 
-      {/* spacer height for header - reduced */}
-      <div className="h-24" />
+      {/* Header spacer */}
+      <div className="hidden sm:block h-20 sm:h-24 md:h-28" />
     </header>
-  )
+  );
 }

@@ -1,6 +1,8 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import Header from '@/components/Header';
+import DesktopSidebar from '@/components/DesktopSidebar';
+import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
 const BottomNav = dynamic(() => import('@/components/BottomNav'), { ssr: false });
@@ -26,12 +28,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   // Show BottomNav on all mobile devices (Android, iOS, or small screens)
   const showBottomNav = isMobile;
+  const pathname = usePathname();
+  const hideSidebar = pathname === '/login' || pathname === '/signup';
 
   return (
     <>
-      <Header isMobile={isMobile} />
-      {children}
-      {showBottomNav && <BottomNav />}
+      {!hideSidebar && <DesktopSidebar />}
+      <div className={hideSidebar ? 'lg:pl-0' : 'lg:pl-64'}>
+        <Header isMobile={isMobile} />
+        {children}
+        {showBottomNav && <BottomNav />}
+      </div>
     </>
   );
 }

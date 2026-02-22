@@ -27,3 +27,24 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Env files — never commit secrets
+.env
+.env.local
+.env*.local
+
+# Build info
+tsconfig.tsbuildinfo
+
+# Temp / one-off scripts — not part of the app
+test_ai_flow.mjs
+check.mjs
+check_table.ts
+fix-signup-bg.js
+fix-styling.js
+fix_profile.js
+patch_jwt.js
+redesign_profiles.js
+show_users.js
+scripts/
+data/
