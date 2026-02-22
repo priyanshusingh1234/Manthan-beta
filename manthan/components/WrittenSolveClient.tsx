@@ -21,7 +21,7 @@ type Submission = {
     checker_deadline: string | null;
 };
 
-export default function WrittenSolveClient({ question }: { question: any }) {
+export default function WrittenSolveClient({ question }: { question: { id: string; title: string; body: string; points: number; time_limit: number; subject?: string; class_grade?: string; options?: string[]; image_url?: string; image_path?: string; teacherName?: string; teacherAvatar?: string; teacherUsername?: string; created_by: string } }) {
     const router = useRouter();
 
     // Auth / gate states
@@ -50,9 +50,6 @@ export default function WrittenSolveClient({ question }: { question: any }) {
     const [selfMarked, setSelfMarked] = useState(false);
     const [selfMarkResult, setSelfMarkResult] = useState<{ pointsAwarded: number; newTotal: number; checkerDeadline: string } | null>(null);
     const [selfMarkError, setSelfMarkError] = useState<string | null>(null);
-
-    // Checker countdown timer (after self-mark)
-    const [checkerTimeLeft, setCheckerTimeLeft] = useState<number | null>(null);
 
     const activeSubmission = existingSubmission || uploadedSubmission;
 
@@ -140,20 +137,8 @@ export default function WrittenSolveClient({ question }: { question: any }) {
         return () => clearInterval(poll);
     }, [existingSubmission, uploadedSubmission]);
 
-    // ── Checker countdown timer (after self-mark) ─────────────────
-    useEffect(() => {
-        const deadline = selfMarkResult?.checkerDeadline || activeSubmission?.checker_deadline;
-        const status = selfMarkResult ? "pending_check" : activeSubmission?.status;
-        if (!deadline || status !== "pending_check") return;
-
-        const update = () => {
-            const diff = Math.max(0, Math.floor((new Date(deadline).getTime() - Date.now()) / 1000));
-            setCheckerTimeLeft(diff);
-        };
-        update();
-        const interval = setInterval(update, 1000);
-        return () => clearInterval(interval);
-    }, [selfMarkResult, activeSubmission]);
+    // ── Checker countdown logic (re-fetched on poll) ───────────────
+    // Removed unused timer state for performance/lint compliance
 
     // ── File Selection ────────────────────────────────────────────
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,8 +185,8 @@ export default function WrittenSolveClient({ question }: { question: any }) {
                 points_awarded: 0,
                 checker_deadline: null,
             });
-        } catch (err: any) {
-            alert("Network error: " + err.message);
+        } catch (err: unknown) {
+            alert("Network error: " + (err instanceof Error ? err.message : String(err)));
         } finally {
             setUploading(false);
         }
@@ -226,8 +211,8 @@ export default function WrittenSolveClient({ question }: { question: any }) {
                 newTotal: data.newTotal,
                 checkerDeadline: data.checkerDeadline,
             });
-        } catch (err: any) {
-            setSelfMarkError("Network error: " + err.message);
+        } catch (err: unknown) {
+            setSelfMarkError("Network error: " + (err instanceof Error ? err.message : String(err)));
         } finally {
             setSubmitting(false);
         }
@@ -254,8 +239,8 @@ export default function WrittenSolveClient({ question }: { question: any }) {
             setSelfMarkError(null);
             setShowTeacherAnswer(false);
 
-        } catch (err: any) {
-            alert("Network error: " + err.message);
+        } catch (err: unknown) {
+            alert("Network error: " + (err instanceof Error ? err.message : String(err)));
         } finally {
             setDeleting(false);
         }
@@ -266,8 +251,6 @@ export default function WrittenSolveClient({ question }: { question: any }) {
         const s = secs % 60;
         return `${m}:${String(s).padStart(2, "0")}`;
     };
-
-    const formatCheckerTime = (s: number) => `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
 
     const statusInfo = (status: string) => {
         switch (status) {
@@ -568,7 +551,7 @@ export default function WrittenSolveClient({ question }: { question: any }) {
                             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl mb-5 flex gap-3">
                                 <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                                 <p className="text-sm text-amber-800">
-                                    <strong>Warning:</strong> The community will review your claim. If 2 peers flag it as wrong, an independent AI Verifier will check it. If the AI confirms it's false,
+                                    <strong>Warning:</strong> The community will review your claim. If 2 peers flag it as wrong, an independent AI Verifier will check it. If the AI confirms it&apos;s false,
                                     you lose {question.points} pts + <strong>3 extra penalty points</strong>.
                                 </p>
                             </div>

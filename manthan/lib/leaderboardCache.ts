@@ -5,15 +5,27 @@
  * when points change, and the next leaderboard request will always be fresh.
  */
 
+export interface LeaderboardUser {
+    id: string;
+    name: string;
+    username: string;
+    school: string;
+    avatar: string | null;
+    points: number;
+    rank: number;
+    streak: number;
+    schoolColor: string;
+}
+
 export const leaderboardCache = {
-    data: null as { topBrains: any[] } | null,
+    data: null as { topBrains: LeaderboardUser[] } | null,
     expiresAt: 0,
 
     isValid(): boolean {
         return this.data !== null && Date.now() < this.expiresAt;
     },
 
-    set(data: { topBrains: any[] }, ttlMs = 20_000) {
+    set(data: { topBrains: LeaderboardUser[] }, ttlMs = 20_000) {
         this.data = data;
         this.expiresAt = Date.now() + ttlMs;
     },
