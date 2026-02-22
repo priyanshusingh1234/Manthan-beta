@@ -6,7 +6,7 @@ import {
     BookOpen, Users, Trophy, GraduationCap, User, PlusCircle,
     LogIn, UserPlus, Search, Star, Zap, Shield, ChevronRight,
     MessageCircle, Target, Award, Sword, Bell, Link2, Sparkles,
-    ArrowUp, ThumbsUp
+    ArrowUp
 } from 'lucide-react';
 
 const sections = [
@@ -17,7 +17,6 @@ const sections = [
     { id: 'follow-system', label: 'Follow System', icon: Users },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
     { id: 'questions', label: 'Questions', icon: BookOpen },
-    { id: 'verification', label: 'Verification Loop', icon: Shield },
     { id: 'point-system', label: 'Points & Penalties', icon: Zap },
     { id: 'achievements', label: 'Achievements', icon: Award },
     { id: 'navigation', label: 'Navigation & Links', icon: Link2 },
@@ -134,12 +133,12 @@ export default function DocsPage() {
                                 <strong>Manthan</strong> is a real-time competitive quiz platform designed for Indian students and teachers. It blends social features (profiles, follows, leaderboards) with academic content (teacher-posted questions, subject-based quizzes) to make learning engaging and competitive.
                             </p>
                             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <FeatureCard icon={BookOpen} title="Written Answers" color="purple">Upload photos of your handwritten work. AI and peers verify your logic, not just the answer.</FeatureCard>
-                                <FeatureCard icon={Zap} title="Verification Loop" color="amber">A unique 3-step system: Self-mark → Peer Review → AI Audit to ensure 100% fairness.</FeatureCard>
-                                <FeatureCard icon={Trophy} title="Real-time Leaderboard" color="emerald">Points update instantly across the app. See yourself climb the Top Brains list in real-time.</FeatureCard>
-                                <FeatureCard icon={Shield} title="Anti-Cheat System" color="indigo">Handwritten requirements + AI pattern matching makes cheating with ChatGPT nearly impossible.</FeatureCard>
-                                <FeatureCard icon={Target} title="Subject Mastery" color="indigo">Track how many subjects you&apos;ve mastered and view your overall progress in a visual dashboard.</FeatureCard>
-                                <FeatureCard icon={GraduationCap} title="Teacher Control" color="purple">Verified teachers create verified content, ensuring high-quality, exam-relevant questions.</FeatureCard>
+                                <FeatureCard icon={Zap} title="Competitive Quizzes" color="amber">Challenge other students in real-time quiz battles, earn points, and climb the leaderboard.</FeatureCard>
+                                <FeatureCard icon={GraduationCap} title="Teacher-Curated Content" color="purple">Verified teachers post questions across subjects and grades that students can attempt anytime.</FeatureCard>
+                                <FeatureCard icon={Users} title="Social Learning" color="emerald">Follow students and teachers, see who you're following, and build your academic network.</FeatureCard>
+                                <FeatureCard icon={Trophy} title="Global Leaderboard" color="amber">A live global ranking board that tracks every student's performance and rewards top scorers.</FeatureCard>
+                                <FeatureCard icon={Target} title="Subject Mastery" color="indigo">Track how many subjects you've mastered and view your overall progress in a visual dashboard.</FeatureCard>
+                                <FeatureCard icon={Shield} title="Secure & Private" color="emerald">Built on Supabase with Row-Level Security — your data is always protected.</FeatureCard>
                             </div>
                         </section>
 
@@ -325,12 +324,12 @@ export default function DocsPage() {
                                 </div>
                                 <h2 className="text-3xl font-black text-slate-900">Leaderboard</h2>
                             </div>
-                            <p className="text-slate-600 text-lg mb-6">The <Link href="/leaderboard" className="text-indigo-600 font-semibold hover:underline">Global Leaderboard</Link> ranks all students by their total earned points. It uses <strong>Real-time Sync</strong> to reflect updates across the entire community instantly.</p>
+                            <p className="text-slate-600 text-lg mb-6">The <Link href="/leaderboard" className="text-indigo-600 font-semibold hover:underline">Global Leaderboard</Link> ranks all students by their total earned points.</p>
                             <div className="grid sm:grid-cols-3 gap-4">
                                 {[
-                                    { medal: '🥇', rank: 'Top 10', desc: 'The "Top Brains" elite tier. Featured on the home dashboard.', color: 'bg-amber-50 border-amber-200' },
-                                    { medal: '📊', rank: 'Live Updates', desc: 'Points from MCQ, Written, and AI reviews sync in < 1s.', color: 'bg-slate-50 border-slate-200' },
-                                    { medal: '👑', rank: 'Status Levels', desc: 'Gold, Silver, and Bronze badges based on your global percentile.', color: 'bg-orange-50 border-orange-200' },
+                                    { medal: '🥇', rank: '1st Place', desc: 'Gold rank. Displayed as #1 on the global board.', color: 'bg-amber-50 border-amber-200' },
+                                    { medal: '🥈', rank: '2nd Place', desc: 'Silver rank. Close to the top!', color: 'bg-slate-50 border-slate-200' },
+                                    { medal: '🥉', rank: '3rd Place', desc: 'Bronze rank.', color: 'bg-orange-50 border-orange-200' },
                                 ].map(r => (
                                     <div key={r.rank} className={`rounded-2xl border p-5 text-center ${r.color}`}>
                                         <div className="text-4xl mb-2">{r.medal}</div>
@@ -346,91 +345,57 @@ export default function DocsPage() {
 
                         <hr className="border-slate-100" />
 
-                        <hr className="border-slate-100" />
-
-                        {/* ── Verification Loop ── */}
-                        <section id="verification" className="scroll-mt-28">
+                        {/* ── Questions ── */}
+                        <section id="questions" className="scroll-mt-28">
                             <div className="flex items-center gap-3 mb-6">
-                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg shadow-indigo-200">
-                                    <Shield className="w-5 h-5 text-white" />
+                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-200">
+                                    <BookOpen className="w-5 h-5 text-white" />
                                 </div>
-                                <h2 className="text-3xl font-black text-slate-900">The Verification Loop</h2>
+                                <h2 className="text-3xl font-black text-slate-900">Questions</h2>
                             </div>
-                            <p className="text-slate-600 text-lg mb-8">
-                                For written answers, Manthan uses a decentralized trust model to ensure students do the work themselves and don&apos;t just cheat with AI.
-                            </p>
 
-                            <div className="relative space-y-12">
-                                {/* Step 1 */}
-                                <div className="flex flex-col md:flex-row gap-8 items-start">
-                                    <div className="md:w-1/3">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <span className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">1</span>
-                                            <h3 className="text-xl font-bold text-slate-800">Self-Marking</h3>
-                                        </div>
-                                        <p className="text-sm text-slate-500">
-                                            After uploading your photo, you see the teacher&apos;s model answer. You honestly decide if yours matches. If you say yes, you get provisional points instantly.
-                                        </p>
-                                    </div>
-                                    <div className="flex-1 bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm">
-                                        <div className="flex gap-4 items-center">
-                                            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                                <ThumbsUp className="w-6 h-6" />
+                            <div className="space-y-4">
+                                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                                        <PlusCircle className="w-5 h-5 text-indigo-500" /> Posting Questions (Teachers Only)
+                                    </h3>
+                                    <p className="text-slate-600 text-sm leading-relaxed mb-4">Verified teachers can create questions at <Link href="/questions/create" className="text-indigo-600 font-semibold hover:underline">/questions/create</Link>.</p>
+                                    <div className="grid sm:grid-cols-2 gap-3">
+                                        {[
+                                            ['Title', 'A short descriptive title for the question.'],
+                                            ['Body', 'The full question text (supports multi-line).'],
+                                            ['Subject & Grade', 'Select the subject (Math, Science, etc.) and target class grade.'],
+                                            ['Difficulty', 'Easy / Medium / Hard — shown as a coloured badge on the card.'],
+                                            ['Options & Answer', 'Up to 4 MCQ options with one correct answer marked.'],
+                                            ['Points', 'Points awarded to students who answer correctly.'],
+                                            ['Time Limit', 'Optional time limit in minutes for the question.'],
+                                            ['Image Attachment', 'Optionally attach a diagram or image to the question.'],
+                                        ].map(([k, v]) => (
+                                            <div key={k} className="flex gap-2 text-sm">
+                                                <span className="font-bold text-indigo-600 shrink-0">{k}:</span>
+                                                <span className="text-slate-600">{v}</span>
                                             </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-slate-800">"I Got It Right"</p>
-                                                <p className="text-xs text-slate-400">Claims the points and moves to Peer Review.</p>
-                                            </div>
-                                        </div>
+                                        ))}
                                     </div>
                                 </div>
 
-                                {/* Step 2 */}
-                                <div className="flex flex-col md:flex-row gap-8 items-start">
-                                    <div className="md:w-1/3">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <span className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">2</span>
-                                            <h3 className="text-xl font-bold text-slate-800">Peer Review</h3>
-                                        </div>
-                                        <p className="text-sm text-slate-500">
-                                            Your answer appears in the "Checker Feed" for other students. Two random peers must approve it to permanentize your points. If they flag it, the AI intervenes.
-                                        </p>
-                                    </div>
-                                    <div className="flex-1 bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm">
-                                        <div className="flex gap-4 items-center">
-                                            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                                                <Users className="w-6 h-6" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-slate-800">2 Agree = Approved</p>
-                                                <p className="text-xs text-slate-400">Points are secured. No further checks needed.</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                                        <Target className="w-5 h-5 text-indigo-500" /> Attempting Questions (Students)
+                                    </h3>
+                                    <ul className="space-y-2 text-sm text-slate-600">
+                                        <li className="flex gap-2"><span className="text-indigo-500">→</span> Browse all available questions from the home dashboard or teacher profiles.</li>
+                                        <li className="flex gap-2"><span className="text-indigo-500">→</span> Click <strong>Attempt</strong> on a question card to start solving it.</li>
+                                        <li className="flex gap-2"><span className="text-indigo-500">→</span> Submit your answer within the time limit to earn points.</li>
+                                        <li className="flex gap-2"><span className="text-indigo-500">→</span> Points are automatically added to your total and reflected on the leaderboard.</li>
+                                    </ul>
                                 </div>
 
-                                {/* Step 3 */}
-                                <div className="flex flex-col md:flex-row gap-8 items-start">
-                                    <div className="md:w-1/3">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <span className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">3</span>
-                                            <h3 className="text-xl font-bold text-slate-800">AI Verification</h3>
-                                        </div>
-                                        <p className="text-sm text-slate-500">
-                                            If peers flag you, Gemini 1.5 Pro performs a deep logic audit. It reads your handwriting, compares it to the model answer, and issues a final, non-negotiable verdict.
-                                        </p>
-                                    </div>
-                                    <div className="flex-1 bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm">
-                                        <div className="flex gap-4 items-center">
-                                            <div className="w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center">
-                                                <Sparkles className="w-6 h-6" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-slate-800">AI Breakdown Provided</p>
-                                                <p className="text-xs text-slate-400">If you lose, the AI explains exactly why your logic failed.</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                                        <Sword className="w-5 h-5 text-indigo-500" /> Deleting Questions
+                                    </h3>
+                                    <p className="text-sm text-slate-600">Teachers can delete their own questions using the <strong>⋯ menu</strong> on each question card. This is only visible to the question's creator.</p>
                                 </div>
                             </div>
                         </section>
@@ -485,7 +450,7 @@ export default function DocsPage() {
                                 </div>
                                 <div className="bg-white/80 backdrop-blur border border-red-100 rounded-xl p-4 text-sm text-red-800 flex gap-2">
                                     <span>💡</span>
-                                    <span><strong>Complete Transparency:</strong> The exact penalty risk is always displayed to you on a red badge *before* you answer. For written work, AI confirmed failures result in a fixed <strong>3-point extra penalty</strong> plus the question value.</span>
+                                    <span><strong>Complete Transparency:</strong> The exact penalty risk is always displayed to you on a red badge *before* you answer a question.</span>
                                 </div>
                             </div>
                         </section>
