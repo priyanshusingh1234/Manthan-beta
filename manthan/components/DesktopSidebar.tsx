@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -28,49 +28,71 @@ type NavItem = {
   href?: string;
   icon: React.ComponentType<any>;
   soon?: boolean;
+  badge?: number;
 };
-
-const NAV: NavItem[] = [
-  { label: 'Home', href: '/', icon: Home },
-  { label: 'Feed', href: '/feed', icon: Compass },
-  { label: 'Search', href: '/search', icon: Search },
-  { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
-  { label: 'Checker Feed', href: '/checker-feed', icon: Shield },
-  { label: 'Messages', icon: MessageSquare, soon: true },
-  { label: 'Notifications', icon: Bell, soon: true },
-];
-
-const HELP_LINKS = [
-  { label: 'See Docs', href: '/docs' },
-  { label: 'Ask', href: '/ask', soon: true },
-  { label: 'Contact', href: '/contact' },
-  { label: 'About', href: '/about' },
-];
 
 export default function DesktopSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<any | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [token, setToken] = useState<string | null>(null);
 
+  const HELP_LINKS = [
+    { label: 'See Docs', href: '/docs' },
+    { label: 'Ask', href: '/ask', soon: true },
+    { label: 'Contact', href: '/contact' },
+    { label: 'About', href: '/about' },
+  ];
+
+  // Auth
   useEffect(() => {
     let mounted = true;
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (mounted) setUser(user);
-    };
-
-    fetchUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      setUser(session?.user ?? null);
+      setToken(session?.access_token ?? null);
     });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        setUser(session?.user ?? null);
+        setToken(session?.access_token ?? null);
+      }
+    });
+    return () => { mounted = false; subscription.unsubscribe(); };
   }, []);
+
+  // Poll unread notification count
+  const fetchUnread = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/notifications', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch { /* ignore */ }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [token, fetchUnread]);
+
+  const NAV: NavItem[] = [
+    { label: 'Home', href: '/', icon: Home },
+    { label: 'Feed', href: '/feed', icon: Compass },
+    { label: 'Search', href: '/search', icon: Search },
+    { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
+    { label: 'Checker Feed', href: '/checker-feed', icon: Shield },
+    { label: 'Messages', icon: MessageSquare, soon: true },
+    { label: 'Notifications', href: '/notifications', icon: Bell, badge: unreadCount },
+  ];
 
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 h-full w-64 flex-col bg-white/80 backdrop-blur-xl border-r border-gray-200/60 z-50 transition-all duration-300 shadow-[2px_0_20px_rgba(0,0,0,0.02)]">
@@ -93,42 +115,55 @@ export default function DesktopSidebar() {
         <div className="space-y-1">
           {NAV.map((item) => {
             const Icon = item.icon;
-            const isActive = item.href ? pathname === item.href : false;
+            const isActive = item.href
+              ? item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
+              : false;
+
+            if (item.soon) {
+              return (
+                <div
+                  key={item.label}
+                  title={`${item.label} (coming soon)`}
+                  className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium opacity-50 cursor-not-allowed text-slate-500"
+                >
+                  <Icon className="w-5 h-5 text-slate-400" strokeWidth={2} />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200">
+                    Soon
+                  </span>
+                </div>
+              );
+            }
 
             return (
-              <button
+              <Link
                 key={item.label}
-                onClick={() => {
-                  if (item.soon) return;
-                  if (item.href) router.push(item.href);
-                }}
-                title={item.soon ? `${item.label} (coming soon)` : item.label}
+                href={item.href!}
+                title={item.label}
                 className={`
                   group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
                   ${isActive
                     ? 'bg-blue-50/80 text-blue-700 shadow-sm ring-1 ring-blue-100'
-                    : item.soon
-                      ? 'opacity-60 cursor-not-allowed text-slate-500'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   }
                 `}
                 aria-current={isActive ? 'page' : undefined}
-                disabled={item.soon}
               >
                 <Icon
                   className={`w-5 h-5 transition-colors duration-200 ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 <span className="flex-1 text-left">{item.label}</span>
-                {item.soon && (
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200">
-                    Soon
+
+                {/* Notification badge */}
+                {item.badge && item.badge > 0 ? (
+                  <span className="min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-sm">
+                    {item.badge > 9 ? '9+' : item.badge}
                   </span>
-                )}
-                {isActive && (
+                ) : isActive ? (
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                )}
-              </button>
+                ) : null}
+              </Link>
             );
           })}
         </div>
@@ -174,7 +209,7 @@ export default function DesktopSidebar() {
           >
             <div className="flex items-center gap-3">
               <Info className="w-5 h-5 text-slate-400" />
-              <span>Help & Resources</span>
+              <span>Help &amp; Resources</span>
             </div>
             <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${helpOpen ? 'rotate-180' : ''}`} />
           </button>
