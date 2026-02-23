@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import supabaseAdmin from '@/lib/supabaseAdmin';
+import { createNotification } from '@/lib/createNotification';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -15,11 +17,9 @@ export async function GET(request: Request) {
         let selectColumn;
 
         if (type === 'followers') {
-            // Who follows the user: following_id = userId, we want to know follower_id
             queryColumn = 'following_id';
             selectColumn = 'follower_id';
         } else if (type === 'following') {
-            // Who the user follows: follower_id = userId, we want to know following_id
             queryColumn = 'follower_id';
             selectColumn = 'following_id';
         } else {
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
         if (dbError) {
             console.error(dbError);
-            return NextResponse.json({ users: [] }); // table might not exist yet
+            return NextResponse.json({ users: [] });
         }
 
         if (!followsData || followsData.length === 0) {
@@ -42,7 +42,6 @@ export async function GET(request: Request) {
 
         const targetUserIds = followsData.map((f: any) => f[selectColumn as string]);
 
-        // Get actual users
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
         if (authError || !authData?.users) {
             return NextResponse.json({ users: [] });
@@ -63,4 +62,53 @@ export async function GET(request: Request) {
         console.error(error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
+}
+
+// POST /api/follows — create a follow + send notification
+export async function POST(request: Request) {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const token = authHeader.replace('Bearer ', '');
+
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { followingId } = await request.json();
+    if (!followingId || followingId === user.id) {
+        return NextResponse.json({ error: 'Invalid followingId' }, { status: 400 });
+    }
+
+    // Insert follow relationship
+    const { error: insertErr } = await supabaseAdmin
+        .from('follows')
+        .upsert({ follower_id: user.id, following_id: followingId }, { onConflict: 'follower_id,following_id' });
+
+    if (insertErr) {
+        console.error('[POST /api/follows]', insertErr);
+        return NextResponse.json({ error: 'Failed to follow' }, { status: 500 });
+    }
+
+    // Fire notification to the followed user (fire-and-forget)
+    const followerName = user.user_metadata?.fullName || user.user_metadata?.username || 'Someone';
+    const followerUsername = user.user_metadata?.username || null;
+    const followerAvatar = user.user_metadata?.avatar_url || null;
+
+    await createNotification({
+        userId: followingId,
+        type: 'new_follower',
+        title: `${followerName} started following you`,
+        body: `@${followerUsername || 'someone'} is now following you on Manthan.`,
+        href: followerUsername ? `/user/${followerUsername}` : null,
+        actorId: user.id,
+        actorName: followerName,
+        actorAvatar: followerAvatar,
+    });
+
+    return NextResponse.json({ success: true });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { leaderboardCache } from "@/lib/leaderboardCache";
+import { createNotification } from "@/lib/createNotification";
 
 async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
     if (!authHeader) return null;
@@ -280,6 +281,15 @@ export async function POST(req: Request) {
                 }
                 // Bust leaderboard cache so TopBrains updates immediately
                 leaderboardCache.invalidate();
+
+                // 🔔 Notify student their answer was confirmed correct
+                await createNotification({
+                    userId: sub.student_id,
+                    type: 'ai_confirmed_correct',
+                    title: '✅ AI confirmed your answer is correct!',
+                    body: `Your written answer was verified by AI and marked correct. Points are secured!`,
+                    href: `/submission/${submissionId}/ai-review`,
+                });
             } else {
                 // Checkers correctly caught a bad assignment
                 await supabaseAdmin
@@ -325,6 +335,15 @@ export async function POST(req: Request) {
                 }
                 // Bust leaderboard cache so TopBrains updates immediately
                 leaderboardCache.invalidate();
+
+                // 🔔 Notify student their answer was confirmed wrong
+                await createNotification({
+                    userId: sub.student_id,
+                    type: 'ai_confirmed_wrong',
+                    title: '❌ AI reviewed your answer — it was wrong',
+                    body: `Your written answer was flagged by peers and the AI confirmed it was incorrect. Points have been deducted.`,
+                    href: `/submission/${submissionId}/ai-review`,
+                });
             }
         }
 

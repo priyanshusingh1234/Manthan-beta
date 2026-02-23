@@ -5,9 +5,10 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield } from 'lucide-react';
+import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell } from 'lucide-react';
 import Logo from './Logo';
 import { supabase } from '@/lib/supabaseClient';
+import NotificationBell from './NotificationBell';
 
 export default function Header({ isMobile = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -140,6 +141,7 @@ export default function Header({ isMobile = false }) {
     if (pathname.startsWith('/subject')) return { title: 'Subject Hub', icon: BookOpen };
     if (pathname.startsWith('/docs')) return { title: 'Documentation', icon: HelpCircle };
     if (pathname.startsWith('/privacy')) return { title: 'Privacy Policy', icon: Shield };
+    if (pathname.startsWith('/notifications')) return { title: 'Notifications', icon: Bell };
 
     const fallbackTitle = pathname.split('/')[1] || '';
     return { title: fallbackTitle.charAt(0).toUpperCase() + fallbackTitle.slice(1) || 'Page', icon: Sparkles };
@@ -235,6 +237,9 @@ export default function Header({ isMobile = false }) {
                       <span>Post Question</span>
                     </Link>
                   )}
+
+                  {/* Notification bell */}
+                  <NotificationBell />
 
                   <div className="relative" ref={dropdownRef}>
                     <button
