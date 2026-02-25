@@ -132,7 +132,7 @@ export async function GET(req: Request) {
         points: r.points,
         timeLimit: r.time_limit,
         difficulty: r.difficulty || null,
-        options: r.options || null,
+        options: typeof r.options === 'string' ? JSON.parse(r.options) : r.options || null,
         correctOption: typeof r.correct_option === 'number' ? r.correct_option : null,
         totalAttempts: attemptsMap[String(r.id)]?.total || 0,
         solvedCount: attemptsMap[String(r.id)]?.solved || 0,
@@ -144,7 +144,7 @@ export async function GET(req: Request) {
         createdAt: r.created_at,
       }));
 
-      return NextResponse.json(apps);
+      return NextResponse.json({ questions: apps });
     }
 
     // fallback to local file — ensure `createdByName` and avatar exist for each item
@@ -154,7 +154,7 @@ export async function GET(req: Request) {
       createdByName: it.createdByName || 'Teacher',
       createdByAvatar: it.createdByAvatar || null,
     })) : [];
-    return NextResponse.json(filtered);
+    return NextResponse.json({ questions: filtered });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: 'Could not read questions' }, { status: 500 });
