@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 
+export const dynamic = 'force-dynamic';
+
 function parseJwtField(bearer?: string | null, field = 'sub') {
     try {
         if (!bearer) return null;
