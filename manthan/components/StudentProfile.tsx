@@ -313,7 +313,7 @@ const StudentProfile: React.FC = () => {
   return (
     <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 relative pb-20">
       {/* Subtle background pattern */}
-      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-20 pointer-events-none" />
+      <div className="absolute inset-0 bg-transparent bg-center opacity-20 pointer-events-none" />
 
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Crop Modal */}

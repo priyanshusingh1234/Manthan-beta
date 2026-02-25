@@ -162,7 +162,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
     <header className="relative isolate z-50">
       {/* Dynamic Main Header Background */}
       <div className="absolute inset-0 overflow-hidden -z-10 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-xl pointer-events-none rounded-b-[2rem] border-b border-white/10">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-20" />
+        <div className="absolute inset-0 bg-transparent bg-center opacity-20" />
         <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/30 via-blue-500/30 to-cyan-400/30 animate-gradient-slow blur-[2px]" />
 
         {/* Animated glowing orbs */}

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/notifications — fetch notifications for the authenticated user
 export async function GET(req: Request) {
     const authHeader = req.headers.get('Authorization');
