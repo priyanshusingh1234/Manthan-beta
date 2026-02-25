@@ -100,7 +100,7 @@ export async function POST(req: Request) {
             headers: { 'Authorization': `Bearer ${sgKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               personalizations: [{ to: [{ email: to }] }],
-              from: { email: process.env.SUPPORT_EMAIL || 'no-reply@manthan.app', name: 'Manthan' },
+              from: { email: process.env.SUPPORT_EMAIL || 'no-reply@dheeyudha.app', name: 'Dheeyudha' },
               subject,
               content: [
                 { type: 'text/plain', value: text },
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
       const to = data?.email || null;
       const subject = action === 'approve' ? 'Your teacher application has been approved' : 'Your teacher application has been reviewed';
       const plain = action === 'approve'
-        ? `Hi ${data?.name || ''},\n\nYour application to become a teacher has been APPROVED. You now have teacher privileges on Manthan.`
+        ? `Hi ${data?.name || ''},\n\nYour application to become a teacher has been APPROVED. You now have teacher privileges on Dheeyudha.`
         : `Hi ${data?.name || ''},\n\nYour application has been reviewed and marked as ${data?.status}.`;
 
       await sendNotificationEmail(to, subject, plain);

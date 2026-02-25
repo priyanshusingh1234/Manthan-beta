@@ -1,6 +1,6 @@
 import HeroSearch from '@/components/HeroSearch'
 import LiveWarFeed from '@/components/LiveWarFeed'
-import TopBrains from '@/components/TopBrains'
+import TopStudents from '@/components/TopStudents'
 import BottomBanner from '@/components/BottomBanner'
 import HomeSignPrompt from '@/components/HomeSignPrompt'
 import QuestionsFeed from '@/components/QuestionsFeed'
@@ -15,7 +15,7 @@ export default function Home() {
       {/* Main content grid */}
       <main className="mx-auto mt-6 grid max-w-6xl grid-cols-1 gap-6 px-4 pb-28 sm:px-6 lg:grid-cols-3 lg:px-8">
         <div className="lg:col-span-2">
-          <LiveWarFeed />
+          {/* <LiveWarFeed /> */}
 
           {/* Questions feed placed on the home screen */}
           <div className="mt-6">
@@ -24,7 +24,7 @@ export default function Home() {
           </div>
         </div>
         <div className="lg:col-span-1">
-          <TopBrains />
+          <TopStudents />
         </div>
       </main>
 

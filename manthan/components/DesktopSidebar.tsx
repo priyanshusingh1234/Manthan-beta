@@ -14,13 +14,14 @@ import {
   PlusCircle,
   User,
   MoreHorizontal,
-  Info,
   ChevronDown,
   Trophy,
   Shield,
+  CheckSquare,
+  Info,
 } from 'lucide-react';
-import Logo from './Logo';
 import TeacherBadge from '@/ticks/teacher';
+import Logo from './Logo';
 import { supabase } from '@/lib/supabaseClient';
 
 type NavItem = {
@@ -46,25 +47,35 @@ export default function DesktopSidebar() {
     { label: 'About', href: '/about' },
   ];
 
-  // Auth
+  // Auth & Session management
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      setUser(session?.user ?? null);
-      setToken(session?.access_token ?? null);
-    });
+
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (mounted) {
+        setUser(session?.user ?? null);
+        setToken(session?.access_token ?? null);
+      }
+    };
+
+    getSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (mounted) {
         setUser(session?.user ?? null);
         setToken(session?.access_token ?? null);
       }
     });
-    return () => { mounted = false; subscription.unsubscribe(); };
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Poll unread notification count
-  const fetchUnread = useCallback(async () => {
+  // Fetch unread notifications count
+  const fetchUnreadCount = useCallback(async () => {
     if (!token) return;
     try {
       const res = await fetch('/api/notifications', {
@@ -74,15 +85,45 @@ export default function DesktopSidebar() {
         const data = await res.json();
         setUnreadCount(data.unreadCount || 0);
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error("[Sidebar] Failed to fetch unread count:", err);
+    }
   }, [token]);
 
+  // Set up polling and realtime for notifications
   useEffect(() => {
-    if (!token) return;
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
-    return () => clearInterval(interval);
-  }, [token, fetchUnread]);
+    if (!token || !user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    fetchUnreadCount();
+
+    // Set up Realtime subscription for instant updates
+    const channel = supabase
+      .channel(`sidebar-notifs-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+
+    // Fallback polling (less frequent because of realtime)
+    const interval = setInterval(fetchUnreadCount, 60000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, [token, user, fetchUnreadCount]);
 
   const NAV: NavItem[] = [
     { label: 'Home', href: '/', icon: Home },
@@ -90,6 +131,7 @@ export default function DesktopSidebar() {
     { label: 'Search', href: '/search', icon: Search },
     { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
     { label: 'Checker Feed', href: '/checker-feed', icon: Shield },
+    { label: 'Solved', href: '/solved', icon: CheckSquare },
     { label: 'Messages', icon: MessageSquare, soon: true },
     { label: 'Notifications', href: '/notifications', icon: Bell, badge: unreadCount },
   ];
@@ -98,14 +140,15 @@ export default function DesktopSidebar() {
     <aside className="hidden lg:flex fixed left-0 top-0 h-full w-64 flex-col bg-white/80 backdrop-blur-xl border-r border-gray-200/60 z-50 transition-all duration-300 shadow-[2px_0_20px_rgba(0,0,0,0.02)]">
       {/* Header / Logo Area */}
       <div className="px-6 py-6">
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-fuchsia-600 p-[1px] shadow-md group-hover:scale-105 transition-transform duration-300">
-            <div className="h-full w-full rounded-[10px] bg-white flex items-center justify-center">
-              <Logo width={28} height={28} />
-            </div>
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="shrink-0">
+            <Logo width={28} height={28} />
           </div>
-          <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent group-hover:from-blue-600 group-hover:to-fuchsia-600 transition-all duration-300">
-            MANTHAN
+          <span
+            style={{ fontFamily: "-apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif" }}
+            className="text-[20px] font-semibold tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors duration-200 select-none"
+          >
+            dheeyudha
           </span>
         </Link>
       </div>
@@ -115,16 +158,14 @@ export default function DesktopSidebar() {
         <div className="space-y-1">
           {NAV.map((item) => {
             const Icon = item.icon;
-            const isActive = item.href
-              ? item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
-              : false;
+            const isActive = item.href ? (item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)) : false;
 
             if (item.soon) {
               return (
                 <div
                   key={item.label}
                   title={`${item.label} (coming soon)`}
-                  className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium opacity-50 cursor-not-allowed text-slate-500"
+                  className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium opacity-50 cursor-not-allowed text-slate-500 hover:bg-slate-50/50"
                 >
                   <Icon className="w-5 h-5 text-slate-400" strokeWidth={2} />
                   <span className="flex-1 text-left">{item.label}</span>
@@ -138,8 +179,7 @@ export default function DesktopSidebar() {
             return (
               <Link
                 key={item.label}
-                href={item.href!}
-                title={item.label}
+                href={item.href || '#'}
                 className={`
                   group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
                   ${isActive
@@ -155,14 +195,16 @@ export default function DesktopSidebar() {
                 />
                 <span className="flex-1 text-left">{item.label}</span>
 
-                {/* Notification badge */}
-                {item.badge && item.badge > 0 ? (
-                  <span className="min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-sm">
-                    {item.badge > 9 ? '9+' : item.badge}
+                {/* Notification Badge */}
+                {item.label === 'Notifications' && unreadCount > 0 && (
+                  <span className="flex items-center justify-center min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full px-1 shadow-sm border border-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
-                ) : isActive ? (
+                )}
+
+                {isActive && !item.badge && (
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                ) : null}
+                )}
               </Link>
             );
           })}
@@ -209,7 +251,7 @@ export default function DesktopSidebar() {
           >
             <div className="flex items-center gap-3">
               <Info className="w-5 h-5 text-slate-400" />
-              <span>Help &amp; Resources</span>
+              <span>Help & Resources</span>
             </div>
             <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${helpOpen ? 'rotate-180' : ''}`} />
           </button>

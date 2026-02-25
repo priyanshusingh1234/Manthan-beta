@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import QuestionCard from './QuestionCard';
+import { supabase } from '@/lib/supabaseClient';
 
 type Question = any;
 
@@ -13,22 +14,30 @@ export default function QuestionsFeed() {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    fetch('/api/questions')
-      .then(async (res) => {
+
+    const loadData = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: HeadersInit = {};
+        if (session) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+        
+        const res = await fetch('/api/questions', { headers });
         if (!res.ok) throw new Error(await res.text());
-        return res.json();
-      })
-      .then((data) => {
+        const data = await res.json();
         if (!mounted) return;
-        // API returns either an array (prod) or an object with `questions` (older fallback);
         setQuestions(Array.isArray(data) ? data : (data?.questions || []));
-      })
-      .catch((error) => {
+      } catch (error: any) {
         console.error(error);
         if (!mounted) return;
         setErr(error?.message || String(error));
-      })
-      .finally(() => mounted && setLoading(false));
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    loadData();
 
     return () => { mounted = false; };
   }, []);

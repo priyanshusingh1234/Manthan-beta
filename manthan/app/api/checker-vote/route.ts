@@ -107,6 +107,95 @@ Respond ONLY with a valid JSON object matching this schema (no markdown formatti
     }
 }
 
+async function processCoopWin(submission: any) {
+    if (!submission.challenge_id) return;
+
+    try {
+        const { data: challenge } = await supabaseAdmin
+            .from("coop_challenges")
+            .select("id, initiator_id, partner_id, status")
+            .eq("id", submission.challenge_id)
+            .single();
+
+        if (!challenge || challenge.status === 'won') return;
+
+        // Mark challenge as won
+        await supabaseAdmin.from("coop_challenges").update({ status: 'won', updated_at: new Date().toISOString() }).eq("id", challenge.id);
+
+        const questionPoints = Number((submission.questions as any)?.points || 0);
+        const splitPoints = Math.ceil(questionPoints / 2);
+
+        // Identify the other player
+        const otherUserId = challenge.initiator_id === submission.student_id ? challenge.partner_id : challenge.initiator_id;
+
+        // Reward the other player (the submitter already got their half provisionally)
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(otherUserId);
+        const userMeta = userData?.user?.user_metadata || {};
+        await supabaseAdmin.auth.admin.updateUserById(otherUserId, {
+            user_metadata: { ...userMeta, totalPoints: (Number(userMeta.totalPoints) || 0) + splitPoints }
+        });
+
+        // Notify the other player
+        await createNotification({
+            userId: otherUserId,
+            type: 'coop_challenge',
+            title: `Team Victory! 🎉`,
+            body: `Your co-op partner got the written answer right! You both earned +${splitPoints} points.`,
+            href: `/questions/${submission.question_id}`,
+        });
+
+        // Delete the other player's pending submission if it exists, so it disappears from the checker feed
+        await supabaseAdmin
+            .from("written_submissions")
+            .delete()
+            .eq("challenge_id", challenge.id)
+            .eq("student_id", otherUserId);
+
+    } catch (err) {
+        console.error("Failed to process coop win:", err);
+    }
+}
+
+async function processCoopLoss(submission: any) {
+    if (!submission.challenge_id) return;
+
+    try {
+        const { data: challenge } = await supabaseAdmin
+            .from("coop_challenges")
+            .select("id, initiator_id, partner_id, status, partner_attempted")
+            .eq("id", submission.challenge_id)
+            .single();
+
+        if (!challenge || challenge.status === 'lost' || challenge.status === 'won') return;
+
+        const isPartner = challenge.partner_id === submission.student_id;
+        const isInitiator = challenge.initiator_id === submission.student_id;
+        const questionPoints = Number((submission.questions as any)?.points || 0);
+        const calculatedPenalty = Math.floor(questionPoints / 5);
+
+        if (isPartner) {
+            // Partner failed to save. Challenge is permanently lost.
+            await supabaseAdmin
+                .from("coop_challenges")
+                .update({ partner_attempted: true, status: 'lost', updated_at: new Date().toISOString() })
+                .eq("id", challenge.id);
+
+            const { data: partnerUser } = await supabaseAdmin.auth.admin.getUserById(submission.student_id);
+            const partnerName = partnerUser?.user?.user_metadata?.fullName || partnerUser?.user?.user_metadata?.username || "Your friend";
+
+            await createNotification({
+                userId: challenge.initiator_id,
+                type: 'coop_challenge',
+                title: `${partnerName} couldn't save you!`,
+                body: `They failed the checker review. Your co-op challenge is officially lost.`,
+                href: `/questions/${submission.question_id}`,
+            });
+        }
+    } catch (err) {
+        console.error("Failed to process coop loss:", err);
+    }
+}
+
 // POST: Submit a checker vote
 export async function POST(req: Request) {
     try {
@@ -182,24 +271,131 @@ export async function POST(req: Request) {
         let newStatus = currentStatus;
         let message = "Vote recorded";
 
-        // TRIGGER A: 2 Correct Votes -> Lock in points, student is safe
+        // TRIGGER A: 2 Correct Votes → Run AI to confirm (prevent spam-correct collusion)
         if (correctVotes.length >= 2) {
-            newStatus = "auto_approved";
+            newStatus = "flagged_for_ai";
             await supabaseAdmin
                 .from("written_submissions")
-                .update({ status: "auto_approved", updated_at: new Date().toISOString() })
+                .update({ status: "flagged_for_ai", updated_at: new Date().toISOString() })
                 .eq("id", submissionId);
 
-            message = "Community verified the answer as Correct. Submission closed.";
+            // Fetch teacher solution if available
+            const { data: teacherSol } = await supabaseAdmin
+                .from("teacher_solutions")
+                .select("solution_url")
+                .eq("question_id", sub.question_id)
+                .maybeSingle();
 
-            // Reward Checkers +1 point
-            for (const cv of correctVotes) {
-                const { data: voterData } = await supabaseAdmin.auth.admin.getUserById(cv.checker_id);
-                const voterMeta = voterData?.user?.user_metadata || {};
-                const voterPoints = (Number(voterMeta.totalPoints) || 0) + CHECKER_CORRECT_REWARD_POINTS;
-                await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
-                    user_metadata: { ...voterMeta, totalPoints: voterPoints },
+            const questionText = (sub.questions as any)?.body || (sub.questions as any)?.title || "Solve this.";
+
+            // Run AI Verification
+            let aiResult: AIVerdict | null = null;
+            try {
+                aiResult = await Promise.race([
+                    verifyWithGemini(sub.submission_url, questionText, teacherSol?.solution_url || null),
+                    new Promise<AIVerdict | null>((_, reject) =>
+                        setTimeout(() => reject(new Error("AI Verification Timeout")), 45000)
+                    )
+                ]);
+            } catch {
+                aiResult = null;
+            }
+
+            // AI failed — rollback, keep pending
+            if (aiResult === null) {
+                await supabaseAdmin.from("checker_votes").delete().eq("checker_id", checkerId).eq("submission_id", submissionId);
+                await supabaseAdmin.from("written_submissions").update({ status: "pending_check" }).eq("id", submissionId);
+                return NextResponse.json({ error: "AI Verification service is currently overloaded. Please try again in a moment." }, { status: 503 });
+            }
+
+            // Save AI breakdown
+            try {
+                const breakdownBuf = Buffer.from(JSON.stringify({
+                    verdict: aiResult.isCorrect ? "correct" : "wrong",
+                    breakdown: aiResult.breakdown,
+                    raw: aiResult.raw,
+                    timestamp: new Date().toISOString()
+                }), "utf8");
+                await supabaseAdmin.storage
+                    .from("written-answers")
+                    .upload(`ai-reviews/${submissionId}.json`, breakdownBuf, { contentType: "application/json", upsert: true });
+            } catch { /* non-fatal */ }
+
+            if (aiResult.isCorrect) {
+                // ✅ AI confirms correct → auto-approve, reward checkers
+                await supabaseAdmin
+                    .from("written_submissions")
+                    .update({ status: "auto_approved", updated_at: new Date().toISOString() })
+                    .eq("id", submissionId);
+
+                newStatus = "auto_approved";
+                message = "AI confirmed correct. Community + AI verified.";
+
+                // Reward correct-voters +1 pt each
+                for (const cv of correctVotes) {
+                    const { data: voterData } = await supabaseAdmin.auth.admin.getUserById(cv.checker_id);
+                    const voterMeta = voterData?.user?.user_metadata || {};
+                    await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
+                        user_metadata: { ...voterMeta, totalPoints: (Number(voterMeta.totalPoints) || 0) + CHECKER_CORRECT_REWARD_POINTS },
+                    });
+                }
+                leaderboardCache.invalidate();
+
+                await createNotification({
+                    userId: sub.student_id,
+                    type: 'answer_approved',
+                    title: '✅ AI + Community verified your answer is correct!',
+                    body: `${correctVotes.length} checkers and AI both confirmed your submission. Points are locked in!`,
+                    href: `/submission/${submissionId}/ai-review`,
                 });
+
+                if (sub.challenge_id) await processCoopWin(sub);
+
+            } else {
+                // ❌ AI says wrong — spam correct voters caught, penalize them
+                await supabaseAdmin
+                    .from("written_submissions")
+                    .update({ status: "ai_confirmed_wrong", updated_at: new Date().toISOString() })
+                    .eq("id", submissionId);
+
+                newStatus = "ai_confirmed_wrong";
+                message = "AI found answer is wrong despite correct votes. Spam-voters penalized.";
+
+                // 1. Penalize spam-correct voters — same as CHECKER_REWARD_POINTS deduction
+                for (const cv of correctVotes) {
+                    const { data: voterData } = await supabaseAdmin.auth.admin.getUserById(cv.checker_id);
+                    const voterMeta = voterData?.user?.user_metadata || {};
+                    const penalized = Math.max(0, (Number(voterMeta.totalPoints) || 0) - CHECKER_REWARD_POINTS);
+                    await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
+                        user_metadata: { ...voterMeta, totalPoints: penalized },
+                    });
+                }
+
+                // 2. Reverse student's provisional points + standard penalty
+                const { data: studentData } = await supabaseAdmin.auth.admin.getUserById(sub.student_id);
+                const studentMeta = studentData?.user?.user_metadata || {};
+                const currentPoints = Number(studentMeta.totalPoints) || 0;
+                const questionPoints = Number((sub.questions as any)?.points || 0);
+                let totalDeduction = Number(sub.points_awarded || 0);
+                if (currentPoints > 0) {
+                    totalDeduction += Math.floor(questionPoints / 5) + STUDENT_EXTRA_PENALTY;
+                }
+                const newStudentTotal = Math.max(0, currentPoints - totalDeduction);
+                const battlesWon = Math.max(0, (Number(studentMeta.battlesWon) || 0) - 1);
+                await supabaseAdmin.auth.admin.updateUserById(sub.student_id, {
+                    user_metadata: { ...studentMeta, totalPoints: newStudentTotal, battlesWon },
+                });
+                leaderboardCache.invalidate();
+
+                await createNotification({
+                    userId: sub.student_id,
+                    type: 'ai_confirmed_wrong',
+                    title: '❌ AI reviewed your answer — it was wrong',
+                    body: `Even though some checkers marked it correct, AI determined your answer was incorrect. Points have been adjusted.`,
+                    href: `/submission/${submissionId}/ai-review`,
+                });
+
+                if (sub.challenge_id) await processCoopLoss(sub);
             }
         }
 
@@ -210,6 +406,15 @@ export async function POST(req: Request) {
                 .from("written_submissions")
                 .update({ status: "flagged_for_ai", updated_at: new Date().toISOString() })
                 .eq("id", submissionId);
+
+            // 🔔 Notify student their answer was flagged
+            await createNotification({
+                userId: sub.student_id,
+                type: 'answer_flagged',
+                title: '⚠️ Your answer was flagged',
+                body: `Multiple checkers flagged your submission. AI verification is underway to determine the outcome.`,
+                href: `/submission/${submissionId}/ai-review`,
+            });
 
             // Fetch teacher solution if available
             const { data: teacherSol } = await supabaseAdmin
@@ -290,6 +495,10 @@ export async function POST(req: Request) {
                     body: `Your written answer was verified by AI and marked correct. Points are secured!`,
                     href: `/submission/${submissionId}/ai-review`,
                 });
+
+                if (sub.challenge_id) {
+                    await processCoopWin(sub);
+                }
             } else {
                 // Checkers correctly caught a bad assignment
                 await supabaseAdmin
@@ -344,6 +553,8 @@ export async function POST(req: Request) {
                     body: `Your written answer was flagged by peers and the AI confirmed it was incorrect. Points have been deducted.`,
                     href: `/submission/${submissionId}/ai-review`,
                 });
+
+                if (sub.challenge_id) await processCoopLoss(sub);
             }
         }
 
@@ -379,6 +590,7 @@ export async function GET(req: Request) {
         submission_url,
         status,
         created_at,
+        challenge_id,
         questions (
           id,
           title,
@@ -443,7 +655,8 @@ export async function GET(req: Request) {
                     wrongVotes: wCount,
                     correctVotes: cCount,
                     requiredToFlag: 2,
-                    windowOpen: true, // Legacy field for component support
+                    isCoopChallenge: !!(sub as any).challenge_id,
+                    windowOpen: true,
                 };
             })
         );

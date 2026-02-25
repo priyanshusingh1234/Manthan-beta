@@ -10,7 +10,9 @@ import {
   MoreHorizontal,
   Trash2,
   Users,
-  FileImage
+  FileImage,
+  CheckCircle,
+  Eye
 } from "lucide-react";
 import TeacherBadge from "@/ticks/teacher";
 import { supabase } from "@/lib/supabaseClient";
@@ -35,6 +37,9 @@ type Question = {
   createdByUsername?: string | null;
   totalAttempts?: number;
   solvedCount?: number;
+  hasAttempted?: boolean;
+  hasWrittenSubmission?: boolean;
+  userSubmissionId?: string | null;
 };
 
 export default function QuestionCard({ q }: { q: Question }) {
@@ -321,6 +326,20 @@ export default function QuestionCard({ q }: { q: Question }) {
             <TeacherBadge />
             <span>Teacher View</span>
           </div>
+        ) : q.hasWrittenSubmission && q.userSubmissionId ? (
+          <Link href={`/questions/${q.id}`} className="flex-1 sm:flex-none">
+            <button className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:translate-y-0">
+              <Eye className="w-4 h-4" />
+              <span>See Breakdown</span>
+            </button>
+          </Link>
+        ) : q.hasAttempted ? (
+          <Link href={`/questions/${q.id}`} className="flex-1 sm:flex-none">
+            <button className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5 active:translate-y-0">
+              <CheckCircle className="w-4 h-4" />
+              <span>Solved Details</span>
+            </button>
+          </Link>
         ) : (
           <Link href={`/questions/${q.id}`} className="flex-1 sm:flex-none">
             <button className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0">

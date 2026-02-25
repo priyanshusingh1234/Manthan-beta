@@ -1,7 +1,7 @@
 import TeacherApplyForm from '@/components/TeacherApplyForm';
 
 export const metadata = {
-  title: 'Register as teacher — Manthan',
+  title: 'Register as teacher — Dheeyudha',
 };
 
 export default function TeacherApplyPage() {

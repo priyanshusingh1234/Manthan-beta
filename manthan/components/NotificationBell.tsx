@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, Check, CheckCheck, Trash2, X, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, X, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles, Swords } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import CoopNotifCard from './CoopNotifCard';
 
 type Notification = {
     id: string;
@@ -36,7 +37,7 @@ function NotifIcon({ type }: { type: string }) {
     if (type === 'ai_confirmed_wrong' || type === 'answer_flagged') return <div className={`${base} bg-red-100 text-red-600`}><XCircle className="w-4 h-4" /></div>;
     if (type === 'points_earned') return <div className={`${base} bg-amber-100 text-amber-600`}><Zap className="w-4 h-4" /></div>;
     if (type === 'new_question') return <div className={`${base} bg-indigo-100 text-indigo-600`}><BookOpen className="w-4 h-4" /></div>;
-    return <div className={`${base} bg-slate-100 text-slate-600`}><Sparkles className="w-4 h-4" /></div>;
+    if (type === 'coop_challenge') return <div className={`${base} bg-indigo-100 text-indigo-600`}><Swords className="w-4 h-4" /></div>;
 }
 
 export default function NotificationBell() {
@@ -195,25 +196,37 @@ export default function NotificationBell() {
                                 <p className="text-xs mt-1 opacity-70">Follow teachers and solve questions to get updates</p>
                             </div>
                         ) : (
-                            notifications.map(notif => (
-                                <button
-                                    key={notif.id}
-                                    onClick={() => handleNotifClick(notif)}
-                                    className={`w-full text-left flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-slate-50 ${!notif.read ? 'bg-indigo-50/50' : ''}`}
-                                >
-                                    <NotifIcon type={notif.type} />
-                                    <div className="flex-1 min-w-0">
-                                        <p className={`text-sm leading-snug ${notif.read ? 'font-medium text-slate-700' : 'font-bold text-slate-900'}`}>
-                                            {notif.title}
-                                        </p>
-                                        <p className="text-xs text-slate-500 mt-0.5 leading-snug line-clamp-2">{notif.body}</p>
-                                        <p className="text-[10px] text-slate-400 mt-1">{timeAgo(notif.created_at)}</p>
-                                    </div>
-                                    {!notif.read && (
-                                        <span className="w-2 h-2 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
-                                    )}
-                                </button>
-                            ))
+                            notifications.map(notif =>
+                                notif.type === 'coop_challenge' ? (
+                                    <CoopNotifCard
+                                        key={notif.id}
+                                        notif={notif}
+                                        compact
+                                        onNavigate={() => {
+                                            handleNotifClick(notif);
+                                            setOpen(false);
+                                        }}
+                                    />
+                                ) : (
+                                    <button
+                                        key={notif.id}
+                                        onClick={() => handleNotifClick(notif)}
+                                        className={`w-full text-left flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-slate-50 ${!notif.read ? 'bg-indigo-50/50' : ''}`}
+                                    >
+                                        <NotifIcon type={notif.type} />
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-sm leading-snug ${notif.read ? 'font-medium text-slate-700' : 'font-bold text-slate-900'}`}>
+                                                {notif.title}
+                                            </p>
+                                            <p className="text-xs text-slate-500 mt-0.5 leading-snug line-clamp-2">{notif.body}</p>
+                                            <p className="text-[10px] text-slate-400 mt-1">{timeAgo(notif.created_at)}</p>
+                                        </div>
+                                        {!notif.read && (
+                                            <span className="w-2 h-2 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                                        )}
+                                    </button>
+                                )
+                            )
                         )}
                     </div>
 

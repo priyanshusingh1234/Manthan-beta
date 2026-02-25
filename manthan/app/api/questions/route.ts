@@ -77,10 +77,18 @@ export async function GET(req: Request) {
       const questionIds = rows.map((r: any) => r.id);
       let attemptsMap: Record<string, { total: number; solved: number }> = {};
 
+      // Attempt tracking for the current user
+      const authHeader = req.headers.get('authorization');
+      const currentUserId = parseJwtField(authHeader, 'sub') || parseJwtField(authHeader, 'user_id');
+
+      let userAttempts = new Set<string>();
+      let userWrittenSubmissions: Record<string, string> = {};
+
       if (questionIds.length > 0) {
+        // Aggregate attempt stats
         const { data: attempts } = await supabaseAdmin
           .from('question_attempts')
-          .select('question_id, is_correct')
+          .select('question_id, is_correct, user_id')
           .in('question_id', questionIds);
 
         if (attempts) {
@@ -89,6 +97,24 @@ export async function GET(req: Request) {
             if (!attemptsMap[qid]) attemptsMap[qid] = { total: 0, solved: 0 };
             attemptsMap[qid].total += 1;
             if (att.is_correct) attemptsMap[qid].solved += 1;
+
+            // Check if user attempted it
+            if (currentUserId && att.user_id === currentUserId) {
+              userAttempts.add(qid);
+            }
+          });
+        }
+
+        // Also fetch written submissions if logged in
+        if (currentUserId) {
+          const { data: wSubs } = await supabaseAdmin
+            .from('written_submissions')
+            .select('id, question_id')
+            .eq('student_id', currentUserId)
+            .in('question_id', questionIds);
+
+          wSubs?.forEach((s: any) => {
+            userWrittenSubmissions[String(s.question_id)] = String(s.id);
           });
         }
       }
@@ -110,6 +136,9 @@ export async function GET(req: Request) {
         correctOption: typeof r.correct_option === 'number' ? r.correct_option : null,
         totalAttempts: attemptsMap[String(r.id)]?.total || 0,
         solvedCount: attemptsMap[String(r.id)]?.solved || 0,
+        hasAttempted: userAttempts.has(String(r.id)),
+        hasWrittenSubmission: !!userWrittenSubmissions[String(r.id)],
+        userSubmissionId: userWrittenSubmissions[String(r.id)] || null,
         imagePath: r.image_path || null,
         imageUrl: r.image_url || null,
         createdAt: r.created_at,

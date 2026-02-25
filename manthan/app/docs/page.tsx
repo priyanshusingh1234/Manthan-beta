@@ -16,9 +16,12 @@ const sections = [
     { id: 'teacher-profile', label: 'Teacher Profile', icon: GraduationCap },
     { id: 'follow-system', label: 'Follow System', icon: Users },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+    { id: 'dheeyudha', label: 'Peer vs Peer (Dheeyudha)', icon: Sword },
     { id: 'questions', label: 'Questions', icon: BookOpen },
     { id: 'point-system', label: 'Points & Penalties', icon: Zap },
     { id: 'achievements', label: 'Achievements', icon: Award },
+    { id: 'ai-review', label: 'AI Submission Review', icon: Sparkles },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'navigation', label: 'Navigation & Links', icon: Link2 },
     { id: 'privacy', label: 'Privacy & Security', icon: Shield },
 ];
@@ -130,7 +133,7 @@ export default function DocsPage() {
                                 <h2 className="text-3xl font-black text-slate-900">Overview</h2>
                             </div>
                             <p className="text-slate-600 leading-relaxed text-lg mb-8">
-                                <strong>Manthan</strong> is a real-time competitive quiz platform designed for Indian students and teachers. It blends social features (profiles, follows, leaderboards) with academic content (teacher-posted questions, subject-based quizzes) to make learning engaging and competitive.
+                                <strong>Dheeyudha</strong> is a real-time competitive quiz platform designed for Indian students and teachers. It blends social features (profiles, follows, leaderboards) with academic content (teacher-posted questions, subject-based quizzes) to make learning engaging and competitive.
                             </p>
                             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <FeatureCard icon={Zap} title="Competitive Quizzes" color="amber">Challenge other students in real-time quiz battles, earn points, and climb the leaderboard.</FeatureCard>
@@ -285,7 +288,7 @@ export default function DocsPage() {
                                 </div>
                                 <h2 className="text-3xl font-black text-slate-900">Follow System</h2>
                             </div>
-                            <p className="text-slate-600 text-lg mb-6">Manthan has a full social follow system. You can follow both students and teachers, and see who follows you.</p>
+                            <p className="text-slate-600 text-lg mb-6">Dheeyudha has a full social follow system. You can follow both students and teachers, and see who follows you.</p>
 
                             <div className="grid sm:grid-cols-3 gap-4 mb-6">
                                 {[
@@ -340,6 +343,44 @@ export default function DocsPage() {
                             </div>
                             <div className="mt-4 bg-white rounded-2xl border border-slate-100 shadow-sm p-5 text-sm text-slate-600">
                                 Points are awarded by attempting and solving teacher-posted questions correctly. The more questions you solve — and the faster — the higher you rank.
+                            </div>
+                        </section>
+
+                        <hr className="border-slate-100" />
+
+                        {/* ── Peer vs Peer (Dheeyudha) ── */}
+                        <section id="dheeyudha" className="scroll-mt-28">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-lg shadow-red-200">
+                                    <Sword className="w-5 h-5 text-white" />
+                                </div>
+                                <h2 className="text-3xl font-black text-slate-900">Peer vs Peer (Dheeyudha)</h2>
+                            </div>
+                            <p className="text-slate-600 text-lg mb-6">
+                                "Dheeyudha" translates to "War of Wits". This is the core competitive feature of Dheeyudha, allowing you to challenge other students to a real-time quiz battle.
+                            </p>
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+                                <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 text-lg">
+                                    <Target className="w-5 h-5 text-indigo-500" /> Declaring a War
+                                </h3>
+                                <ol className="space-y-4 text-slate-600 text-sm leading-relaxed">
+                                    <li className="flex gap-3">
+                                        <span className="flex-none w-6 h-6 rounded-full bg-red-100 text-red-700 font-black flex items-center justify-center text-xs">1</span>
+                                        <span>From the homepage, use the "Challenge a Peer" feature to find an opponent. You can search by username or school.</span>
+                                    </li>
+                                    <li className="flex gap-3">
+                                        <span className="flex-none w-6 h-6 rounded-full bg-red-100 text-red-700 font-black flex items-center justify-center text-xs">2</span>
+                                        <span>Once you've selected an opponent, you can "Declare War".</span>
+                                    </li>
+                                    <li className="flex gap-3">
+                                        <span className="flex-none w-6 h-6 rounded-full bg-red-100 text-red-700 font-black flex items-center justify-center text-xs">3</span>
+                                        <span>The opponent will be notified of your challenge.</span>
+                                    </li>
+                                </ol>
+                                <div className="mt-5 p-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-800 flex gap-2">
+                                    <span>⚔️</span>
+                                    <span>Winning battles is a key way to earn points and climb the leaderboard. Your win/loss record is displayed on your profile.</span>
+                                </div>
                             </div>
                         </section>
 
@@ -411,7 +452,7 @@ export default function DocsPage() {
                                 <h2 className="text-3xl font-black text-slate-900">Points & Penalties</h2>
                             </div>
 
-                            <p className="text-slate-600 text-lg mb-6">Manthan uses a completely transparent and fair point system. You are rewarded for correct answers, but to prevent random guessing, higher-value questions carry a risk of negative marking.</p>
+                            <p className="text-slate-600 text-lg mb-6">Dheeyudha uses a completely transparent and fair point system. You are rewarded for correct answers, but to prevent random guessing, higher-value questions carry a risk of negative marking.</p>
 
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
                                 <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
@@ -427,7 +468,7 @@ export default function DocsPage() {
                                     <Shield className="w-5 h-5 text-red-500" /> Flat-Tiered Negative Marking
                                 </h3>
                                 <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                                    To maintain leaderboard integrity, incorrect guesses on high-reward questions result in a penalty. Manthan uses a <strong>Flat-Tiered Deduction Scale</strong> — meaning 1-point questions don't carry harsh penalties, but major questions do.
+                                    To maintain leaderboard integrity, incorrect guesses on high-reward questions result in a penalty. Dheeyudha uses a <strong>Flat-Tiered Deduction Scale</strong> — meaning 1-point questions don't carry harsh penalties, but major questions do.
                                 </p>
 
                                 <div className="grid sm:grid-cols-2 gap-3 mb-6">
@@ -486,6 +527,74 @@ export default function DocsPage() {
                             <div className="mt-4 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-sm text-emerald-800 flex gap-2">
                                 <span>💡</span>
                                 <span>Earned achievements are shown with a green ✓ badge on your profile. Locked ones appear greyed out as goals.</span>
+                            </div>
+                        </section>
+
+                        <hr className="border-slate-100" />
+
+                        {/* ── AI Submission Review ── */}
+                        <section id="ai-review" className="scroll-mt-28">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-200">
+                                    <Sparkles className="w-5 h-5 text-white" />
+                                </div>
+                                <h2 className="text-3xl font-black text-slate-900">AI Submission Review</h2>
+                            </div>
+                            <p className="text-slate-600 text-lg mb-6">
+                                Get instant, detailed feedback on your written submissions with our advanced AI-powered review system. This feature helps you understand your mistakes and improve your knowledge without waiting for a human checker.
+                            </p>
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                                <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 text-lg">
+                                    <Zap className="w-5 h-5 text-indigo-500" /> How It Works
+                                </h3>
+                                <ol className="space-y-4 text-slate-600 text-sm leading-relaxed">
+                                    <li className="flex gap-3">
+                                        <span className="flex-none w-6 h-6 rounded-full bg-cyan-100 text-cyan-700 font-black flex items-center justify-center text-xs">1</span>
+                                        <span>After completing a written question, you can request an AI review for your submission.</span>
+                                    </li>
+                                    <li className="flex gap-3">
+                                        <span className="flex-none w-6 h-6 rounded-full bg-cyan-100 text-cyan-700 font-black flex items-center justify-center text-xs">2</span>
+                                        <span>Our AI analyzes your answer for correctness, completeness, and clarity based on the question's context.</span>
+                                    </li>
+                                    <li className="flex gap-3">
+                                        <span className="flex-none w-6 h-6 rounded-full bg-cyan-100 text-cyan-700 font-black flex items-center justify-center text-xs">3</span>
+                                        <span>You receive a detailed report with a score, feedback on what you did right, and suggestions for improvement.</span>
+                                    </li>
+                                </ol>
+                            </div>
+                        </section>
+
+                        <hr className="border-slate-100" />
+
+                        {/* ── Notifications ── */}
+                        <section id="notifications" className="scroll-mt-28">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-200">
+                                    <Bell className="w-5 h-5 text-white" />
+                                </div>
+                                <h2 className="text-3xl font-black text-slate-900">Notifications</h2>
+                            </div>
+                            <p className="text-slate-600 text-lg mb-6">
+                                Stay up-to-date with everything happening on the platform. The notification system ensures you never miss important events.
+                            </p>
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                                <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 text-lg">
+                                    <MessageCircle className="w-5 h-5 text-indigo-500" /> Types of Notifications
+                                </h3>
+                                <p className="text-slate-600 text-sm leading-relaxed mb-4">
+                                    You will receive notifications for:
+                                </p>
+                                <ul className="space-y-2 text-sm text-slate-600 list-disc list-inside">
+                                    <li>When someone follows you.</li>
+                                    <li>When a teacher you follow posts a new question.</li>
+                                    <li>When your application to become a teacher is approved.</li>
+                                    <li>When you receive a new challenge.</li>
+                                    <li>When you earn a new achievement.</li>
+                                </ul>
+                                <div className="mt-5 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-800 flex gap-2">
+                                    <span>💡</span>
+                                    <span>You can view all your notifications on the <Link href="/notifications" className="font-semibold hover:underline">/notifications</Link> page.</span>
+                                </div>
                             </div>
                         </section>
 
@@ -571,7 +680,7 @@ export default function DocsPage() {
                         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-10 text-center text-white">
                             <Bell className="w-10 h-10 mx-auto mb-4 text-indigo-200" />
                             <h3 className="text-2xl font-black mb-2">Ready to start learning?</h3>
-                            <p className="text-white/70 mb-6">Join thousands of students competing and learning on Manthan.</p>
+                            <p className="text-white/70 mb-6">Join thousands of students competing and learning on Dheeyudha.</p>
                             <div className="flex gap-3 justify-center flex-wrap">
                                 <Link href="/signup" className="inline-flex items-center gap-2 bg-white text-indigo-700 font-bold px-6 py-3 rounded-2xl hover:bg-indigo-50 transition-colors shadow-lg">
                                     <UserPlus className="w-4 h-4" /> Get Started

@@ -10,15 +10,15 @@ export default function ContactPage() {
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    
+
     // Show success message
     setShowSuccess(true)
-    
+
     // Clear form
     setName('')
     setEmail('')
     setMessage('')
-    
+
     // Hide success message after 5 seconds
     setTimeout(() => {
       setShowSuccess(false)
@@ -33,10 +33,10 @@ export default function ContactPage() {
           <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl mb-4">
             Contact Us
           </h1>
-          
+
           {/* Explanatory copy */}
           <p className="text-gray-600 mb-8">
-            Have questions about Manthan? Want to partner with us or report an issue? 
+            Have questions about Dheeyudha? Want to partner with us or report an issue?
             We&apos;d love to hear from you! Fill out the form below and we&apos;ll get back to you soon.
           </p>
 

@@ -42,12 +42,27 @@ export async function GET(request: Request) {
 
         const targetUserIds = followsData.map((f: any) => f[selectColumn as string]);
 
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-        if (authError || !authData?.users) {
-            return NextResponse.json({ users: [] });
+        // Fetch all users with pagination to find matches
+        let allUsers: any[] = [];
+        let pageNum = 1;
+        let hasMore = true;
+
+        while (hasMore) {
+            const { data: pageData, error: pageError } = await supabaseAdmin.auth.admin.listUsers({
+                pageSize: 1000,
+                page: pageNum,
+            });
+
+            if (pageError || !pageData?.users) {
+                break;
+            }
+
+            allUsers = allUsers.concat(pageData.users);
+            hasMore = pageData.users.length === 1000;
+            pageNum++;
         }
 
-        const matchedUsers = authData.users
+        const matchedUsers = allUsers
             .filter(u => targetUserIds.includes(u.id))
             .map(u => ({
                 id: u.id,
@@ -103,7 +118,7 @@ export async function POST(request: Request) {
         userId: followingId,
         type: 'new_follower',
         title: `${followerName} started following you`,
-        body: `@${followerUsername || 'someone'} is now following you on Manthan.`,
+        body: `@${followerUsername || 'someone'} is now following you on Dheeyudha.`,
         href: followerUsername ? `/user/${followerUsername}` : null,
         actorId: user.id,
         actorName: followerName,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { leaderboardCache } from "@/lib/leaderboardCache";
+import { createNotification } from "@/lib/createNotification";
 
 async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
     if (!authHeader) return null;
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Authentication required" }, { status: 401 });
         }
 
-        const { questionId, selectedOption, startedAt, timeTaken } = await req.json();
+        const { questionId, selectedOption, startedAt, timeTaken, challengeId } = await req.json();
 
         if (!questionId) {
             return NextResponse.json({ error: "Missing questionId" }, { status: 400 });
@@ -56,7 +57,21 @@ export async function POST(req: Request) {
         const isCorrect = correctOpt !== null && selectedOption === correctOpt;
         const questionPoints = q.points || 0;
 
+        // Custom logic for coop challenges
+        let challenge = null;
+        if (challengeId) {
+            const { data: c } = await supabaseAdmin
+                .from("coop_challenges")
+                .select("*")
+                .eq("id", challengeId)
+                .single();
+            challenge = c;
+        }
+
         // 4. Update User Points
+        let userPointsChange = 0;
+        let pointsChangeDisplay = 0;
+
         const { data: userResp, error: uErr } = await supabaseAdmin.auth.admin.getUserById(userId);
         if (uErr || !userResp?.user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -64,20 +79,75 @@ export async function POST(req: Request) {
 
         const userMeta = userResp.user.user_metadata || {};
         const currentPoints = Number(userMeta.totalPoints) || 0;
+        if (challenge) {
+            const isPartner = challenge.partner_id === userId;
+            const isInitiator = challenge.initiator_id === userId;
 
-        let pointsChange = 0;
-        if (isCorrect) {
-            pointsChange = questionPoints;
+            if (isCorrect) {
+                // If correct, both win and split points
+                const splitPoints = Math.ceil(questionPoints / 2);
+                userPointsChange = splitPoints;
+                pointsChangeDisplay = splitPoints;
+
+                // Update challenge status to won
+                await supabaseAdmin
+                    .from("coop_challenges")
+                    .update({ status: 'won' })
+                    .eq("id", challenge.id);
+
+                // We must reward the other person too
+                const otherUserId = isPartner ? challenge.initiator_id : challenge.partner_id;
+                const { data: otherUser } = await supabaseAdmin.auth.admin.getUserById(otherUserId);
+                if (otherUser?.user) {
+                    const otherMeta = otherUser.user.user_metadata || {};
+                    const otherCurrent = Number(otherMeta.totalPoints) || 0;
+                    await supabaseAdmin.auth.admin.updateUserById(otherUserId, {
+                        user_metadata: {
+                            ...otherMeta,
+                            totalPoints: Math.max(0, otherCurrent + splitPoints),
+                        }
+                    });
+                }
+            } else {
+                // Wrong answer in challenge
+                const calculatedPenalty = currentPoints > 0 ? Math.floor(questionPoints / 5) : 0;
+                userPointsChange = -calculatedPenalty;
+                pointsChangeDisplay = -calculatedPenalty;
+
+                if (isPartner) {
+                    await supabaseAdmin
+                        .from("coop_challenges")
+                        .update({ partner_attempted: true, status: 'lost' })
+                        .eq("id", challenge.id);
+
+                    // Notify initiator that partner failed to save them
+                    const { data: partnerUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+                    const partnerName = partnerUser?.user?.user_metadata?.fullName || partnerUser?.user?.user_metadata?.username || "Your friend";
+
+                    await createNotification({
+                        userId: challenge.initiator_id,
+                        type: 'coop_challenge',
+                        title: `${partnerName} couldn't save you!`,
+                        body: `They got the answer wrong. Your co-op challenge is officially lost.`,
+                        href: `/questions/${questionId}`,
+                    });
+                }
+            }
         } else {
-            // Flat Tiered Deduction: penalty = Math.floor(questionPoints / 5). 
-            // 1-4 points = 0 penalty. 5-9 = -1 penalty, etc. This is explicit and avoids unfair harsh decimals.
-            if (currentPoints > 0) {
-                const calculatedPenalty = Math.floor(questionPoints / 5);
-                pointsChange = -calculatedPenalty;
+            // Normal solve logic
+            if (isCorrect) {
+                userPointsChange = questionPoints;
+                pointsChangeDisplay = questionPoints;
+            } else {
+                if (currentPoints > 0) {
+                    const calculatedPenalty = Math.floor(questionPoints / 5);
+                    userPointsChange = -calculatedPenalty;
+                    pointsChangeDisplay = -calculatedPenalty;
+                }
             }
         }
 
-        const newTotal = Math.max(0, currentPoints + pointsChange);
+        const newTotal = Math.max(0, currentPoints + userPointsChange);
 
         // Update totalPoints and increment attempts counter maybe
         const battlesAttempted = (Number(userMeta.battlesAttempted) || 0) + 1;
@@ -93,22 +163,34 @@ export async function POST(req: Request) {
         });
         leaderboardCache.invalidate(); // reflect new MCQ points in TopBrains immediately
 
-        // 5. Save attempt
-        await supabaseAdmin.from("question_attempts").insert({
-            user_id: userId,
-            question_id: questionId,
-            selected_option: selectedOption,
-            is_correct: isCorrect,
-            time_taken: timeTaken || 0,
-            started_at: startedAt || new Date().toISOString(),
-            submitted_at: new Date().toISOString(),
-        });
+        // 5. Save attempt or update existing if it's the initiator's second try
+        if (challenge && challenge.initiator_id === userId) {
+            // they already have an attempt, so we should UPDATE it to reflect the new time/answer if we wanted,
+            // or simply not insert a duplicate (which would crash due to unique constraint).
+            // Since they already attempted, we just update the attempt so it shows the new result in UI
+            await supabaseAdmin.from("question_attempts").update({
+                selected_option: selectedOption,
+                is_correct: isCorrect,
+                time_taken: timeTaken || 0,
+                submitted_at: new Date().toISOString(),
+            }).eq("user_id", userId).eq("question_id", questionId);
+        } else {
+            await supabaseAdmin.from("question_attempts").insert({
+                user_id: userId,
+                question_id: questionId,
+                selected_option: selectedOption,
+                is_correct: isCorrect,
+                time_taken: timeTaken || 0,
+                started_at: startedAt || new Date().toISOString(),
+                submitted_at: new Date().toISOString(),
+            });
+        }
 
         return NextResponse.json({
             success: true,
             isCorrect,
             correctOption: correctOpt,
-            pointsChange,
+            pointsChange: pointsChangeDisplay,
             newTotal
         });
     } catch (err: any) {

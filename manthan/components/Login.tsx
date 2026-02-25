@@ -39,8 +39,8 @@ const Login: React.FC = () => {
         } else {
           // Persist email if requested
           try {
-            if (rememberMe) localStorage.setItem('manthan_remember_email', email)
-            else localStorage.removeItem('manthan_remember_email')
+            if (rememberMe) localStorage.setItem('dheeyudha_remember_email', email)
+            else localStorage.removeItem('dheeyudha_remember_email')
           } catch (err) { void err }
           router.push('/profile')
         }
@@ -76,7 +76,7 @@ const Login: React.FC = () => {
   // Load remembered email on mount
   React.useEffect(() => {
     try {
-      const saved = localStorage.getItem('manthan_remember_email')
+      const saved = localStorage.getItem('dheeyudha_remember_email')
       if (saved) {
         setEmail(saved)
         setRememberMe(true)
@@ -210,7 +210,7 @@ const Login: React.FC = () => {
                   disabled={loading}
                   className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-base font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-95 disabled:opacity-60"
                 >
-                  {loading ? 'Signing in…' : 'Sign in to Manthan'}
+                  {loading ? 'Signing in…' : 'Sign in to Dheeyudha'}
                 </button>
               </div>
 

@@ -32,4 +32,14 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
   }
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    detectSessionInUrl: true,
+    // Override the NavigatorLock to avoid 10s timeout in browsers with MetaMask/other extensions
+    lock: async (name: string, acquireTimeout: number, fn: () => Promise<unknown>) => {
+      return fn();
+    },
+  },
+})
+

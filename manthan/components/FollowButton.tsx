@@ -85,21 +85,31 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                     setFollowersCount(prev => Math.max(0, prev - 1));
                 }
             } else {
-                // Follow
-                const { error } = await supabase
-                    .from('follows')
-                    .insert({
-                        follower_id: currentUser.id,
-                        following_id: profileUserId
-                    });
-
-                if (!error) {
-                    setIsFollowing(true);
-                    setFollowersCount(prev => prev + 1);
+                // Follow - use API endpoint to create notification
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) {
+                    throw new Error('No access token available');
                 }
+
+                const response = await fetch('/api/follows', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ followingId: profileUserId }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to follow user');
+                }
+
+                setIsFollowing(true);
+                setFollowersCount(prev => prev + 1);
             }
         } catch (err) {
             console.error("Follow toggle failed:", err);
+            alert("Failed to follow user. Please try again.");
         } finally {
             setActionLoading(false);
         }

@@ -13,10 +13,26 @@ export default async function StudentProfilePage({ params }: Props) {
     try {
         let fetchedUser: any = null;
 
-        // Fetch by Username
-        const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-        if (!error && data?.users) {
+        // Fetch by Username with proper pagination
+        let pageNum = 1;
+        let hasMore = true;
+        while (hasMore && !fetchedUser) {
+            const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+                pageSize: 1000, // Increase page size to reduce API calls
+                page: pageNum,
+            });
+
+            if (error || !data?.users) {
+                console.error('Error fetching users:', error);
+                break;
+            }
+
+            // Search for user in this page
             fetchedUser = data.users.find((u: any) => (u.user_metadata?.username || '').toLowerCase() === username.toLowerCase());
+
+            // Check if there are more pages
+            hasMore = data.users.length === 1000;
+            pageNum++;
         }
 
         if (!fetchedUser) {

@@ -16,12 +16,26 @@ export default async function TeacherProfilePage({ params }: Props) {
   try {
     let fetchedUser: any = null;
 
-    // Fetch by Username (inefficient scan, requires 'profiles' table for production)
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-    if (!error && data?.users) {
+    // Fetch by Username with proper pagination (inefficient scan, requires 'profiles' table for production)
+    let pageNum = 1;
+    let hasMore = true;
+    while (hasMore && !fetchedUser) {
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+        pageSize: 1000,
+        page: pageNum,
+      });
+      
+      if (error || !data?.users) {
+        console.error('Error fetching teacher users:', error);
+        break;
+      }
+
       fetchedUser = data.users.find((u: any) =>
         (u.user_metadata?.username || '').toLowerCase() === targetUsername.toLowerCase()
       );
+
+      hasMore = data.users.length === 1000;
+      pageNum++;
     }
 
     if (!fetchedUser) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { leaderboardCache } from "@/lib/leaderboardCache";
+import { createNotification } from "@/lib/createNotification";
 
 async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
     if (!authHeader) return null;
@@ -46,15 +47,41 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Written submissions only for questions > 15 points" }, { status: 400 });
         }
 
-        // Check if student already submitted
-        const { data: existing } = await supabaseAdmin
+        const challengeId = formData.get("challengeId") as string | null;
+
+        // Check if student already submitted — use limit(1) to avoid issues with multiple rows
+        const { data: existingRows } = await supabaseAdmin
             .from("written_submissions")
             .select("id, status")
             .eq("student_id", userId)
             .eq("question_id", questionId)
-            .maybeSingle();
+            .order("created_at", { ascending: false })
+            .limit(1);
 
-        if (existing) {
+        const existing = existingRows?.[0] ?? null;
+
+        if (challengeId) {
+            // Verify challenge exists and user is part of it
+            const { data: challenge } = await supabaseAdmin
+                .from("coop_challenges")
+                .select("id, initiator_id, partner_id")
+                .eq("id", challengeId)
+                .single();
+
+            if (!challenge || (challenge.initiator_id !== userId && challenge.partner_id !== userId)) {
+                return NextResponse.json({ error: "Invalid challenge" }, { status: 403 });
+            }
+
+            // Only allow re-upload over an explicitly wrong prior submission
+            if (existing) {
+                if (existing.status !== "ai_confirmed_wrong") {
+                    return NextResponse.json({ error: "You have already submitted an answer for this question" }, { status: 403 });
+                }
+                // Delete the wrong submission so they can retry via co-op
+                await supabaseAdmin.from("written_submissions").delete().eq("id", existing.id);
+            }
+        } else if (existing) {
+            // No co-op context — always block re-submission
             return NextResponse.json({ error: "You have already submitted an answer for this question" }, { status: 403 });
         }
 
@@ -92,6 +119,7 @@ export async function POST(req: Request) {
                 status: "pending",
                 self_marked_correct: false,
                 points_awarded: 0,
+                challenge_id: challengeId || null,
             })
             .select()
             .single();
@@ -142,12 +170,13 @@ export async function PATCH(req: Request) {
         }
 
         const questionPoints = (sub.questions as any)?.points || 0;
+        const pointsToAward = sub.challenge_id ? Math.ceil(questionPoints / 2) : questionPoints;
 
         // Award points provisionally
         const { data: userResp } = await supabaseAdmin.auth.admin.getUserById(userId);
         const userMeta = userResp?.user?.user_metadata || {};
         const currentPoints = Number(userMeta.totalPoints) || 0;
-        const newTotal = currentPoints + questionPoints;
+        const newTotal = currentPoints + pointsToAward;
         const battlesAttempted = (Number(userMeta.battlesAttempted) || 0) + 1;
         const battlesWon = (Number(userMeta.battlesWon) || 0) + 1;
 
@@ -167,15 +196,24 @@ export async function PATCH(req: Request) {
             .update({
                 self_marked_correct: true,
                 status: "pending_check",
-                points_awarded: questionPoints,
+                points_awarded: pointsToAward,
                 checker_deadline: null, // Legacy, no longer used
                 updated_at: new Date().toISOString(),
             })
             .eq("id", submissionId);
 
+        // 🔔 Notify student they earned points
+        await createNotification({
+            userId: userId,
+            type: 'points_earned',
+            title: `+${pointsToAward} points earned!`,
+            body: `Your answer was submitted for community verification. You've earned ${pointsToAward} points provisionally.`,
+            href: `/submission/${submissionId}/ai-review`,
+        });
+
         return NextResponse.json({
             success: true,
-            pointsAwarded: questionPoints,
+            pointsAwarded: pointsToAward,
             newTotal,
         });
     } catch (err: any) {

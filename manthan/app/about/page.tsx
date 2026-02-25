@@ -5,23 +5,23 @@ export default function AboutPage() {
         <div className="max-w-4xl mx-auto animate-fadeIn">
           {/* Page heading */}
           <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl mb-6">
-            About Manthan
+            About Dheeyudha
           </h1>
-          
+
           {/* Description section */}
           <div className="space-y-6 rounded-2xl shadow-2xl ring-1 ring-black/5 bg-white p-8 animate-slideUp">
             <div>
               <p className="text-lg text-gray-700 leading-relaxed">
-                Manthan is an innovative educational platform that transforms learning into an exciting 
-                competitive experience. We bring students from different schools together in knowledge 
+                Dheeyudha is an innovative educational platform that transforms learning into an exciting
+                competitive experience. We bring students from different schools together in knowledge
                 battles, creating a vibrant community of learners who challenge each other to grow and excel.
               </p>
             </div>
 
             <div>
               <p className="text-gray-600 leading-relaxed">
-                Our mission is to make education engaging and fun while fostering healthy competition 
-                and collaboration. Through Manthan, students don&apos;t just learn—they compete, conquer 
+                Our mission is to make education engaging and fun while fostering healthy competition
+                and collaboration. Through Dheeyudha, students don&apos;t just learn—they compete, conquer
                 challenges, and celebrate victories together.
               </p>
             </div>
@@ -103,7 +103,7 @@ export default function AboutPage() {
             {/* Call to action */}
             <div className="mt-10 pt-8 border-t border-gray-200">
               <p className="text-center text-gray-700 text-lg">
-                Join thousands of students already competing on Manthan!
+                Join thousands of students already competing on Dheeyudha!
               </p>
               <div className="mt-4 flex justify-center">
                 <button className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300">

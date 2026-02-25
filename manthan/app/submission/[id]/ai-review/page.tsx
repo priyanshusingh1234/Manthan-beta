@@ -93,6 +93,16 @@ export default function AIReviewPage() {
                                     FINAL VERDICT: {reviewData.verdict.toUpperCase()}
                                 </div>
 
+                                {/* Auto-Delete Storage Notice for Wrong Answers */}
+                                {reviewData.verdict === "wrong" && (
+                                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                                        <p className="text-sm font-medium text-amber-800">
+                                            <span className="font-bold text-amber-900 block mb-0.5">⚠️ Space Saving Policy</span>
+                                            Because your answer was marked wrong, this submission and its review will be <strong>automatically deleted in 2 days</strong> to keep our servers fast and clean.
+                                        </p>
+                                    </div>
+                                )}
+
                                 {/* Breakdown */}
                                 <div className="p-6 bg-slate-50/50 rounded-2xl border border-slate-100 shadow-inner">
                                     <h3 className="flex items-center gap-2 text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">

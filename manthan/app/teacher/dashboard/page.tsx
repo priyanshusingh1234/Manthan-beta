@@ -1,7 +1,7 @@
 import TeacherApplicationsList from '@/components/TeacherApplicationsList';
 
 export const metadata = {
-  title: 'Teacher applications — Manthan',
+  title: 'Teacher applications — Dheeyudha',
 };
 
 export default function TeacherDashboardPage() {

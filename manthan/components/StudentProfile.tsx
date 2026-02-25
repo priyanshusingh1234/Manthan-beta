@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
-import Cropper, { type Area } from 'react-easy-crop';
+import { type Area } from 'react-easy-crop';
 import { getCroppedImg, blobToFile } from '@/utils/cropImage';
 import { compressImage } from '@/utils/compressImage';
 import {
@@ -13,7 +13,8 @@ import {
 import Image from 'next/image';
 import TeacherBadge from '@/ticks/teacher';
 import FollowButton from '@/components/FollowButton';
-
+import CropModal from '@/components/profile/CropModal';
+import EditProfileModal from '@/components/profile/EditProfileModal';
 
 const StudentProfile: React.FC = () => {
   const [userData, setUserData] = useState({
@@ -317,141 +318,28 @@ const StudentProfile: React.FC = () => {
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Crop Modal */}
         {showCrop && imageSrc && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCrop(false)} />
-            <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl h-[70vh] p-6">
-              <div className="h-[60%] bg-slate-100 dark:bg-slate-700 rounded-xl overflow-hidden relative">
-                <Cropper
-                  image={imageSrc}
-                  crop={crop}
-                  zoom={zoom}
-                  aspect={cropType === 'avatar' ? 1 : 16 / 6}
-                  onCropChange={setCrop}
-                  onZoomChange={setZoom}
-                  onCropComplete={onCropComplete}
-                />
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Zoom</label>
-                  <input
-                    type="range"
-                    min={1}
-                    max={3}
-                    step={0.01}
-                    value={zoom}
-                    onChange={(e) => setZoom(Number(e.target.value))}
-                    className="w-40 accent-blue-600"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowCrop(false)}
-                    className="px-5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={onCropSave}
-                    className="px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium hover:from-blue-700 hover:to-purple-700 transition shadow-md"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <CropModal
+            imageSrc={imageSrc}
+            crop={crop}
+            zoom={zoom}
+            cropType={cropType}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+            onSave={onCropSave}
+            onCancel={() => setShowCrop(false)}
+          />
         )}
 
         {/* Edit Profile Modal */}
         {showEditProfile && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowEditProfile(false)} />
-            <div className="relative bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
-              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <h3 className="text-xl font-black text-slate-900 dark:text-white">Edit Profile</h3>
-                <button
-                  onClick={() => setShowEditProfile(false)}
-                  className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition"
-                >
-                  <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                </button>
-              </div>
-              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                {message && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl text-sm font-medium">
-                    {message}
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Full Name</label>
-                  <input
-                    value={editForm.name}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors font-medium text-slate-800 dark:text-slate-200"
-                    placeholder="E.g. Elon Musk"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="flex justify-between items-center text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">
-                    <span>Username</span>
-                    <span className="text-xs font-normal opacity-70">Max 3 updates/month</span>
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">@</span>
-                    <input
-                      value={editForm.username}
-                      onChange={(e) => setEditForm({ ...editForm, username: e.target.value.toLowerCase().replace(/\s/g, '') })}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-4 py-3 outline-none focus:border-indigo-500 transition-colors font-mono font-medium text-slate-800 dark:text-slate-200"
-                      placeholder="username"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">School</label>
-                    <input
-                      value={editForm.school}
-                      onChange={(e) => setEditForm({ ...editForm, school: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors font-medium text-slate-800 dark:text-slate-200"
-                      placeholder="High School"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Grade / Class</label>
-                    <input
-                      value={editForm.grade}
-                      onChange={(e) => setEditForm({ ...editForm, grade: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors font-medium text-slate-800 dark:text-slate-200"
-                      placeholder="10th"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Bio</label>
-                  <textarea
-                    value={editForm.bio}
-                    onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors font-medium text-slate-800 dark:text-slate-200 min-h-[100px] resize-none"
-                    placeholder="A little about yourself..."
-                  />
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-                <button
-                  onClick={saveProfile}
-                  className="w-full bg-slate-900 dark:bg-indigo-600 text-white font-bold px-4 py-4 rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-500 transition-all shadow-md active:translate-y-0.5"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          </div>
+          <EditProfileModal
+            form={editForm}
+            message={message}
+            onFormChange={setEditForm}
+            onSave={saveProfile}
+            onClose={() => setShowEditProfile(false)}
+          />
         )}
 
         {/* Profile Header */}

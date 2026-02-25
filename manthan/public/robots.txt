@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /*?*challenge=
+Sitemap: https://manthan-beta-c975.vercel.app/sitemap.xml

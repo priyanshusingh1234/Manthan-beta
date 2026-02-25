@@ -5,13 +5,31 @@ import { Trophy, Medal, MapPin, Sparkles, Zap, Award } from "lucide-react";
 export const revalidate = 0; // Always fetch fresh data
 
 export default async function LeaderboardPage() {
-  // Fetch all users and sort them by totalPoints
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+  // Fetch all users and sort them by totalPoints with proper pagination
+  let allUsers: any[] = [];
+  let pageNum = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      pageSize: 1000,
+      page: pageNum,
+    });
+
+    if (error || !data?.users) {
+      console.error('Error fetching leaderboard users:', error);
+      break;
+    }
+
+    allUsers = allUsers.concat(data.users);
+    hasMore = data.users.length === 1000;
+    pageNum++;
+  }
 
   let students: any[] = [];
 
-  if (!error && data?.users) {
-    students = data.users
+  if (allUsers.length > 0) {
+    students = allUsers
       .filter((u: any) => !u.user_metadata?.isTeacher) // strictly students
       .map((u: any) => {
         const meta = u.user_metadata || {};

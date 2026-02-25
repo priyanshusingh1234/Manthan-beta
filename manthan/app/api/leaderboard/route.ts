@@ -1,54 +1,46 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
-import { leaderboardCache } from "@/lib/leaderboardCache";
 import { NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
-async function fetchFreshLeaderboard() {
-    // Query the student_leaderboard VIEW directly via SQL — this reads from auth.users
-    // in real-time (no Supabase REST API caching lag like auth.admin.listUsers() has)
-    const { data, error } = await supabaseAdmin
-        .from("student_leaderboard")
-        .select("id, name, username, school, avatar, points")
-        .order("points", { ascending: false })
-        .limit(10);
-
-    if (error) throw new Error(error.message);
-
-    const topBrains = (data || []).map((u: any, i: number) => ({
-        id: u.id,
-        name: u.name || "Student",
-        username: u.username,
-        school: u.school || "Unknown School",
-        avatar: u.avatar || null,
-        points: Number(u.points) || 0,
-        rank: i + 1,
-        streak: 0,
-        schoolColor: "bg-blue-500",
-    }));
-
-    return { topBrains };
-}
-
-export async function GET(req: Request) {
+export async function GET() {
     try {
-        const forceRefresh = new URL(req.url).searchParams.get("refresh") === "1";
+        // Use the Auth Admin API directly — bypasses the student_leaderboard VIEW
+        // and Supabase PostgREST caching. This reads auth.users in real-time.
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+            page: 1,
+            perPage: 1000,
+        });
 
-        if (!forceRefresh && leaderboardCache.isValid()) {
-            return NextResponse.json(leaderboardCache.data!, {
-                status: 200,
-                headers: { "X-Cache": "HIT", "Cache-Control": "no-store" },
-            });
-        }
+        if (error) throw new Error(error.message);
 
-        const fresh = await fetchFreshLeaderboard();
-        leaderboardCache.set(fresh, 20_000);
+        // Filter to students only (non-teachers), sort by totalPoints desc
+        const students = (data.users || [])
+            .filter((u) => !u.user_metadata?.isTeacher)
+            .map((u) => ({
+                id: u.id,
+                name: (u.user_metadata?.fullName as string) || u.email?.split('@')[0] || 'Student',
+                username: (u.user_metadata?.username as string) || '',
+                school: (u.user_metadata?.school as string) || 'Unknown School',
+                avatar: (u.user_metadata?.avatar_url as string) || null,
+                points: Number(u.user_metadata?.totalPoints) || 0,
+                streak: 0,
+                schoolColor: 'bg-blue-500',
+            }))
+            .filter((u) => u.username) // must have a username to appear
+            .sort((a, b) => b.points - a.points)
+            .slice(0, 10)
+            .map((u, i) => ({ ...u, rank: i + 1 }));
 
-        return NextResponse.json(fresh, {
+        return NextResponse.json({ topBrains: students }, {
             status: 200,
-            headers: { "X-Cache": "MISS", "Cache-Control": "no-store" },
+            headers: {
+                "Cache-Control": "no-store, no-cache, must-revalidate",
+                "Pragma": "no-cache",
+            },
         });
     } catch (err: any) {
+        console.error('[leaderboard] error:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

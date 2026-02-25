@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send, Users } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import TeacherBadge from "@/ticks/teacher";
+import ChallengeFriendModal from "@/components/ChallengeFriendModal";
+import CoopChallengeHeader from "@/components/CoopChallengeHeader";
+import CoopSpectatorScreen from "@/components/CoopSpectatorScreen";
+
 
 export default function SolveQuestionClient({ question }: { question: any }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const challengeId = searchParams.get("challenge");
+
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState<number>(question.time_limit * 60);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,30 +27,49 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const [hoverRating, setHoverRating] = useState<number>(0);
     const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
+    const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+    const [challengeInitiator, setChallengeInitiator] = useState<string | null>(null);
+
     useEffect(() => {
         let mounted = true;
         const checkAuthAndAttempt = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
+            // Use getUser() to avoid NavigatorLock timeout issues
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            if (authError || !user) {
                 if (mounted) router.push("/login");
                 return;
             }
 
-            if (session.user.user_metadata?.isTeacher) {
+            if (user.user_metadata?.isTeacher) {
                 if (mounted) router.push("/");
                 return;
             }
 
-            // Check if already attempted query via RLS or direct
+            if (challengeId) {
+                const { data: challengeInfo } = await supabase
+                    .from("coop_challenges")
+                    .select("initiator_id")
+                    .eq("id", challengeId)
+                    .single();
+                if (mounted && challengeInfo) {
+                    setChallengeInitiator(challengeInfo.initiator_id);
+                }
+            }
+
+            // Check if already attempted
             const { data, error } = await supabase
                 .from("question_attempts")
                 .select("is_correct, selected_option, time_taken")
-                .eq("user_id", session.user.id)
+                .eq("user_id", user.id)
                 .eq("question_id", question.id)
+                .limit(1)
                 .maybeSingle();
 
             if (mounted) {
                 if (data) setAlreadyAttempted(data);
+                setCurrentUserId(user.id);
                 setAuthChecked(true);
             }
         };
@@ -74,6 +100,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     selectedOption: optionToSend ?? null,
                     startedAt,
                     timeTaken: Math.max(0, question.time_limit * 60 - timeLeft),
+                    challengeId
                 }),
             });
 
@@ -89,7 +116,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             alert("Network error: " + err.message);
             setIsSubmitting(false);
         }
-    }, [isSubmitting, result, selectedOption, startedAt, question, timeLeft]);
+    }, [isSubmitting, result, selectedOption, startedAt, question, timeLeft, challengeId]);
 
     // Timer effect
     useEffect(() => {
@@ -188,9 +215,22 @@ export default function SolveQuestionClient({ question }: { question: any }) {
         );
     }
 
-    if (alreadyAttempted) {
+    // Initiator visited their own challenge link — show spectator screen, NOT the question
+    if (alreadyAttempted && challengeId && challengeInitiator === currentUserId) {
         return (
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 text-center space-y-6 animate-in fade-in zoom-in-95">
+            <CoopSpectatorScreen
+                challengeId={challengeId}
+                questionPoints={question.points || 0}
+                currentUserId={currentUserId!}
+            />
+        );
+    }
+
+    // Non-challenge re-attempt → already attempted screen
+    if (alreadyAttempted && !challengeId) {
+        return (
+            <div className="bg-white rounded-[3rem] p-8 shadow-sm border border-slate-100 text-center space-y-6 animate-in fade-in zoom-in-95 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
                 <div className="flex justify-center">
                     {alreadyAttempted.is_correct ? (
                         <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
@@ -209,14 +249,40 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 <p className="text-lg text-slate-600 max-w-md mx-auto">
                     Your answer was <span className="font-bold">{alreadyAttempted.is_correct ? "Correct" : "Incorrect"}</span>.
                 </p>
-                <div className="pt-6">
+                <div className="pt-6 flex flex-col gap-3 max-w-sm mx-auto">
+                    {!alreadyAttempted.is_correct && !challengeId && (
+                        <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl mb-2 text-sm text-indigo-800 text-left">
+                            <span className="font-bold flex items-center gap-1.5 mb-1"><Users className="w-4 h-4" /> Co-op Recovery Available!</span>
+                            You can't retry this alone, but if you tag a friend and they solve it correctly, you'll both split the points!
+                        </div>
+                    )}
+
+                    {!alreadyAttempted.is_correct && !challengeId && (
+                        <button
+                            onClick={() => setIsChallengeModalOpen(true)}
+                            className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20"
+                        >
+                            <Users className="w-5 h-5" />
+                            Tag a Friend to Retry!
+                        </button>
+                    )}
                     <button
                         onClick={() => router.push("/")}
-                        className="bg-slate-900 text-white font-bold px-8 py-3 rounded-full hover:bg-slate-800 transition"
+                        className={`w-full ${alreadyAttempted.is_correct ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 border'} font-bold px-8 py-3.5 rounded-xl transition`}
                     >
                         Back to Dashboard
                     </button>
                 </div>
+
+                {/* Challenge Modal */}
+                {currentUserId && (
+                    <ChallengeFriendModal
+                        isOpen={isChallengeModalOpen}
+                        onClose={() => setIsChallengeModalOpen(false)}
+                        questionId={question.id}
+                        currentUserId={currentUserId}
+                    />
+                )}
             </div>
         );
     }
@@ -297,21 +363,48 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                         </div>
                     )}
 
-                    <div className="mt-6">
+                    <div className="mt-6 flex flex-col gap-3">
+                        {!result.isCorrect && (
+                            <button
+                                onClick={() => setIsChallengeModalOpen(true)}
+                                className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20"
+                            >
+                                <Users className="w-5 h-5" />
+                                Tag a Friend to Recover Points!
+                            </button>
+                        )}
                         <button
                             onClick={() => router.push("/")}
-                            className="w-full bg-slate-900 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-slate-800 transition shadow-lg shadow-slate-900/20"
+                            className={`w-full ${result.isCorrect ? 'bg-slate-900 border-transparent text-white hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'} font-bold px-8 py-3.5 rounded-xl border transition`}
                         >
                             Back to Dashboard
                         </button>
                     </div>
                 </div>
+
+                {/* Challenge Modal */}
+                {currentUserId && (
+                    <ChallengeFriendModal
+                        isOpen={isChallengeModalOpen}
+                        onClose={() => setIsChallengeModalOpen(false)}
+                        questionId={question.id}
+                        currentUserId={currentUserId}
+                    />
+                )}
             </div>
         );
     }
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-5">
+            {challengeId && (
+                <CoopChallengeHeader
+                    challengeId={challengeId}
+                    questionPoints={question.points || 0}
+                    currentUserId={currentUserId}
+                />
+            )}
+
             {/* Top Bar: Timer & Points */}
             <div className="flex items-center justify-between bg-white/95 backdrop-blur-md px-5 py-3 rounded-2xl border border-gray-200 shadow-sm sticky top-4 z-40">
                 <div className={`flex items-center gap-2 font-mono text-lg font-medium px-4 py-1.5 rounded-full ${timeLeft <= 30 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-100/80 text-gray-700'}`}>
@@ -333,76 +426,78 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             </div>
 
             {/* Main Card */}
-            <div className="bg-white rounded-[2rem] p-6 sm:p-12 shadow-sm border border-gray-200 relative overflow-hidden">
-                {renderTeacherProfile()}
+            {(
+                <div className="bg-white rounded-[2rem] p-6 sm:p-12 shadow-sm border border-gray-200 relative overflow-hidden">
+                    {renderTeacherProfile()}
 
-                <div className="mb-8 flex flex-wrap gap-2">
-                    {question.class_grade && (
-                        <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium tracking-wide">Class {question.class_grade}</span>
-                    )}
-                    {question.subject && (
-                        <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium tracking-wide">{question.subject}</span>
-                    )}
-                    {question.difficulty && (
-                        <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium capitalize tracking-wide">
-                            {question.difficulty}
-                        </span>
-                    )}
-                </div>
-
-                <h1 className="text-2xl sm:text-4xl font-semibold text-gray-900 mb-6 leading-relaxed tracking-tight">
-                    {question.title}
-                </h1>
-
-                {question.body && (
-                    <p className="text-gray-600 leading-relaxed text-lg sm:text-xl mb-10 whitespace-pre-wrap font-light">
-                        {question.body}
-                    </p>
-                )}
-
-                {publicUrl && (
-                    <div className="mb-12 rounded-[1.5rem] overflow-hidden bg-gray-50/50 flex items-center justify-center p-6 border border-gray-100">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={publicUrl} alt="Question Attachment" className="max-h-[400px] object-contain rounded-xl drop-shadow-sm" />
+                    <div className="mb-8 flex flex-wrap gap-2">
+                        {question.class_grade && (
+                            <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium tracking-wide">Class {question.class_grade}</span>
+                        )}
+                        {question.subject && (
+                            <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium tracking-wide">{question.subject}</span>
+                        )}
+                        {question.difficulty && (
+                            <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium capitalize tracking-wide">
+                                {question.difficulty}
+                            </span>
+                        )}
                     </div>
-                )}
 
-                {/* Options */}
-                {question.options && question.options.length > 0 && (
-                    <div className="grid gap-3 mt-8">
-                        {question.options.map((opt: string, idx: number) => {
-                            const isSelected = selectedOption === idx;
-                            return (
-                                <button
-                                    key={idx}
-                                    onClick={() => setSelectedOption(idx)}
-                                    className={`relative p-5 sm:p-6 text-left rounded-2xl border transition-all duration-200 flex items-center gap-4 group ${isSelected
-                                        ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500 z-10"
-                                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/80 text-gray-700"
-                                        }`}
-                                >
-                                    <div className={`shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
-                                        }`}>
-                                        {String.fromCharCode(65 + idx)}
-                                    </div>
-                                    <span className={`text-base sm:text-lg transition-colors ${isSelected ? "text-blue-900 font-medium" : "text-gray-700"}`}>{opt}</span>
-                                </button>
-                            );
-                        })}
+                    <h1 className="text-2xl sm:text-4xl font-semibold text-gray-900 mb-6 leading-relaxed tracking-tight">
+                        {question.title}
+                    </h1>
+
+                    {question.body && (
+                        <p className="text-gray-600 leading-relaxed text-lg sm:text-xl mb-10 whitespace-pre-wrap font-light">
+                            {question.body}
+                        </p>
+                    )}
+
+                    {publicUrl && (
+                        <div className="mb-12 rounded-[1.5rem] overflow-hidden bg-gray-50/50 flex items-center justify-center p-6 border border-gray-100">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={publicUrl} alt="Question Attachment" className="max-h-[400px] object-contain rounded-xl drop-shadow-sm" />
+                        </div>
+                    )}
+
+                    {/* Options */}
+                    {question.options && question.options.length > 0 && (
+                        <div className="grid gap-3 mt-8">
+                            {question.options.map((opt: string, idx: number) => {
+                                const isSelected = selectedOption === idx;
+                                return (
+                                    <button
+                                        key={idx}
+                                        onClick={() => setSelectedOption(idx)}
+                                        className={`relative p-5 sm:p-6 text-left rounded-2xl border transition-all duration-200 flex items-center gap-4 group ${isSelected
+                                            ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500 z-10"
+                                            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/80 text-gray-700"
+                                            }`}
+                                    >
+                                        <div className={`shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+                                            }`}>
+                                            {String.fromCharCode(65 + idx)}
+                                        </div>
+                                        <span className={`text-base sm:text-lg transition-colors ${isSelected ? "text-blue-900 font-medium" : "text-gray-700"}`}>{opt}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Footer sticky submit integrated inside card */}
+                    <div className="mt-12 pt-8 border-t border-gray-100 flex justify-end">
+                        <button
+                            onClick={() => handleSubmit()}
+                            disabled={selectedOption === null || isSubmitting}
+                            className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-medium text-lg px-10 py-4 rounded-full transition-all w-full sm:w-auto justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                        >
+                            {isSubmitting ? "Submitting..." : "Submit Answer"}
+                        </button>
                     </div>
-                )}
-
-                {/* Footer sticky submit integrated inside card */}
-                <div className="mt-12 pt-8 border-t border-gray-100 flex justify-end">
-                    <button
-                        onClick={() => handleSubmit()}
-                        disabled={selectedOption === null || isSubmitting}
-                        className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-medium text-lg px-10 py-4 rounded-full transition-all w-full sm:w-auto justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                    >
-                        {isSubmitting ? "Submitting..." : "Submit Answer"}
-                    </button>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

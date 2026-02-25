@@ -1,7 +1,7 @@
 import CreateQuestionForm from '@/components/CreateQuestionForm';
 
 export const metadata = {
-  title: 'Create question — Manthan',
+  title: 'Create question — Dheeyudha',
 };
 
 export default function CreateQuestionPage() {

@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Bell, CheckCheck, Trash2, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles, ArrowLeft } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles, ArrowLeft, Swords } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { User } from '@supabase/supabase-js';
+import CoopNotifCard from '@/components/CoopNotifCard';
 
 type Notification = {
     id: string;
@@ -37,13 +39,15 @@ function NotifIcon({ type }: { type: string }) {
     if (type === 'ai_confirmed_wrong' || type === 'answer_flagged') return <div className={`${base} bg-red-100 text-red-600`}><XCircle className="w-5 h-5" /></div>;
     if (type === 'points_earned') return <div className={`${base} bg-amber-100 text-amber-600`}><Zap className="w-5 h-5" /></div>;
     if (type === 'new_question') return <div className={`${base} bg-indigo-100 text-indigo-600`}><BookOpen className="w-5 h-5" /></div>;
+    if (type === 'coop_challenge') return <div className={`${base} bg-indigo-100 text-indigo-600`}><Swords className="w-5 h-5" /></div>;
     return <div className={`${base} bg-slate-100 text-slate-600`}><Sparkles className="w-5 h-5" /></div>;
 }
 
-const FILTERS = ['All', 'Unread', 'Followers', 'Answers', 'Points'];
+const FILTERS = ['All', 'Unread', 'Challenges', 'Followers', 'Answers', 'Points'];
 
 function filterNotifications(notifications: Notification[], filter: string): Notification[] {
     if (filter === 'Unread') return notifications.filter(n => !n.read);
+    if (filter === 'Challenges') return notifications.filter(n => n.type === 'coop_challenge');
     if (filter === 'Followers') return notifications.filter(n => n.type === 'new_follower');
     if (filter === 'Answers') return notifications.filter(n => ['answer_approved', 'answer_flagged', 'ai_confirmed_correct', 'ai_confirmed_wrong'].includes(n.type));
     if (filter === 'Points') return notifications.filter(n => n.type === 'points_earned');
@@ -55,6 +59,7 @@ export default function NotificationsPage() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [token, setToken] = useState<string | null>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [activeFilter, setActiveFilter] = useState('All');
     const router = useRouter();
 
@@ -62,6 +67,7 @@ export default function NotificationsPage() {
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (!session) { router.push('/login'); return; }
             setToken(session.access_token);
+            setUser(session.user);
         });
     }, [router]);
 
@@ -82,39 +88,94 @@ export default function NotificationsPage() {
     }, [token]);
 
     useEffect(() => {
+        if (!token || !user) return;
         fetchNotifications();
-    }, [fetchNotifications]);
+
+        // Subscribe to real-time notification changes
+        const channel = supabase
+            .channel(`notif-page-${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'notifications',
+                    filter: `user_id=eq.${user.id}`
+                },
+                () => {
+                    fetchNotifications();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [token, user, fetchNotifications]);
 
     const markAllRead = async () => {
         if (!token) return;
+        const previousNotifications = notifications;
+        const previousUnreadCount = unreadCount;
         setNotifications(n => n.map(x => ({ ...x, read: true })));
         setUnreadCount(0);
-        await fetch('/api/notifications', {
-            method: 'PATCH',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
-        });
+        try {
+            const res = await fetch('/api/notifications', {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            if (!res.ok) {
+                setNotifications(previousNotifications);
+                setUnreadCount(previousUnreadCount);
+            }
+        } catch (error) {
+            setNotifications(previousNotifications);
+            setUnreadCount(previousUnreadCount);
+        }
     };
 
     const clearAll = async () => {
         if (!token || !window.confirm('Clear all notifications?')) return;
+        const previousNotifications = notifications;
         setNotifications([]);
         setUnreadCount(0);
-        await fetch('/api/notifications', {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        try {
+            const res = await fetch('/api/notifications', {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) {
+                alert('Failed to delete notifications. Please try again.');
+                setNotifications(previousNotifications);
+            }
+        } catch (error) {
+            alert('Failed to delete notifications. Please try again.');
+            setNotifications(previousNotifications);
+        }
     };
 
     const handleNotifClick = async (notif: Notification) => {
         if (!notif.read && token) {
+            const previousNotifications = notifications;
+            const previousUnreadCount = unreadCount;
             setNotifications(n => n.map(x => x.id === notif.id ? { ...x, read: true } : x));
             setUnreadCount(c => Math.max(0, c - 1));
-            await fetch('/api/notifications', {
-                method: 'PATCH',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ notificationId: notif.id })
-            });
+            try {
+                const res = await fetch('/api/notifications', {
+                    method: 'PATCH',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notificationId: notif.id })
+                });
+                if (!res.ok) {
+                    setNotifications(previousNotifications);
+                    setUnreadCount(previousUnreadCount);
+                }
+            }
+            catch (error) {
+                setNotifications(previousNotifications);
+                setUnreadCount(previousUnreadCount);
+            }
         }
         if (notif.href) router.push(notif.href);
     };
@@ -209,7 +270,7 @@ export default function NotificationsPage() {
                         <p className="text-slate-500 text-sm">
                             {activeFilter === 'Unread'
                                 ? "You have no unread notifications."
-                                : "Activity will appear here as you use Manthan."}
+                                : "Activity will appear here as you use Dheeyudha."}
                         </p>
                         {activeFilter !== 'All' && (
                             <button onClick={() => setActiveFilter('All')} className="mt-4 text-indigo-600 text-sm font-bold hover:underline">
@@ -219,30 +280,39 @@ export default function NotificationsPage() {
                     </div>
                 ) : (
                     <div className="space-y-2">
-                        {filtered.map(notif => (
-                            <button
-                                key={notif.id}
-                                onClick={() => handleNotifClick(notif)}
-                                className={`w-full text-left bg-white rounded-3xl border transition-all hover:shadow-md hover:border-indigo-100 hover:-translate-y-0.5 ${!notif.read ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-100'} p-5 flex gap-4 items-start`}
-                            >
-                                <NotifIcon type={notif.type} />
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <p className={`text-sm leading-snug ${notif.read ? 'font-semibold text-slate-700' : 'font-black text-slate-900'}`}>
-                                            {notif.title}
-                                        </p>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <span className="text-[11px] text-slate-400 font-medium">{timeAgo(notif.created_at)}</span>
-                                            {!notif.read && <span className="w-2 h-2 rounded-full bg-indigo-500" />}
+                        {filtered.map(notif =>
+                            notif.type === 'coop_challenge' ? (
+                                <CoopNotifCard
+                                    key={notif.id}
+                                    notif={notif}
+                                    compact={false}
+                                    onNavigate={() => handleNotifClick(notif)}
+                                />
+                            ) : (
+                                <button
+                                    key={notif.id}
+                                    onClick={() => handleNotifClick(notif)}
+                                    className={`w-full text-left bg-white rounded-3xl border transition-all hover:shadow-md hover:border-indigo-100 hover:-translate-y-0.5 ${!notif.read ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-100'} p-5 flex gap-4 items-start`}
+                                >
+                                    <NotifIcon type={notif.type} />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <p className={`text-sm leading-snug ${notif.read ? 'font-semibold text-slate-700' : 'font-black text-slate-900'}`}>
+                                                {notif.title}
+                                            </p>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <span className="text-[11px] text-slate-400 font-medium">{timeAgo(notif.created_at)}</span>
+                                                {!notif.read && <span className="w-2 h-2 rounded-full bg-indigo-500" />}
+                                            </div>
                                         </div>
+                                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">{notif.body}</p>
+                                        {notif.href && (
+                                            <span className="text-xs text-indigo-500 font-bold mt-2 inline-block">View details →</span>
+                                        )}
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">{notif.body}</p>
-                                    {notif.href && (
-                                        <span className="text-xs text-indigo-500 font-bold mt-2 inline-block">View details →</span>
-                                    )}
-                                </div>
-                            </button>
-                        ))}
+                                </button>
+                            )
+                        )}
                     </div>
                 )}
             </div>

@@ -5,8 +5,8 @@ import {
 } from 'lucide-react';
 
 export const metadata = {
-  title: 'Privacy Policy — Manthan',
-  description: 'Learn how Manthan collects, uses, and protects your personal data.',
+  title: 'Privacy Policy — Dheeyudha',
+  description: 'Learn how Dheeyudha collects, uses, and protects your personal data.',
 };
 
 const LAST_UPDATED = 'February 20, 2026';
@@ -111,18 +111,18 @@ export default function PrivacyPage() {
               <SectionHeading id="overview" icon={Shield}>Overview</SectionHeading>
               <InfoCard>
                 <p>
-                  Manthan ("we", "our", or "us") is an educational quiz platform that connects students and
+                  Dheeyudha ("we", "our", or "us") is an educational quiz platform that connects students and
                   verified teachers for academic learning and competitive quizzes. This Privacy Policy explains how
-                  we collect, use, store, and protect information in connection with your use of Manthan at{' '}
-                  <span className="font-semibold text-indigo-600">manthan.app</span> and related services.
+                  we collect, use, store, and protect information in connection with your use of Dheeyudha at{' '}
+                  <span className="font-semibold text-indigo-600">Dheeyudha.app</span> and related services.
                 </p>
                 <p className="mt-4">
-                  By creating an account or using Manthan, you agree to the practices described in this policy.
+                  By creating an account or using Dheeyudha, you agree to the practices described in this policy.
                   If you do not agree, please discontinue use of the service and contact us to delete your account.
                 </p>
                 <p className="mt-4">
                   This policy applies to all users — students, teachers, and visitors — regardless of how they
-                  access Manthan (web browser, mobile device, etc.).
+                  access Dheeyudha (web browser, mobile device, etc.).
                 </p>
               </InfoCard>
             </section>
@@ -227,7 +227,7 @@ export default function PrivacyPage() {
                   {
                     name: 'Vercel / Next.js',
                     role: 'Web Hosting & Delivery',
-                    desc: 'Manthan is hosted on Vercel, which serves the web application globally. Vercel may collect standard web server logs (IP addresses, timestamps, request paths) as part of their infrastructure.',
+                    desc: 'Dheeyudha is hosted on Vercel, which serves the web application globally. Vercel may collect standard web server logs (IP addresses, timestamps, request paths) as part of their infrastructure.',
                     link: 'https://vercel.com/legal/privacy-policy',
                     linkLabel: 'Vercel Privacy Policy',
                     badge: 'Hosting',
@@ -287,7 +287,7 @@ export default function PrivacyPage() {
             <section>
               <SectionHeading id="public-data" icon={Globe}>Public Information</SectionHeading>
               <InfoCard>
-                <p className="mb-4">Some of the information you provide is visible to all users and visitors of Manthan — even without an account. This includes:</p>
+                <p className="mb-4">Some of the information you provide is visible to all users and visitors of Dheeyudha — even without an account. This includes:</p>
                 <BulletList items={[
                   'Your display name and username (e.g. /user/your-username)',
                   'Your profile avatar and banner image',
@@ -342,7 +342,7 @@ export default function PrivacyPage() {
             <section>
               <SectionHeading id="cookies" icon={Bell}>Cookies & Local Storage</SectionHeading>
               <InfoCard>
-                <p className="mb-4">Manthan uses minimal browser storage to function properly:</p>
+                <p className="mb-4">Dheeyudha uses minimal browser storage to function properly:</p>
                 <div className="overflow-hidden rounded-xl border border-slate-100">
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 border-b border-slate-100">
@@ -380,15 +380,15 @@ export default function PrivacyPage() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5">
                     <div className="font-bold text-indigo-800 mb-1 text-sm">💌 Email</div>
-                    <a href="mailto:privacy@manthan.app" className="text-indigo-600 font-semibold hover:underline text-sm">
-                      privacy@manthan.app
+                    <a href="mailto:privacy@dheeyudha.app" className="text-indigo-600 font-semibold hover:underline text-sm">
+                      privacy@dheeyudha.app
                     </a>
                     <p className="text-xs text-indigo-500 mt-1">We aim to respond within 2 business days.</p>
                   </div>
                   <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5">
                     <div className="font-bold text-slate-700 mb-1 text-sm">📝 Contact Form</div>
                     <Link href="/contact" className="text-indigo-600 font-semibold hover:underline text-sm">
-                      manthan.app/contact
+                      Dheeyudha.app/contact
                     </Link>
                     <p className="text-xs text-slate-400 mt-1">Use our contact page for general queries.</p>
                   </div>

@@ -1,83 +1,198 @@
-import React from 'react';
-
-/**
- * LogoProps interface defines the props for the Logo component
- */
 interface LogoProps {
-  /** Width of the logo in pixels (default: 200) */
-  width?: number;
-  /** Height of the logo in pixels (default: 200) */
-  height?: number;
-  /** Whether to show the tagline below the logo (default: true) */
-  showTagline?: boolean;
-  /** Custom color for the tagline (default: gradient) */
-  taglineColor?: string;
+    variant?: "full" | "icon" | "horizontal" | "stacked";
+    theme?: "light" | "dark";
+    size?: number;
+    className?: string;
 }
 
-/**
- * Logo component displays the Manthan custom shield-shaped logo
- * with circuit board design elements and an optional tagline.
- * 
- * @param {LogoProps} props - Component props
- * @returns {JSX.Element} SVG logo element
- */
-const Logo: React.FC<LogoProps> = ({ 
-  width = 200, 
-  height = 200, 
-  showTagline = true,
-  taglineColor 
-}) => {
-  const scale = width / 200; // Calculate scale based on width
-  const taglineStyle: React.CSSProperties = taglineColor 
-    ? { color: taglineColor }
-    : {
-        background: 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
-      };
+export function DheeyudhaLogo({
+    variant = "full",
+    theme = "light",
+    size = 200,
+    className = "",
+}: LogoProps) {
+    const primaryColor = theme === "dark" ? "#ffffff" : "#1a1a1a";
+    const secondaryColor =
+        theme === "dark" ? "#a3a3a3" : "#737373";
+    const accentColor = theme === "dark" ? "#3b82f6" : "#2563eb";
 
-  return (
-    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: `${8 * scale}px` }}>
-      <svg width={width} height={height} viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M100 185C60 165 25 125 25 75V40L100 20L175 40V75C175 125 140 165 100 185Z" fill="#F0F9FF" stroke="#0F172A" strokeWidth="4" strokeLinejoin="round"/>
-        
-        <path d="M60 55V145" stroke="#94A3B8" strokeWidth="3" strokeLinecap="round"/>
-        <path d="M45 60V135" stroke="#CBD5E1" strokeWidth="3" strokeLinecap="round"/>
-        
-        <path d="M140 60V140" stroke="#E2E8F0" strokeWidth="2"/>
-        <circle cx="140" cy="60" r="2" fill="#3B82F6"/>
-        <circle cx="140" cy="100" r="2" fill="#3B82F6"/>
-        <circle cx="140" cy="140" r="2" fill="#3B82F6"/>
+    // The Diamond D Path
+    // Outer shape: A bold geometric D
+    // Inner shape: A sharp diamond representing the "spark" of intellect
+    const dShapePath =
+        "M 15 15 H 55 C 80 15 95 30 95 50 C 95 70 80 85 55 85 H 15 V 15 Z";
+    const diamondPath = "M 55 35 L 40 50 L 55 65 L 70 50 Z";
 
-        <circle cx="100" cy="100" r="30" stroke="#0F172A" strokeWidth="4" strokeDasharray="8 4"/>
-        
-        {/* Fixed M shape - now pointing upward correctly */}
-        <path d="M85 115V95L100 105L115 95V115" stroke="#2563EB" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+    // Icon only
+    if (variant === "icon") {
+        return (
+            <svg
+                width={size}
+                height={size}
+                viewBox="0 0 100 100"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className={className}
+            >
+                <path
+                    d={`${dShapePath} ${diamondPath}`}
+                    fill={accentColor}
+                    fillRule="evenodd"
+                />
+            </svg>
+        );
+    }
 
-        <path d="M145 45L155 55" stroke="#0F172A" strokeWidth="4" strokeLinecap="round"/>
-        <rect x="138" y="42" width="10" height="20" transform="rotate(45 138 42)" fill="#10B981" stroke="#0F172A" strokeWidth="2"/>
-        <path d="M142 58L58 142" stroke="#0F172A" strokeWidth="4"/>
-        <path d="M58 142L50 150L66 142L58 142Z" fill="#10B981"/>
-      </svg>
-      
-      {showTagline && (
-        <span 
-          style={{
-            ...taglineStyle,
-            fontSize: `${18 * scale}px`,
-            fontWeight: 600,
-            letterSpacing: '0.05em',
-            textTransform: 'lowercase',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            textShadow: '0 2px 8px rgba(59, 130, 246, 0.15)',
-          }}
+    // Horizontal layout (icon + text side by side)
+    if (variant === "horizontal") {
+        return (
+            <svg
+                width={size * 3.8}
+                height={size}
+                viewBox="0 0 380 100"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className={className}
+            >
+                {/* Icon */}
+                <g transform="translate(10, 10) scale(0.8)">
+                    <path
+                        d={`${dShapePath} ${diamondPath}`}
+                        fill={accentColor}
+                        fillRule="evenodd"
+                    />
+                </g>
+
+                {/* Text */}
+                <text
+                    x="100"
+                    y="62"
+                    fontFamily="'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+                    fontSize="42"
+                    fontWeight="700"
+                    fill={primaryColor}
+                    letterSpacing="-1.5"
+                >
+                    dheeyudha
+                </text>
+            </svg>
+        );
+    }
+
+    // Stacked layout (icon above text)
+    if (variant === "stacked") {
+        return (
+            <svg
+                width={size * 2}
+                height={size * 1.6}
+                viewBox="0 0 200 160"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className={className}
+            >
+                {/* Icon */}
+                <g transform="translate(60, 0) scale(0.8)">
+                    <path
+                        d={`${dShapePath} ${diamondPath}`}
+                        fill={accentColor}
+                        fillRule="evenodd"
+                    />
+                </g>
+
+                {/* Text */}
+                <text
+                    x="100"
+                    y="110"
+                    fontFamily="'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+                    fontSize="28"
+                    fontWeight="700"
+                    fill={primaryColor}
+                    textAnchor="middle"
+                    letterSpacing="-1"
+                >
+                    dheeyudha
+                </text>
+                <text
+                    x="100"
+                    y="135"
+                    fontFamily="'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+                    fontSize="9"
+                    fontWeight="600"
+                    fill={secondaryColor}
+                    textAnchor="middle"
+                    letterSpacing="2"
+                >
+                    WAR OF INTELLECT
+                </text>
+            </svg>
+        );
+    }
+
+    // Full logo with tagline (Default)
+    return (
+        <svg
+            width={size * 3.5}
+            height={size * 1.2}
+            viewBox="0 0 350 120"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className={className}
         >
-          churning knowledge
-        </span>
-      )}
-    </div>
-  );
-};
+            {/* Icon */}
+            <g transform="translate(15, 20) scale(0.8)">
+                <path
+                    d={`${dShapePath} ${diamondPath}`}
+                    fill={accentColor}
+                    fillRule="evenodd"
+                />
+            </g>
 
-export default Logo;
+            {/* Main text */}
+            <text
+                x="105"
+                y="65"
+                fontFamily="'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+                fontSize="40"
+                fontWeight="700"
+                fill={primaryColor}
+                letterSpacing="-1.2"
+            >
+                dheeyudha
+            </text>
+
+            {/* Tagline */}
+            <text
+                x="107"
+                y="88"
+                fontFamily="'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+                fontSize="10"
+                fontWeight="600"
+                fill={secondaryColor}
+                letterSpacing="2.5"
+            >
+                WAR OF INTELLECT
+            </text>
+        </svg>
+    );
+}
+
+// Default export — backwards-compat with all existing usages:
+//   <Logo width={28} height={28} />          → icon variant
+//   <Logo width={90} height={90} showTagline={true} /> → stacked variant (auth pages)
+export default function Logo({
+    width,
+    height,
+    showTagline = false,
+    className,
+}: {
+    width?: number;
+    height?: number;
+    showTagline?: boolean;
+    className?: string;
+}) {
+    if (showTagline) {
+        // Use height as the size base for stacked (icon+name+tagline)
+        return <DheeyudhaLogo variant="stacked" size={(height ?? width ?? 90) * 0.5} className={className} />;
+    }
+    return <DheeyudhaLogo variant="icon" size={width ?? height ?? 28} className={className} />;
+}

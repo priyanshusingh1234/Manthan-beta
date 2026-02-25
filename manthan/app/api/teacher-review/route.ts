@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { leaderboardCache } from "@/lib/leaderboardCache";
+import { createNotification } from "@/lib/createNotification";
 
 async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
     if (!authHeader) return null;
@@ -174,6 +175,15 @@ export async function POST(req: Request) {
                 await supabaseAdmin.auth.admin.updateUserById(voter.checker_id, {
                     user_metadata: { ...voterMeta, totalPoints: voterPoints + CHECKER_REWARD_POINTS },
                 });
+
+                // 🔔 Notify correct voters that they were right
+                await createNotification({
+                    userId: voter.checker_id,
+                    type: 'points_earned',
+                    title: `+${CHECKER_REWARD_POINTS} points! Your vote was validated`,
+                    body: `Your assessment was confirmed by the teacher. Great job!`,
+                    href: `/submission/${submissionId}/ai-review`,
+                });
             }
 
             // Bust leaderboard cache so TopBrains updates immediately
@@ -183,6 +193,15 @@ export async function POST(req: Request) {
                 .from("written_submissions")
                 .update({ status: "teacher_confirmed_wrong", updated_at: new Date().toISOString() })
                 .eq("id", submissionId);
+
+            // 🔔 Notify student their answer was marked wrong by teacher
+            await createNotification({
+                userId: sub.student_id,
+                type: 'answer_flagged',
+                title: '❌ Teacher confirmed your answer is wrong',
+                body: `Your submission was reviewed by the teacher and marked incorrect. You lost ${totalDeduction} points.`,
+                href: `/submission/${submissionId}/ai-review`,
+            });
 
             return NextResponse.json({
                 success: true,
@@ -197,6 +216,15 @@ export async function POST(req: Request) {
                 .from("written_submissions")
                 .update({ status: "teacher_confirmed_correct", updated_at: new Date().toISOString() })
                 .eq("id", submissionId);
+
+            // 🔔 Notify student their answer was confirmed correct by teacher
+            await createNotification({
+                userId: sub.student_id,
+                type: 'answer_approved',
+                title: '✅ Teacher confirmed your answer is correct!',
+                body: `Your submission was reviewed by the teacher and confirmed as correct. Points are locked in!`,
+                href: `/submission/${submissionId}/ai-review`,
+            });
 
             return NextResponse.json({ success: true, verdict: "correct" });
         }
