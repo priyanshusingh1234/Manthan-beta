@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import PushNotificationPrompt from '@/components/PushNotificationPrompt';
 
 const BottomNav = dynamic(() => import('@/components/BottomNav'), { ssr: false });
 
@@ -64,6 +65,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {children}
         {showBottomNav && !hideSidebar && <BottomNav />}
       </div>
+      {isAuthenticated && <PushNotificationPrompt />}
     </>
   );
 }

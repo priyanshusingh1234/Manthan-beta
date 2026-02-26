@@ -47,7 +47,7 @@ export default function SettingsPage() {
             title: "Account",
             items: [
                 { icon: User, label: "My Profile", href: "/profile", description: "View and edit your profile" },
-                { icon: Bell, label: "Notifications", href: "/notifications", description: "Manage notification preferences" },
+                { icon: Bell, label: "Notifications", href: "/settings/notifications", description: "Manage notification preferences" },
                 { icon: Moon, label: "Appearance", href: "#", description: "Dark mode and theme settings" },
             ]
         },
