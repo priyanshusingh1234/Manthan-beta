@@ -32,7 +32,25 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
   }
 }
 
+const customFetch = (url: URL | RequestInfo, options?: RequestInit) => {
+  let urlStr = url.toString();
+  const realSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+
+  // We only proxy requests when running in the browser.
+  // The Vercel Node backend operates perfectly fine and isn't affected by Jio.
+  if (typeof window !== 'undefined' && realSupabaseUrl && urlStr.startsWith(realSupabaseUrl)) {
+    // Realtime WebSockets cannot be dynamically proxied through standard HTTP API routes easily
+    if (!urlStr.includes('/realtime/v1/')) {
+      urlStr = urlStr.replace(realSupabaseUrl, '/api/supabase-proxy');
+    }
+  }
+  return fetch(urlStr, options);
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    fetch: customFetch
+  },
   auth: {
     persistSession: true,
     detectSessionInUrl: true,
