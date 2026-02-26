@@ -32,25 +32,15 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
   }
 }
 
-const customFetch = (url: URL | RequestInfo, options?: RequestInit) => {
-  let urlStr = url.toString();
-  const realSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+// Build the runtime Supabase URL. 
+// On the backend (Vercel), use the real URL.
+// On the frontend (Browser/App WebView), use our custom proxy to bypass ISP blocks (like Jio 5G)
+const realSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://127.0.0.1';
+const supabaseRuntimeUrl = typeof window !== 'undefined'
+  ? `${window.location.origin}/api/supabase-proxy`
+  : realSupabaseUrl;
 
-  // We only proxy requests when running in the browser.
-  // The Vercel Node backend operates perfectly fine and isn't affected by Jio.
-  if (typeof window !== 'undefined' && realSupabaseUrl && urlStr.startsWith(realSupabaseUrl)) {
-    // Realtime WebSockets cannot be dynamically proxied through standard HTTP API routes easily
-    if (!urlStr.includes('/realtime/v1/')) {
-      urlStr = urlStr.replace(realSupabaseUrl, '/api/supabase-proxy');
-    }
-  }
-  return fetch(urlStr, options);
-};
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  global: {
-    fetch: customFetch
-  },
+export const supabase = createClient(supabaseRuntimeUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     detectSessionInUrl: true,
