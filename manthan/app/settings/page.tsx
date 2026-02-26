@@ -47,17 +47,17 @@ export default function SettingsPage() {
             title: "Account",
             items: [
                 { icon: User, label: "My Profile", href: "/profile", description: "View and edit your profile" },
-                { icon: Bell, label: "Notifications", href: "#", description: "Manage notification preferences" },
+                { icon: Bell, label: "Notifications", href: "/notifications", description: "Manage notification preferences" },
                 { icon: Moon, label: "Appearance", href: "#", description: "Dark mode and theme settings" },
             ]
         },
         {
             title: "Support & About",
             items: [
-                { icon: CircleHelp, label: "Help & Support", href: "#", description: "Get help with Dheeyudhha" },
-                { icon: FileText, label: "Documentation", href: "#", description: "Read the user guides" },
-                { icon: Shield, label: "Privacy Policy", href: "#", description: "How we protect your data" },
-                { icon: Info, label: "Terms of Service", href: "#", description: "Rules and agreements" },
+                { icon: CircleHelp, label: "Help & Support", href: "/contact", description: "Get help with Dheeyudhha" },
+                { icon: FileText, label: "Documentation", href: "/docs", description: "Read the user guides" },
+                { icon: Shield, label: "Privacy Policy", href: "/privacy", description: "How we protect your data" },
+                { icon: Info, label: "Terms of Service", href: "/about", description: "Rules and agreements" },
             ]
         }
     ];
