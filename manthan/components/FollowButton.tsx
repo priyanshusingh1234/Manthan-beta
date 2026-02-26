@@ -144,16 +144,16 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                         onClick={() => openUsersModal('followers')}
                         className="flex flex-col items-center sm:items-start text-center group"
                     >
-                        <span className="text-2xl font-black text-slate-800 group-hover:text-indigo-600 transition-colors">{followersCount}</span>
-                        <span className="text-xs font-bold text-slate-400 group-hover:text-indigo-400 uppercase tracking-widest mt-1">Followers</span>
+                        <span className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{followersCount}</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 group-hover:text-indigo-400 uppercase tracking-widest mt-1">Followers</span>
                     </button>
 
                     <button
                         onClick={() => openUsersModal('following')}
                         className="flex flex-col items-center sm:items-start text-center group"
                     >
-                        <span className="text-2xl font-black text-slate-800 group-hover:text-indigo-600 transition-colors">{followingCount}</span>
-                        <span className="text-xs font-bold text-slate-400 group-hover:text-indigo-400 uppercase tracking-widest mt-1">Following</span>
+                        <span className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{followingCount}</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 group-hover:text-indigo-400 uppercase tracking-widest mt-1">Following</span>
                     </button>
                 </div>
 
@@ -163,8 +163,8 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                         onClick={handleToggleFollow}
                         disabled={actionLoading}
                         className={`flex-1 sm:flex-none flex items-center justify-center gap-2 group px-8 py-3 rounded-2xl font-bold transition-all duration-300 ring-2 ring-transparent active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${isFollowing
-                            ? 'bg-slate-100 text-slate-700 hover:bg-red-50 hover:text-red-600 hover:ring-red-100'
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-200 hover:shadow-indigo-300'
+                            ? 'bg-slate-100 text-slate-700 hover:bg-red-50 hover:text-red-600 hover:ring-red-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-red-900/40 dark:hover:text-red-400 dark:hover:ring-red-900/50'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-200 hover:shadow-indigo-300 dark:shadow-indigo-900/20'
                             }`}
                     >
                         {actionLoading ? (

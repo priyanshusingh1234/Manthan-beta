@@ -254,10 +254,10 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
 
     const getStatusInfo = (status: string) => {
         switch (status) {
-            case "pending_check": return { label: "In Checker Queue", color: "text-amber-600 bg-amber-50 border-amber-200", icon: <Shield className="w-4 h-4" /> };
-            case "points_given": return { label: "Points Awarded ✓ — Still open for peer review", color: "text-emerald-600 bg-emerald-50 border-emerald-200", icon: <CheckCircle2 className="w-4 h-4" /> };
-            case "auto_approved": return { label: "Auto-Approved ✓", color: "text-emerald-600 bg-emerald-50 border-emerald-200", icon: <CheckCircle2 className="w-4 h-4" /> };
-            default: return { label: "Uploaded — Not Yet Marked", color: "text-slate-600 bg-slate-50 border-slate-200", icon: <Clock className="w-4 h-4" /> };
+            case "pending_check": return { label: "In Checker Queue", color: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50", icon: <Shield className="w-4 h-4" /> };
+            case "points_given": return { label: "Points Awarded ✓ — Still open for peer review", color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50", icon: <CheckCircle2 className="w-4 h-4" /> };
+            case "auto_approved": return { label: "Auto-Approved ✓", color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50", icon: <CheckCircle2 className="w-4 h-4" /> };
+            default: return { label: "Uploaded — Not Yet Marked", color: "text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700", icon: <Clock className="w-4 h-4" /> };
         }
     };
 
@@ -266,7 +266,7 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
     // ── Loading gate ──────────────────────────────────────────────
     if (!authChecked) {
         return (
-            <div className="flex flex-col items-center justify-center p-20 text-slate-400 space-y-4">
+            <div className="flex flex-col items-center justify-center p-20 text-slate-400 dark:text-slate-500 space-y-4">
                 <Loader2 className="w-10 h-10 animate-spin" />
                 <p className="font-medium animate-pulse">Loading written challenge...</p>
             </div>
@@ -298,13 +298,13 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
             )}
 
             {/* ── Top bar with timer ── */}
-            <div className="flex items-center justify-between bg-white/95 backdrop-blur-md px-5 py-3 rounded-2xl border border-gray-200 shadow-sm sticky top-4 z-40">
-                <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors text-sm font-medium">
+            <div className="flex items-center justify-between bg-white/95 dark:bg-slate-900/90 backdrop-blur-md px-5 py-3 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm sticky top-4 z-40">
+                <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors text-sm font-medium">
                     <ArrowLeft className="w-4 h-4" /> Back
                 </button>
                 <div className="flex items-center gap-3">
                     {!activeSubmission && (
-                        <div className={`flex items-center gap-2 font-mono text-sm font-bold px-4 py-1.5 rounded-full border transition-colors ${isTimeLow ? "bg-red-50 text-red-600 border-red-200 animate-pulse" : "bg-slate-50 text-slate-700 border-slate-200"}`}>
+                        <div className={`flex items-center gap-2 font-mono text-sm font-bold px-4 py-1.5 rounded-full border transition-colors ${isTimeLow ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/50 animate-pulse" : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"}`}>
                             <Clock className="w-4 h-4" />
                             {formatSolveTime(solveTimeLeft)}
                         </div>

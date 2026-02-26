@@ -137,7 +137,7 @@ export default function DesktopSidebar() {
   ];
 
   return (
-    <aside className="hidden lg:flex fixed left-0 top-0 h-full w-64 flex-col bg-white/80 backdrop-blur-xl border-r border-gray-200/60 z-50 transition-all duration-300 shadow-[2px_0_20px_rgba(0,0,0,0.02)]">
+    <aside className="hidden lg:flex fixed left-0 top-0 h-full w-64 flex-col bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-r border-slate-200/60 dark:border-slate-800/60 z-50 transition-all duration-300 shadow-[2px_0_20px_rgba(0,0,0,0.02)]">
       {/* Header / Logo Area */}
       <div className="px-6 py-6">
         <Link href="/" className="flex items-center gap-2.5 group">
@@ -146,7 +146,7 @@ export default function DesktopSidebar() {
           </div>
           <span
             style={{ fontFamily: "-apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif" }}
-            className="text-[20px] font-semibold tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors duration-200 select-none"
+            className="text-[20px] font-semibold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 select-none"
           >
             dheeyudha
           </span>
@@ -165,11 +165,11 @@ export default function DesktopSidebar() {
                 <div
                   key={item.label}
                   title={`${item.label} (coming soon)`}
-                  className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium opacity-50 cursor-not-allowed text-slate-500 hover:bg-slate-50/50"
+                  className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium opacity-50 cursor-not-allowed text-slate-500 dark:text-slate-400 hover:bg-slate-50/50 dark:hover:bg-slate-900/50"
                 >
                   <Icon className="w-5 h-5 text-slate-400" strokeWidth={2} />
                   <span className="flex-1 text-left">{item.label}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
                     Soon
                   </span>
                 </div>
@@ -183,8 +183,8 @@ export default function DesktopSidebar() {
                 className={`
                   group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
                   ${isActive
-                    ? 'bg-blue-50/80 text-blue-700 shadow-sm ring-1 ring-blue-100'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 shadow-sm ring-1 ring-blue-100 dark:ring-blue-500/20'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200'
                   }
                 `}
                 aria-current={isActive ? 'page' : undefined}
@@ -211,7 +211,7 @@ export default function DesktopSidebar() {
         </div>
 
         {/* Divider */}
-        <div className="my-4 border-t border-gray-100/80 mx-2" />
+        <div className="my-4 border-t border-slate-100/80 dark:border-slate-800/80 mx-2" />
 
         {/* Teacher / Action Area */}
         <div className="space-y-3">
@@ -247,7 +247,7 @@ export default function DesktopSidebar() {
         <div className="mt-2">
           <button
             onClick={() => setHelpOpen((s) => !s)}
-            className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
           >
             <div className="flex items-center gap-3">
               <Info className="w-5 h-5 text-slate-400" />
@@ -261,13 +261,13 @@ export default function DesktopSidebar() {
               {HELP_LINKS.map((link) => (
                 <div key={link.label}>
                   {link.soon ? (
-                    <div className="flex items-center justify-between text-xs py-1.5 px-2 text-slate-400 cursor-not-allowed">
+                    <div className="flex items-center justify-between text-xs py-1.5 px-2 text-slate-400 dark:text-slate-500 cursor-not-allowed">
                       <span>{link.label}</span>
                     </div>
                   ) : (
                     <Link
                       href={link.href}
-                      className="flex items-center justify-between text-xs py-1.5 px-2 text-slate-500 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-colors"
+                      className="flex items-center justify-between text-xs py-1.5 px-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-md transition-colors"
                     >
                       <span>{link.label}</span>
                     </Link>
@@ -280,10 +280,10 @@ export default function DesktopSidebar() {
       </nav>
 
       {/* User Footer */}
-      <div className="p-4 border-t border-gray-200/60 bg-white/50 backdrop-blur-sm">
+      <div className="p-4 border-t border-slate-200/60 dark:border-slate-800/60 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
         <Link
           href="/profile"
-          className="flex items-center gap-3 p-2 rounded-xl hover:bg-white hover:shadow-sm transition-all duration-200 border border-transparent hover:border-gray-100 group"
+          className="flex items-center gap-3 p-2 rounded-xl hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm transition-all duration-200 border border-transparent hover:border-slate-100 dark:hover:border-slate-800 group"
         >
           <div className="relative h-10 w-10 shrink-0">
             <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500 to-fuchsia-500 blur-sm opacity-20 group-hover:opacity-40 transition-opacity"></div>
@@ -291,7 +291,7 @@ export default function DesktopSidebar() {
               {user?.user_metadata?.avatar_url ? (
                 <Image src={user.user_metadata.avatar_url} alt="Profile" width={40} height={40} className="object-cover h-full w-full" />
               ) : (
-                <div className="h-full w-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-sm">
+                <div className="h-full w-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold text-sm">
                   {user?.email?.[0]?.toUpperCase() || 'U'}
                 </div>
               )}
@@ -304,10 +304,10 @@ export default function DesktopSidebar() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
               {user?.user_metadata?.fullName || 'Guest User'}
             </p>
-            <p className="text-xs text-slate-500 truncate">
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
               {user?.email || 'Sign in to sync'}
             </p>
           </div>

@@ -161,17 +161,17 @@ export default function QuestionCard({ q }: { q: Question }) {
 
   if (isDeleting) {
     return (
-      <div className="w-full max-w-2xl h-48 flex items-center justify-center bg-slate-50/50 rounded-2xl border border-slate-200 animate-pulse">
-        <span className="text-slate-400 font-medium">Deleting...</span>
+      <div className="w-full max-w-2xl h-48 flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 animate-pulse">
+        <span className="text-slate-400 dark:text-slate-500 font-medium">Deleting...</span>
       </div>
     );
   }
 
   return (
-    <article className="group relative w-full bg-white/80 backdrop-blur-xl rounded-2xl border border-white/40 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 overflow-visible ring-1 ring-slate-200/50 hover:ring-blue-500/30">
+    <article className="group relative w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-800/40 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 dark:hover:shadow-blue-500/10 transition-all duration-300 overflow-visible ring-1 ring-slate-200/50 dark:ring-slate-800/50 hover:ring-blue-500/30 dark:hover:ring-blue-500/30">
 
       {/* Decorative gradient blur */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-fuchsia-500/10 blur-2xl rounded-full -mr-10 -mt-10 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-fuchsia-500/10 dark:from-blue-500/20 dark:to-fuchsia-500/20 blur-2xl rounded-full -mr-10 -mt-10 pointer-events-none" />
 
       {/* CARD HEADER: Author & Bounty */}
       <div className="relative flex items-center justify-between p-4 pb-0">
@@ -184,10 +184,10 @@ export default function QuestionCard({ q }: { q: Question }) {
               <img
                 src={q.createdByAvatar}
                 alt={q.createdByName || "Teacher"}
-                className="relative h-11 w-11 rounded-full object-cover border-2 border-white shadow-sm"
+                className="relative h-11 w-11 rounded-full object-cover border-2 border-white dark:border-slate-900 shadow-sm"
               />
             ) : (
-              <div className="relative h-11 w-11 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-sm font-bold text-slate-600 shadow-sm">
+              <div className="relative h-11 w-11 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-400 shadow-sm">
                 {String((q.createdByName || "T").split(" ").map((s) => s[0]).join("")).slice(0, 2).toUpperCase()}
               </div>
             )}
@@ -197,11 +197,11 @@ export default function QuestionCard({ q }: { q: Question }) {
           <div>
             <div className="flex items-center gap-1.5">
               <Link href={teacherProfileLink} className="hover:underline decoration-blue-500/30 underline-offset-2">
-                <h3 className="font-bold text-slate-900 text-sm tracking-tight">{q.createdByName || "Teacher"}</h3>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm tracking-tight">{q.createdByName || "Teacher"}</h3>
               </Link>
               <TeacherBadge />
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               <span className="font-medium">{q.subject || "General"}</span>
               <span>•</span>
               <span>{q.classGrade ? `Class ${q.classGrade}` : ""}</span>
@@ -220,16 +220,16 @@ export default function QuestionCard({ q }: { q: Question }) {
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors focus:outline-none"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none"
             >
               <MoreHorizontal className="w-5 h-5" />
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-8 w-40 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute right-0 top-8 w-40 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-100">
                 <button
                   onClick={handleDelete}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
+                  className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left"
                 >
                   <Trash2 className="w-4 h-4" />
                   Delete Question
@@ -248,7 +248,7 @@ export default function QuestionCard({ q }: { q: Question }) {
           <div className="flex flex-wrap items-center gap-2">
             {/* Written Answer badge for high-point questions */}
             {(q.points ?? 0) > 15 && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-100/80 border border-violet-200 text-violet-700 text-[10px] font-bold uppercase tracking-wider">
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-100/80 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300 text-[10px] font-bold uppercase tracking-wider">
                 <FileImage className="w-3 h-3" />
                 Written
               </span>
@@ -259,36 +259,36 @@ export default function QuestionCard({ q }: { q: Question }) {
               </span>
             )}
             {q.timeLimit && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100/80 border border-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-wider">
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold uppercase tracking-wider">
                 <Clock className="w-3 h-3" />
                 {q.timeLimit}m
               </span>
             )}
             {(q.totalAttempts !== undefined && q.totalAttempts > 0) && (
-              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50/80 border border-blue-200 text-blue-700 text-[10px] font-bold uppercase tracking-wider" title={`${q.solvedCount} students solved this successfully`}>
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-[10px] font-bold uppercase tracking-wider" title={`${q.solvedCount} students solved this successfully`}>
                 <Users className="w-3 h-3" />
                 {q.solvedCount} Solved
               </span>
             )}
           </div>
 
-          <h2 className="text-lg font-bold text-slate-800 leading-snug group-hover:text-blue-700 transition-colors">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 leading-snug group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
             {q.title}
           </h2>
         </div>
 
         {/* Question Text */}
         {q.body && (
-          <p className="text-slate-600 text-sm leading-relaxed line-clamp-3">
+          <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed line-clamp-3">
             {q.body}
           </p>
         )}
 
         {/* Image Attachment */}
         {publicUrl && (
-          <div className="group/image relative w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+          <div className="group/image relative w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
             <div className="absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-black/20 to-transparent opacity-0 group-hover/image:opacity-100 transition-opacity" />
-            <div className="flex items-center justify-center bg-slate-100/50 p-2">
+            <div className="flex items-center justify-center bg-slate-100/50 dark:bg-slate-900/50 p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={publicUrl}
@@ -309,9 +309,9 @@ export default function QuestionCard({ q }: { q: Question }) {
       {/* CARD FOOTER: Action Bar */}
       <div className="px-5 pb-5 pt-2 flex items-center justify-between gap-4">
         {/* Bounty Badge */}
-        <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 px-3 py-1.5 rounded-lg border border-amber-100/80 shadow-sm shrink-0">
-          <div className="bg-amber-100 p-1 rounded-full">
-            <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+        <div className="flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 text-amber-900 dark:text-amber-300 px-3 py-1.5 rounded-lg border border-amber-100/80 dark:border-amber-900/50 shadow-sm shrink-0">
+          <div className="bg-amber-100 dark:bg-amber-900/50 p-1 rounded-full">
+            <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-500 dark:text-amber-400" />
           </div>
           <span className="text-xs font-bold">{q.points ?? 0} <span className="opacity-70 font-normal ml-0.5">Points</span></span>
         </div>
@@ -319,10 +319,10 @@ export default function QuestionCard({ q }: { q: Question }) {
         {/* Action Button — hidden for teachers */}
         {user === undefined ? (
           <div className="flex-1 sm:flex-none">
-            <div className="w-full h-10 bg-slate-200 animate-pulse rounded-xl"></div>
+            <div className="w-full h-10 bg-slate-200 dark:bg-slate-700 animate-pulse rounded-xl"></div>
           </div>
         ) : isTeacher ? (
-          <div className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-50 border border-slate-200 text-slate-400 px-5 py-2.5 rounded-xl text-sm font-semibold cursor-default select-none">
+          <div className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 px-5 py-2.5 rounded-xl text-sm font-semibold cursor-default select-none">
             <TeacherBadge />
             <span>Teacher View</span>
           </div>

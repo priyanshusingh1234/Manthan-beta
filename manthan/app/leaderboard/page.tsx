@@ -48,183 +48,111 @@ export default async function LeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 text-slate-900 pb-24 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3" />
-      <div className="absolute top-40 left-0 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-3xl pointer-events-none translate-y-1/2 -translate-x-1/2" />
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 pb-24 relative overflow-hidden flex flex-col items-center">
+      {/* Dynamic Background Blur effects */}
+      <div className="absolute top-0 right-0 w-full h-[400px] bg-gradient-to-b from-indigo-50/50 to-transparent dark:from-indigo-950/20 dark:to-transparent pointer-events-none" />
 
-      <main className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-20 pt-6 sm:pt-10">
+      <main className="w-full max-w-2xl px-4 relative z-20 pt-6">
 
-        {/* Page Header Area */}
-        <div className="mb-10 text-center flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-100/50 text-indigo-700 text-xs font-bold mb-4 border border-indigo-200/50 shadow-sm animate-fade-in">
-            <Trophy className="w-3.5 h-3.5" />
-            Live Rankings
-          </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 mb-3 drop-shadow-sm">
-            Global Leaderboard
-          </h1>
-          <p className="text-slate-500 font-medium max-w-md mx-auto text-sm md:text-base">
-            The top brightest minds competing across schools. Earn points by solving questions and climbing the ranks.
-          </p>
-        </div>
-
-        {/* Top 3 Podiums Area (Only display if we have at least 3 students) */}
+        {/* Podium Display (Top 3) */}
         {students.length >= 3 && (
-          <div className="hidden sm:flex justify-center items-end gap-4 mb-12 h-64">
+          <div className="flex justify-center items-end gap-2 sm:gap-6 mb-10 h-60">
             {/* 2nd Place */}
-            <div className="relative flex flex-col items-center w-1/3 max-w-[200px] animate-slideUp" style={{ animationDelay: '100ms' }}>
+            <div className="relative flex flex-col items-center w-[30%] animate-slideUp" style={{ animationDelay: '100ms' }}>
               <div className="relative mb-3 group">
-                <div className="absolute -inset-1 rounded-full bg-slate-200/50 animate-pulse-soft blur-sm"></div>
-                <img src={students[1].avatar || `https://ui-avatars.com/api/?name=${students[1].name}&background=f8fafc&color=94a3b8`} alt={students[1].name} className="w-20 h-20 rounded-full object-cover border-4 border-slate-200 shadow-xl relative z-10 bg-white" />
-                <div className="absolute -bottom-3 -right-2 bg-slate-200 text-slate-700 w-8 h-8 rounded-full border-2 border-white flex items-center justify-center font-black shadow-md z-20">2</div>
+                <img src={students[1].avatar || `https://ui-avatars.com/api/?name=${students[1].name}&background=e2e8f0&color=475569`} alt={students[1].name} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-slate-200 shadow-md relative z-10 bg-white" />
+                <div className="absolute -bottom-2 right-0 bg-slate-200 text-slate-700 w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-xs z-20">2</div>
               </div>
-              <div className="bg-white/80 backdrop-blur-xl border border-slate-200/60 shadow-lg rounded-t-3xl rounded-b-xl w-full p-4 flex flex-col items-center border-t-4 border-t-slate-300">
-                <span className="font-bold text-slate-800 text-center truncate w-full text-sm">{students[1].name}</span>
-                <span className="text-slate-500 text-xs mt-0.5 truncate w-full text-center">@{students[1].username}</span>
-                <div className="mt-3 bg-slate-50 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-inner border border-slate-100">
-                  <Zap className="w-3.5 h-3.5 text-slate-400 fill-slate-400" />
-                  <span className="text-slate-700 font-black text-xs">{students[1].totalPoints.toLocaleString()}</span>
-                </div>
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl w-full py-3 px-2 flex flex-col items-center border-t-[3px] border-t-slate-300">
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-xs sm:text-sm truncate">{students[1].name}</span>
+                <span className="text-indigo-600 font-bold text-xs mt-1">{students[1].totalPoints.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">pts</span></span>
               </div>
             </div>
 
             {/* 1st Place */}
-            <div className="relative flex flex-col items-center w-1/3 max-w-[220px] z-10 -translate-y-8 animate-slideUp">
-              <div className="absolute -top-12 opacity-80 animate-pulse">
-                <Sparkles className="w-8 h-8 text-amber-400" />
+            <div className="relative flex flex-col items-center w-[35%] z-10 -translate-y-6 animate-slideUp">
+              <div className="absolute -top-8 text-amber-500 animate-pulse hidden sm:block">
+                 <Trophy className="w-6 h-6" />
               </div>
               <div className="relative mb-3 group">
-                <div className="absolute -inset-2 rounded-full bg-amber-400/30 animate-pulse blur-md"></div>
-                <img src={students[0].avatar || `https://ui-avatars.com/api/?name=${students[0].name}&background=fef3c7&color=d97706`} alt={students[0].name} className="w-28 h-28 rounded-full object-cover border-4 border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.5)] relative z-10 bg-white" />
-                <div className="absolute -bottom-4 right-0 bg-gradient-to-br from-amber-300 to-amber-500 text-white w-10 h-10 rounded-full border-[3px] border-white flex items-center justify-center text-lg font-black shadow-lg z-20"><Medal className="w-5 h-5" /></div>
+                <div className="absolute -inset-2 rounded-full bg-amber-400/20 animate-pulse blur-md"></div>
+                <img src={students[0].avatar || `https://ui-avatars.com/api/?name=${students[0].name}&background=fef3c7&color=d97706`} alt={students[0].name} className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.3)] relative z-10 bg-white" />
+                <div className="absolute -bottom-2 right-1 bg-gradient-to-br from-amber-400 to-amber-600 text-white w-7 h-7 sm:w-8 sm:h-8 rounded-full border-[2px] border-white flex items-center justify-center font-black shadow-md z-20">1</div>
               </div>
-              <div className="bg-white/90 backdrop-blur-2xl border border-amber-200/60 shadow-xl shadow-amber-500/10 rounded-t-[2rem] rounded-b-2xl w-full p-5 flex flex-col items-center border-t-[6px] border-t-amber-400">
-                <span className="font-black text-slate-900 text-center truncate w-full text-base">{students[0].name}</span>
-                <span className="text-amber-600/80 text-xs mt-0.5 truncate w-full text-center font-medium">@{students[0].username}</span>
-                <div className="mt-4 bg-amber-50 px-4 py-2 rounded-full flex items-center gap-1.5 shadow-inner border border-amber-100/50">
-                  <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-                  <span className="text-amber-700 font-black text-sm">{students[0].totalPoints.toLocaleString()}</span>
+              <div className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 shadow-md shadow-amber-500/10 rounded-2xl w-full py-4 px-2 flex flex-col items-center border-t-[4px] border-t-amber-400">
+                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-center w-full text-sm sm:text-base truncate">{students[0].name}</span>
+                <div className="flex items-center gap-1 mt-1 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-md border border-amber-100 dark:border-amber-900/50">
+                   <Zap className="w-3" fill="currentColor" className="text-amber-500" />
+                   <span className="text-amber-700 dark:text-amber-400 font-black text-xs sm:text-sm">{students[0].totalPoints.toLocaleString()}</span>
                 </div>
               </div>
             </div>
 
             {/* 3rd Place */}
-            <div className="relative flex flex-col items-center w-1/3 max-w-[200px] animate-slideUp" style={{ animationDelay: '200ms' }}>
+            <div className="relative flex flex-col items-center w-[30%] animate-slideUp" style={{ animationDelay: '200ms' }}>
               <div className="relative mb-3 group">
-                <div className="absolute -inset-1 rounded-full bg-orange-200/50 animate-pulse-soft blur-sm"></div>
-                <img src={students[2].avatar || `https://ui-avatars.com/api/?name=${students[2].name}&background=ffedd5&color=ea580c`} alt={students[2].name} className="w-20 h-20 rounded-full object-cover border-4 border-orange-300 shadow-xl relative z-10 bg-white" />
-                <div className="absolute -bottom-3 -right-2 bg-gradient-to-br from-orange-300 to-orange-500 text-white w-8 h-8 rounded-full border-2 border-white flex items-center justify-center font-black shadow-md z-20">3</div>
+                <img src={students[2].avatar || `https://ui-avatars.com/api/?name=${students[2].name}&background=ffedd5&color=ea580c`} alt={students[2].name} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-orange-300 shadow-md relative z-10 bg-white" />
+                <div className="absolute -bottom-2 right-0 bg-orange-300 text-orange-800 w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-xs z-20">3</div>
               </div>
-              <div className="bg-white/80 backdrop-blur-xl border border-orange-200/60 shadow-lg rounded-t-3xl rounded-b-xl w-full p-4 flex flex-col items-center border-t-4 border-t-orange-400">
-                <span className="font-bold text-slate-800 text-center truncate w-full text-sm">{students[2].name}</span>
-                <span className="text-orange-600/70 text-xs mt-0.5 truncate w-full text-center">@{students[2].username}</span>
-                <div className="mt-3 bg-orange-50 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-inner border border-orange-100/50">
-                  <Zap className="w-3.5 h-3.5 text-orange-400 fill-orange-400" />
-                  <span className="text-orange-700 font-black text-xs">{students[2].totalPoints.toLocaleString()}</span>
-                </div>
+              <div className="bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-900/50 shadow-sm rounded-2xl w-full py-3 px-2 flex flex-col items-center border-t-[3px] border-t-orange-400">
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-xs sm:text-sm truncate">{students[2].name}</span>
+                <span className="text-indigo-600 font-bold text-xs mt-1">{students[2].totalPoints.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">pts</span></span>
               </div>
             </div>
           </div>
         )}
 
-        {/* Main List */}
-        <div className="bg-white/80 backdrop-blur-2xl rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-200/60 overflow-hidden relative">
+        {/* List Header */}
+        <div className="flex items-center justify-between mb-2 px-2">
+           <h3 className="font-extrabold text-slate-900 dark:text-white text-lg">Top Players</h3>
+           <span className="text-xs font-semibold text-slate-500 bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded-md">Live</span>
+        </div>
+
+        {/* Scrollable Leaderboard List */}
+        <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800/50">
           {students.length === 0 ? (
-            <div className="p-16 text-center text-slate-500 font-medium flex flex-col items-center">
-              <Award className="w-12 h-12 text-slate-300 mb-4" />
-              <p className="text-lg">No students found on the leaderboard yet.</p>
+            <div className="p-12 text-center flex flex-col items-center gap-3">
+              <Award className="w-12 h-12 text-slate-300" />
+              <p className="text-slate-500 font-medium">Rankings will appear here soon.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto text-sm sm:text-base">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/50 border-b border-slate-100 text-slate-400 text-xs font-bold uppercase tracking-widest">
-                    <th className="py-5 px-4 sm:px-6 w-16 text-center">#</th>
-                    <th className="py-5 px-4 sm:px-6">Student</th>
-                    <th className="py-5 px-4 sm:px-6 hidden md:table-cell">School</th>
-                    <th className="py-5 px-4 sm:px-6 text-right w-32">Points</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100/80">
-                  {students.map((student, index) => {
-                    const rank = index + 1;
+            <div className="flex flex-col">
+              {students.slice(3).map((student, index) => {
+                const rank = index + 4; // since we slice past top 3
 
-                    // Style logic for the rows
-                    let rankBadge = '';
-                    if (rank === 1) rankBadge = 'bg-amber-100 text-amber-700 border-amber-200 shadow-sm shadow-amber-500/10';
-                    else if (rank === 2) rankBadge = 'bg-slate-100 text-slate-700 border-slate-200 shadow-sm shadow-slate-500/10';
-                    else if (rank === 3) rankBadge = 'bg-orange-100 text-orange-700 border-orange-200 shadow-sm shadow-orange-500/10';
-                    else rankBadge = 'bg-transparent text-slate-400 border-transparent text-sm';
+                return (
+                  <div key={student.id} className="flex items-center px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    
+                    <div className="w-8 shrink-0 flex justify-center text-sm font-bold text-slate-400 dark:text-slate-500">
+                      {rank}
+                    </div>
 
-                    let rowHighlight = '';
-                    if (rank === 1) rowHighlight = 'bg-amber-50/20';
-                    else if (rank === 2) rowHighlight = 'bg-slate-50/30';
-                    else if (rank === 3) rowHighlight = 'bg-orange-50/20';
+                    <div className="relative shrink-0 ml-1">
+                      {student.avatar ? (
+                        <img src={student.avatar} alt={student.name} className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-800 bg-slate-100" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-100 dark:border-indigo-800">
+                          {String(student.name[0]).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
 
-                    return (
-                      <tr
-                        key={student.id}
-                        className={`hover:bg-blue-50/30 transition-all duration-200 group ${rowHighlight}`}
-                      >
-                        <td className="py-4 px-4 sm:px-6 flex items-center justify-center">
-                          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black border transition-transform group-hover:scale-110 ${rankBadge}`}>
-                            {rank}
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 sm:px-6">
-                          <div className="flex items-center gap-3 sm:gap-4 outline-none group/user text-slate-900 pointer-events-none">
-                            <div className="relative">
-                              {student.avatar ? (
-                                <img src={student.avatar} alt={student.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shadow-sm border border-slate-200 transition-colors" />
-                              ) : (
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 font-bold border border-indigo-100 shadow-sm">
-                                  {String(student.name[0]).toUpperCase()}
-                                </div>
-                              )}
-                              {rank <= 3 && (
-                                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
-                                  {rank === 1 && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
-                                  {rank === 2 && <Medal className="w-3.5 h-3.5 text-slate-400 fill-slate-400" />}
-                                  {rank === 3 && <Medal className="w-3.5 h-3.5 text-orange-400 fill-orange-400" />}
-                                </div>
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="font-bold text-slate-800 text-sm sm:text-base truncate">{student.name}</div>
-                              <div className="text-xs font-semibold text-slate-400 truncate mt-0.5">@{student.username}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 sm:px-6 hidden md:table-cell">
-                          <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 font-medium bg-slate-50 w-max px-3 py-1.5 rounded-lg border border-slate-100 truncate max-w-[200px] lg:max-w-full">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span className="truncate">{student.school}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 sm:px-6 text-right">
-                          <div className={`inline-flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-black text-sm border shadow-sm transition-all
-                            ${rank <= 3 ? 'bg-white shadow-[0_2px_10px_rgba(0,0,0,0.04)] border-slate-200/60' : 'bg-slate-50 text-slate-600 border-slate-100 group-hover:bg-white'} 
-                          `}>
-                            {rank === 1 ? (
-                              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 fill-amber-500 drop-shadow-sm" />
-                            ) : rank === 2 ? (
-                              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 fill-slate-400 drop-shadow-sm" />
-                            ) : rank === 3 ? (
-                              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-400 fill-orange-400 drop-shadow-sm" />
-                            ) : (
-                              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 fill-indigo-100" />
-                            )}
-                            <span className={rank === 1 ? 'text-amber-600' : rank === 2 ? 'text-slate-600' : rank === 3 ? 'text-orange-600' : 'text-slate-700'}>
-                              {student.totalPoints.toLocaleString()}
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    <div className="ml-3 flex-1 min-w-0">
+                      <div className="font-bold text-[15px] text-slate-900 dark:text-slate-100 truncate">{student.name}</div>
+                      <div className="text-xs font-medium text-slate-500 truncate flex items-center gap-1">
+                         <MapPin className="w-3 h-3 shrink-0" />
+                         <span className="truncate">{student.school}</span>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 flex flex-col items-end pl-2">
+                       <span className="font-bold text-slate-900 dark:text-white text-sm">{student.totalPoints.toLocaleString()}</span>
+                       <span className="text-[10px] uppercase font-bold text-indigo-500 tracking-wider">Points</span>
+                    </div>
+
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

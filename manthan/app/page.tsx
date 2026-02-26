@@ -1,13 +1,47 @@
+"use client";
+
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 import HeroSearch from '@/components/HeroSearch'
 import LiveWarFeed from '@/components/LiveWarFeed'
 import TopStudents from '@/components/TopStudents'
 import BottomBanner from '@/components/BottomBanner'
 import HomeSignPrompt from '@/components/HomeSignPrompt'
 import QuestionsFeed from '@/components/QuestionsFeed'
+import LandingPage from '@/components/LandingPage';
+import { Loader2 } from 'lucide-react';
 
 export default function Home() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAuthenticated(!!user);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session?.user);
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white dark:bg-slate-950 text-gray-900 dark:text-gray-100">
       {/* Hero/Search */}
       <HeroSearch />
       <HomeSignPrompt />
@@ -19,7 +53,7 @@ export default function Home() {
 
           {/* Questions feed placed on the home screen */}
           <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-4">Latest questions</h2>
+            <h2 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200">Latest questions</h2>
             <QuestionsFeed />
           </div>
         </div>

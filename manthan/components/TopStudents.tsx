@@ -31,14 +31,14 @@ function Avatar({ student, size = 40 }: { student: Student; size?: number }) {
                 alt={student.name}
                 width={size}
                 height={size}
-                className="rounded-full object-cover bg-slate-100"
+                className="rounded-full object-cover bg-slate-100 dark:bg-slate-800"
                 style={{ width: size, height: size }}
             />
         );
     }
     return (
         <div
-            className="rounded-full bg-indigo-100 flex items-center justify-center font-black text-indigo-600"
+            className="rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center font-black text-indigo-600 dark:text-indigo-400"
             style={{ width: size, height: size, fontSize: size * 0.4 }}
         >
             {String(student.name[0] || '?').toUpperCase()}
@@ -110,7 +110,7 @@ export default function TopStudents() {
     const podiumStudents = [students[1], students[0], students[2]].filter(Boolean);
 
     return (
-        <aside className="rounded-3xl bg-white shadow-xl ring-1 ring-black/[0.06] overflow-hidden">
+        <aside className="rounded-3xl bg-white dark:bg-slate-900 shadow-xl ring-1 ring-black/[0.06] dark:ring-white/[0.05] overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 px-5 pt-5 pb-8 relative overflow-hidden">
                 {/* Background glows */}
@@ -141,11 +141,11 @@ export default function TopStudents() {
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-12 opacity-60">
                     <Loader2 className="w-7 h-7 text-indigo-500 animate-spin mb-2" />
-                    <p className="text-sm font-semibold text-slate-400">Loading ranks...</p>
+                    <p className="text-sm font-semibold text-slate-400 dark:text-slate-500">Loading ranks...</p>
                 </div>
             ) : students.length === 0 ? (
-                <div className="py-10 text-center text-sm font-medium text-slate-400 px-4">
-                    <Star className="w-8 h-8 mx-auto mb-2 text-slate-200" />
+                <div className="py-10 text-center text-sm font-medium text-slate-400 dark:text-slate-500 px-4">
+                    <Star className="w-8 h-8 mx-auto mb-2 text-slate-200 dark:text-slate-700" />
                     No students on the leaderboard yet. Be the first!
                 </div>
             ) : (
@@ -169,7 +169,7 @@ export default function TopStudents() {
                                             <Avatar student={student} size={isFirst ? 52 : 42} />
                                         </div>
                                         {/* Name */}
-                                        <p className={`text-xs font-black text-slate-800 text-center truncate max-w-[70px] ${isFirst ? 'text-sm' : ''}`}>
+                                        <p className={`text-xs font-black text-slate-800 dark:text-slate-100 text-center truncate max-w-[70px] ${isFirst ? 'text-sm' : ''}`}>
                                             {student.name.split(' ')[0]}
                                         </p>
                                         {/* Points chip */}
@@ -187,17 +187,17 @@ export default function TopStudents() {
                     {/* ── Ranks 4+ ──────────────────────────────────────── */}
                     {students.length > 3 && (
                         <div className="px-4 pb-4 space-y-1">
-                            <div className="h-px bg-slate-100 mb-3" />
+                            <div className="h-px bg-slate-100 dark:bg-slate-800 mb-3" />
                             {students.slice(3).map((student) => {
                                 const percentage = topScore > 0 ? (student.points / topScore) * 100 : 0;
                                 return (
                                     <Link
                                         href={`/user/${student.username}`}
                                         key={student.rank}
-                                        className="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 transition-all group"
+                                        className="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group"
                                     >
                                         {/* Rank number */}
-                                        <span className="w-6 text-center text-xs font-black text-slate-400">
+                                        <span className="w-6 text-center text-xs font-black text-slate-400 dark:text-slate-500">
                                             {student.rank}
                                         </span>
 
@@ -209,7 +209,7 @@ export default function TopStudents() {
                                         {/* Info */}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-1.5">
-                                                <span className="text-sm font-bold text-slate-800 truncate group-hover:text-indigo-600 transition-colors">
+                                                <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-indigo-600 transition-colors">
                                                     {student.name}
                                                 </span>
                                                 {student.streak > 0 && (
@@ -220,7 +220,7 @@ export default function TopStudents() {
                                                 )}
                                             </div>
                                             {/* Progress bar */}
-                                            <div className="mt-1 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                                            <div className="mt-1 h-1 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                                                 <div
                                                     className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-violet-500 transition-all duration-500"
                                                     style={{ width: `${percentage}%` }}
@@ -230,8 +230,8 @@ export default function TopStudents() {
 
                                         {/* Points */}
                                         <div className="text-right shrink-0">
-                                            <div className="text-sm font-black text-slate-700">{student.points.toLocaleString()}</div>
-                                            <div className="text-[10px] text-slate-400">pts</div>
+                                            <div className="text-sm font-black text-slate-700 dark:text-slate-300">{student.points.toLocaleString()}</div>
+                                            <div className="text-[10px] text-slate-400 dark:text-slate-500">pts</div>
                                         </div>
                                     </Link>
                                 );

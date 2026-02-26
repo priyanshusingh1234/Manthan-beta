@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon } from 'lucide-react';
+import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 import { supabase } from '@/lib/supabaseClient';
 import NotificationBell from './NotificationBell';
@@ -31,8 +32,11 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
 
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     let mounted = true;
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (mounted) setUser(user);
@@ -140,26 +144,67 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
 
   const getPageInfo = (): PageInfo | null => {
     if (!pathname || pathname === '/') return null;
-    if (pathname.startsWith('/profile')) return { title: 'User Profile', icon: User };
-    if (pathname.startsWith('/questions/create')) return { title: 'Create Custom Question', icon: PlusCircle };
+    if (pathname.startsWith('/profile')) return { title: 'Profile', icon: User };
+    if (pathname.startsWith('/questions/create')) return { title: 'Create Question', icon: PlusCircle };
     if (pathname.startsWith('/questions')) return { title: 'Solve Question', icon: FileQuestion };
-    if (pathname.startsWith('/leaderboard')) return { title: 'Global Leaderboard', icon: Trophy };
-    if (pathname.startsWith('/contact')) return { title: 'Contact Us', icon: Mail };
-    if (pathname.startsWith('/about')) return { title: 'About Dheeyudha', icon: Info };
-    if (pathname.startsWith('/teacher')) return { title: 'Teacher Profile', icon: GraduationCap };
-    if (pathname.startsWith('/subject')) return { title: 'Subject Hub', icon: BookOpen };
+    if (pathname.startsWith('/leaderboard')) return { title: 'Leaderboard', icon: Trophy };
+    if (pathname.startsWith('/war')) return { title: 'Battle Room', icon: Shield };
+    if (pathname.startsWith('/feed')) return { title: 'Community Feed', icon: Sparkles };
+    if (pathname.startsWith('/contact')) return { title: 'Contact Support', icon: Mail };
+    if (pathname.startsWith('/about')) return { title: 'About App', icon: Info };
+    if (pathname.startsWith('/teacher')) return { title: 'Teacher Hub', icon: GraduationCap };
+    if (pathname.startsWith('/subject')) return { title: 'Subjects', icon: BookOpen };
     if (pathname.startsWith('/docs')) return { title: 'Documentation', icon: HelpCircle };
     if (pathname.startsWith('/privacy')) return { title: 'Privacy Policy', icon: Shield };
     if (pathname.startsWith('/notifications')) return { title: 'Notifications', icon: Bell };
-
-    const fallbackTitle = pathname.split('/')[1] || '';
-    return { title: fallbackTitle.charAt(0).toUpperCase() + fallbackTitle.slice(1) || 'Page', icon: Sparkles };
+    return null;
   };
 
   const pageInfo = getPageInfo();
 
   return (
-    <header className="relative isolate z-50">
+    <>
+      {/* Professional Mobile-Only Header */}
+      <header className="md:hidden sticky top-0 z-[60] bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 px-5 pt-4 pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight" style={{ fontFamily: "-apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif", letterSpacing: "-0.5px" }}>
+              {pageInfo ? pageInfo.title : 'Dheeyudha'}
+            </h1>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            {user ? (
+               <>
+                 <NotificationBell />
+                 {user?.user_metadata?.isTeacher && (
+                   <Link
+                     href="/questions/create"
+                     className="inline-flex items-center justify-center w-9 h-9 text-indigo-600 bg-indigo-100 dark:bg-indigo-900/50 rounded-full active:scale-95"
+                   >
+                     <PlusCircle className="h-5 w-5" />
+                   </Link>
+                 )}
+                 <Link href="/profile" className="active:scale-95 transition-transform flex items-center justify-center">
+                   <span className="inline-block h-9 w-9 rounded-full overflow-hidden border-[2px] border-slate-200 dark:border-slate-700 shadow-sm relative">
+                      {user.user_metadata?.avatar_url ? (
+                        <Image src={user.user_metadata.avatar_url} alt="avatar" fill className="object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="flex items-center justify-center h-full w-full text-base font-bold text-indigo-600 bg-white">
+                          {user?.user_metadata?.fullName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                        </span>
+                      )}
+                    </span>
+                 </Link>
+               </>
+            ) : (
+                <Link href="/login" className="text-sm font-bold text-slate-700 dark:text-slate-300 bg-slate-200/50 dark:bg-slate-800/50 px-4 py-1.5 rounded-full active:scale-95">Sign In</Link>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Desktop Header */}
+      <header className="hidden md:block relative isolate z-50">
       {/* Dynamic Main Header Background */}
       <div className="absolute inset-0 overflow-hidden -z-10 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-xl pointer-events-none rounded-b-[2rem] border-b border-white/10">
         <div className="absolute inset-0 bg-transparent bg-center opacity-20" />
@@ -200,27 +245,20 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
             )}
           </div>
 
-          {/* Mobile Centered Title */}
-          <div className="flex md:hidden flex-1 justify-center px-2">
-            <div className="flex flex-col items-center">
-              <span className="text-base font-extrabold tracking-[0.15em] text-white drop-shadow-md">
-                DHEEYUDHA
-              </span>
-              {pageInfo && (
-                <div className="flex items-center gap-1 opacity-90">
-                  <pageInfo.icon className="w-3 h-3 text-indigo-100" />
-                  <span className="text-[10px] font-bold text-white tracking-widest uppercase truncate max-w-[120px]">
-                    {pageInfo.title}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Mobile Centered Title (Removed) */}
 
           {/* Top Right: Actions & Auth */}
           <div className="flex items-center gap-3 shrink-0">
 
-
+            {isMounted && (
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all active:scale-95"
+                title="Toggle Theme"
+              >
+                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+            )}
 
             {user ? (
               <>
@@ -270,21 +308,21 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                     {dropdownOpen && typeof window !== 'undefined' && createPortal(
                       <div
                         ref={portalRef}
-                        className="bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-popIn w-56 flex flex-col"
+                        className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-popIn w-56 flex flex-col"
                         style={{ position: 'absolute', top: dropdownCoords.top, left: dropdownCoords.left, zIndex: 9999 }}
                       >
-                        <div className="px-5 py-5 bg-gradient-to-br from-indigo-50 to-purple-50 border-b border-gray-100">
+                        <div className="px-5 py-5 bg-gradient-to-br from-indigo-50 dark:from-indigo-950/30 to-purple-50 dark:to-purple-950/30 border-b border-slate-100 dark:border-slate-800">
                           <p className="text-xs font-extrabold text-indigo-500 uppercase tracking-widest mb-1 shadow-sm">Account</p>
-                          <p className="text-sm font-bold text-gray-800 truncate">
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
                             {user.email}
                           </p>
                         </div>
 
-                        <div className="p-2 space-y-1 bg-white">
+                        <div className="p-2 space-y-1 bg-white dark:bg-slate-900">
                           <Link
                             href="/profile"
                             onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 hover:shadow-sm border border-transparent hover:border-indigo-100 transition-all"
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm border border-transparent hover:border-indigo-100 dark:hover:border-slate-700 transition-all"
                           >
                             <User className="h-5 w-5" />
                             <span>My Profile</span>
@@ -293,7 +331,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                           <Link
                             href="/docs"
                             onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 hover:shadow-sm border border-transparent hover:border-indigo-100 transition-all"
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm border border-transparent hover:border-indigo-100 dark:hover:border-slate-700 transition-all"
                           >
                             <HelpCircle className="h-5 w-5" />
                             <span>Help &amp; Docs</span>
@@ -301,7 +339,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
 
                           <button
                             onClick={handleLogout}
-                            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 hover:shadow-sm border border-transparent hover:border-red-100 transition-all"
+                            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-bold text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 hover:shadow-sm border border-transparent hover:border-red-100 dark:hover:border-red-900/50 transition-all"
                           >
                             <LogOut className="h-5 w-5" />
                             <span>Sign out</span>
@@ -337,6 +375,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
       {/* Header spacer */}
       <div className="hidden sm:block h-20 sm:h-24 md:h-28" />
     </header>
+    </>
   );
 }
 

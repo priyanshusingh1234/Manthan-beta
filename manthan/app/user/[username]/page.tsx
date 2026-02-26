@@ -8,7 +8,7 @@ type Props = { params: { username: string } };
 
 export default async function StudentProfilePage({ params }: Props) {
     const username = params.username;
-    if (!username) return (<div className="min-h-screen py-12 flex items-center justify-center text-slate-500">User not found</div>);
+    if (!username) return (<div className="min-h-screen py-12 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950">User not found</div>);
 
     try {
         let fetchedUser: any = null;
@@ -37,13 +37,13 @@ export default async function StudentProfilePage({ params }: Props) {
 
         if (!fetchedUser) {
             return (
-                <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                    <div className="bg-white p-12 rounded-3xl shadow-lg border border-slate-100 text-center max-w-md">
-                        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+                    <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-800 text-center max-w-md">
+                        <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
                             <span className="text-3xl">👻</span>
                         </div>
-                        <h2 className="text-2xl font-bold text-slate-900 mb-2">User Not Found</h2>
-                        <p className="text-slate-500">The student profile you are looking for doesn&apos;t exist or hasn&apos;t set a username yet.</p>
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">User Not Found</h2>
+                        <p className="text-slate-500 dark:text-slate-400">The student profile you are looking for doesn&apos;t exist or hasn&apos;t set a username yet.</p>
                     </div>
                 </div>
             );
@@ -89,7 +89,7 @@ export default async function StudentProfilePage({ params }: Props) {
         ];
 
         return (
-            <div className="min-h-screen bg-slate-50 pb-20 pt-6 sm:pt-8">
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 pt-6 sm:pt-8 w-full">
                 {/* Banner Section */}
                 <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="h-64 sm:h-80 w-full relative bg-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl ring-1 ring-slate-900/5">
@@ -103,41 +103,43 @@ export default async function StudentProfilePage({ params }: Props) {
                     </div>
                 </div>
 
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 sm:-mt-28 relative z-10">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 sm:-mt-28 relative z-10 w-full">
                     {/* Profile Card */}
-                    <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-10 border border-slate-100 flex flex-col sm:flex-row gap-8 items-center sm:items-start text-center sm:text-left">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl p-6 sm:p-10 border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-8 items-center sm:items-start text-center sm:text-left w-full">
                         {avatar ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={avatar} alt={name} className="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover shadow-2xl ring-4 ring-white relative -mt-16 sm:-mt-20 bg-white" />
+                            <img src={avatar} alt={name} className="w-32 h-32 sm:w-40 sm:h-40 rounded-full object-cover shadow-2xl ring-4 ring-white dark:ring-slate-900 relative -mt-16 sm:-mt-20 bg-white dark:bg-slate-900" />
                         ) : (
-                            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-tr from-indigo-100 to-blue-50 flex items-center justify-center text-5xl font-bold text-indigo-500 shadow-2xl ring-4 ring-white relative -mt-16 sm:-mt-20">{String(name[0] || 'S').toUpperCase()}</div>
+                            <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-tr from-indigo-100 to-blue-50 dark:from-indigo-900/40 dark:to-blue-900/20 flex items-center justify-center text-5xl font-bold text-indigo-500 dark:text-indigo-400 shadow-2xl ring-4 ring-white dark:ring-slate-900 relative -mt-16 sm:-mt-20">{String(name[0] || 'S').toUpperCase()}</div>
                         )}
 
-                        <div className="flex-1">
-                            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                        <div className="flex-1 w-full">
+                            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white flex flex-wrap items-center justify-center sm:justify-start gap-3">
                                 {name}
                                 {isTeacher && <TeacherBadge />}
                             </h1>
-                            <p className="text-lg font-mono text-indigo-500 mt-1 font-semibold">@{username}</p>
+                            <p className="text-lg font-mono text-indigo-500 dark:text-indigo-400 mt-1 font-semibold">@{username}</p>
 
-                            <div className="flex flex-wrap gap-4 mt-4 justify-center sm:justify-start text-sm font-medium text-slate-600">
+                            <div className="flex flex-wrap gap-4 mt-4 justify-center sm:justify-start text-sm font-medium text-slate-600 dark:text-slate-400 w-full">
                                 {school && (
-                                    <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-full">
-                                        <MapPin className="w-4 h-4 text-slate-400" />
+                                    <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+                                        <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                                         <span>{school}</span>
                                     </div>
                                 )}
                                 {grade && (
-                                    <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-full">
-                                        <GraduationCap className="w-4 h-4 text-slate-400" />
+                                    <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+                                        <GraduationCap className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                                         <span>Class {grade}</span>
                                     </div>
                                 )}
                             </div>
 
-                            {bio && <p className="mt-5 text-base text-slate-600 leading-relaxed max-w-2xl mx-auto sm:mx-0">{bio}</p>}
+                            {bio && <p className="mt-5 text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mx-auto sm:mx-0 w-full">{bio}</p>}
 
-                            <FollowButton profileUserId={fetchedUser.id} initialFollowers={initialFollowers} initialFollowing={initialFollowing} />
+                            <div className="mt-6">
+                                <FollowButton profileUserId={fetchedUser.id} initialFollowers={initialFollowers} initialFollowing={initialFollowing} />
+                            </div>
                         </div>
 
                         {/* Global Rank Snippet */}
@@ -150,25 +152,25 @@ export default async function StudentProfilePage({ params }: Props) {
                         </div>
                     </div>
 
-                    <div className={"grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8"}>
+                    <div className={"grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8 w-full"}>
                         {stats.map((stat, i) => {
                             const Icon = stat.icon;
                             return (
-                                <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
-                                    <div className={`${stat.bgColor} w-12 h-12 rounded-xl flex items-center justify-center mb-3`}>
+                                <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center text-center w-full">
+                                    <div className={`${stat.bgColor} dark:bg-slate-800 w-12 h-12 rounded-xl flex items-center justify-center mb-3`}>
                                         <Icon className={`${stat.color} w-6 h-6`} />
                                     </div>
-                                    <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
-                                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-1">{stat.label}</div>
+                                    <div className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</div>
+                                    <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">{stat.label}</div>
                                 </div>
                             );
                         })}
                     </div>
 
                     {/* Recent Activity (Dummy for Public View) */}
-                    <div className="mt-8 bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
-                        <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-                            <Trophy className="w-6 h-6 text-indigo-500" />
+                    <div className="mt-8 bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 w-full mb-10">
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                            <Trophy className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
                             Recent Victories
                         </h2>
                         <div className="space-y-4">
@@ -177,17 +179,17 @@ export default async function StudentProfilePage({ params }: Props) {
                                 { o: 'Physics Motion Quiz', d: '1 day ago', p: '+30 pts' },
                                 { o: 'History Trivia Clash', d: '3 days ago', p: '+45 pts' },
                             ].map((v, i) => (
-                                <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div key={i} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold">
+                                        <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center font-bold">
                                             {v.o.charAt(0)}
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-slate-800">{v.o}</h3>
-                                            <p className="text-xs text-slate-500">{v.d}</p>
+                                            <h3 className="font-bold text-slate-800 dark:text-slate-200">{v.o}</h3>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">{v.d}</p>
                                         </div>
                                     </div>
-                                    <div className="font-bold text-green-500 bg-green-50 px-3 py-1 rounded-full text-sm">
+                                    <div className="font-bold text-green-500 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full text-sm">
                                         {v.p}
                                     </div>
                                 </div>
@@ -199,6 +201,6 @@ export default async function StudentProfilePage({ params }: Props) {
             </div >
         );
     } catch (err) {
-        return (<div className="min-h-screen py-12 flex items-center justify-center text-slate-500">Profile rendering failed</div>);
+        return (<div className="min-h-screen py-12 flex items-center justify-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950">Profile rendering failed</div>);
     }
 }

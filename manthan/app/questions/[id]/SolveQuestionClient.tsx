@@ -185,19 +185,19 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const renderTeacherProfile = () => {
         const tLink = question.teacherUsername ? `/teacher/${question.teacherUsername}` : "#";
         return (
-            <div className="flex items-center gap-4 p-4 mb-6 bg-slate-50 border border-slate-100 rounded-2xl">
+            <div className="flex items-center gap-4 p-4 mb-6 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-2xl">
                 <a href={tLink} className="relative block shrink-0">
                     {question.teacherAvatar ? (
-                        <img src={question.teacherAvatar} alt="Teacher" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+                        <img src={question.teacherAvatar} alt="Teacher" className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm" />
                     ) : (
-                        <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 font-bold flex items-center justify-center border-2 border-white shadow-sm">
+                        <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 font-bold flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-sm">
                             {String(question.teacherName?.[0] || 'T').toUpperCase()}
                         </div>
                     )}
                 </a>
                 <div className="flex flex-col">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-0.5">Posted By</span>
-                    <a href={tLink} className="font-bold flex items-center text-slate-800 hover:text-indigo-600 transition-colors">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">Posted By</span>
+                    <a href={tLink} className="font-bold flex items-center text-slate-800 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                         {question.teacherName || "Verified Teacher"}
                         <TeacherBadge />
                     </a>
@@ -208,7 +208,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
     if (!authChecked) {
         return (
-            <div className="flex flex-col items-center justify-center p-20 text-slate-400 space-y-4">
+            <div className="flex flex-col items-center justify-center p-20 text-slate-400 dark:text-slate-500 space-y-4">
                 <Loader2 className="w-10 h-10 animate-spin" />
                 <p className="font-medium animate-pulse">Loading battle arena...</p>
             </div>
@@ -229,29 +229,29 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     // Non-challenge re-attempt → already attempted screen
     if (alreadyAttempted && !challengeId) {
         return (
-            <div className="bg-white rounded-[3rem] p-8 shadow-sm border border-slate-100 text-center space-y-6 animate-in fade-in zoom-in-95 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+            <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 text-center space-y-6 animate-in fade-in zoom-in-95 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/5 dark:bg-slate-400/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
                 <div className="flex justify-center">
                     {alreadyAttempted.is_correct ? (
-                        <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                        <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center">
                             <CheckCircle2 className="w-10 h-10" />
                         </div>
                     ) : (
-                        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                        <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center">
                             <XCircle className="w-10 h-10" />
                         </div>
                     )}
                 </div>
-                <h2 className="text-3xl font-black text-slate-900">
+                <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">
                     You have already attempted this question.
                 </h2>
 
-                <p className="text-lg text-slate-600 max-w-md mx-auto">
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-md mx-auto">
                     Your answer was <span className="font-bold">{alreadyAttempted.is_correct ? "Correct" : "Incorrect"}</span>.
                 </p>
                 <div className="pt-6 flex flex-col gap-3 max-w-sm mx-auto">
                     {!alreadyAttempted.is_correct && !challengeId && (
-                        <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-2xl mb-2 text-sm text-indigo-800 text-left">
+                        <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/50 p-4 rounded-2xl mb-2 text-sm text-indigo-800 dark:text-indigo-300 text-left">
                             <span className="font-bold flex items-center gap-1.5 mb-1"><Users className="w-4 h-4" /> Co-op Recovery Available!</span>
                             You can't retry this alone, but if you tag a friend and they solve it correctly, you'll both split the points!
                         </div>
@@ -260,7 +260,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     {!alreadyAttempted.is_correct && !challengeId && (
                         <button
                             onClick={() => setIsChallengeModalOpen(true)}
-                            className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20"
+                            className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 dark:shadow-indigo-500/20"
                         >
                             <Users className="w-5 h-5" />
                             Tag a Friend to Retry!
@@ -268,7 +268,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     )}
                     <button
                         onClick={() => router.push("/")}
-                        className={`w-full ${alreadyAttempted.is_correct ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 border'} font-bold px-8 py-3.5 rounded-xl transition`}
+                        className={`w-full ${alreadyAttempted.is_correct ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 border'} font-bold px-8 py-3.5 rounded-xl transition`}
                     >
                         Back to Dashboard
                     </button>
@@ -289,48 +289,48 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
     if (result) {
         return (
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 text-center space-y-6 animate-in fade-in zoom-in-95">
+            <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 text-center space-y-6 animate-in fade-in zoom-in-95">
                 <div className="flex justify-center">
                     {result.isCorrect ? (
-                        <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                        <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center">
                             <CheckCircle2 className="w-10 h-10" />
                         </div>
                     ) : (
-                        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
+                        <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center">
                             <XCircle className="w-10 h-10" />
                         </div>
                     )}
                 </div>
-                <h2 className="text-3xl font-black text-slate-900">
+                <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">
                     {result.isCorrect ? "Correct!" : "Incorrect!"}
                 </h2>
 
-                <p className="text-lg text-slate-600 max-w-md mx-auto">
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-md mx-auto">
                     {result.isCorrect
                         ? `Brilliant job! You earned ${result.pointsChange} points.`
                         : `Keep learning! You lost ${Math.abs(result.pointsChange)} points.`
                     }
                 </p>
 
-                <div className="p-6 bg-slate-50 rounded-2xl inline-block w-full max-w-sm border border-slate-200">
-                    <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Total Points</div>
-                    <div className="text-4xl font-black text-indigo-600">{result.newTotal}</div>
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl inline-block w-full max-w-sm border border-slate-200 dark:border-slate-700">
+                    <div className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Total Points</div>
+                    <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400">{result.newTotal}</div>
                 </div>
 
                 {!result.isCorrect && question.options && result.correctOption !== undefined && result.correctOption !== null && (
                     <div className="mt-6 text-sm">
-                        <span className="text-slate-500 font-medium">The correct answer was: </span>
-                        <strong className="text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">The correct answer was: </span>
+                        <strong className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded">
                             {question.options[result.correctOption]}
                         </strong>
                     </div>
                 )}
 
-                <div className="pt-6 border-t border-slate-100 mt-6 max-w-md mx-auto">
+                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 mt-6 max-w-md mx-auto">
                     {!reviewSubmitted ? (
-                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                            <h3 className="font-bold text-slate-800 mb-2">Rate this Question</h3>
-                            <p className="text-sm text-slate-500 mb-4">Help us identify the best content from our teachers.</p>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
+                            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-2">Rate this Question</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Help us identify the best content from our teachers.</p>
                             <div className="flex justify-center gap-2 mb-4">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                     <button
@@ -343,7 +343,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                                         <Star
                                             className={`w-8 h-8 transition-colors ${(hoverRating || rating) >= star
                                                 ? "fill-amber-400 text-amber-400"
-                                                : "fill-slate-200 text-slate-200"
+                                                : "fill-slate-200 dark:fill-slate-700 text-slate-200 dark:text-slate-700"
                                                 }`}
                                         />
                                     </button>
@@ -358,7 +358,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                             </button>
                         </div>
                     ) : (
-                        <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl border border-emerald-100 font-medium flex items-center justify-center gap-2">
+                        <div className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 font-medium flex items-center justify-center gap-2">
                             <CheckCircle2 className="w-5 h-5" /> Thanks for your feedback!
                         </div>
                     )}
@@ -367,7 +367,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                         {!result.isCorrect && (
                             <button
                                 onClick={() => setIsChallengeModalOpen(true)}
-                                className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20"
+                                className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 dark:shadow-indigo-500/20"
                             >
                                 <Users className="w-5 h-5" />
                                 Tag a Friend to Recover Points!
@@ -375,7 +375,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                         )}
                         <button
                             onClick={() => router.push("/")}
-                            className={`w-full ${result.isCorrect ? 'bg-slate-900 border-transparent text-white hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'} font-bold px-8 py-3.5 rounded-xl border transition`}
+                            className={`w-full ${result.isCorrect ? 'bg-slate-900 dark:bg-slate-100 border-transparent text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'} font-bold px-8 py-3.5 rounded-xl border transition`}
                         >
                             Back to Dashboard
                         </button>
@@ -406,20 +406,20 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             )}
 
             {/* Top Bar: Timer & Points */}
-            <div className="flex items-center justify-between bg-white/95 backdrop-blur-md px-5 py-3 rounded-2xl border border-gray-200 shadow-sm sticky top-4 z-40">
-                <div className={`flex items-center gap-2 font-mono text-lg font-medium px-4 py-1.5 rounded-full ${timeLeft <= 30 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-100/80 text-gray-700'}`}>
+            <div className="flex items-center justify-between bg-white/95 dark:bg-slate-900/90 backdrop-blur-md px-5 py-3 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm sticky top-4 z-40">
+                <div className={`flex items-center gap-2 font-mono text-lg font-medium px-4 py-1.5 rounded-full ${timeLeft <= 30 ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/50' : 'bg-gray-100/80 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300'}`}>
                     <Clock className="w-4 h-4" />
                     {formatTime(timeLeft)}
                 </div>
 
                 <div className="flex items-center gap-2">
                     {/* Penalty Badge */}
-                    <div className="hidden sm:flex items-center gap-1 text-gray-500 px-3 py-1.5 rounded-full border border-gray-100 bg-gray-50 text-xs font-medium cursor-help" title="Penalty if answered incorrectly">
+                    <div className="hidden sm:flex items-center gap-1 text-gray-500 dark:text-slate-400 px-3 py-1.5 rounded-full border border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 text-xs font-medium cursor-help" title="Penalty if answered incorrectly">
                         <span>- {Math.floor((question.points || 0) / 5)} pts if wrong</span>
                     </div>
 
                     {/* Reward Badge */}
-                    <div className="flex items-center gap-1.5 bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-medium shadow-sm transition-transform hover:scale-105 cursor-help" title="Reward if correct">
+                    <div className="flex items-center gap-1.5 bg-gray-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-1.5 rounded-full text-sm font-medium shadow-sm transition-transform hover:scale-105 cursor-help" title="Reward if correct">
                         <span className="font-semibold">{question.points || 0} points</span>
                     </div>
                 </div>
@@ -427,35 +427,35 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
             {/* Main Card */}
             {(
-                <div className="bg-white rounded-[2rem] p-6 sm:p-12 shadow-sm border border-gray-200 relative overflow-hidden">
+                <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 sm:p-12 shadow-sm border border-gray-200 dark:border-slate-800 relative overflow-hidden">
                     {renderTeacherProfile()}
 
                     <div className="mb-8 flex flex-wrap gap-2">
                         {question.class_grade && (
-                            <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium tracking-wide">Class {question.class_grade}</span>
+                            <span className="bg-gray-100/80 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 px-3 py-1 rounded-full text-xs font-medium tracking-wide">Class {question.class_grade}</span>
                         )}
                         {question.subject && (
-                            <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium tracking-wide">{question.subject}</span>
+                            <span className="bg-gray-100/80 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 px-3 py-1 rounded-full text-xs font-medium tracking-wide">{question.subject}</span>
                         )}
                         {question.difficulty && (
-                            <span className="bg-gray-100/80 border border-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-medium capitalize tracking-wide">
+                            <span className="bg-gray-100/80 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 px-3 py-1 rounded-full text-xs font-medium capitalize tracking-wide">
                                 {question.difficulty}
                             </span>
                         )}
                     </div>
 
-                    <h1 className="text-2xl sm:text-4xl font-semibold text-gray-900 mb-6 leading-relaxed tracking-tight">
+                    <h1 className="text-2xl sm:text-4xl font-semibold text-gray-900 dark:text-white mb-6 leading-relaxed tracking-tight">
                         {question.title}
                     </h1>
 
                     {question.body && (
-                        <p className="text-gray-600 leading-relaxed text-lg sm:text-xl mb-10 whitespace-pre-wrap font-light">
+                        <p className="text-gray-600 dark:text-slate-300 leading-relaxed text-lg sm:text-xl mb-10 whitespace-pre-wrap font-light">
                             {question.body}
                         </p>
                     )}
 
                     {publicUrl && (
-                        <div className="mb-12 rounded-[1.5rem] overflow-hidden bg-gray-50/50 flex items-center justify-center p-6 border border-gray-100">
+                        <div className="mb-12 rounded-[1.5rem] overflow-hidden bg-gray-50/50 dark:bg-slate-800/50 flex items-center justify-center p-6 border border-gray-100 dark:border-slate-800">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={publicUrl} alt="Question Attachment" className="max-h-[400px] object-contain rounded-xl drop-shadow-sm" />
                         </div>
@@ -471,15 +471,15 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                                         key={idx}
                                         onClick={() => setSelectedOption(idx)}
                                         className={`relative p-5 sm:p-6 text-left rounded-2xl border transition-all duration-200 flex items-center gap-4 group ${isSelected
-                                            ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500 z-10"
-                                            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/80 text-gray-700"
+                                            ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/30 ring-1 ring-blue-500 z-10"
+                                            : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600 hover:bg-gray-50/80 dark:hover:bg-slate-800/80 text-gray-700 dark:text-slate-300"
                                             }`}
                                     >
-                                        <div className={`shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500 group-hover:bg-gray-200"
+                                        <div className={`shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 group-hover:bg-gray-200 dark:group-hover:bg-slate-700"
                                             }`}>
                                             {String.fromCharCode(65 + idx)}
                                         </div>
-                                        <span className={`text-base sm:text-lg transition-colors ${isSelected ? "text-blue-900 font-medium" : "text-gray-700"}`}>{opt}</span>
+                                        <span className={`text-base sm:text-lg transition-colors ${isSelected ? "text-blue-900 dark:text-blue-300 font-medium" : "text-gray-700 dark:text-slate-300"}`}>{opt}</span>
                                     </button>
                                 );
                             })}
@@ -487,11 +487,11 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     )}
 
                     {/* Footer sticky submit integrated inside card */}
-                    <div className="mt-12 pt-8 border-t border-gray-100 flex justify-end">
+                    <div className="mt-12 pt-8 border-t border-gray-100 dark:border-slate-800 flex justify-end">
                         <button
                             onClick={() => handleSubmit()}
                             disabled={selectedOption === null || isSubmitting}
-                            className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-medium text-lg px-10 py-4 rounded-full transition-all w-full sm:w-auto justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                            className="flex items-center gap-2 bg-gray-900 dark:bg-indigo-600 hover:bg-gray-800 dark:hover:bg-indigo-500 disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:text-gray-400 dark:disabled:text-slate-500 text-white font-medium text-lg px-10 py-4 rounded-full transition-all w-full sm:w-auto justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5"
                         >
                             {isSubmitting ? "Submitting..." : "Submit Answer"}
                         </button>

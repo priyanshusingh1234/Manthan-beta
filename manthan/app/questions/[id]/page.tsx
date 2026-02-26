@@ -20,7 +20,7 @@ export default async function SolveQuestionPage({
 
     if (error || !q) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-6 text-slate-500">
+            <div className="min-h-screen flex items-center justify-center p-6 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950">
                 Question not found.
             </div>
         );
@@ -50,7 +50,7 @@ export default async function SolveQuestionPage({
     const isWrittenQuestion = (q.points || 0) > 15;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/20 py-10 px-4 flex flex-col items-center">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/20 py-10 px-4 flex flex-col items-center">
             <div className="w-full max-w-3xl">
                 {isWrittenQuestion ? (
                     <WrittenSolveClient question={clientQuestion} />
