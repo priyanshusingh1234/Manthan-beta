@@ -297,136 +297,94 @@ export default function TrailerPage() {
                                 </div>
 
                                 {/* Floating Elements */}
-                                <div className="flex-1 grid gap-6 relative p-8">
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/20 blur-[100px] rounded-full -z-10" />
+                                {/* Premium Apple-style Right Side Dashboard Visuals */}
+                                <div className="flex-1 right-side-glass grid grid-cols-2 gap-8 relative px-4 py-8 mt-12">
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-br from-indigo-500/30 to-purple-600/20 blur-[120px] rounded-full -z-10 pointer-events-none" />
 
-                                    {/* Realistic Question Card */}
-                                    <motion.div
-                                        initial={{ opacity: 0, x: 50 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 1, type: "spring" }}
-                                        className="relative w-full max-w-sm ml-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-800/40 shadow-xl overflow-hidden group"
-                                    >
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-fuchsia-500/20 blur-2xl rounded-full -mr-10 -mt-10 pointer-events-none" />
-
-                                        {/* Header */}
-                                        <div className="relative flex items-center justify-between p-4 pb-0">
-                                            <div className="flex items-center gap-3">
-                                                <div className="relative h-11 w-11 rounded-full bg-slate-800 border-2 border-slate-900 flex items-center justify-center text-sm font-bold text-slate-400 shadow-sm shrink-0">
-                                                    DR
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <h3 className="font-bold text-slate-100 text-sm tracking-tight">Dr. Sharma</h3>
-                                                        <BadgeCheck className="w-4 h-4 text-blue-400" />
-                                                    </div>
-                                                    <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                                                        <span className="font-medium">Advanced Physics</span>
-                                                        <span>•</span>
-                                                        <span>Class 12</span>
+                                    {/* Left Column of Floating UI */}
+                                    <div className="flex flex-col gap-8">
+                                        {/* Player Profile & Settings */}
+                                        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1, type: "spring", stiffness: 100 }} className="bg-white/5 backdrop-blur-[40px] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
+                                            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                                            <div className="flex justify-between items-start mb-8">
+                                                <div className="relative">
+                                                    <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-50 rounded-full" />
+                                                    <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-400 to-fuchsia-500 p-[2px] relative z-10">
+                                                        <div className="w-full h-full bg-[#111] rounded-full flex items-center justify-center">
+                                                            <User className="w-7 h-7 text-white" />
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Body */}
-                                        <div className="p-5 space-y-4">
-                                            <div className="space-y-2">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <span className="px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-500 border-red-500/30">
-                                                        HARD
-                                                    </span>
+                                                {/* Settings Button directly placed */}
+                                                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10 hover:bg-white/10 transition-colors shadow-sm cursor-pointer hover:rotate-45 duration-300">
+                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                                                 </div>
-                                                <h2 className="text-lg font-bold text-slate-100 leading-snug">
-                                                    Calculate the magnetic field at the center of a circular current-carrying coil with N turns.
-                                                </h2>
                                             </div>
-                                        </div>
+                                            <h3 className="text-3xl font-semibold text-white tracking-tight leading-none mb-2">Priyanshu</h3>
+                                            <p className="text-gray-400 font-medium text-lg">Grandmaster Rank</p>
+                                        </motion.div>
 
-                                        {/* Footer */}
-                                        <div className="px-5 pb-5 flex items-center justify-between gap-4">
-                                            <div className="flex items-center gap-2 bg-amber-950/30 text-amber-300 px-3 py-1.5 rounded-lg border border-amber-900/50 shadow-sm shrink-0">
-                                                <div className="bg-amber-900/50 p-1 rounded-full">
-                                                    <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-400" />
-                                                </div>
-                                                <span className="text-xs font-bold">50 <span className="opacity-70 font-normal ml-0.5">Points</span></span>
+                                        {/* Beautiful Clean Question Widget */}
+                                        <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.2, type: "spring" }} className="bg-[#111]/90 backdrop-blur-[60px] border border-white/10 rounded-[2.5rem] p-8 shadow-[0_30px_60px_rgba(0,0,0,0.6)] relative overflow-hidden group">
+                                            <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
+                                            <div className="flex gap-3 mb-6 relative z-10">
+                                                <span className="px-4 py-1.5 bg-white/10 rounded-full text-xs font-bold text-white tracking-widest uppercase">Physics</span>
+                                                <span className="px-4 py-1.5 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-xs font-bold text-indigo-300 tracking-widest uppercase">Premium</span>
                                             </div>
+                                            <h4 className="text-xl font-semibold text-white/90 leading-relaxed mb-10 relative z-10">
+                                                Calculate the magnetic field at the center of a circular coil with N turns and radius R.
+                                            </h4>
 
-                                            <div className="flex items-center gap-2">
-                                                <button className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 border-none text-white px-4 py-2 rounded-xl font-semibold text-sm shadow-md">
-                                                    Solve
+                                            <div className="flex items-center justify-between relative z-10">
+                                                <button id="repost-btn" ref={repostBtnRef} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors py-2 px-1">
+                                                    <RefreshCw className="w-6 h-6" />
+                                                    <span className="font-semibold text-lg">Repost</span>
                                                 </button>
-                                                <button id="repost-btn" ref={repostBtnRef} className="flex items-center justify-center gap-2 bg-slate-800 text-slate-300 border border-slate-700 px-4 py-2 rounded-xl font-semibold text-sm transition-colors">
-                                                    <RefreshCw className="w-4 h-4" /> Repost
+                                                <button className="bg-white text-black px-8 py-3.5 rounded-full font-bold shadow-[0_8px_20px_rgba(255,255,255,0.25)] hover:bg-gray-100 transition-colors">
+                                                    Solve Now
                                                 </button>
                                             </div>
-                                        </div>
-                                    </motion.div>
+                                        </motion.div>
+                                    </div>
 
-                                    {/* Actual App Leaderboard Mock */}
-                                    <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.2, type: "spring" }} className="rounded-3xl bg-[#0A0A0A]/80 border border-white/10 backdrop-blur-3xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05),0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden w-80 relative mr-auto -mt-10">
-                                        {/* Header */}
-                                        <div className="bg-gradient-to-br from-violet-600/40 via-indigo-600/40 to-blue-600/40 px-5 pt-4 pb-6 relative overflow-hidden border-b border-white/10">
-                                            <div className="absolute -top-6 -right-6 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-                                            <div className="flex items-center justify-between mb-1 relative z-10">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center border border-white/10">
-                                                        <Trophy className="h-4 w-4 text-yellow-300 drop-shadow-md" />
+                                    {/* Right Column */}
+                                    <div className="flex flex-col gap-8 mt-16">
+                                        {/* Beautiful Performance Chart / Ranking Style Card */}
+                                        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.4, type: "spring" }} className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-[40px] border border-white/20 rounded-[3rem] p-10 shadow-2xl relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 w-48 h-48 bg-fuchsia-500/30 blur-[60px] rounded-full pointer-events-none" />
+                                            <div className="flex items-center gap-3 mb-4 opacity-70">
+                                                <Trophy className="w-5 h-5 text-fuchsia-300" />
+                                                <span className="text-white font-semibold uppercase tracking-widest text-sm">Global Leaderboard</span>
+                                            </div>
+                                            <div className="flex items-end gap-3 mb-6">
+                                                <div className="text-7xl font-bold text-white tracking-tighter leading-none">#12</div>
+                                                <div className="text-emerald-400 font-bold text-sm bg-emerald-500/10 border border-emerald-500/20 inline-flex px-4 py-1.5 rounded-full mb-2">
+                                                    ▲ Up 4 places
+                                                </div>
+                                            </div>
+
+                                            <p className="text-gray-400 font-medium mb-10">Your performance is climbing the ranks. Keep solving premium bounds.</p>
+
+                                            {/* Beautiful Minimalist Mock Progress Graph */}
+                                            <div className="flex items-end gap-3 h-32 mb-4 relative z-10 w-full justify-between">
+                                                {[30, 45, 20, 60, 40, 80, 100].map((h, i) => (
+                                                    <div key={i} className="w-6 bg-white/10 rounded overflow-hidden relative group">
+                                                        {/* Native tool doesn't support complex mapping cleanly if broken, but this is a pure block. */}
+                                                        <motion.div
+                                                            initial={{ height: 0 }}
+                                                            animate={{ height: `${h}%` }}
+                                                            transition={{ delay: 1.5 + (i * 0.1), duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                                                            className={`absolute bottom-0 w-full rounded ${i === 6 ? 'bg-gradient-to-t from-fuchsia-600 to-indigo-400' : 'bg-white/40 group-hover:bg-white/60 transition-colors'}`}
+                                                        />
                                                     </div>
-                                                    <h3 className="text-base font-black text-white tracking-tight drop-shadow-md">Top Students</h3>
-                                                </div>
+                                                ))}
                                             </div>
-                                        </div>
-
-                                        {/* Podium */}
-                                        <div className="flex items-end justify-center gap-3 px-4 -mt-4 mb-4 relative z-10">
-                                            {/* 2nd */}
-                                            <div className="flex flex-col items-center gap-1">
-                                                <span className="text-xl leading-none">🥈</span>
-                                                <div className="rounded-full ring-2 ring-slate-300 shadow-lg">
-                                                    <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-300">P</div>
-                                                </div>
-                                                <p className="text-xs font-black text-white text-center">Priyanshu</p>
-                                                <div className="w-12 h-12 rounded-t-xl bg-gradient-to-b from-slate-300 to-slate-400 opacity-80 shadow-inner border-t border-white/30" />
+                                            <div className="flex justify-between text-sm text-gray-500 font-medium mt-4">
+                                                <span>Mon</span>
+                                                <span>Sun</span>
                                             </div>
-                                            {/* 1st */}
-                                            <div className="flex flex-col items-center gap-1 z-10 -mr-1 -ml-1">
-                                                <span className="text-xl leading-none">🥇</span>
-                                                <div className="rounded-full ring-2 ring-yellow-400 shadow-lg scale-110">
-                                                    <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center font-bold text-yellow-400">R</div>
-                                                </div>
-                                                <p className="text-sm font-black text-white text-center mt-1">Rahul</p>
-                                                <div className="w-14 h-20 rounded-t-xl bg-gradient-to-b from-yellow-400 to-amber-500 opacity-90 shadow-inner border-t border-white/40" />
-                                            </div>
-                                            {/* 3rd */}
-                                            <div className="flex flex-col items-center gap-1">
-                                                <span className="text-xl leading-none">🥉</span>
-                                                <div className="rounded-full ring-2 ring-orange-400 shadow-lg">
-                                                    <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-orange-400">A</div>
-                                                </div>
-                                                <p className="text-xs font-black text-white text-center">Ayush</p>
-                                                <div className="w-12 h-8 rounded-t-xl bg-gradient-to-b from-orange-400 to-orange-500 opacity-80 shadow-inner border-t border-white/30" />
-                                            </div>
-                                        </div>
-
-                                        {/* List Item */}
-                                        <div className="px-4 pb-4">
-                                            <div className="h-px bg-white/10 mb-2" />
-                                            <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-white/5 border border-white/5">
-                                                <span className="w-4 text-center text-xs font-black text-slate-400">4</span>
-                                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-300">S</div>
-                                                <div className="flex-1 min-w-0">
-                                                    <span className="text-sm font-bold text-white block">Sneha</span>
-                                                    <div className="h-1 w-full bg-slate-800 rounded-full mt-1">
-                                                        <div className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-violet-500 w-[70%]" />
-                                                    </div>
-                                                </div>
-                                                <div className="text-right shrink-0">
-                                                    <div className="text-sm font-black text-slate-300">14.2k</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
+                                        </motion.div>
+                                    </div>
                                 </div>
                             </div>
                             <div className="h-[400px]" />
