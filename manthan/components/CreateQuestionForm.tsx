@@ -103,7 +103,14 @@ export default function CreateQuestionForm() {
       try { URL.revokeObjectURL(imagePreview); } catch { }
     }
     if (imagePath && !keepImage) {
-      try { await supabase.storage.from('question-images').remove([imagePath]); } catch { /* ignore */ }
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await fetch('/api/questions/upload', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+          body: JSON.stringify({ path: imagePath }),
+        });
+      } catch { /* ignore */ }
     }
     setImageFile(null);
     setImagePreview(null);

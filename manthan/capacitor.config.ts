@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Dheeyudha',
   webDir: 'out',
   server: {
-    url: 'https://manthan-beta.vercel.app', 
+    url: 'https://manthan-beta-c975.vercel.app',
     cleartext: true
   }
 };

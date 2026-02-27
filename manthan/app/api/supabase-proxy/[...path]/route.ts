@@ -24,7 +24,7 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
     headers.delete('transfer-encoding');
 
     try {
-        const fetchOptions: RequestInit = {
+        const fetchOptions: RequestInit & { duplex?: 'half' } = {
             method: req.method,
             headers,
             redirect: 'manual',
@@ -33,9 +33,9 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
 
         // Forward the body if it's not a GET/HEAD request
         if (req.method !== 'GET' && req.method !== 'HEAD') {
-            const body = await req.arrayBuffer();
-            if (body.byteLength > 0) {
-                fetchOptions.body = body;
+            if (req.body) {
+                fetchOptions.body = req.body;
+                fetchOptions.duplex = 'half'; // Required for Node fetch to send streams
             }
         }
 

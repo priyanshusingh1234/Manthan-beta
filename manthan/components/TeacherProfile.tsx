@@ -111,10 +111,24 @@ const TeacherProfile: React.FC = () => {
   }, []);
 
   const uploadToStorage = async (bucket: string, path: string, file: File) => {
-    const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
-    if (error) throw error;
-    const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(data.path);
-    return { publicUrl: publicData.publicUrl, path: data.path };
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    const form = new FormData();
+    form.append('file', file);
+    form.append('bucket', bucket);
+    form.append('path', path);
+
+    const res = await fetch('/api/profile/upload', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form
+    });
+
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || 'Upload failed');
+
+    return { publicUrl: body.publicUrl, path: body.path };
   };
 
   // Cropping modal state
@@ -182,10 +196,19 @@ const TeacherProfile: React.FC = () => {
       setMessage(`${type[0].toUpperCase() + type.slice(1)} updated`);
 
       if (oldPath) {
-        const { error: removeErr } = await supabase.storage.from(bucket).remove([oldPath]);
-        if (removeErr) {
-          console.warn('Failed to remove old storage file:', removeErr.message || removeErr);
-          setMessage(`Updated ${type} but failed to remove old file: ${removeErr.message || removeErr}`);
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const delRes = await fetch('/api/profile/delete', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ bucket, path: oldPath })
+        });
+        if (!delRes.ok) {
+          const errData = await delRes.json();
+          console.warn('Failed to remove old storage file:', errData.error);
         }
       }
 
