@@ -562,7 +562,6 @@ export default function TrailerPage() {
             {showCursor && (
                 <motion.div
                     animate={cursorControls}
-                    initial={{ opacity: 0 }}
                     className="fixed top-0 left-0 z-[999999] pointer-events-none drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
                     style={{ transformOrigin: "top left" }}
                 >
