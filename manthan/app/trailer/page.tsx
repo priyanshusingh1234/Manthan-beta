@@ -45,6 +45,26 @@ export default function TrailerPage() {
             await new Promise((r) => setTimeout(r, 1500));
             if (!active) return;
 
+            // NEW: Move Cursor to "Repost" button
+            const repostBtn = document.getElementById('repost-btn');
+            if (repostBtn) {
+                const rect = repostBtn.getBoundingClientRect();
+                cursorControls.set({ opacity: 1 });
+                await cursorControls.start({
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2,
+                    transition: { duration: 1.5, ease: [0.25, 0.1, 0.25, 1] }
+                });
+
+                if (!active) return;
+                setCursorClicked(true);
+                await new Promise((r) => setTimeout(r, 150));
+                setCursorClicked(false);
+                // fake repost highlight effect...
+                document.getElementById('repost-btn')?.classList.add('text-green-400', 'bg-white/10');
+                await new Promise((r) => setTimeout(r, 800));
+            }
+
             // Move to "Challenge Friend" button
             if (buttonRef.current) {
                 const rect = buttonRef.current.getBoundingClientRect();
@@ -147,6 +167,9 @@ export default function TrailerPage() {
                         <span className="bg-gradient-to-br from-white via-gray-200 to-gray-500 bg-clip-text text-transparent">
                             Education meets <br /> The Arena.
                         </span>
+                        <div className="mt-6 text-3xl font-medium text-red-500 italic tracking-[0.2em]">
+                            WAR OF WITS
+                        </div>
                     </motion.div>
                 )}
 
@@ -164,8 +187,8 @@ export default function TrailerPage() {
                         {/* Fake Header */}
                         <div className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-black/50 backdrop-blur-md">
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-cyan-400 flex items-center justify-center">
-                                    <Zap className="w-4 h-4 text-white" />
+                                <div className="w-10 h-10 rounded-xl bg-white overflow-hidden flex items-center justify-center p-1">
+                                    <img src="/IMG_20260123_164742.jpg" alt="Logo" className="w-full h-full object-cover rounded-lg" />
                                 </div>
                                 <span className="text-white font-bold text-lg tracking-tight">Dheeyudha</span>
                             </div>
@@ -183,21 +206,21 @@ export default function TrailerPage() {
                             <div className="flex-1 flex flex-col justify-center">
                                 <motion.div
                                     initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.8 }}
-                                    className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full text-xs font-bold uppercase tracking-wider mb-4 w-max"
+                                    className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-full text-xs font-bold uppercase tracking-wider mb-4 w-max"
                                 >
-                                    <Sparkles className="w-3 h-3" /> New Co-op Mode
+                                    <Sparkles className="w-3 h-3" /> War of Wits
                                 </motion.div>
                                 <motion.h1
                                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}
                                     className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight"
                                 >
-                                    Prove your skills. <br /> Challenge the best.
+                                    Earn rewards. <br /> Answer teacher questions.
                                 </motion.h1>
                                 <motion.p
                                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.0 }}
                                     className="text-gray-400 max-w-md text-lg mb-8"
                                 >
-                                    Engage in intense academic battles, climb the global leaderboard, and conquer the Dheeyudha realm.
+                                    Solve premium questions, repost to earn community points, and challenge your rivals in a live co-op battle.
                                 </motion.p>
 
                                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1 }}>
@@ -212,45 +235,42 @@ export default function TrailerPage() {
                                 </motion.div>
                             </div>
 
-                            {/* Decorative Glass Cards Right Side */}
+                            {/* TEACHER QUESTION CARD (Right Side) */}
                             <div className="hidden md:flex flex-1 relative items-center justify-center">
                                 <motion.div
-                                    initial={{ opacity: 0, scale: 0.8, rotate: -5 }} animate={{ opacity: 1, scale: 1, rotate: -5 }} transition={{ delay: 1.2, type: "spring" }}
-                                    className="absolute bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 p-6 rounded-2xl w-64 shadow-2xl -ml-20 -mt-10"
+                                    initial={{ opacity: 0, scale: 0.8, rotate: 2 }} animate={{ opacity: 1, scale: 1, rotate: 2 }} transition={{ delay: 1.2, type: "spring" }}
+                                    className="bg-[#1A1A1A] border border-white/10 p-6 rounded-3xl w-80 shadow-2xl backdrop-blur-xl"
                                 >
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center">
-                                            <Trophy className="w-6 h-6 text-emerald-400" />
+                                    {/* Author row */}
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-10 h-10 bg-indigo-500/20 rounded-full flex items-center justify-center border border-indigo-500/50 text-indigo-300 font-bold">
+                                            DR
                                         </div>
                                         <div>
-                                            <div className="text-gray-400 text-xs uppercase font-bold tracking-wider">Rank</div>
-                                            <div className="text-white font-bold text-xl">Grandmaster</div>
+                                            <div className="text-white font-bold text-sm tracking-tight flex items-center gap-1">
+                                                Dr. Sharma <span className="bg-blue-500 text-[10px] px-1.5 rounded text-white italic">Teacher</span>
+                                            </div>
+                                            <div className="text-gray-500 text-xs">Mathematics • Class 12</div>
                                         </div>
                                     </div>
-                                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                                        <div className="h-full bg-emerald-400 w-3/4" />
-                                    </div>
-                                </motion.div>
 
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.8, rotate: 5 }} animate={{ opacity: 1, scale: 1, rotate: 5 }} transition={{ delay: 1.4, type: "spring" }}
-                                    className="absolute bg-gradient-to-br from-indigo-900 to-black border border-indigo-500/30 p-6 rounded-2xl w-72 shadow-2xl ml-20 mt-20 backdrop-blur-xl"
-                                >
-                                    <div className="flex justify-between items-center mb-4">
-                                        <span className="text-white font-bold">Recent Battles</span>
-                                        <Target className="text-indigo-400 w-5 h-5" />
+                                    {/* Content */}
+                                    <div className="bg-black/50 p-4 rounded-xl border border-white/5 mb-4">
+                                        <p className="text-white font-medium text-sm mb-2">Evaluate the integral of e^x * sin(x) dx.</p>
+                                        <div className="flex gap-2">
+                                            <span className="px-2 py-1 bg-white/10 rounded text-[10px] font-bold text-white uppercase tracking-wider">Hard</span>
+                                            <span className="px-2 py-1 bg-amber-500/20 rounded text-[10px] font-bold text-amber-500 uppercase tracking-wider">+25 Points</span>
+                                        </div>
                                     </div>
-                                    <div className="space-y-3 gap-2">
-                                        {[1, 2].map(i => (
-                                            <div key={i} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                                                <div className="w-8 h-8 rounded-full bg-white/10" />
-                                                <div className="flex-1">
-                                                    <div className="h-2 bg-white/20 w-16 rounded mb-1.5" />
-                                                    <div className="h-1.5 bg-white/10 w-10 rounded" />
-                                                </div>
-                                                <span className="text-emerald-400 text-xs font-bold">+15</span>
-                                            </div>
-                                        ))}
+
+                                    {/* Actions */}
+                                    <div className="flex items-center justify-between border-t border-white/5 pt-4">
+                                        <button className="text-sm font-bold text-white bg-indigo-600 px-4 py-2 rounded-lg hover:bg-indigo-500 transition-colors">
+                                            Solve
+                                        </button>
+                                        <button id="repost-btn" className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/5">
+                                            <RefreshCw className="w-4 h-4" /> Repost
+                                        </button>
                                     </div>
                                 </motion.div>
                             </div>
