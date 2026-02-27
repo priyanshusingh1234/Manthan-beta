@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, useAnimation, AnimatePresence } from "framer-motion";
-import { Search, Sword, Target, Crosshair, Sparkles, Shield, User, Trophy, Zap, RefreshCw } from "lucide-react";
+import { Search, Sword, Target, Crosshair, Sparkles, Shield, User, Trophy, Zap, RefreshCw, ArrowRight } from "lucide-react";
 
 export default function TrailerPage() {
     const cursorControls = useAnimation();
