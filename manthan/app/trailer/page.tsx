@@ -366,18 +366,28 @@ export default function TrailerPage() {
                                             <p className="text-gray-400 font-medium mb-10">Your performance is climbing the ranks. Keep solving premium bounds.</p>
 
                                             {/* Beautiful Minimalist Mock Progress Graph */}
-                                            <div className="flex items-end gap-3 h-32 mb-4 relative z-10 w-full justify-between">
-                                                {[30, 45, 20, 60, 40, 80, 100].map((h, i) => (
-                                                    <div key={i} className="w-6 bg-white/10 rounded overflow-hidden relative group">
-                                                        {/* Native tool doesn't support complex mapping cleanly if broken, but this is a pure block. */}
-                                                        <motion.div
-                                                            initial={{ height: 0 }}
-                                                            animate={{ height: `${h}%` }}
-                                                            transition={{ delay: 1.5 + (i * 0.1), duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                                                            className={`absolute bottom-0 w-full rounded ${i === 6 ? 'bg-gradient-to-t from-fuchsia-600 to-indigo-400' : 'bg-white/40 group-hover:bg-white/60 transition-colors'}`}
-                                                        />
-                                                    </div>
-                                                ))}
+                                            <div className="flex items-end h-32 mb-4 relative z-10 w-full justify-between gap-2 overflow-hidden px-2">
+                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
+                                                    <motion.div initial={{ height: 0 }} animate={{ height: '30%' }} transition={{ delay: 1.5, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
+                                                </div>
+                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
+                                                    <motion.div initial={{ height: 0 }} animate={{ height: '45%' }} transition={{ delay: 1.6, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
+                                                </div>
+                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
+                                                    <motion.div initial={{ height: 0 }} animate={{ height: '20%' }} transition={{ delay: 1.7, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
+                                                </div>
+                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
+                                                    <motion.div initial={{ height: 0 }} animate={{ height: '60%' }} transition={{ delay: 1.8, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
+                                                </div>
+                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
+                                                    <motion.div initial={{ height: 0 }} animate={{ height: '40%' }} transition={{ delay: 1.9, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
+                                                </div>
+                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
+                                                    <motion.div initial={{ height: 0 }} animate={{ height: '80%' }} transition={{ delay: 2.0, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
+                                                </div>
+                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group shadow-[0_0_20px_rgba(192,38,211,0.5)]">
+                                                    <motion.div initial={{ height: 0 }} animate={{ height: '100%' }} transition={{ delay: 2.1, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-gradient-to-t from-fuchsia-600 to-indigo-400 group-hover:brightness-110 transition-all" />
+                                                </div>
                                             </div>
                                             <div className="flex justify-between text-sm text-gray-500 font-medium mt-4">
                                                 <span>Mon</span>
