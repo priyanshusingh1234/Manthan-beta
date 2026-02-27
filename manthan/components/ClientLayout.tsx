@@ -97,12 +97,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const isAuthPage = pathname === '/login' || pathname === '/signup';
   const isLandingPage = pathname === '/';
+  const isTrailerPage = pathname === '/trailer';
 
   // Hide the sidebar if:
   // 1. We are on an auth page
   // 2. We are definitely NOT authenticated
   // 3. We are on the landing page (home) AND we're still checking auth (prevents flash for logged-out users)
-  const hideSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null);
+  // 4. We are on the trailer showcase page
+  const hideSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage;
 
   return (
     <>
