@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, useAnimation, AnimatePresence } from "framer-motion";
-import { Search, Sword, Target, Sparkles, User, Trophy, RefreshCw, ArrowRight, Lock, Mail, BadgeCheck, Zap } from "lucide-react";
+import { Search, Sword, Target, Sparkles, User, Trophy, RefreshCw, ArrowRight, Lock, Mail, BadgeCheck, Settings } from "lucide-react";
 import { DheeyudhaLogo } from "@/components/Logo";
 
 export default function TrailerPage() {
     const cursorControls = useAnimation();
-    const screenControls = useAnimation(); // For screen shake effect
+    const screenControls = useAnimation();
 
     const [step, setStep] = useState(0);
     const [typingEmail, setTypingEmail] = useState("");
@@ -37,7 +37,6 @@ export default function TrailerPage() {
         setActiveInput(inputName);
         for (let i = 1; i <= text.length; i++) {
             setter(text.substring(0, i));
-            // Slight randomization for human-like typing
             await new Promise((r) => setTimeout(r, speed + (Math.random() * 30 - 15)));
         }
         await new Promise((r) => setTimeout(r, 200));
@@ -50,7 +49,7 @@ export default function TrailerPage() {
         await cursorControls.start({
             x: rect.left + rect.width / 2 + offsetX,
             y: rect.top + rect.height / 2 + offsetY,
-            transition: { duration, ease: [0.16, 1, 0.3, 1] } // Apple-like fluid easing
+            transition: { duration, ease: [0.16, 1, 0.3, 1] }
         });
     };
 
@@ -99,14 +98,13 @@ export default function TrailerPage() {
             await new Promise((r) => setTimeout(r, 1500));
             if (!active) return;
 
-            // Smooth scroll via Framer Motion
-            setScrollOffset(-250);
+            setScrollOffset(-200);
             await new Promise((r) => setTimeout(r, 2000));
             if (!active) return;
 
             // -- STEP 4: REPOST ACTION (16s - 20s) --
             setStep(4);
-            setScrollOffset(-180); // scroll slightly back up to frame the button perfectly
+            setScrollOffset(-120);
             await new Promise((r) => setTimeout(r, 800));
 
             await moveTo(repostBtnRef, 1.2);
@@ -145,7 +143,6 @@ export default function TrailerPage() {
             if (!active) return;
             setStep(6);
 
-            // Camera Shake Effect
             screenControls.start({
                 x: [0, -10, 10, -10, 10, 0],
                 y: [0, 10, -10, 10, -10, 0],
@@ -181,18 +178,12 @@ export default function TrailerPage() {
                         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.5, duration: 1.5 }}>
                             <DheeyudhaLogo variant="full" theme="dark" size={30} />
                         </motion.div>
-                        <motion.div
-                            initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 1.2, duration: 1.5 }}
-                            className="mt-12 text-5xl md:text-7xl font-bold tracking-tighter"
-                        >
+                        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 1.2, duration: 1.5 }} className="mt-12 text-5xl md:text-7xl font-bold tracking-tighter">
                             <span className="bg-gradient-to-b from-white via-gray-200 to-gray-500 bg-clip-text text-transparent">
                                 Redefining the <br /> Academic Arena.
                             </span>
                         </motion.div>
-                        <motion.div
-                            initial={{ opacity: 0, letterSpacing: "1em" }} animate={{ opacity: 1, letterSpacing: "0.5em" }} transition={{ delay: 2.2, duration: 1.5 }}
-                            className="mt-8 text-lg font-bold text-red-500/90 uppercase"
-                        >
+                        <motion.div initial={{ opacity: 0, letterSpacing: "1em" }} animate={{ opacity: 1, letterSpacing: "0.5em" }} transition={{ delay: 2.2, duration: 1.5 }} className="mt-8 text-lg font-bold text-red-500/90 uppercase">
                             Prepare for the War of Wits
                         </motion.div>
                     </motion.div>
@@ -251,7 +242,7 @@ export default function TrailerPage() {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)", transition: { duration: 0.8 } }}
                         transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                        className="w-full max-w-6xl h-[85vh] bg-[#050505] rounded-[2.5rem] border border-white/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05),0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden relative flex flex-col mx-4"
+                        className="w-full max-w-7xl h-[85vh] bg-[#050505] rounded-[2.5rem] border border-white/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05),0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden relative flex flex-col mx-4"
                     >
                         {/* Header */}
                         <div className="h-20 border-b border-white/5 flex items-center justify-between px-10 bg-black/60 backdrop-blur-xl z-20 shrink-0">
@@ -273,18 +264,20 @@ export default function TrailerPage() {
                         <motion.div
                             className="flex-1 w-full relative z-10 flex flex-col"
                             animate={{ y: scrollOffset }}
-                            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }} // Native smooth scroll
+                            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
                         >
-                            <div className="px-12 py-20 flex flex-col md:flex-row gap-12 items-center">
-                                <div className="flex-1">
+                            <div className="px-12 py-20 flex flex-col lg:flex-row gap-16 items-start">
+
+                                {/* Left Hero Column */}
+                                <div className="w-full lg:w-5/12 pt-10">
                                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="inline-flex items-center gap-2 px-4 py-1.5 bg-red-500/10 border border-red-500/20 text-red-500 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
                                         <Sparkles className="w-4 h-4" /> The War of Wits is Live
                                     </motion.div>
-                                    <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="text-5xl md:text-7xl font-bold text-white mb-6 leading-[1.1] tracking-tighter">
+                                    <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="text-5xl md:text-6xl xl:text-7xl font-bold text-white mb-6 leading-[1.1] tracking-tighter">
                                         Earn glory. <br />
-                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">Master the syllabus.</span>
+                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">Master it all.</span>
                                     </motion.h1>
-                                    <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="text-gray-400 max-w-lg text-xl mb-10 leading-relaxed font-medium">
+                                    <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="text-gray-400 max-w-md text-xl mb-10 leading-relaxed font-medium">
                                         Drop into intense intellectual battles, solve premium teacher questions, and climb the ranks.
                                     </motion.p>
                                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
@@ -296,104 +289,89 @@ export default function TrailerPage() {
                                     </motion.div>
                                 </div>
 
-                                {/* Floating Elements */}
-                                {/* Premium Apple-style Right Side Dashboard Visuals */}
-                                <div className="flex-1 right-side-glass grid grid-cols-2 gap-8 relative px-4 py-8 mt-12">
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-br from-indigo-500/30 to-purple-600/20 blur-[120px] rounded-full -z-10 pointer-events-none" />
+                                {/* Right Floating Bento Box Grid */}
+                                <div className="w-full lg:w-7/12 relative">
+                                    {/* Unified Ambient Glow */}
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-indigo-500/20 to-purple-600/20 blur-[100px] rounded-full -z-10 pointer-events-none" />
 
-                                    {/* Left Column of Floating UI */}
-                                    <div className="flex flex-col gap-8">
-                                        {/* Player Profile & Settings */}
-                                        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1, type: "spring", stiffness: 100 }} className="bg-white/5 backdrop-blur-[40px] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
-                                            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-                                            <div className="flex justify-between items-start mb-8">
-                                                <div className="relative">
-                                                    <div className="absolute inset-0 bg-indigo-500 blur-xl opacity-50 rounded-full" />
-                                                    <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-400 to-fuchsia-500 p-[2px] relative z-10">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                                        {/* Grid Column 1 */}
+                                        <div className="flex flex-col gap-6">
+
+                                            {/* Profile Card */}
+                                            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1, type: "spring", stiffness: 100 }} className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden group">
+                                                <div className="flex justify-between items-start mb-6">
+                                                    <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-400 to-fuchsia-500 p-[2px] shadow-[0_0_20px_rgba(99,102,241,0.3)]">
                                                         <div className="w-full h-full bg-[#111] rounded-full flex items-center justify-center">
                                                             <User className="w-7 h-7 text-white" />
                                                         </div>
                                                     </div>
+                                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10 hover:bg-white/10 transition-colors cursor-pointer">
+                                                        <Settings className="w-5 h-5 text-gray-400" />
+                                                    </div>
                                                 </div>
-                                                {/* Settings Button directly placed */}
-                                                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10 hover:bg-white/10 transition-colors shadow-sm cursor-pointer hover:rotate-45 duration-300">
-                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                                                </div>
-                                            </div>
-                                            <h3 className="text-3xl font-semibold text-white tracking-tight leading-none mb-2">Priyanshu</h3>
-                                            <p className="text-gray-400 font-medium text-lg">Grandmaster Rank</p>
-                                        </motion.div>
+                                                <h3 className="text-2xl font-bold text-white tracking-tight mb-1">Priyanshu</h3>
+                                                <p className="text-gray-400 font-medium text-sm">Grandmaster Rank</p>
+                                            </motion.div>
 
-                                        {/* Beautiful Clean Question Widget */}
-                                        <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.2, type: "spring" }} className="bg-[#111]/90 backdrop-blur-[60px] border border-white/10 rounded-[2.5rem] p-8 shadow-[0_30px_60px_rgba(0,0,0,0.6)] relative overflow-hidden group">
-                                            <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
-                                            <div className="flex gap-3 mb-6 relative z-10">
-                                                <span className="px-4 py-1.5 bg-white/10 rounded-full text-xs font-bold text-white tracking-widest uppercase">Physics</span>
-                                                <span className="px-4 py-1.5 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-xs font-bold text-indigo-300 tracking-widest uppercase">Premium</span>
-                                            </div>
-                                            <h4 className="text-xl font-semibold text-white/90 leading-relaxed mb-10 relative z-10">
-                                                Calculate the magnetic field at the center of a circular coil with N turns and radius R.
-                                            </h4>
+                                            {/* Teacher Question Card */}
+                                            <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.2, type: "spring" }} className="bg-[#111]/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
 
-                                            <div className="flex items-center justify-between relative z-10">
-                                                <button id="repost-btn" ref={repostBtnRef} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors py-2 px-1">
-                                                    <RefreshCw className="w-6 h-6" />
-                                                    <span className="font-semibold text-lg">Repost</span>
-                                                </button>
-                                                <button className="bg-white text-black px-8 py-3.5 rounded-full font-bold shadow-[0_8px_20px_rgba(255,255,255,0.25)] hover:bg-gray-100 transition-colors">
-                                                    Solve Now
-                                                </button>
-                                            </div>
-                                        </motion.div>
-                                    </div>
+                                                <div className="flex gap-2 mb-4 relative z-10">
+                                                    <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold text-white tracking-wider uppercase">Physics</span>
+                                                    <span className="px-3 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-[10px] font-bold text-indigo-300 tracking-wider uppercase">Premium</span>
+                                                </div>
 
-                                    {/* Right Column */}
-                                    <div className="flex flex-col gap-8 mt-16">
-                                        {/* Beautiful Performance Chart / Ranking Style Card */}
-                                        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.4, type: "spring" }} className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-[40px] border border-white/20 rounded-[3rem] p-10 shadow-2xl relative overflow-hidden">
-                                            <div className="absolute top-0 right-0 w-48 h-48 bg-fuchsia-500/30 blur-[60px] rounded-full pointer-events-none" />
-                                            <div className="flex items-center gap-3 mb-4 opacity-70">
-                                                <Trophy className="w-5 h-5 text-fuchsia-300" />
-                                                <span className="text-white font-semibold uppercase tracking-widest text-sm">Global Leaderboard</span>
-                                            </div>
-                                            <div className="flex items-end gap-3 mb-6">
-                                                <div className="text-7xl font-bold text-white tracking-tighter leading-none">#12</div>
-                                                <div className="text-emerald-400 font-bold text-sm bg-emerald-500/10 border border-emerald-500/20 inline-flex px-4 py-1.5 rounded-full mb-2">
-                                                    ▲ Up 4 places
-                                                </div>
-                                            </div>
+                                                <h4 className="text-lg font-semibold text-white/90 leading-snug mb-8 relative z-10">
+                                                    Calculate the magnetic field at the center of a circular coil with N turns and radius R.
+                                                </h4>
 
-                                            <p className="text-gray-400 font-medium mb-10">Your performance is climbing the ranks. Keep solving premium bounds.</p>
+                                                <div className="flex items-center justify-between relative z-10 border-t border-white/5 pt-5">
+                                                    <button className="bg-white text-black px-6 py-2.5 rounded-full font-bold shadow-sm hover:bg-gray-200 transition-colors text-sm">
+                                                        Solve
+                                                    </button>
+                                                    <button id="repost-btn" ref={repostBtnRef} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors py-2 px-3 rounded-xl border border-transparent text-sm font-semibold">
+                                                        <RefreshCw className="w-4 h-4" /> Repost
+                                                    </button>
+                                                </div>
+                                            </motion.div>
+                                        </div>
 
-                                            {/* Beautiful Minimalist Mock Progress Graph */}
-                                            <div className="flex items-end h-32 mb-4 relative z-10 w-full justify-between gap-2 overflow-hidden px-2">
-                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
-                                                    <motion.div initial={{ height: 0 }} animate={{ height: '30%' }} transition={{ delay: 1.5, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
+                                        {/* Grid Column 2 (Staggered Downward) */}
+                                        <div className="flex flex-col gap-6 pt-12">
+
+                                            {/* Leaderboard Chart Card */}
+                                            <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.4, type: "spring" }} className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden h-full flex flex-col justify-between">
+                                                <div className="absolute top-0 right-0 w-48 h-48 bg-fuchsia-500/10 blur-[50px] rounded-full pointer-events-none" />
+
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-4 opacity-70">
+                                                        <Trophy className="w-4 h-4 text-fuchsia-300" />
+                                                        <span className="text-white font-semibold uppercase tracking-widest text-xs">Leaderboard</span>
+                                                    </div>
+                                                    <div className="flex items-end gap-3 mb-4">
+                                                        <div className="text-6xl font-bold text-white tracking-tighter leading-none">#12</div>
+                                                    </div>
+                                                    <div className="text-emerald-400 font-bold text-xs bg-emerald-500/10 border border-emerald-500/20 inline-flex px-3 py-1 rounded-full mb-6">
+                                                        ▲ Up 4 places
+                                                    </div>
                                                 </div>
-                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
-                                                    <motion.div initial={{ height: 0 }} animate={{ height: '45%' }} transition={{ delay: 1.6, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
+
+                                                {/* Chart Visual */}
+                                                <div className="flex items-end h-28 w-full justify-between gap-1.5 overflow-hidden">
+                                                    {[30, 45, 20, 60, 40, 80].map((height, i) => (
+                                                        <div key={i} className="flex-1 bg-white/10 rounded-t-md relative group overflow-hidden">
+                                                            <motion.div initial={{ height: 0 }} animate={{ height: `${height}%` }} transition={{ delay: 1.5 + (i * 0.1), duration: 0.8, ease: "easeOut" }} className="absolute bottom-0 w-full rounded-t-md bg-white/30" />
+                                                        </div>
+                                                    ))}
+                                                    <div className="flex-1 bg-white/10 rounded-t-md relative group shadow-[0_0_15px_rgba(192,38,211,0.3)] overflow-hidden">
+                                                        <motion.div initial={{ height: 0 }} animate={{ height: '100%' }} transition={{ delay: 2.1, duration: 0.8, ease: "easeOut" }} className="absolute bottom-0 w-full rounded-t-md bg-gradient-to-t from-fuchsia-600 to-indigo-400" />
+                                                    </div>
                                                 </div>
-                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
-                                                    <motion.div initial={{ height: 0 }} animate={{ height: '20%' }} transition={{ delay: 1.7, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
-                                                </div>
-                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
-                                                    <motion.div initial={{ height: 0 }} animate={{ height: '60%' }} transition={{ delay: 1.8, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
-                                                </div>
-                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
-                                                    <motion.div initial={{ height: 0 }} animate={{ height: '40%' }} transition={{ delay: 1.9, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
-                                                </div>
-                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group">
-                                                    <motion.div initial={{ height: 0 }} animate={{ height: '80%' }} transition={{ delay: 2.0, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-white/40 group-hover:bg-white/60 transition-colors" />
-                                                </div>
-                                                <div className="w-8 bg-white/10 rounded-t-lg overflow-hidden relative group shadow-[0_0_20px_rgba(192,38,211,0.5)]">
-                                                    <motion.div initial={{ height: 0 }} animate={{ height: '100%' }} transition={{ delay: 2.1, duration: 1, ease: [0.16, 1, 0.3, 1] }} className="absolute bottom-0 w-full rounded-t-lg bg-gradient-to-t from-fuchsia-600 to-indigo-400 group-hover:brightness-110 transition-all" />
-                                                </div>
-                                            </div>
-                                            <div className="flex justify-between text-sm text-gray-500 font-medium mt-4">
-                                                <span>Mon</span>
-                                                <span>Sun</span>
-                                            </div>
-                                        </motion.div>
+                                            </motion.div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -446,7 +424,6 @@ export default function TrailerPage() {
                         exit={{ opacity: 0, filter: "blur(20px)", transition: { duration: 1 } }}
                         className="fixed inset-0 flex items-center justify-center bg-black overflow-hidden z-[100]"
                     >
-                        {/* White flash effect on load */}
                         <motion.div initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="absolute inset-0 bg-white z-[101] pointer-events-none" />
 
                         <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 2, opacity: 0.4 }} transition={{ duration: 3, ease: "easeOut" }} className="absolute bg-orange-600/30 w-[800px] h-[800px] rounded-full blur-[120px]" />
@@ -465,7 +442,7 @@ export default function TrailerPage() {
                                 </motion.h2>
                             </motion.div>
 
-                            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8, type: "spring" }} className="mt-16 flex items-center gap-12 text-4xl font-bold text-white bg-black/40 backdrop-blur-xl p-8 rounded-[3rem] border border-white/10 shadow-2xl">
+                            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.8, type: "spring" }} className="mt-16 flex items-center gap-12 text-4xl font-bold text-white bg-black/40 backdrop-blur-2xl p-8 rounded-[3rem] border border-white/10 shadow-2xl">
                                 <motion.div initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 1, type: "spring" }} className="flex flex-col items-center gap-4 w-32">
                                     <div className="w-24 h-24 rounded-full border-[3px] border-indigo-500 bg-indigo-900/50 flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.3)]">
                                         <User className="w-10 h-10 text-indigo-300" />
