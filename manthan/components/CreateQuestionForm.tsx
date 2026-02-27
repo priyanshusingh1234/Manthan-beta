@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { compressImage } from '@/utils/compressImage';
 
 type Difficulty = 'easy' | 'moderate' | 'hard' | '';
 
@@ -144,8 +145,9 @@ export default function CreateQuestionForm() {
     if (!file) return null;
     setImageUploading(true);
     try {
+      const compressed = await compressImage(file, "banner"); // Using banner preset for general question images
       const form = new FormData();
-      form.append('file', file, file.name);
+      form.append('file', compressed, compressed.name);
 
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -289,7 +291,12 @@ export default function CreateQuestionForm() {
           const { data: { session: s2 } } = await supabase.auth.getSession();
           const t2 = s2?.access_token;
           const form = new FormData();
-          form.append('file', modelAnswerFile, modelAnswerFile.name);
+          let fileToUpload = modelAnswerFile;
+          // Only attempt to compress if it is an image (not application/pdf)
+          if (modelAnswerFile.type.startsWith('image/')) {
+            fileToUpload = await compressImage(modelAnswerFile, "answer");
+          }
+          form.append('file', fileToUpload, fileToUpload.name);
           form.append('questionId', createdQuestionId);
           const solRes = await fetch('/api/teacher-solution', {
             method: 'POST',
