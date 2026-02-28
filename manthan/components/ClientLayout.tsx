@@ -109,7 +109,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <>
       {!hideSidebar && <DesktopSidebar />}
-      <div className={hideSidebar ? 'lg:pl-0' : 'lg:pl-64'}>
+      <div className={`${hideSidebar ? 'lg:pl-0' : 'lg:pl-64'} ${showBottomNav && !hideSidebar ? 'pb-24' : ''}`}>
         {!hideSidebar && <Header isMobile={isMobile} />}
         {children}
         {showBottomNav && !hideSidebar && <BottomNav />}
