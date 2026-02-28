@@ -12,12 +12,8 @@ export default function ShortAnimation() {
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
-    // Sequence Timeline for YouTube Short
-    const timeline = async () => {
-        // STEP 1: The Hook (0s)
-        setStep(1);
-
-        // Fast counter animation for 99%
+    // Fast counter animation for 99%
+    const startCounter = () => {
         let c = 0;
         const interval = setInterval(() => {
             c += 3;
@@ -27,36 +23,6 @@ export default function ShortAnimation() {
             }
             setCounter(c);
         }, 30);
-
-        // Await specific intervals matching the voiceover
-        await new Promise((r) => setTimeout(r, 6500));
-
-        // STEP 2: The Setup / Drawing
-        setStep(2);
-        await new Promise((r) => setTimeout(r, 11000));
-
-        // STEP 3: The Options
-        setStep(3);
-        await new Promise((r) => setTimeout(r, 4000));
-
-        // STEP 4: The Trap / Red X 
-        setStep(4);
-        await new Promise((r) => setTimeout(r, 7000));
-
-        // STEP 5: Call to Action (App Reveal Prompt) showing Question Card
-        setStep(5);
-        await new Promise((r) => setTimeout(r, 6000));
-
-        // STEP 6: "Tag a Friend" Co-op Modal visual
-        setStep(6);
-        await new Promise((r) => setTimeout(r, 6000));
-
-        // Stop Recording automatically
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-            mediaRecorderRef.current.stop();
-        }
-        setRecording(false);
-        setStatus("Video downloaded successfully!");
     };
 
     const startRecordingAndAnimation = async () => {
@@ -71,7 +37,7 @@ export default function ShortAnimation() {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    text: `99% of students fail this. I am giving 500 bonus ranking points inside the Dheeyudha arena to the first person who solves this physics problem. Imagine a heavy uniform chain of mass M. It hangs vertically so the bottom link just touches a weighing scale. You let it drop. What is the absolute maximum weight the scale reads during the fall? If you said 1Mg, you're wrong. The impact force changes everything. I just uploaded this exact question as a Level 99 Bounty on my new competitive study app, Dheeyudha. Drop into the arena, upload your mathematical proof, and claim the rank number one spot. The link is in the pinned comment. Good luck.`,
+                    text: `99% of students fail this. I am giving 500 bonus ranking points inside the Dheeyudha arena to the first person who solves this physics problem. Imagine a heavy uniform chain of mass M. It hangs vertically so the bottom link just touches a weighing scale. You let it drop. What is the absolute maximum weight the scale reads during the fall? If you said 1Mg, you're wrong. The impact force changes everything. I just uploaded this exact question as a Level 99 Bounty on my new competitive study app, Dheeyudha. You can even tag your smartest friend if you need a co-op partner. Drop into the arena, upload your mathematical proof, and claim the rank number one spot. The link is in the pinned comment. Good luck.`,
                     target_language_code: "hi-IN",
                     speaker: "shubh",
                     model: "bulbul:v3",
@@ -148,11 +114,34 @@ export default function ShortAnimation() {
             recorder.start();
             mediaRecorderRef.current = recorder;
 
-            // 5. Hide controls, play audio, start animation sequence!
+            // 5. Hide controls, attach precise audio sync events, play audio!
             setStatus("");
             setRecording(true);
+            setStep(1);
+            startCounter();
+
+            audio.ontimeupdate = () => {
+                const t = audio.currentTime;
+                // Sync animation to exact seconds of the spoken audio
+                if (t >= 7.5 && t < 15.5) setStep(2);
+                else if (t >= 15.5 && t < 19.5) setStep(3);
+                else if (t >= 19.5 && t < 24.5) setStep(4);
+                else if (t >= 24.5 && t < 29.5) setStep(5);
+                else if (t >= 29.5) setStep(6);
+            };
+
+            audio.onended = () => {
+                // Wait 1 second after voice finishes to let visual sink in, then stop recording
+                setTimeout(() => {
+                    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+                        mediaRecorderRef.current.stop();
+                    }
+                    setRecording(false);
+                    setStatus("Video downloaded successfully!");
+                }, 1500);
+            };
+
             audio.play();
-            timeline();
 
         } catch (err: any) {
             console.error("Setup error:", err);
