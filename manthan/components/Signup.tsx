@@ -93,7 +93,7 @@ const Signup: React.FC = () => {
 
       if (signUpError) throw signUpError;
 
-      router.push('/login');
+      router.push('/profile');
     } catch (err: any) {
       setError(err.message || 'Signup failed');
     } finally {
