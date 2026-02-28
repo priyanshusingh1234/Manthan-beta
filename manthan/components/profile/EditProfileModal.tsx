@@ -28,9 +28,9 @@ export default function EditProfileModal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="relative bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="px-6 py-4 shrink-0 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                     <h3 className="text-xl font-black text-slate-900 dark:text-white">Edit Profile</h3>
                     <button
                         onClick={onClose}
@@ -41,7 +41,7 @@ export default function EditProfileModal({
                 </div>
 
                 {/* Fields */}
-                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div className="p-6 space-y-4 flex-1 overflow-y-auto">
                     {message && (
                         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl text-sm font-medium">
                             {message}
@@ -109,7 +109,7 @@ export default function EditProfileModal({
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+                <div className="p-6 shrink-0 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
                     <button
                         onClick={onSave}
                         className="w-full bg-slate-900 dark:bg-indigo-600 text-white font-bold px-4 py-4 rounded-xl hover:bg-slate-800 dark:hover:bg-indigo-500 transition-all shadow-md active:translate-y-0.5"

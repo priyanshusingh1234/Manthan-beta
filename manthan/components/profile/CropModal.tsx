@@ -26,10 +26,10 @@ export default function CropModal({
     onCancel,
 }: CropModalProps) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
-            <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl h-[70vh] p-6">
-                <div className="h-[60%] bg-slate-100 dark:bg-slate-700 rounded-xl overflow-hidden relative">
+            <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl h-[70vh] max-h-[90vh] flex flex-col p-4 md:p-6 overflow-hidden">
+                <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-xl overflow-hidden relative min-h-0">
                     <Cropper
                         image={imageSrc}
                         crop={crop}
@@ -40,8 +40,8 @@ export default function CropModal({
                         onCropComplete={onCropComplete}
                     />
                 </div>
-                <div className="mt-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <div className="mt-4 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
                         <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Zoom</label>
                         <input
                             type="range"
@@ -50,10 +50,10 @@ export default function CropModal({
                             step={0.01}
                             value={zoom}
                             onChange={(e) => onZoomChange(Number(e.target.value))}
-                            className="w-40 accent-blue-600"
+                            className="w-full sm:w-40 accent-blue-600"
                         />
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 w-full sm:w-auto justify-end shrink-0">
                         <button
                             onClick={onCancel}
                             className="px-5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
