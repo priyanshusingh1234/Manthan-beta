@@ -43,9 +43,13 @@ export default function ShortAnimation() {
         setStep(4);
         await new Promise((r) => setTimeout(r, 7000));
 
-        // STEP 5: Call to Action (App Reveal Prompt)
+        // STEP 5: Call to Action (App Reveal Prompt) showing Question Card
         setStep(5);
-        await new Promise((r) => setTimeout(r, 12000)); // allow CTA to play
+        await new Promise((r) => setTimeout(r, 6000));
+
+        // STEP 6: "Tag a Friend" Co-op Modal visual
+        setStep(6);
+        await new Promise((r) => setTimeout(r, 6000));
 
         // Stop Recording automatically
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
@@ -379,22 +383,139 @@ export default function ShortAnimation() {
                         </motion.div>
                     )}
 
-                    {/* SCENE 5: RECORD APP PROMPT */}
+                    {/* SCENE 5: APP UI REVEAL - QUESTION CARD */}
                     {step === 5 && (
                         <motion.div
                             key="scene5"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, y: 50, filter: "blur(10px)" }}
+                            transition={{ type: "spring", damping: 20 }}
+                            className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-[#0a0a0a]"
+                        >
+                            {/* App Header Mockup */}
+                            <div className="absolute top-10 w-full px-8 flex items-center justify-between">
+                                <span className="font-black text-white tracking-widest text-lg">DHEEYUDHA</span>
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500" />
+                            </div>
+
+                            {/* The Question Card */}
+                            <motion.div
+                                initial={{ y: 100, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ delay: 0.5, type: "spring", damping: 20 }}
+                                className="w-full bg-[#111] border border-indigo-500/30 rounded-3xl p-6 shadow-[0_20px_60px_rgba(79,70,229,0.2)] relative overflow-hidden mt-6"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/20 blur-3xl -mr-10 -mt-10" />
+
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="bg-amber-500/20 text-amber-500 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">
+                                        Level 99
+                                    </span>
+                                    <span className="bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">
+                                        Physics
+                                    </span>
+                                </div>
+
+                                <h3 className="text-white font-bold text-xl mb-2">The Falling Chain Paradox</h3>
+                                <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+                                    Drop a chain of mass M onto a scale. Calculate the absolute peak force recorded at impact.
+                                </p>
+
+                                <div className="flex items-center justify-between border-t border-white/5 pt-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-amber-500 font-bold text-lg">+500</div>
+                                        <div className="text-slate-500 text-xs uppercase font-bold tracking-wider">Points</div>
+                                    </div>
+
+                                    <motion.div
+                                        animate={{ scale: [1, 1.05, 1] }}
+                                        transition={{ repeat: Infinity, duration: 2 }}
+                                        className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-[0_0_20px_rgba(79,70,229,0.4)]"
+                                    >
+                                        Solve Now
+                                    </motion.div>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+
+                    {/* SCENE 6: CO-OP TAG FRIEND VISUAL */}
+                    {step === 6 && (
+                        <motion.div
+                            key="scene6"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-[#0a0a0a] text-center"
+                            className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-[#0a0a0a]"
                         >
-                            <h2 className="text-5xl font-black text-white mb-6 tracking-tighter uppercase blur-[0.5px]">
-                                Try to <br /> Beat Me.
-                            </h2>
-                            <div className="flex flex-col gap-3 font-bold uppercase text-xl mt-6">
-                                <span className="bg-indigo-600 text-white px-6 py-3 rounded-full shadow-[0_0_30px_rgba(79,70,229,0.5)]">
-                                    Link in Comments
-                                </span>
-                            </div>
+                            {/* Blur backdrop simulating modal */}
+                            <div className="absolute inset-0 bg-indigo-950/40 backdrop-blur-xl" />
+
+                            <motion.div
+                                initial={{ scale: 0.9, y: 50, opacity: 0 }}
+                                animate={{ scale: 1, y: 0, opacity: 1 }}
+                                transition={{ type: "spring", damping: 25 }}
+                                className="w-full bg-white rounded-[2rem] p-6 shadow-2xl relative z-10"
+                            >
+                                <div className="flex items-center gap-4 mb-6 relative">
+                                    <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center">
+                                        <span className="text-2xl">🤝</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-slate-900 text-lg leading-tight">Co-op Mode</h3>
+                                        <p className="text-slate-500 text-sm">Tag a friend to help</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {/* Friend 1 */}
+                                    <div className="flex items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-rose-400 to-orange-400 text-white font-bold flex items-center justify-center shadow-lg">R</div>
+                                        <div className="ml-3 flex-1">
+                                            <div className="font-bold text-sm text-slate-800">Rahul Kumar</div>
+                                            <div className="text-xs text-slate-500">Rank #12</div>
+                                        </div>
+                                        <motion.div
+                                            initial={{ scale: 1 }}
+                                            animate={{ scale: [1, 1.1, 1] }}
+                                            transition={{ delay: 1, duration: 0.5 }}
+                                            className="px-4 py-1.5 bg-indigo-600 text-white font-bold text-xs rounded-full shadow-lg"
+                                        >
+                                            Tag
+                                        </motion.div>
+                                    </div>
+
+                                    {/* Typed Message Box */}
+                                    <div className="mt-4 border-2 border-indigo-100 rounded-2xl p-4 bg-indigo-50/30">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: "100%" }}
+                                            transition={{ duration: 1.5, delay: 2 }}
+                                            className="overflow-hidden whitespace-nowrap border-r-2 border-indigo-500"
+                                        >
+                                            <span className="text-sm font-medium text-slate-700">Bro I need your brain for this one! 🆘</span>
+                                        </motion.div>
+                                    </div>
+                                </div>
+
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 4 }}
+                                    className="w-full mt-6 py-4 rounded-2xl bg-slate-900 text-white font-bold text-center text-sm shadow-xl flex items-center justify-center gap-2"
+                                >
+                                    <span className="text-lg">⚡</span> Send Challenge
+                                </motion.div>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 5.5 }}
+                                className="absolute bottom-10 px-8 py-4 bg-white/10 backdrop-blur-md rounded-full border border-white/20 text-white font-bold shadow-[0_0_30px_rgba(255,255,255,0.2)] z-20"
+                            >
+                                Link in comments 👇
+                            </motion.div>
                         </motion.div>
                     )}
 
