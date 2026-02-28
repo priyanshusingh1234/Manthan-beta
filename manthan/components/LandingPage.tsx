@@ -65,7 +65,7 @@ export default function LandingPage() {
                     </Link>
 
                     {/* Mobile Menu Button */}
-                    <button 
+                    <button
                         className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                     >
@@ -76,7 +76,7 @@ export default function LandingPage() {
                 {/* Mobile Dropdown Menu */}
                 <AnimatePresence>
                     {isMenuOpen && (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
@@ -102,26 +102,26 @@ export default function LandingPage() {
 
             <main className="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 pt-16 sm:pt-24 pb-32">
                 {/* Hero Section */}
-                <motion.div 
+                <motion.div
                     className="text-center max-w-4xl mx-auto"
                     initial="hidden"
                     animate="visible"
                     variants={staggerContainer}
                 >
                     <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-2 border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50 dark:bg-indigo-900/20 rounded-full text-indigo-600 dark:text-indigo-400 font-bold text-sm mb-8 shadow-sm">
-                        <Sparkles className="w-4 h-4" />
-                        <span>The Ultimate Student Battleground</span>
+                        <Trophy className="w-4 h-4" />
+                        <span>The Premier Academic Proving Ground</span>
                     </motion.div>
-                    
+
                     <motion.h1 variants={fadeUp} className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1]">
-                        Master Your Subjects.<br />
+                        Elite preparation.<br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500">
-                            Defeat Your Peers.
+                            Verified Excellence.
                         </span>
                     </motion.h1>
 
                     <motion.p variants={fadeUp} className="text-base sm:text-xl md:text-2xl text-slate-600 dark:text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed">
-                        Step into a gamified learning platform where students answer real questions, solve peer challenges, and rank on the global leaderboard.
+                        Join India's top 1% of students solving high-stakes, peer-reviewed mathematical proofs and complex theorems for national ranking.
                     </motion.p>
 
                     <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -135,7 +135,7 @@ export default function LandingPage() {
                 </motion.div>
 
                 {/* Core Mechanics Explanations */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.8, duration: 0.8 }}
@@ -152,7 +152,7 @@ export default function LandingPage() {
                         <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm sm:text-base relative z-10 flex-1">
                             Move beyond simple multiple choice. True mastery requires showing your work. Upload your written solutions, step-by-step logic, and let AI or your peers judge the perfection of your method.
                         </p>
-                        
+
                         {/* Chart Component */}
                         <div className="mt-8 bg-white/60 dark:bg-slate-950/60 rounded-2xl p-4 border border-indigo-100 dark:border-indigo-900/50 backdrop-blur-sm relative z-10 pb-8">
                             <div className="flex justify-between items-end h-24 gap-4 px-2 mt-6">
@@ -183,28 +183,28 @@ export default function LandingPage() {
                         <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm sm:text-base relative z-10 flex-1">
                             Every guess counts. Incorrect answers carry heavy point penalties that drop your global rank instantly. This forces critical thinking, reducing blind guessing and rewarding absolute certainty.
                         </p>
-                        
+
                         {/* Penalty Chart */}
                         <div className="mt-8 bg-white/60 dark:bg-slate-950/60 rounded-2xl p-5 border border-rose-100 dark:border-rose-900/50 backdrop-blur-sm relative z-10">
                             <div className="flex flex-col gap-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-bold w-12 text-slate-500">Correct</span>
                                     <div className="flex-1 h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
-                                       <div className="w-full bg-emerald-500 rounded-full shadow-sm" />
+                                        <div className="w-full bg-emerald-500 rounded-full shadow-sm" />
                                     </div>
                                     <span className="text-sm font-black text-emerald-600 w-12 text-right">+50<span className="text-[10px] opacity-70">pt</span></span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-bold w-12 text-slate-500">Pass</span>
                                     <div className="flex-1 h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex justify-center">
-                                       <div className="w-3 bg-slate-400 rounded-full" />
+                                        <div className="w-3 bg-slate-400 rounded-full" />
                                     </div>
                                     <span className="text-sm font-black text-slate-500 w-12 text-right">0<span className="text-[10px] opacity-70">pt</span></span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-bold w-12 text-slate-500">Wrong</span>
                                     <div className="flex-1 h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex justify-start">
-                                       <div className="w-1/2 bg-rose-500 rounded-full shadow-sm" />
+                                        <div className="w-1/2 bg-rose-500 rounded-full shadow-sm" />
                                     </div>
                                     <span className="text-sm font-black text-rose-600 w-12 text-right">-25<span className="text-[10px] opacity-70">pt</span></span>
                                 </div>
@@ -223,22 +223,22 @@ export default function LandingPage() {
                         <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-sm sm:text-base relative z-10 flex-1">
                             No junk content. Questions are crafted and curated strictly by platform-verified educators. Learn exclusively from top-tier, incredibly accurate, and challenging academic material.
                         </p>
-                        
+
                         {/* Verified Chart */}
                         <div className="mt-8 bg-white/60 dark:bg-slate-950/60 rounded-2xl p-5 border border-emerald-100 dark:border-emerald-900/50 backdrop-blur-sm relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-4">
                             <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
                                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                                     <path
-                                      className="text-emerald-500/20 dark:text-emerald-900/50"
-                                      strokeDasharray="100, 100"
-                                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                      stroke="currentColor" strokeWidth="3" fill="none"
+                                        className="text-emerald-500/20 dark:text-emerald-900/50"
+                                        strokeDasharray="100, 100"
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        stroke="currentColor" strokeWidth="3" fill="none"
                                     />
                                     <path
-                                      className="text-emerald-500 drop-shadow-md"
-                                      strokeDasharray="100, 100"
-                                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                      stroke="currentColor" strokeWidth="4" fill="none" strokeLinecap="round"
+                                        className="text-emerald-500 drop-shadow-md"
+                                        strokeDasharray="100, 100"
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        stroke="currentColor" strokeWidth="4" fill="none" strokeLinecap="round"
                                     />
                                 </svg>
                                 <div className="absolute flex flex-col items-center justify-center text-center">
@@ -260,7 +260,7 @@ export default function LandingPage() {
                 </motion.div>
 
                 {/* Core Features Grid */}
-                <motion.div 
+                <motion.div
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true, margin: "-100px" }}
@@ -271,8 +271,8 @@ export default function LandingPage() {
                         <div className="w-14 h-14 rounded-2xl bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 flex items-center justify-center mb-6">
                             <Zap className="w-7 h-7" />
                         </div>
-                        <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Earn Reputation</h3>
-                        <p className="text-slate-500 dark:text-slate-400 leading-relaxed">Solve questions correctly to earn points and rank up. Prove your intelligence globally.</p>
+                        <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">National Ranking</h3>
+                        <p className="text-slate-500 dark:text-slate-400 leading-relaxed">Solve complex problems to earn verified reputation points. Establish your intellectual dominance on the global leaderboard.</p>
                     </motion.div>
 
                     <motion.div variants={fadeUp} className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
@@ -287,16 +287,16 @@ export default function LandingPage() {
                         <div className="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-6">
                             <Users className="w-7 h-7" />
                         </div>
-                        <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Co-op Mode</h3>
-                        <p className="text-slate-500 dark:text-slate-400 leading-relaxed">Tag a friend when you're stuck to solve questions together and split the points!</p>
+                        <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Collaborative Defense</h3>
+                        <p className="text-slate-500 dark:text-slate-400 leading-relaxed">Consult with trusted academic peers on highly difficult bounties to split points and avoid severe individual ranking penalties.</p>
                     </motion.div>
 
                     <motion.div variants={fadeUp} className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
                         <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-6">
-                            <Heart className="w-7 h-7" />
+                            <BrainCircuit className="w-7 h-7" />
                         </div>
-                        <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">Built by Students</h3>
-                        <p className="text-slate-500 dark:text-slate-400 leading-relaxed">Designed and built by students, for students. We know exactly what makes learning fun and competitive.</p>
+                        <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">AI-Powered Validation</h3>
+                        <p className="text-slate-500 dark:text-slate-400 leading-relaxed">Our proprietary AI grading engine reads multi-step mathematical proofs with the same rigor as an elite university examiner.</p>
                     </motion.div>
 
                     <motion.div variants={fadeUp} className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all relative overflow-hidden">
