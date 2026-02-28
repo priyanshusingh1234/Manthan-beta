@@ -1,62 +1,187 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, ArrowDown } from "lucide-react";
+import { X, Check, ArrowDown, Video, Loader2 } from "lucide-react";
 
 export default function ShortAnimation() {
     const [step, setStep] = useState(0);
     const [counter, setCounter] = useState(0);
+    const [status, setStatus] = useState<string>("Click to generate audio & record");
+    const [recording, setRecording] = useState(false);
 
-    useEffect(() => {
-        // Sequence Timeline for YouTube Short
-        const timeline = async () => {
-            // STEP 1: The Hook (0s)
-            setStep(1);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
-            // Fast counter animation for 99%
-            let c = 0;
-            const interval = setInterval(() => {
-                c += 3;
-                if (c >= 99) {
-                    c = 99;
-                    clearInterval(interval);
-                }
-                setCounter(c);
-            }, 30);
+    // Sequence Timeline for YouTube Short
+    const timeline = async () => {
+        // STEP 1: The Hook (0s)
+        setStep(1);
 
-            await new Promise((r) => setTimeout(r, 5000));
+        // Fast counter animation for 99%
+        let c = 0;
+        const interval = setInterval(() => {
+            c += 3;
+            if (c >= 99) {
+                c = 99;
+                clearInterval(interval);
+            }
+            setCounter(c);
+        }, 30);
 
-            // STEP 2: The Setup / Drawing (5s)
-            setStep(2);
-            await new Promise((r) => setTimeout(r, 8000)); // Increased time for reading the text
+        // Await specific intervals matching the voiceover
+        await new Promise((r) => setTimeout(r, 6500));
 
-            // STEP 3: The Options (13s)
-            setStep(3);
-            await new Promise((r) => setTimeout(r, 3000));
+        // STEP 2: The Setup / Drawing
+        setStep(2);
+        await new Promise((r) => setTimeout(r, 11000));
 
-            // STEP 4: The Trap / Red X (14s)
-            setStep(4);
-            await new Promise((r) => setTimeout(r, 6000));
+        // STEP 3: The Options
+        setStep(3);
+        await new Promise((r) => setTimeout(r, 4000));
 
-            // STEP 5: Call to Action (App Reveal Prompt) (20s)
-            setStep(5);
-        };
+        // STEP 4: The Trap / Red X 
+        setStep(4);
+        await new Promise((r) => setTimeout(r, 7000));
 
-        // Start 2 seconds after page loads to allow time to hit record
-        setTimeout(timeline, 2000);
-    }, []);
+        // STEP 5: Call to Action (App Reveal Prompt)
+        setStep(5);
+        await new Promise((r) => setTimeout(r, 12000)); // allow CTA to play
+
+        // Stop Recording automatically
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            mediaRecorderRef.current.stop();
+        }
+        setRecording(false);
+        setStatus("Video downloaded successfully!");
+    };
+
+    const startRecordingAndAnimation = async () => {
+        try {
+            setStatus("Generating AI Voice via Sarvam...");
+
+            // 1. Fetch TTS Audio (Sarvam AI API)
+            const response = await fetch("https://api.sarvam.ai/text-to-speech/stream", {
+                method: "POST",
+                headers: {
+                    "api-subscription-key": "sk_3ezu2nya_dTQ0gxd4pHVIdwAkDo4ZWmep",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    text: `99% of students fail this. I am giving 500 bonus ranking points inside the Dheeyudha arena to the first person who solves this physics problem. Imagine a heavy uniform chain of mass M. It hangs vertically so the bottom link just touches a weighing scale. You let it drop. What is the absolute maximum weight the scale reads during the fall? If you said 1Mg, you're wrong. The impact force changes everything. I just uploaded this exact question as a Level 99 Bounty on my new competitive study app, Dheeyudha. Drop into the arena, upload your mathematical proof, and claim the rank number one spot. The link is in the pinned comment. Good luck.`,
+                    target_language_code: "hi-IN",
+                    speaker: "shubh",
+                    model: "bulbul:v3",
+                    pace: 1.1,
+                    speech_sample_rate: 22050,
+                    output_audio_codec: "mp3",
+                    enable_preprocessing: true
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Read the stream chunks into a playable blob
+            const chunks: Uint8Array[] = [];
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error("No reader stream");
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+            }
+
+            const audioBlob = new Blob(chunks, { type: "audio/mpeg" });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+
+            // 2. Request screen recording (DisplayMedia)
+            setStatus("Waiting for screen share... (Select 'This Tab')");
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { displaySurface: "browser" },
+                audio: false
+            });
+
+            setStatus("Starting mix down...");
+
+            // 3. Mix TTS Audio into Recording Stream bypassing Microphone
+            const audioCtx = new window.AudioContext();
+            const dest = audioCtx.createMediaStreamDestination();
+            const source = audioCtx.createMediaElementSource(audio);
+
+            // Connect to destination stream (for recording)
+            source.connect(dest);
+            // Connect to computer speakers so user can hear it locally
+            source.connect(audioCtx.destination);
+
+            // Combine the video from screen and audio from TTS
+            const tracks = [...stream.getVideoTracks(), ...dest.stream.getAudioTracks()];
+            const combinedStream = new MediaStream(tracks);
+
+            // 4. Start Recording
+            const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+            const recordedChunks: Blob[] = [];
+
+            recorder.ondataavailable = e => {
+                if (e.data.size > 0) recordedChunks.push(e.data);
+            };
+
+            recorder.onstop = () => {
+                const finalBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(finalBlob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'Dheeyudha-Viral-Short.webm';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                stream.getTracks().forEach(t => t.stop()); // kill screen share
+            };
+
+            recorder.start();
+            mediaRecorderRef.current = recorder;
+
+            // 5. Hide controls, play audio, start animation sequence!
+            setStatus("");
+            setRecording(true);
+            audio.play();
+            timeline();
+
+        } catch (err: any) {
+            console.error("Setup error:", err);
+            setStatus(`Error: ${err.message || 'Something went wrong.'}`);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#050505] flex items-center justify-center font-sans overflow-hidden">
 
-            {/* INSTRUCTIONS */}
-            <div className="absolute top-4 left-4 text-white/50 text-xs max-w-xs">
-                <p>1. Open OBS</p>
-                <p>2. Window Capture this browser</p>
-                <p>3. Crop to the 9:16 phone frame</p>
-                <p>4. Reload page (F5) and hit RECORD immediately</p>
-            </div>
+            {/* INSTRUCTIONS / RECORDING OVERLAY (Hides while recording) */}
+            {!recording && (
+                <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-8">
+                    <div className="max-w-md w-full bg-slate-900 border border-slate-700 rounded-3xl p-8 text-center shadow-2xl">
+                        <div className="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Video className="w-10 h-10 text-indigo-400" />
+                        </div>
+                        <h2 className="text-2xl font-black text-white mb-2">Auto-Record Short</h2>
+                        <p className="text-slate-400 text-sm mb-8">
+                            This will generate the AI voice, ask you to select this tab, and automatically record the animation & audio into an MP4/WebM file.
+                        </p>
+
+                        <button
+                            onClick={startRecordingAndAnimation}
+                            disabled={status.includes("Generating") || status.includes("Waiting")}
+                            className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 font-bold text-white shadow-[0_10px_40px_rgba(99,102,241,0.4)] hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-3"
+                        >
+                            {status.includes("Generating") && <Loader2 className="w-5 h-5 animate-spin" />}
+                            {status || "START GENERATING & RECORDING"}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* 9:16 PHONE FRAME (1080x1920 scaled down) */}
             <div className="relative w-[360px] h-[640px] md:w-[450px] md:h-[800px] bg-[#0A0A0A] rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,1)] border-[8px] border-[#1a1a1a] overflow-hidden flex flex-col">
@@ -88,7 +213,7 @@ export default function ShortAnimation() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 1 }}
-                                className="text-4xl font-black text-white uppercase tracking-tight mt-6"
+                                className="text-4xl font-black text-white uppercase tracking-tight mt-6 leading-tight"
                             >
                                 Of Students <br />
                                 <span className="text-red-500">Fail This.</span>
@@ -151,7 +276,6 @@ export default function ShortAnimation() {
 
                             {/* Diagram Container */}
                             <div className="flex-1 w-full relative flex flex-col items-center justify-end pb-20">
-
                                 {/* The Chain */}
                                 <motion.div
                                     initial={{ height: 0, opacity: 0 }}
@@ -261,17 +385,16 @@ export default function ShortAnimation() {
                             key="scene5"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-indigo-950 text-center"
+                            className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-[#0a0a0a] text-center"
                         >
-                            <div className="w-24 h-24 mb-6 rounded-full bg-indigo-500/20 flex items-center justify-center border-4 border-indigo-400">
-                                <Check className="w-12 h-12 text-indigo-300" />
-                            </div>
-                            <h2 className="text-3xl font-black text-white mb-4">
-                                ANIMATION COMPLETE
+                            <h2 className="text-5xl font-black text-white mb-6 tracking-tighter uppercase blur-[0.5px]">
+                                Try to <br /> Beat Me.
                             </h2>
-                            <p className="text-indigo-200 font-medium mb-8">
-                                Now, stop recording. Screen record yourself opening Dheeyudha, searching "Falling Chain", and interacting with the app. Stitch them together in your editor!
-                            </p>
+                            <div className="flex flex-col gap-3 font-bold uppercase text-xl mt-6">
+                                <span className="bg-indigo-600 text-white px-6 py-3 rounded-full shadow-[0_0_30px_rgba(79,70,229,0.5)]">
+                                    Link in Comments
+                                </span>
+                            </div>
                         </motion.div>
                     )}
 
