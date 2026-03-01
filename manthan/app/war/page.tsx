@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link2, Search, Zap, CheckCircle2, ShieldAlert, Target, Play, Shield, ArrowRight, Save, User as UserIcon } from "lucide-react";
+import { Link2, Search, Zap, ShieldAlert, Target, Play, Shield, ArrowRight, User as UserIcon, Swords, AlertCircle, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function WarLobbyDynamic() {
@@ -14,6 +14,10 @@ export default function WarLobbyDynamic() {
   const [globalStandings, setGlobalStandings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [declaringWar, setDeclaringWar] = useState(false);
+  const [warError, setWarError] = useState<string | null>(null);
+  const [warSuccess, setWarSuccess] = useState<string | null>(null);
+  const [isGeneral, setIsGeneral] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -48,9 +52,15 @@ export default function WarLobbyDynamic() {
       const json = await res.json();
       if (res.ok) {
         setSchoolData(json.school);
+        setIsGeneral(json.squad?.general_id === (await supabase.auth.getUser()).data.user?.id);
+        // Fetch active wars if school exists
+        if (json.school?.id) {
+          const warRes = await fetch(`/api/war?school_id=${json.school.id}`);
+          const warJson = await warRes.json();
+          if (warRes.ok) setWars(warJson.wars || []);
+        }
         setSquad(json.squad);
         setRoster(json.members || []);
-        setWars(json.activeWars || []);
         setGlobalStandings(json.globalStandings || []);
       } else {
         console.error("Failed to load squad:", json.error);
@@ -87,6 +97,32 @@ export default function WarLobbyDynamic() {
     }
   };
 
+  const handleDeclareWar = async () => {
+    if (!session || !isGeneral) return;
+    setDeclaringWar(true);
+    setWarError(null);
+    setWarSuccess(null);
+    try {
+      const res = await fetch('/api/war', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setWarSuccess(`⚔️ War declared against ${data.war.opponent}! Battle ends in 24 hours.`);
+        await fetchData(session.access_token); // Refresh war list
+      } else {
+        setWarError(data.error || 'Failed to declare war.');
+      }
+    } catch {
+      setWarError('Network error.');
+    } finally {
+      setDeclaringWar(false);
+    }
+  };
   const copyInviteLink = () => {
     // Generate a theoretical invite link. We will implement /api/squad/join later
     const link = `${window.location.origin}/invite?squad=${squad?.id}`;
@@ -127,11 +163,29 @@ export default function WarLobbyDynamic() {
             </div>
           </div>
 
-          <button disabled={!squad} className="disabled:opacity-50 disabled:cursor-not-allowed bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center gap-2 group">
-            <Target className="w-4 h-4 group-hover:animate-pulse" /> Declare War
+          <button
+            disabled={!squad || !isGeneral || declaringWar || wars.filter(w => w.status === 'active').length > 0}
+            onClick={handleDeclareWar}
+            className="disabled:opacity-50 disabled:cursor-not-allowed bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center gap-2 group"
+            title={!isGeneral ? 'Only the General can declare war' : wars.filter(w => w.status === 'active').length > 0 ? 'Already in an active war' : 'Find and challenge a rival school'}
+          >
+            <Target className="w-4 h-4 group-hover:animate-pulse" />
+            {declaringWar ? 'Finding rival...' : 'Declare War'}
           </button>
         </div>
       </header>
+
+      {/* Notification Banners */}
+      {warSuccess && (
+        <div className="bg-green-500/10 border-b border-green-500/30 text-green-400 text-center py-3 px-6 text-sm font-bold flex items-center justify-center gap-2">
+          <Swords className="w-4 h-4" /> {warSuccess}
+        </div>
+      )}
+      {warError && (
+        <div className="bg-red-500/10 border-b border-red-500/30 text-red-400 text-center py-3 px-6 text-sm font-bold flex items-center justify-center gap-2">
+          <AlertCircle className="w-4 h-4" /> {warError}
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-6 py-10 grid lg:grid-cols-3 gap-8">
         {/* Left Column: My Squad */}
