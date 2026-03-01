@@ -61,6 +61,10 @@ const Signup: React.FC = () => {
       setError('Username cannot contain spaces');
       return;
     }
+    if (!school.trim()) {
+      setError('School name is required to join a faction');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -311,10 +315,10 @@ const Signup: React.FC = () => {
 
                 {/* Row 4 */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* School/Institution Input (Optional) */}
+                  {/* School/Institution Input (Required) */}
                   <div className="group">
                     <label htmlFor="school" className="sr-only">
-                      School/Institution (Optional)
+                      School/Institution (Required)
                     </label>
                     <div className="relative my-2">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -324,11 +328,12 @@ const Signup: React.FC = () => {
                         id="school"
                         name="school"
                         type="text"
+                        required
                         autoComplete="organization"
                         value={school}
                         onChange={(e) => setSchool(e.target.value)}
                         className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:border-slate-400"
-                        placeholder="School (Opt)"
+                        placeholder="School/Institution"
                       />
                       {/* Gradient border on focus */}
                       <div className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 blur-sm transition-opacity duration-300 group-focus-within:opacity-100"></div>
