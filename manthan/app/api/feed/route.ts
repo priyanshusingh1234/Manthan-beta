@@ -4,16 +4,14 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 export const dynamic = 'force-dynamic';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper: parse userId from JWT without full verification (server-side safe)
+// Helper: get verified userId from bearer token via Supabase
 // ─────────────────────────────────────────────────────────────────────────────
-function parseUserId(bearer?: string | null): string | null {
+async function getUserId(bearer?: string | null): Promise<string | null> {
     try {
         if (!bearer) return null;
         const token = bearer.replace(/^Bearer\s+/i, '');
-        const payload = token.split('.')[1];
-        const json = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
-        const obj = JSON.parse(json);
-        return obj?.sub ?? obj?.user_id ?? null;
+        const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+        return user?.id ?? null;
     } catch { return null; }
 }
 
@@ -64,19 +62,22 @@ function normalizeQuestion(
 export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get('authorization');
-        const userId = parseUserId(authHeader);
+        const userId = await getUserId(authHeader);
         const subject = req.nextUrl.searchParams.get('subject') || '';
         const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || '30'), 60);
 
-        // ── Get user profile ───────────────────────────────────────────────
+        // ── Get user profile ─────────────────────────────────────────────────────────
         let userGrade: string | null = null;
         let userSchoolName: string | null = null;
         let followingIds: string[] = [];
 
         if (userId) {
-            const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
-            userGrade = userData?.user?.user_metadata?.classGrade?.toString() || null;
-            userSchoolName = userData?.user?.user_metadata?.school || null;
+            // Get the full user profile (token already validated above, reuse)
+            const { data: { user: userProfile } } = await supabaseAdmin.auth.getUser(
+                req.headers.get('authorization')!.replace(/^Bearer\s+/i, '')
+            );
+            userGrade = userProfile?.user_metadata?.classGrade?.toString() || null;
+            userSchoolName = userProfile?.user_metadata?.school || null;
 
             // Get following list
             const { data: followsData } = await supabaseAdmin
