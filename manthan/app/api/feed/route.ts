@@ -3,15 +3,24 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
+import { createClient } from '@supabase/supabase-js';
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper: get verified userId from bearer token via Supabase
+// Helper: verify user token using anon-key client (same as /api/questions)
+// The service-role admin client cannot verify USER tokens — must use anon key
 // ─────────────────────────────────────────────────────────────────────────────
-async function getUserId(bearer?: string | null): Promise<string | null> {
+async function getVerifiedUser(bearer?: string | null) {
     try {
         if (!bearer) return null;
         const token = bearer.replace(/^Bearer\s+/i, '');
-        const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-        return user?.id ?? null;
+        // Use anon-key client to verify the user JWT — this is the correct approach
+        const supabaseAnon = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
+        if (error || !user) return null;
+        return user;
     } catch { return null; }
 }
 
@@ -62,7 +71,9 @@ function normalizeQuestion(
 export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get('authorization');
-        const userId = await getUserId(authHeader);
+        // Verify user token using anon-key client (service-role cannot verify user JWTs)
+        const currentUser = await getVerifiedUser(authHeader);
+        const userId = currentUser?.id ?? null;
         const subject = req.nextUrl.searchParams.get('subject') || '';
         const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || '30'), 60);
 
@@ -71,13 +82,10 @@ export async function GET(req: NextRequest) {
         let userSchoolName: string | null = null;
         let followingIds: string[] = [];
 
-        if (userId) {
-            // Get the full user profile (token already validated above, reuse)
-            const { data: { user: userProfile } } = await supabaseAdmin.auth.getUser(
-                req.headers.get('authorization')!.replace(/^Bearer\s+/i, '')
-            );
-            userGrade = userProfile?.user_metadata?.classGrade?.toString() || null;
-            userSchoolName = userProfile?.user_metadata?.school || null;
+        if (userId && currentUser) {
+            // Reuse the already-verified user object — no extra API call needed
+            userGrade = currentUser.user_metadata?.classGrade?.toString() || null;
+            userSchoolName = currentUser.user_metadata?.school || null;
 
             // Get following list
             const { data: followsData } = await supabaseAdmin
