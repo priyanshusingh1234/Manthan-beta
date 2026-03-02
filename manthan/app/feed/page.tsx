@@ -27,11 +27,36 @@ export default function FeedPage() {
             const headers: Record<string, string> = {};
             if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
 
-            const res = await fetch(`/api/feed?${params}`, { headers });
-            const data = await res.json();
+            // Fetch feed + solved IDs in parallel for maximum speed
+            const [feedRes, solvedRes] = await Promise.all([
+                fetch(`/api/feed?${params}`, { headers }),
+                session?.access_token
+                    ? fetch('/api/questions/solved', { headers })
+                    : Promise.resolve(null),
+            ]);
+
             if (!mounted) return;
-            setQuestions(Array.isArray(data) ? data : data.questions || []);
-            setFeedMeta(data.meta || null);
+
+            const feedData = await feedRes.json();
+            let feedQuestions: any[] = Array.isArray(feedData) ? feedData : feedData.questions || [];
+
+            // Build a Set of solved question IDs from the separate solved endpoint
+            // This guarantees hasAttempted is correct even if the feed API missed it
+            if (solvedRes?.ok) {
+                const solvedData = await solvedRes.json();
+                const solvedIds = new Set<string>(
+                    (Array.isArray(solvedData) ? solvedData : []).map((q: any) => String(q.id))
+                );
+                if (solvedIds.size > 0) {
+                    feedQuestions = feedQuestions.map(q => ({
+                        ...q,
+                        hasAttempted: solvedIds.has(String(q.id)) ? true : q.hasAttempted,
+                    }));
+                }
+            }
+
+            setQuestions(feedQuestions);
+            setFeedMeta(feedData.meta || null);
             setLoading(false);
         }).catch(err => {
             console.error(err);
