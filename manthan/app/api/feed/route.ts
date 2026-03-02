@@ -128,31 +128,33 @@ export async function GET(req: NextRequest) {
             return q;
         };
 
-        // LAYER 1 (~20%): Fresh questions at user's grade, never seen by user
-        const layer1Count = Math.ceil(limit * 0.20);
+        // LAYER 1 (~30%): Questions at user's grade — show ALL including attempted (with solved badge)
+        const layer1Count = Math.ceil(limit * 0.30);
         if (userGrade) {
             const { data } = await baseQ()
                 .eq('class_grade', userGrade)
-                .not('id', 'in', userAttempted.size > 0 ? `(${Array.from(userAttempted).join(',')})` : '(NULL)')
                 .order('created_at', { ascending: false })
                 .limit(layer1Count);
-            (data || []).forEach((r: any) => pool.push({ ...r, _layer: 1, _label: '✨ Fresh for You', _score: 100 }));
+            (data || []).forEach((r: any) => pool.push({ ...r, _layer: 1, _label: '✨ For You', _score: 100 }));
         } else {
             // No grade — show newest
             const { data } = await baseQ().order('created_at', { ascending: false }).limit(layer1Count);
             (data || []).forEach((r: any) => pool.push({ ...r, _layer: 1, _label: '✨ Fresh Questions', _score: 100 }));
         }
 
-        // LAYER 2 (~20%): Questions user got wrong — retry zone (spaced repetition)
-        if (userFailed.size > 0) {
-            const layer2Count = Math.ceil(limit * 0.20);
-            const failedArr = Array.from(userFailed).slice(0, layer2Count * 3);
+        // LAYER 2 (~15%): Questions user already attempted — show for review/awareness
+        if (userAttempted.size > 0) {
+            const layer2Count = Math.ceil(limit * 0.15);
+            const attemptedArr = Array.from(userAttempted).slice(0, layer2Count * 3);
             const { data } = await supabaseAdmin
                 .from('questions')
                 .select('*')
-                .in('id', failedArr)
+                .in('id', attemptedArr)
                 .limit(layer2Count);
-            (data || []).forEach((r: any) => pool.push({ ...r, _layer: 2, _label: '🔄 Retry Zone', _score: 95 }));
+            (data || []).forEach((r: any) => {
+                const label = userFailed.has(String(r.id)) ? '🔄 You Got This Wrong — Review' : '✅ Already Solved';
+                pool.push({ ...r, _layer: 2, _label: label, _score: 60 });
+            });
         }
 
         // LAYER 3 (~20%): What school peers solved recently
@@ -224,13 +226,12 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        // LAYER 5 (~10%): One level up — stretch questions
+        // LAYER 5 (~10%): One level up — stretch questions (only unseen)
         const layer5Count = Math.ceil(limit * 0.10);
         if (userGrade) {
             const nextGrade = String(Number(userGrade) + 1);
             const { data } = await baseQ()
                 .eq('class_grade', nextGrade)
-                .not('id', 'in', userAttempted.size > 0 ? `(${Array.from(userAttempted).join(',')})` : '(NULL)')
                 .order('created_at', { ascending: false })
                 .limit(layer5Count);
             (data || []).forEach((r: any) => pool.push({ ...r, _layer: 5, _label: '🚀 Stretch: Class ' + nextGrade, _score: 80 }));
