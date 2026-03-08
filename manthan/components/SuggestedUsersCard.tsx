@@ -58,7 +58,7 @@ export default function SuggestedUsersCard() {
         if (!session) return;
 
         try {
-            await fetch('/api/follows', {
+            const res = await fetch('/api/follows', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -66,6 +66,7 @@ export default function SuggestedUsersCard() {
                 },
                 body: JSON.stringify({ followingId: suggestedId })
             });
+            if (!res.ok) throw new Error('Failed to follow');
         } catch (err) {
             console.error('Follow failed', err);
             // Revert if API fails
@@ -96,7 +97,7 @@ export default function SuggestedUsersCard() {
                                 <div className="absolute inset-0 rounded-full bg-indigo-500/20 blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
                                 <div className="relative h-10 w-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
                                     {user.avatar ? (
-                                        <Image src={user.avatar} alt={user.name} width={40} height={40} className="object-cover w-full h-full" />
+                                        <img src={user.avatar} alt={user.name} width={40} height={40} className="object-cover w-full h-full" referrerPolicy="no-referrer" />
                                     ) : (
                                         <span className="font-bold text-slate-400 text-sm">{user.name.charAt(0)}</span>
                                     )}

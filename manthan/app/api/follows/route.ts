@@ -102,28 +102,31 @@ export async function POST(request: Request) {
     // Insert follow relationship
     const { error: insertErr } = await supabaseAdmin
         .from('follows')
-        .upsert({ follower_id: user.id, following_id: followingId }, { onConflict: 'follower_id,following_id' });
+        .insert({ follower_id: user.id, following_id: followingId });
 
-    if (insertErr) {
-        console.error('[POST /api/follows]', insertErr);
+    if (insertErr && insertErr.code !== '23505') { // 23505 is PostgreSQL for unique_violation
+        console.error('[POST /api/follows] DB error:', insertErr);
         return NextResponse.json({ error: 'Failed to follow' }, { status: 500 });
     }
 
-    // Fire notification to the followed user (fire-and-forget)
-    const followerName = user.user_metadata?.fullName || user.user_metadata?.username || 'Someone';
-    const followerUsername = user.user_metadata?.username || null;
-    const followerAvatar = user.user_metadata?.avatar_url || null;
+    // Only broadcast notification if it was a NEW insert (not a duplicate violation)
+    if (!insertErr) {
+        // Fire notification to the followed user (fire-and-forget)
+        const followerName = user.user_metadata?.fullName || user.user_metadata?.username || 'Someone';
+        const followerUsername = user.user_metadata?.username || null;
+        const followerAvatar = user.user_metadata?.avatar_url || null;
 
-    await createNotification({
-        userId: followingId,
-        type: 'new_follower',
-        title: `${followerName} started following you`,
-        body: `@${followerUsername || 'someone'} is now following you on Dheeyudha.`,
-        href: followerUsername ? `/user/${followerUsername}` : null,
-        actorId: user.id,
-        actorName: followerName,
-        actorAvatar: followerAvatar,
-    });
+        await createNotification({
+            userId: followingId,
+            type: 'new_follower',
+            title: `${followerName} started following you`,
+            body: `@${followerUsername || 'someone'} is now following you on Dheeyudha.`,
+            href: followerUsername ? `/user/${followerUsername}` : null,
+            actorId: user.id,
+            actorName: followerName,
+            actorAvatar: followerAvatar,
+        });
+    }
 
     return NextResponse.json({ success: true });
 }
