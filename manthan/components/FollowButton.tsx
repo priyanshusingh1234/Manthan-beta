@@ -7,7 +7,7 @@ import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import TeacherBadge from '@/ticks/teacher';
 
-export default function FollowButton({ profileUserId, initialFollowers = 0, initialFollowing = 0 }: { profileUserId: string, initialFollowers?: number, initialFollowing?: number }) {
+export default function FollowButton({ profileUserId, initialFollowers = 0, initialFollowing = 0, compact = false }: { profileUserId: string, initialFollowers?: number, initialFollowing?: number, compact?: boolean }) {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
     const [followersCount, setFollowersCount] = useState(initialFollowers);
@@ -133,6 +133,35 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
             setModalLoading(false);
         }
     };
+
+    if (compact) {
+        if (loading || (currentUser && currentUser.id === profileUserId)) return null;
+
+        return (
+            <button
+                onClick={handleToggleFollow}
+                disabled={actionLoading}
+                className={`
+                    shrink-0 ml-2 rounded-full p-2 flex items-center justify-center transition-all duration-300 disabled:opacity-50
+                    ${isFollowing
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-red-500/10 hover:text-red-500 dark:hover:text-red-400 group cursor-pointer'
+                        : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transform hover:scale-105 active:scale-95 cursor-pointer'}
+                `}
+                aria-label={isFollowing ? 'Following' : 'Follow'}
+            >
+                {actionLoading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                ) : isFollowing ? (
+                    <>
+                        <Check size={16} strokeWidth={3} className="group-hover:hidden" />
+                        <X size={16} strokeWidth={3} className="hidden group-hover:block" />
+                    </>
+                ) : (
+                    <UserPlus size={16} />
+                )}
+            </button>
+        );
+    }
 
     return (
         <>

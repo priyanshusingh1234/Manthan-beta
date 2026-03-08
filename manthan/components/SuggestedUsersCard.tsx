@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import TeacherBadge from '@/ticks/teacher';
 import Link from 'next/link';
-import { UserPlus, Check } from 'lucide-react';
+import FollowButton from '@/components/FollowButton';
 import Image from 'next/image';
 
 interface Suggestion {
@@ -19,7 +19,6 @@ interface Suggestion {
 export default function SuggestedUsersCard() {
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [loading, setLoading] = useState(true);
-    const [following, setFollowing] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         let mounted = true;
@@ -50,34 +49,6 @@ export default function SuggestedUsersCard() {
         return () => { mounted = false; };
     }, []);
 
-    const handleFollow = async (suggestedId: string) => {
-        // Optimistic UI update
-        setFollowing(prev => new Set(prev).add(suggestedId));
-
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        try {
-            const res = await fetch('/api/follows', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`
-                },
-                body: JSON.stringify({ followingId: suggestedId })
-            });
-            if (!res.ok) throw new Error('Failed to follow');
-        } catch (err) {
-            console.error('Follow failed', err);
-            // Revert if API fails
-            setFollowing(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(suggestedId);
-                return newSet;
-            });
-        }
-    };
-
     if (loading || suggestions.length === 0) return null;
 
     return (
@@ -88,8 +59,6 @@ export default function SuggestedUsersCard() {
 
             <div className="flex flex-col gap-4">
                 {suggestions.map((user) => {
-                    const isFollowed = following.has(user.id);
-
                     return (
                         <div key={user.id} className="flex items-center gap-3 w-full px-2 group cursor-pointer transition-transform hover:-translate-x-1">
                             {/* Avatar */}
@@ -117,20 +86,8 @@ export default function SuggestedUsersCard() {
                                 </p>
                             </div>
 
-                            {/* Action Button */}
-                            <button
-                                onClick={() => handleFollow(user.id)}
-                                disabled={isFollowed}
-                                className={`
-                  shrink-0 ml-2 rounded-full p-2 flex items-center justify-center transition-all duration-300
-                  ${isFollowed
-                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 cursor-default'
-                                        : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transform hover:scale-105 active:scale-95 cursor-pointer'}
-                `}
-                                aria-label={isFollowed ? 'Following' : 'Follow'}
-                            >
-                                {isFollowed ? <Check size={16} strokeWidth={3} /> : <UserPlus size={16} />}
-                            </button>
+                            {/* Action Button using Global Follow Logic */}
+                            <FollowButton profileUserId={user.id} compact />
                         </div>
                     );
                 })}
