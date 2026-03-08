@@ -240,19 +240,18 @@ export default function FeedPage() {
                                 </div>
                             ))}
                         </div>
+                    )}
+                </div>
+
+                {/* Right Sidebar Suggestions */}
+                <div className="hidden lg:block w-[320px] shrink-0 xl:w-[340px]">
+                    <div className="sticky top-28">
+                        <SuggestedUsersCard />
                     </div>
-                )}
-        </div>
+                </div>
 
-                {/* Right Sidebar Suggestions */ }
-    <div className="hidden lg:block w-[320px] shrink-0 xl:w-[340px]">
-        <div className="sticky top-28">
-            <SuggestedUsersCard />
+            </main>
         </div>
-    </div>
-
-            </main >
-        </div >
     );
 }
 
