@@ -35,8 +35,24 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setIsAuthenticated(!!user);
     });
 
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) {
+        // Trigger weekly report check/generation
+        fetch('/api/report/generate-notification', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        }).catch(() => { });
+      }
+    });
+
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session?.user);
+      if (session?.access_token) {
+        fetch('/api/report/generate-notification', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        }).catch(() => { });
+      }
     });
 
     return () => {
