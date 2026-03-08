@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { UserPlus, UserCheck, Loader2, Users, X } from 'lucide-react';
+import { UserPlus, UserCheck, Loader2, Users, X, Check } from 'lucide-react';
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import TeacherBadge from '@/ticks/teacher';
