@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Home, Trophy, Swords, Compass, Zap, LucideIcon, Settings } from 'lucide-react';
+import { Home, Trophy, Swords, Compass, Zap, LucideIcon, Settings, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -17,7 +17,7 @@ const BottomNav: React.FC = () => {
   const navItems: NavItem[] = [
     { href: '/', icon: Home, label: 'Home' },
     { href: '/leaderboard', icon: Trophy, label: 'Ranks' },
-    { href: '/war', icon: Swords, label: 'War', isCenter: true },
+    { href: '/my-school', icon: ShieldAlert, label: 'Faction', isCenter: true },
     { href: '/feed', icon: Compass, label: 'Feed' },
     { href: '/settings', icon: Settings, label: 'Settings' },
   ];
@@ -54,8 +54,8 @@ const BottomNav: React.FC = () => {
                   {/* Ripple/Pulse effect */}
                   <div className="absolute inset-0 rounded-full border border-white/20 animate-pulse active:hidden" />
                 </Link>
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-indigo-900/50 dark:text-indigo-400/70 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                  Battle
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-indigo-900/50 dark:text-indigo-400/70 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                  My Faction
                 </div>
               </div>
             );

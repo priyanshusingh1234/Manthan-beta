@@ -363,79 +363,7 @@ export default function WarLobbyDynamic() {
               Full School Rankings →
             </a>
           </div>
-
-          {/* Join Requests Panel — only visible to the General */}
-          {isGeneral && <JoinRequestsPanel token={session?.access_token} schoolId={schoolData?.id} />}
         </div>
       </main>
     </div>
   );
-}
-
-// ── Join Requests Panel Component ────────────────────────────────────────────
-function JoinRequestsPanel({ token, schoolId }: { token: string; schoolId: string }) {
-  const [requests, setRequests] = useState<any[]>([]);
-  const [reviewState, setReviewState] = useState<Record<string, 'idle' | 'loading' | 'done'>>({});
-
-  useEffect(() => {
-    if (!token || !schoolId) return;
-    fetch(`/api/schools/join?school_id=${schoolId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    }).then(r => r.json()).then(d => setRequests(d.requests || []));
-  }, [token, schoolId]);
-
-  const review = async (requestId: string, action: 'approve' | 'reject') => {
-    setReviewState(prev => ({ ...prev, [requestId]: 'loading' }));
-    const res = await fetch('/api/schools/join', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, requestId }),
-    });
-    if (res.ok) {
-      setReviewState(prev => ({ ...prev, [requestId]: 'done' }));
-      setRequests(prev => prev.filter(r => r.id !== requestId));
-    } else {
-      setReviewState(prev => ({ ...prev, [requestId]: 'idle' }));
-    }
-  };
-
-  if (requests.length === 0) return null;
-
-  return (
-    <div className="bg-slate-900 border border-amber-500/30 rounded-3xl p-6 shadow-2xl">
-      <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2">
-        <Shield className="w-5 h-5 text-amber-500" />
-        Recruit Requests
-        <span className="ml-auto bg-amber-500 text-black text-xs font-black w-6 h-6 rounded-full flex items-center justify-center">{requests.length}</span>
-      </h3>
-      <div className="space-y-3">
-        {requests.map(req => (
-          <div key={req.id} className="bg-slate-950/60 border border-white/5 rounded-xl p-4">
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div>
-                <div className="font-bold text-white text-sm">{req.name}</div>
-                <div className="text-slate-500 text-xs mt-0.5">@{req.username} · Class {req.classGrade} · {req.points} pts</div>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => review(req.id, 'approve')}
-                disabled={reviewState[req.id] === 'loading'}
-                className="flex-1 bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-400 text-xs font-black py-2 rounded-lg transition-all disabled:opacity-50"
-              >
-                ✓ Approve
-              </button>
-              <button
-                onClick={() => review(req.id, 'reject')}
-                disabled={reviewState[req.id] === 'loading'}
-                className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-black py-2 rounded-lg transition-all disabled:opacity-50"
-              >
-                ✕ Reject
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}

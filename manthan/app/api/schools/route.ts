@@ -118,6 +118,12 @@ export async function POST(req: NextRequest) {
             .select()
             .single();
 
+        if (squad) {
+            await supabaseAdmin
+                .from('squad_members')
+                .insert({ squad_id: squad.id, user_id: user.id });
+        }
+
         // Update user metadata with school info
         await supabaseAdmin.auth.admin.updateUserById(user.id, {
             user_metadata: {

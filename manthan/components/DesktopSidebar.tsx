@@ -20,7 +20,8 @@ import {
   CheckSquare,
   Info,
   BarChart2,
-  Swords
+  Swords,
+  ShieldAlert
 } from 'lucide-react';
 import TeacherBadge from '@/ticks/teacher';
 import Logo from './Logo';
@@ -130,6 +131,7 @@ export default function DesktopSidebar() {
   const NAV: NavItem[] = [
     { label: 'Home', href: '/', icon: Home },
     { label: 'Feed', href: '/feed', icon: Compass },
+    { label: 'My Faction', href: '/my-school', icon: ShieldAlert },
     { label: 'Top Schools', href: '/top-schools', icon: Swords },
     { label: 'Search', href: '/search', icon: Search },
     { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
