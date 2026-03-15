@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { motion } from "framer-motion";
-import { Shield, Users, Swords, Plus, Crown, AlertCircle, Clock, CheckCircle, X, ChevronRight, User as UserIcon } from "lucide-react";
+import { Shield, Users, Swords, Plus, Crown, AlertCircle, Clock, CheckCircle, X, ChevronRight, User as UserIcon, Search } from "lucide-react";
 import Link from "next/link";
 import TeacherBadge from "@/ticks/teacher";
 
@@ -87,8 +87,11 @@ export default function MySchoolPage() {
             const data = await res.json();
             if (res.ok) {
                 setNewSchoolName("");
-                await supabase.auth.refreshSession();
-                await fetchMySquad(session.access_token);
+                const { data: { session: newSession } } = await supabase.auth.refreshSession();
+                if (newSession) {
+                    setSession(newSession);
+                    await fetchMySquad(newSession.access_token);
+                }
             } else {
                 setCreateError(data.error || 'Failed to create group.');
             }
@@ -210,9 +213,9 @@ export default function MySchoolPage() {
                                 </span>
                             )}
                         </div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-500 mt-2 flex items-center gap-4">
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-4">
                             <span className="flex items-center gap-1.5"><Users className="w-4 h-4" /> {squadData.school.membersCount} Soldiers</span>
-                            <span className="flex items-center gap-1.5 text-indigo-400"><Shield className="w-4 h-4" /> {squadData.school.points.toLocaleString()} Points</span>
+                            <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400"><Shield className="w-4 h-4" /> {squadData.school.points.toLocaleString()} Points</span>
                         </p>
                     </div>
                     <Link href="/war" className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white border border-red-200 dark:border-red-500/30 font-bold px-6 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">

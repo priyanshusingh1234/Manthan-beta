@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
+const normalizeSchoolName = (value: string) =>
+    value.toLowerCase().trim().replace(/\s+/g, ' ');
+
 // GET /api/schools — list all schools with member count, general info, war stats
 export async function GET(req: NextRequest) {
     try {
@@ -82,13 +85,44 @@ export async function POST(req: NextRequest) {
         const { name } = body;
         if (!name?.trim()) return NextResponse.json({ error: 'School name is required' }, { status: 400 });
 
-        // Check already exists
+        const cleanedName = name.trim().replace(/\s+/g, ' ');
+        const normalizedName = normalizeSchoolName(cleanedName);
+
+        if (cleanedName.length < 3) {
+            return NextResponse.json({ error: 'School name must be at least 3 characters.' }, { status: 400 });
+        }
+
+        if (cleanedName.length > 90) {
+            return NextResponse.json({ error: 'School name must be under 90 characters.' }, { status: 400 });
+        }
+
+        // Check exact case-insensitive duplicate first (fast path)
         const { data: existing } = await supabaseAdmin
             .from('schools')
-            .select('id')
-            .ilike('name', name.trim())
+            .select('id, name')
+            .ilike('name', cleanedName)
             .maybeSingle();
-        if (existing) return NextResponse.json({ error: 'A school with this name already exists. Search and request to join instead.' }, { status: 400 });
+
+        if (existing) {
+            return NextResponse.json({ error: 'A school with this name already exists. Search and request to join instead.' }, { status: 400 });
+        }
+
+        // Check normalized duplicate to avoid spacing/casing bypass
+        const { data: samePrefixSchools, error: samePrefixError } = await supabaseAdmin
+            .from('schools')
+            .select('id, name')
+            .ilike('name', `${cleanedName.split(' ')[0]}%`)
+            .limit(200);
+
+        if (samePrefixError) throw samePrefixError;
+
+        const normalizedDuplicate = (samePrefixSchools || []).find(
+            (school) => normalizeSchoolName(school.name || '') === normalizedName
+        );
+
+        if (normalizedDuplicate) {
+            return NextResponse.json({ error: 'A school with this name already exists. If this is the same school, add Branch in the name.' }, { status: 400 });
+        }
 
         // Check user isn't already in a school
         const { data: existingMember } = await supabaseAdmin
@@ -101,7 +135,7 @@ export async function POST(req: NextRequest) {
         // Create school
         const { data: school, error: schoolError } = await supabaseAdmin
             .from('schools')
-            .insert({ name: name.trim() })
+            .insert({ name: cleanedName })
             .select()
             .single();
         if (schoolError) throw schoolError;
