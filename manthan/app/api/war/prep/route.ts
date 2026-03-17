@@ -74,11 +74,11 @@ export async function GET(req: Request) {
         //      return NextResponse.json({ error: "Only the General can pick questions" }, { status: 403 });
         // }
 
-        // Get questions
+        // Get questions matching the user's class grade OR 'All' grade questions
         const { data: questions, error: qErr } = await supabaseAdmin
             .from("questions")
             .select("id, title, subject, difficulty, points, class_grade")
-            .eq("class_grade", userClassGrade)
+            .or(`class_grade.eq.${userClassGrade},class_grade.eq.All`)
             .order("created_at", { ascending: false })
             .limit(100);
 
