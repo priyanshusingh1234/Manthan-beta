@@ -75,7 +75,7 @@ export async function GET(req: Request) {
         // Fetch the active questions
         const { data: questions, error: qErr } = await supabaseAdmin
             .from("questions")
-            .select("id, title, subject, topic, difficulty, points")
+            .select("id, title, subject, difficulty, points")
             .in("id", questionIdsToSolve);
 
         if (qErr) throw qErr;

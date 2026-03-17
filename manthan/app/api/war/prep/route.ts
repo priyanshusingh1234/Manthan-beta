@@ -64,7 +64,7 @@ export async function GET(req: Request) {
         // Get questions
         const { data: questions, error: qErr } = await supabaseAdmin
             .from("questions")
-            .select("id, title, subject, topic, difficulty, points")
+            .select("id, title, subject, difficulty, points")
             .order("created_at", { ascending: false })
             .limit(100);
 
