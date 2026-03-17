@@ -300,7 +300,7 @@ export default function WarLobbyDynamic() {
 
           {/* Active Conflicts */}
           <div>
-            <h3 className="text-xl font-black text-white mb-6 uppercase tracking-wider border-b border-white/10 pb-4">Active Deployments</h3>
+            <h3 className="text-xl font-black text-white mb-6 uppercase tracking-wider border-b border-white/10 pb-4">Active & Pending Deployments</h3>
             <div className="space-y-4">
               {wars.length === 0 ? (
                 <div className="bg-slate-900/60 border border-white/10 border-dashed rounded-2xl p-10 text-center flex flex-col items-center justify-center min-h-[250px]">
@@ -312,31 +312,60 @@ export default function WarLobbyDynamic() {
                 </div>
               ) : (
                 wars.map(war => (
-                  <div key={war.id} className="bg-slate-900/90 border border-red-500/25 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 hover:border-red-500/50 transition-colors shadow-lg shadow-red-500/10">
+                  <div key={war.id} className={`bg-slate-900/90 border rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 transition-colors shadow-lg ${war.status === 'searching' ? 'border-indigo-500/50 hover:border-indigo-400 shadow-indigo-500/10' : war.status === 'preparation' ? 'border-amber-500/50 hover:border-amber-400 shadow-amber-500/10' : war.status === 'calculating' ? 'border-fuchsia-500/50 hover:border-fuchsia-400 shadow-fuchsia-500/10' : 'border-red-500/40 hover:border-red-400 shadow-red-500/10'}`}>
                     <div className="flex items-center gap-6">
-                      <div className="text-center">
-                        <div className="text-xs text-red-500 font-black uppercase tracking-widest mb-2 bg-red-500/10 px-2 py-0.5 rounded inline-block">CHALLENGER</div>
-                        <div className="w-16 h-16 rounded-2xl bg-slate-800 animate-pulse border border-red-500/30 flex items-center justify-center" />
+                      <div className="text-center flex flex-col items-center">
+                        <div className={`text-[10px] font-black uppercase tracking-widest mb-2 px-2 py-0.5 rounded inline-block ${war.status === 'searching' ? 'text-indigo-400 bg-indigo-500/20' : war.status === 'preparation' ? 'text-amber-500 bg-amber-500/20' : war.status === 'calculating' ? 'text-fuchsia-400 bg-fuchsia-500/20' : 'text-red-500 bg-red-500/20'}`}>
+                          {war.status === 'searching' ? 'MATCHMAKING' : war.isChallenger ? 'CHALLENGER' : 'DEFENDER'}
+                        </div>
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border bg-slate-800 ${war.status === 'searching' ? 'border-indigo-500/30 text-indigo-400 animate-pulse' : war.status === 'calculating' ? 'border-fuchsia-500/30 text-fuchsia-400 animate-pulse' : 'border-red-500/30'}`}>
+                           {war.status === 'searching' ? <Search className="w-6 h-6 animate-spin-slow" /> : war.status === 'calculating' ? <Zap className="w-6 h-6 animate-pulse" /> : <ShieldAlert className="w-6 h-6 text-red-500" />}
+                        </div>
                       </div>
                       <div>
-                        <h4 className="text-xl font-black text-white">{war.opponent}</h4>
-                        <div className="flex items-center gap-3 mt-2">
-                          <span className={`text-[10px] uppercase tracking-wider font-black px-2 py-1 rounded bg-red-500/20 text-red-500`}>
-                            {war.status || 'Combat Live'}
-                          </span>
-                          <span className="text-xs font-mono font-bold text-slate-400">{war.timeLeft || '1h 22m'} remaining</span>
+                        <h4 className="text-xl font-black text-white">{war.opponent || 'Searching for Match...'}</h4>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2">
+                           <span className={`text-[10px] uppercase tracking-widest font-black px-2 py-1 rounded w-fit ${war.status === 'searching' ? 'bg-indigo-500/20 text-indigo-400' : war.status === 'preparation' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : war.status === 'calculating' ? 'bg-fuchsia-500/20 text-fuchsia-400 animate-pulse' : 'bg-red-500/20 text-red-500'}`}>
+                             {war.status === 'searching' ? 'IN QUEUE' : war.status === 'preparation' ? 'PREPARING' : war.status === 'calculating' ? 'CALCULATING RESULT' : 'COMBAT LIVE'}
+                           </span>
+                           <span className="text-sm font-mono font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                             ⏱ {war.timeLeft}
+                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6 sm:border-l sm:border-slate-800 sm:pl-6 w-full sm:w-auto mt-4 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-800">
-                      <div className="text-left sm:text-right flex-1">
-                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Deployment Stake</div>
-                        <div className="text-xl font-mono font-black text-amber-500">{war.stake || '0'} PTS</div>
-                      </div>
-                      <button className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-xl font-black text-sm flex items-center gap-2 transition-transform transform hover:scale-105 active:scale-95 shadow-xl shadow-red-900/50">
-                        <Play className="w-4 h-4" /> Enter Battlefield
-                      </button>
+                    <div className="flex flex-col sm:flex-row items-center gap-4 sm:border-l sm:border-slate-800 sm:pl-6 w-full sm:w-auto mt-4 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-800">
+                      {war.status !== 'searching' && (
+                          <div className="text-center sm:text-right hidden sm:block">
+                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1 shadow-sm">War Format</div>
+                            <div className="text-lg font-mono font-black text-white">{war.war_format} v {war.war_format}</div>
+                          </div>
+                      )}
+                      
+                      {war.status === 'searching' && (
+                        <div className="text-center flex flex-col items-center justify-center px-4">
+                           <div className="text-xs text-indigo-400 font-bold max-w-[150px]">Ghost protocol activates after 10m</div>
+                        </div>
+                      )}
+
+                      {war.status === 'preparation' && (
+                        <Link href={`/war-prep/${war.id}`} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-500 text-white px-6 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-transform transform hover:scale-105 active:scale-95 shadow-xl shadow-amber-900/40">
+                          <Target className="w-4 h-4" /> Pick Questions
+                        </Link>
+                      )}
+
+                      {war.status === 'active' && (
+                        <Link href={`/war-battle/${war.id}`} className="w-full sm:w-auto bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-transform transform hover:scale-105 active:scale-95 shadow-xl shadow-red-900/50">
+                          <Swords className="w-4 h-4" /> Enter Battlefield
+                        </Link>
+                      )}
+
+                      {war.status === 'calculating' && (
+                        <div className="w-full sm:w-auto bg-slate-800 text-fuchsia-400 px-6 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 border border-fuchsia-500/30">
+                          <Zap className="w-4 h-4 animate-pulse" /> Finalizing Submissions...
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
