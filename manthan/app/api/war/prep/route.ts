@@ -36,25 +36,23 @@ export async function GET(req: Request) {
 
         // Ensure user is General of challenger or defender
         // Get user's squad
-        const { data: profile } = await supabaseAdmin.from("profiles").select("squad_id").eq("id", userId).single();
-        if (!profile || !profile.squad_id) return NextResponse.json({ error: "Not part of a squad" }, { status: 403 });
+        const { data: member } = await supabaseAdmin.from("squad_members").select("squad_id, role").eq("user_id", userId).single();
+        if (!member || !member.squad_id) return NextResponse.json({ error: "Not part of a squad" }, { status: 403 });
 
         let isChallenger = false;
         let isDefender = false;
 
-        if (profile.squad_id === war.challenger_squad_id) isChallenger = true;
-        if (profile.squad_id === war.defender_squad_id) isDefender = true;
+        if (member.squad_id === war.challenger_squad_id) isChallenger = true;
+        if (member.squad_id === war.defender_squad_id) isDefender = true;
 
         if (!isChallenger && !isDefender) {
              return NextResponse.json({ error: "Your school is not in this war" }, { status: 403 });
         }
 
-        // Fetch user's role in squad
-        const { data: member } = await supabaseAdmin.from("squad_members").select("role").eq("squad_id", profile.squad_id).eq("user_id", userId).single();
-        if (!member || member.role !== 'General') {
-             // Regular soldiers shouldn't be here, but we can let them see
-             // return NextResponse.json({ error: "Only the General can pick questions" }, { status: 403 });
-        }
+        // Note: member.role is fetched above
+        // if (!member || member.role !== 'General') {
+        //      return NextResponse.json({ error: "Only the General can pick questions" }, { status: 403 });
+        // }
 
         // Get questions
         const { data: questions, error: qErr } = await supabaseAdmin
@@ -105,11 +103,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: `You must pick exactly ${war.war_format} questions.` }, { status: 400 });
         }
 
-        const { data: profile } = await supabaseAdmin.from("profiles").select("squad_id").eq("id", userId).single();
-        if (!profile || !profile.squad_id) return NextResponse.json({ error: "Not in a squad" }, { status: 403 });
+        const { data: member } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).single();
+        if (!member || !member.squad_id) return NextResponse.json({ error: "Not in a squad" }, { status: 403 });
 
         let isChallenger = false;
-        if (profile.squad_id === war.challenger_squad_id) isChallenger = true;
+        if (member.squad_id === war.challenger_squad_id) isChallenger = true;
 
         // Save picks
         const updateData: any = {};

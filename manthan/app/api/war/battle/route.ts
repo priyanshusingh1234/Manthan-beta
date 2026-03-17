@@ -35,14 +35,14 @@ export async function GET(req: Request) {
         if (warErr || !war) return NextResponse.json({ error: "War not found" }, { status: 404 });
 
         // Get user's squad
-        const { data: profile } = await supabaseAdmin.from("profiles").select("squad_id").eq("id", userId).single();
-        if (!profile || !profile.squad_id) return NextResponse.json({ error: "Not part of a squad" }, { status: 403 });
+        const { data: member } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).single();
+        if (!member || !member.squad_id) return NextResponse.json({ error: "Not part of a squad" }, { status: 403 });
 
         let isChallenger = false;
         let isDefender = false;
 
-        if (profile.squad_id === war.challenger_squad_id) isChallenger = true;
-        if (profile.squad_id === war.defender_squad_id) isDefender = true;
+        if (member.squad_id === war.challenger_squad_id) isChallenger = true;
+        if (member.squad_id === war.defender_squad_id) isDefender = true;
 
         if (!isChallenger && !isDefender) {
              return NextResponse.json({ error: "Your school is not in this war" }, { status: 403 });
