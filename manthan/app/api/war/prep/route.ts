@@ -20,7 +20,20 @@ export async function GET(req: Request) {
         if (!warId) return NextResponse.json({ error: "Missing war_id" }, { status: 400 });
 
         const auth = req.headers.get("authorization");
-        const userId = await getVerifiedUserId(auth);
+        let userId = null;
+        let userClassGrade = "10"; // fallback
+
+        if (auth) {
+            const token = auth.replace(/^Bearer\s+/i, "");
+            const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+            if (user) {
+                userId = user.id;
+                if (user.user_metadata?.classGrade) {
+                    userClassGrade = user.user_metadata.classGrade;
+                }
+            }
+        }
+
         if (!userId) {
             return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
         }
@@ -64,7 +77,8 @@ export async function GET(req: Request) {
         // Get questions
         const { data: questions, error: qErr } = await supabaseAdmin
             .from("questions")
-            .select("id, title, subject, difficulty, points")
+            .select("id, title, subject, difficulty, points, class_grade")
+            .eq("class_grade", userClassGrade)
             .order("created_at", { ascending: false })
             .limit(100);
 
