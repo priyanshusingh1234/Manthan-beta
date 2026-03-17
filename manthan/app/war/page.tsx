@@ -50,15 +50,17 @@ export default function WarLobbyDynamic() {
       const res = await fetch('/api/squad', {
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },
+        cache: 'no-store'
       });
       const json = await res.json();
       if (res.ok) {
         setSchoolData(json.school);
-        setIsGeneral(json.squad?.general_id === (await supabase.auth.getUser()).data.user?.id);
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsGeneral(json.squad?.general_id === user?.id);
         // Fetch active wars if school exists
         if (json.school?.id) {
-          const warRes = await fetch(`/api/war?school_id=${json.school.id}`);
+          const warRes = await fetch(`/api/war?school_id=${json.school.id}`, { cache: 'no-store' });
           const warJson = await warRes.json();
           if (warRes.ok) setWars(warJson.wars || []);
         }
@@ -228,10 +230,15 @@ export default function WarLobbyDynamic() {
           </div>
 
           <button
-            disabled={!squad || !isGeneral || declaringWar || wars.filter(w => w.status === 'active').length > 0}
+            disabled={!squad || !isGeneral || declaringWar || wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0}
             onClick={handleDeclareWar}
             className="w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group shadow-sm dark:shadow-red-950/30"
-            title={!isGeneral ? 'Only the General can declare war' : wars.filter(w => w.status === 'active').length > 0 ? 'Already in an active war' : 'Find and challenge a rival school'}
+            title={
+              !squad ? 'No squad found for your school' :
+              !isGeneral ? 'Only the General can declare war' :
+              wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0 ? 'Already in an ongoing war' :
+              'Find and challenge a rival school'
+            }
           >
             <Target className="w-4 h-4 group-hover:animate-pulse" />
             {declaringWar ? 'Finding rival...' : 'Declare War'}

@@ -39,7 +39,8 @@ export default function MySchoolPage() {
         setLoading(true);
         try {
             const res = await fetch('/api/squad', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${token}` },
+                cache: 'no-store'
             });
             const d = await res.json();
             if (res.ok && d.school?.id) {
