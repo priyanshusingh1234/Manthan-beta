@@ -248,6 +248,70 @@ export default function WarBattleDashboard() {
     const isCalculating = war?.status === "calculating";
     const isCompleted = war?.status === "completed";
 
+    // ── War ended results screen ──────────────────────
+    if (isCompleted) {
+        const iWon = war?.winner_school_id === mySchoolId;
+        const isDraw = !war?.winner_school_id;
+        return (
+            <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
+                <motion.div
+                    initial={{ scale: 0.85, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", bounce: 0.35 }}
+                    className="w-full max-w-md"
+                >
+                    {/* Result banner */}
+                    <div className={`text-center p-8 rounded-3xl mb-4 border-2 ${iWon
+                        ? "bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/30 dark:to-yellow-900/20 border-amber-300 dark:border-amber-500/40"
+                        : isDraw
+                            ? "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                            : "bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/10 border-red-200 dark:border-red-500/30"
+                        }`}>
+                        <div className="text-6xl mb-4">{iWon ? "🏆" : isDraw ? "🤝" : "💀"}</div>
+                        <h1 className={`text-4xl font-black mb-2 ${iWon ? "text-amber-600 dark:text-amber-400" : isDraw ? "text-slate-600 dark:text-slate-400" : "text-red-600 dark:text-red-400"}`}>
+                            {iWon ? "VICTORY!" : isDraw ? "DRAW!" : "DEFEATED!"}
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-6">
+                            {iWon ? "+5 victory bonus awarded to your squad!" : isDraw ? "An honourable tie." : "The enemy destroyed you."}
+                        </p>
+
+                        {/* Final score */}
+                        <div className="flex items-center justify-center gap-8">
+                            <div className="text-center">
+                                <div className={`text-5xl font-black tabular-nums ${iWon ? "text-indigo-600 dark:text-indigo-400" : "text-slate-600 dark:text-slate-400"}`}>{myScore}</div>
+                                <div className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">{mySchoolName}</div>
+                            </div>
+                            <div className="text-slate-400 font-black">:</div>
+                            <div className="text-center">
+                                <div className={`text-5xl font-black tabular-nums ${!iWon && !isDraw ? "text-red-600 dark:text-red-400" : "text-slate-600 dark:text-slate-400"}`}>{opponentScore}</div>
+                                <div className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">{opponentSchoolName}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-center">
+                            <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{mySecured}<span className="text-base text-slate-400">/{myQuestions.length}</span></div>
+                            <div className="text-xs font-bold text-slate-500 mt-1">Targets Destroyed</div>
+                        </div>
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-center">
+                            <div className="text-2xl font-black text-red-500">{opponentSecured}<span className="text-base text-slate-400">/{opponentQuestions.length}</span></div>
+                            <div className="text-xs font-bold text-slate-500 mt-1">Your Base Fell</div>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={() => router.push("/war")}
+                        className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black py-4 rounded-2xl text-lg transition-all hover:opacity-90 active:scale-95"
+                    >
+                        Return to War Room
+                    </button>
+                </motion.div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#0a0e1a] text-slate-900 dark:text-slate-100 pb-24 relative overflow-x-hidden">
 

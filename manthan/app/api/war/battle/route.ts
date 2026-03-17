@@ -39,8 +39,36 @@ export async function GET(req: Request) {
         const userId = user.id;
 
         // Fetch War
-        const { data: war, error: warErr } = await supabaseAdmin.from("wars").select("*").eq("id", warId).single();
-        if (warErr || !war) return NextResponse.json({ error: "War not found" }, { status: 404 });
+        const warFetch = await supabaseAdmin.from("wars").select("*").eq("id", warId).single();
+        if (warFetch.error || !warFetch.data) return NextResponse.json({ error: "War not found" }, { status: 404 });
+        let war: any = warFetch.data;
+
+        // Auto-end war if timer has expired and still active
+        if (war.status === "active" && war.ends_at && new Date(war.ends_at).getTime() < Date.now()) {
+            const { data: allSubs } = await supabaseAdmin.from("war_submissions").select("school_id, points_awarded, status").eq("war_id", warId);
+            const calcScore = (sid: string) => (allSubs || []).filter(s => s.school_id === sid && s.status === "correct").reduce((sum, s) => sum + (s.points_awarded || 0), 0);
+            const cScore = calcScore(war.challenger_school_id);
+            const dScore = calcScore(war.defender_school_id);
+            const winnerSchoolId = cScore > dScore ? war.challenger_school_id : dScore > cScore ? war.defender_school_id : null;
+            const winnerSquadId = winnerSchoolId === war.challenger_school_id ? war.challenger_squad_id : war.defender_squad_id;
+            const { data: updatedWar } = await supabaseAdmin.from("wars").update({
+                status: "completed", challenger_score: cScore, defender_score: dScore, winner_school_id: winnerSchoolId
+            }).eq("id", warId).select().single();
+            if (updatedWar) war = updatedWar;
+            // +5 win bonus per squad member
+            if (winnerSquadId) {
+                const { data: winMembers } = await supabaseAdmin.from("squad_members").select("user_id").eq("squad_id", winnerSquadId);
+                for (const wm of (winMembers || [])) {
+                    const { data: wmUser } = await supabaseAdmin.auth.admin.getUserById(wm.user_id);
+                    if (wmUser?.user) {
+                        const meta = wmUser.user.user_metadata || {};
+                        await supabaseAdmin.auth.admin.updateUserById(wm.user_id, {
+                            user_metadata: { ...meta, totalPoints: Math.max(0, (Number(meta.totalPoints) || 0) + 5) }
+                        });
+                    }
+                }
+            }
+        }
 
         // Identify user's squad
         const { data: member, error: memberErr } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).single();
@@ -92,7 +120,7 @@ export async function GET(req: Request) {
         const allQuestionIds = [...new Set([...myQuestionIds, ...opponentQuestionIds])].filter(Boolean);
         const { data: allQuestions } = await supabaseAdmin
             .from("questions")
-            .select("id, title, subject, difficulty, points, class_grade")
+            .select("id, title, body, subject, difficulty, points, class_grade, options, correct_option, image_path, image_url, time_limit")
             .in("id", allQuestionIds);
 
         const qMap: Record<string, any> = {};
