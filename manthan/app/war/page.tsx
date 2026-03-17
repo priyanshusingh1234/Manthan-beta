@@ -17,7 +17,7 @@ export default function WarLobbyDynamic() {
   const [creating, setCreating] = useState(false);
   const [declaringWar, setDeclaringWar] = useState(false);
   const [warError, setWarError] = useState<string | null>(null);
-  const [warSuccess, setWarSuccess] = useState<string | null>(null);
+  const [warSuccessData, setWarSuccessData] = useState<any>(null);
   const [isGeneral, setIsGeneral] = useState(false);
 
   useEffect(() => {
@@ -104,7 +104,7 @@ export default function WarLobbyDynamic() {
     if (!session || !isGeneral) return;
     setDeclaringWar(true);
     setWarError(null);
-    setWarSuccess(null);
+    setWarSuccessData(null);
     try {
       const res = await fetch('/api/war', {
         method: 'POST',
@@ -115,8 +115,10 @@ export default function WarLobbyDynamic() {
       });
       const data = await res.json();
       if (res.ok) {
-        setWarSuccess(`⚔️ War declared against ${data.war.opponent}! Battle ends in 24 hours.`);
+        setWarSuccessData(data.war);
         await fetchData(session.access_token); // Refresh war list
+        // Hide animation after 5 seconds
+        setTimeout(() => setWarSuccessData(null), 5000);
       } else {
         setWarError(data.error || 'Failed to declare war.');
       }
@@ -160,6 +162,54 @@ export default function WarLobbyDynamic() {
     }
 
   return (
+    <>
+    {/* Full Screen War Declaration Overlay */}
+    {warSuccessData && (
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-950 text-white overflow-hidden perspective-1000">
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-red-600/20 mix-blend-color-burn" />
+
+        {/* Diagonal caution stripes animation */}
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "repeating-linear-gradient(45deg, #000 0, #000 20px, #ff0000 20px, #ff0000 40px)" }}></div>
+
+        <motion.div 
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", bounce: 0.5 }}
+          className="relative z-10 flex flex-col items-center"
+        >
+          <motion.div 
+             animate={{ rotate: 360 }} 
+             transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+             className="w-48 h-48 border-4 border-red-500/30 border-t-red-500 rounded-full flex items-center justify-center mb-8 shadow-[0_0_100px_rgba(239,68,68,0.3)]"
+          >
+             <Swords className="w-20 h-20 text-red-500 animate-pulse" />
+          </motion.div>
+          
+          <h1 className="text-6xl sm:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-red-500 tracking-tighter drop-shadow-2xl mb-4 text-center">
+            {warSuccessData.status === 'searching' ? 'INITIATING WAR' : 'WAR DECLARED'}
+          </h1>
+          
+          {warSuccessData.status === 'searching' ? (
+             <div className="flex flex-col items-center mt-8">
+               <div className="text-xl sm:text-2xl font-bold text-slate-300 mb-2 uppercase tracking-widest flex items-center gap-3">
+                 <Search className="w-6 h-6 animate-spin-slow text-indigo-400" /> SEARCHING FOR OPPONENT
+               </div>
+               <div className="text-sm font-mono text-indigo-400">Matchmaking weight: {Math.round(warSuccessData.myWeight || 0)}</div>
+             </div>
+          ) : (
+             <div className="flex flex-col items-center mt-8 space-y-4">
+                <div className="text-2xl font-bold text-slate-400">YOUR SQUAD</div>
+                <div className="text-4xl text-white font-black">VS</div>
+                <div className="text-4xl font-black text-red-500 text-center uppercase drop-shadow-[0_0_20px_rgba(239,68,68,0.8)] px-4">
+                  {warSuccessData.opponent || "RIVAL SCHOOL"}
+                </div>
+             </div>
+          )}
+        </motion.div>
+      </div>
+    )}
+
     <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-24 pt-4 sm:pt-8 md:pt-12 relative overflow-hidden">
       <div className="pointer-events-none absolute -top-32 -left-20 w-[34rem] h-[34rem] rounded-full bg-indigo-400/10 dark:bg-indigo-500/10 blur-3xl mix-blend-overlay" />
       <div className="pointer-events-none absolute top-1/3 -right-24 w-[30rem] h-[30rem] rounded-full bg-red-400/10 dark:bg-red-500/10 blur-3xl mix-blend-overlay" />
@@ -191,13 +241,8 @@ export default function WarLobbyDynamic() {
       </div>
 
       {/* Notification Banners */}
-      {warSuccess && (
-        <div className="bg-green-500/10 border-b border-green-500/30 text-green-400 text-center py-3 px-6 text-sm font-bold flex items-center justify-center gap-2">
-          <Swords className="w-4 h-4" /> {warSuccess}
-        </div>
-      )}
       {warError && (
-        <div className="bg-red-500/10 border-b border-red-500/30 text-red-400 text-center py-3 px-6 text-sm font-bold flex items-center justify-center gap-2">
+        <div className="bg-red-500/10 border-b border-red-500/30 text-red-600 dark:text-red-400 text-center py-3 px-6 text-sm font-bold flex items-center justify-center gap-2">
           <AlertCircle className="w-4 h-4" /> {warError}
         </div>
       )}
@@ -417,5 +462,6 @@ export default function WarLobbyDynamic() {
         </div>
       </main>
     </div>
+    </>
   );
 }
