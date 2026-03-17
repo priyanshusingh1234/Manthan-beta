@@ -38,6 +38,9 @@ BEGIN
     )
     ON CONFLICT (id) DO NOTHING;
     RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+    -- Never block signup even if profile insert fails
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
