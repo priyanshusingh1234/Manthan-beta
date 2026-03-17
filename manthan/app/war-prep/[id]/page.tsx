@@ -179,7 +179,7 @@ export default function WarPrepPage() {
                             
                             <div className="flex items-center gap-3 mt-auto pt-3 border-t border-slate-100 dark:border-slate-800/80">
                                 <div className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                                    <Target className="w-3 h-3" /> Class {q.class || '?'}
+                                    <Target className="w-3 h-3" /> Question ID: {q.id.split('-').shift()?.toUpperCase()}
                                 </div>
                                 <div className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded">
                                     {q.points || 0} pts

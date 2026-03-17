@@ -195,7 +195,6 @@ export default function WarLobbyDynamic() {
                <div className="text-xl sm:text-2xl font-bold text-slate-300 mb-2 uppercase tracking-widest flex items-center gap-3">
                  <Search className="w-6 h-6 animate-spin-slow text-indigo-400" /> SEARCHING FOR OPPONENT
                </div>
-               <div className="text-sm font-mono text-indigo-400">Matchmaking weight: {Math.round(warSuccessData.myWeight || 0)}</div>
              </div>
           ) : (
              <div className="flex flex-col items-center mt-8 space-y-4">
