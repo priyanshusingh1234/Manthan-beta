@@ -365,9 +365,9 @@ export default function WarBattleDashboard() {
                         <div className="w-7 h-7 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center">
                             <Target className="w-4 h-4" />
                         </div>
-                        <h2 className="font-black text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Your Targets to Attack</h2>
+                        <h2 className="font-black text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Attack These (Enemy's Questions)</h2>
                         <span className="ml-auto text-xs font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
-                            {mySecured}/{myQuestions.length}
+                            {mySecured}/{myQuestions.length} destroyed
                         </span>
                     </div>
 
@@ -413,9 +413,9 @@ export default function WarBattleDashboard() {
                         <div className="w-7 h-7 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center">
                             <Shield className="w-4 h-4" />
                         </div>
-                        <h2 className="font-black text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Enemy's Drafted Questions</h2>
+                        <h2 className="font-black text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Your Side's Questions (Enemy Attacks These)</h2>
                         <span className="ml-auto text-xs font-bold text-red-500 bg-red-50 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
-                            {opponentSecured}/{opponentQuestions.length}
+                            {opponentSecured}/{opponentQuestions.length} enemy secured
                         </span>
                     </div>
 

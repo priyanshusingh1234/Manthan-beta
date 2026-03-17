@@ -22,16 +22,24 @@ export default function WarSolvePage() {
     const [result, setResult] = useState<{ isCorrect: boolean; pointsChange: number; newTotal: number; correctOption: number } | null>(null);
     const [startedAt] = useState(() => new Date().toISOString());
 
-    // Fetch question details
+    // Fetch question + war details together
     useEffect(() => {
         const load = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) { router.push("/login"); return; }
             try {
-                const res = await fetch(`/api/questions?id=${questionId}`, { cache: 'no-store' });
+                // Fetch via the battle API which already includes all question data
+                const res = await fetch(`/api/war/battle?war_id=${warId}`, {
+                    headers: { Authorization: `Bearer ${session.access_token}` },
+                    cache: 'no-store'
+                });
                 const json = await res.json();
-                const q = (json.questions || []).find((x: any) => x.id === questionId) || json.question;
-                if (!q) { setError("Question not found."); setLoading(false); return; }
+                if (json.error) { setError(json.error); setLoading(false); return; }
+
+                // Search in BOTH myQuestions and opponentQuestions
+                const allQ = [...(json.myQuestions || []), ...(json.opponentQuestions || [])];
+                const q = allQ.find((x: any) => x.id === questionId);
+                if (!q) { setError("Question not found in this war."); setLoading(false); return; }
                 setQuestion(q);
                 setTimeLeft((q.time_limit || 5) * 60);
             } catch {
@@ -41,7 +49,7 @@ export default function WarSolvePage() {
             }
         };
         load();
-    }, [questionId, router]);
+    }, [questionId, warId, router]);
 
     // Countdown timer
     useEffect(() => {
