@@ -140,37 +140,40 @@ export default function WarLobbyDynamic() {
       .catch(() => alert("Could not copy the invite link. Please copy it manually."));
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+    if (loading) {
+        return (
+            <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex items-center justify-center pb-24">
+                <div className="w-10 h-10 border-4 border-slate-200 dark:border-slate-800 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin"></div>
+            </div>
+        );
+    }
 
-  if (!session) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white">
-        <h1 className="text-3xl font-black text-red-500 mb-4">RESTRICTED ACCESS</h1>
-        <p className="text-slate-400">You must log in to access the War Room.</p>
-      </div>
-    );
-  }
+    if (!session) {
+        return (
+            <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-900 dark:text-slate-100">
+                <ShieldAlert className="w-20 h-20 text-red-500 mb-6" />
+                <h1 className="text-3xl font-black mb-2 text-red-600 dark:text-red-500">RESTRICTED ACCESS</h1>
+                <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm">You must log in to access the War Room.</p>
+                <Link href="/login" className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-indigo-500 transition-all">Log in</Link>
+            </div>
+        );
+    }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 pb-20 relative overflow-hidden">
-      <div className="pointer-events-none absolute -top-32 -left-20 w-[34rem] h-[34rem] rounded-full bg-indigo-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/3 -right-24 w-[30rem] h-[30rem] rounded-full bg-red-500/10 blur-3xl" />
-      {/* Header */}
-      <header className="border-b border-white/5 bg-slate-900/60 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-22 py-4 flex items-center justify-between">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-24 pt-4 sm:pt-8 md:pt-12 relative overflow-hidden">
+      <div className="pointer-events-none absolute -top-32 -left-20 w-[34rem] h-[34rem] rounded-full bg-indigo-400/10 dark:bg-indigo-500/10 blur-3xl mix-blend-overlay" />
+      <div className="pointer-events-none absolute top-1/3 -right-24 w-[30rem] h-[30rem] rounded-full bg-red-400/10 dark:bg-red-500/10 blur-3xl mix-blend-overlay" />
+      
+      {/* Header Content */}
+      <div className="max-w-7xl mx-auto px-6 mb-8 relative z-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-red-500 via-orange-500 to-amber-400 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-red-600 dark:from-red-500 via-orange-600 dark:via-orange-500 to-amber-500 dark:to-amber-400 bg-clip-text text-transparent">
               WAR ROOM
             </h1>
-            <div className="flex items-center gap-2 text-sm text-slate-400 mt-1">
-              <span className="font-bold text-white">{schoolData?.name}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 mt-1">
+              <span className="font-bold text-slate-900 dark:text-white">{schoolData?.name}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-700" />
               <span>{schoolData?.points} Global Power</span>
             </div>
           </div>
@@ -178,14 +181,14 @@ export default function WarLobbyDynamic() {
           <button
             disabled={!squad || !isGeneral || declaringWar || wars.filter(w => w.status === 'active').length > 0}
             onClick={handleDeclareWar}
-            className="disabled:opacity-50 disabled:cursor-not-allowed bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 group shadow-lg shadow-red-950/30"
+            className="w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group shadow-sm dark:shadow-red-950/30"
             title={!isGeneral ? 'Only the General can declare war' : wars.filter(w => w.status === 'active').length > 0 ? 'Already in an active war' : 'Find and challenge a rival school'}
           >
             <Target className="w-4 h-4 group-hover:animate-pulse" />
             {declaringWar ? 'Finding rival...' : 'Declare War'}
           </button>
         </div>
-      </header>
+      </div>
 
       {/* Notification Banners */}
       {warSuccess && (
@@ -203,16 +206,16 @@ export default function WarLobbyDynamic() {
         {/* Left Column: My Squad */}
         <div className="lg:col-span-2 space-y-8">
           {/* Active Squad Builder */}
-          <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-500 hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/10">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/15 blur-3xl -translate-y-1/2 translate-x-1/2 rounded-full pointer-events-none" />
+          <div className="bg-gradient-to-br from-white dark:from-slate-900 via-slate-50 dark:via-slate-900 to-slate-100 dark:to-slate-950 border border-slate-200 dark:border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-500 hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/10 shadow-lg">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 dark:bg-indigo-500/15 blur-3xl -translate-y-1/2 translate-x-1/2 rounded-full pointer-events-none" />
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 relative z-10">
               <div>
-                <h2 className="text-2xl font-black text-white flex items-center gap-2">
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
                   <Shield className="w-6 h-6 text-indigo-500" />
                   Elite Squad
                 </h2>
-                <p className="text-slate-400 text-sm mt-1 max-w-sm leading-relaxed">Your 50-man squad for the next global battle. Recruit heavily to prepare for Wars.</p>
+                <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 max-w-sm leading-relaxed">Your 50-man squad for the next global battle. Recruit heavily to prepare for Wars.</p>
               </div>
               <div className="mt-4 sm:mt-0 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 px-5 py-2 rounded-full text-xs font-bold font-mono shadow-inner">
                 {roster.length}/50 RECRUITED
@@ -220,10 +223,10 @@ export default function WarLobbyDynamic() {
             </div>
 
             {!squad ? (
-              <div className="text-center py-12 border-2 text-stone-300 border-dashed border-slate-700 rounded-2xl relative z-10 bg-slate-900/50 hover:bg-slate-800/80 transition-colors">
+              <div className="text-center py-12 border-2 text-slate-600 dark:text-stone-300 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl relative z-10 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors">
                 <ShieldAlert className="w-16 h-16 text-indigo-500/50 mx-auto mb-4" />
-                <h3 className="text-2xl font-black text-white mb-2">Your school has no leader.</h3>
-                <p className="text-slate-400 max-w-md mx-auto mb-8 font-medium">Claim the title of General and form your squad before a rival school takes overhead control.</p>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Your school has no leader.</h3>
+                <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-8 font-medium">Claim the title of General and form your squad before a rival school takes overhead control.</p>
                 <button
                   onClick={handleCreateSquad}
                   disabled={creating}
@@ -241,7 +244,7 @@ export default function WarLobbyDynamic() {
                       whileHover={{ y: -2 }}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`p-5 rounded-2xl border bg-slate-800/60 ${member.isMe ? 'border-indigo-500/50 bg-indigo-500/10 shadow-lg shadow-indigo-900/20' : 'border-white/10'} transition-all hover:bg-slate-800`}
+                      className={`p-5 rounded-2xl border bg-white dark:bg-slate-800/60 ${member.isMe ? 'border-indigo-500/50 bg-indigo-50 dark:bg-indigo-500/10 shadow-lg shadow-indigo-900/20' : 'border-slate-200 dark:border-white/10'} transition-all hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm`}
                     >
                       {(() => {
                         const displayName = member?.name?.trim() || "Unknown";
@@ -251,9 +254,9 @@ export default function WarLobbyDynamic() {
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-black text-white shadow-lg text-lg">
                           {displayName.charAt(0).toUpperCase()}
                         </div>
-                        {member.role === "General" ? <Shield className="w-5 h-5 text-amber-500 drop-shadow-md" /> : <UserIcon className="w-5 h-5 text-slate-500" />}
+                        {member.role === "General" ? <Shield className="w-5 h-5 text-amber-500 drop-shadow-md" /> : <UserIcon className="w-5 h-5 text-slate-400 dark:text-slate-500" />}
                       </div>
-                      <div className="font-bold text-white truncate text-lg tracking-tight">
+                      <div className="font-bold text-slate-900 dark:text-white truncate text-lg tracking-tight">
                         {displayName}
                         {member.isMe && <span className="text-xs ml-2 text-indigo-400 bg-indigo-500/20 px-2 py-0.5 rounded-full inline-block mt-1">You</span>}
                       </div>
@@ -269,25 +272,25 @@ export default function WarLobbyDynamic() {
 
                   {/* Empty slots placeholders (Show up to 3 empty boxes to prompt adding) */}
                   {Array.from({ length: Math.min(3, 50 - roster.length) }).map((_, i) => (
-                    <div key={`empty-${i}`} className="h-[142px] p-5 rounded-2xl border bg-slate-900/50 border-dashed border-slate-700 hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all flex flex-col items-center justify-center text-center cursor-pointer group">
-                      <div className="w-10 h-10 rounded-full bg-slate-800 group-hover:bg-indigo-500/20 text-slate-500 group-hover:text-indigo-400 flex items-center justify-center transition-all mb-3 group-hover:scale-110">
+                    <div key={`empty-${i}`} className="h-[142px] p-5 rounded-2xl border bg-slate-50 dark:bg-slate-900/50 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/5 transition-all flex flex-col items-center justify-center text-center cursor-pointer group shadow-sm dark:shadow-none">
+                      <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 flex items-center justify-center transition-all mb-3 group-hover:scale-110">
                         <Search className="w-5 h-5" />
                       </div>
-                      <div className="font-bold text-slate-400 group-hover:text-white transition-colors">Draft Soldier</div>
-                      <div className="text-[10px] text-slate-600 mt-1 uppercase tracking-wider font-bold">Unfilled Position</div>
+                      <div className="font-bold text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Draft Soldier</div>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-600 mt-1 uppercase tracking-wider font-bold">Unfilled Position</div>
                     </div>
                   ))}
                 </div>
 
                 {/* Invite Link */}
-                <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-xl bg-slate-950/70 border border-indigo-500/30 relative z-10 gap-4 sm:gap-0">
+                <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-xl bg-white dark:bg-slate-950/70 border border-slate-200 dark:border-indigo-500/30 relative z-10 gap-4 sm:gap-0 shadow-sm">
                   <div className="flex items-center gap-4">
-                    <div className="bg-indigo-500/20 p-2.5 rounded-lg border border-indigo-500/30 shadow-inner block">
-                      <Link2 className="w-6 h-6 text-indigo-400" />
+                    <div className="bg-indigo-50 dark:bg-indigo-500/20 p-2.5 rounded-lg border border-indigo-200 dark:border-indigo-500/30 shadow-inner block">
+                      <Link2 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-white">Poach Students</div>
-                      <div className="text-xs text-slate-400 mt-0.5">Send a link to classmates to steal points for your school</div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-white">Poach Students</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Send a link to classmates to steal points for your school</div>
                     </div>
                   </div>
                   <button onClick={copyInviteLink} className="w-full sm:w-auto text-sm font-black bg-white text-slate-900 px-6 py-3 rounded-xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2 shadow-xl shadow-white/10 hover:shadow-white/20 active:scale-95">
@@ -300,30 +303,30 @@ export default function WarLobbyDynamic() {
 
           {/* Active Conflicts */}
           <div>
-            <h3 className="text-xl font-black text-white mb-6 uppercase tracking-wider border-b border-white/10 pb-4">Active & Pending Deployments</h3>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-wider border-b border-slate-200 dark:border-white/10 pb-4">Active & Pending Deployments</h3>
             <div className="space-y-4">
               {wars.length === 0 ? (
-                <div className="bg-slate-900/60 border border-white/10 border-dashed rounded-2xl p-10 text-center flex flex-col items-center justify-center min-h-[250px]">
-                  <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-700 shadow-inner">
-                    <Zap className="w-8 h-8 text-slate-600" />
+                <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 border-dashed rounded-2xl p-10 text-center flex flex-col items-center justify-center min-h-[250px] shadow-sm">
+                  <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-slate-700 shadow-inner">
+                    <Zap className="w-8 h-8 text-slate-400 dark:text-slate-600" />
                   </div>
-                  <h4 className="text-white font-bold text-lg mb-1">Peacetime Maintained</h4>
+                  <h4 className="font-bold text-lg mb-1">Peacetime Maintained</h4>
                   <p className="text-sm text-slate-500 max-w-xs mx-auto">No rival schools have challenged {schoolData?.name} recently. Establish your squad to go on the offensive.</p>
                 </div>
               ) : (
                 wars.map(war => (
-                  <div key={war.id} className={`bg-slate-900/90 border rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 transition-colors shadow-lg ${war.status === 'searching' ? 'border-indigo-500/50 hover:border-indigo-400 shadow-indigo-500/10' : war.status === 'preparation' ? 'border-amber-500/50 hover:border-amber-400 shadow-amber-500/10' : war.status === 'calculating' ? 'border-fuchsia-500/50 hover:border-fuchsia-400 shadow-fuchsia-500/10' : 'border-red-500/40 hover:border-red-400 shadow-red-500/10'}`}>
+                  <div key={war.id} className={`bg-white dark:bg-slate-900/90 border rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 transition-colors shadow-lg ${war.status === 'searching' ? 'border-indigo-200 dark:border-indigo-500/50 hover:border-indigo-400 shadow-indigo-500/10' : war.status === 'preparation' ? 'border-amber-200 dark:border-amber-500/50 hover:border-amber-400 shadow-amber-500/10' : war.status === 'calculating' ? 'border-fuchsia-200 dark:border-fuchsia-500/50 hover:border-fuchsia-400 shadow-fuchsia-500/10' : 'border-red-200 dark:border-red-500/40 hover:border-red-400 shadow-red-500/10'}`}>
                     <div className="flex items-center gap-6">
                       <div className="text-center flex flex-col items-center">
-                        <div className={`text-[10px] font-black uppercase tracking-widest mb-2 px-2 py-0.5 rounded inline-block ${war.status === 'searching' ? 'text-indigo-400 bg-indigo-500/20' : war.status === 'preparation' ? 'text-amber-500 bg-amber-500/20' : war.status === 'calculating' ? 'text-fuchsia-400 bg-fuchsia-500/20' : 'text-red-500 bg-red-500/20'}`}>
+                        <div className={`text-[10px] font-black uppercase tracking-widest mb-2 px-2 py-0.5 rounded inline-block ${war.status === 'searching' ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20' : war.status === 'preparation' ? 'text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/20' : war.status === 'calculating' ? 'text-fuchsia-600 dark:text-fuchsia-400 bg-fuchsia-50 dark:bg-fuchsia-500/20' : 'text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/20'}`}>
                           {war.status === 'searching' ? 'MATCHMAKING' : war.isChallenger ? 'CHALLENGER' : 'DEFENDER'}
                         </div>
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border bg-slate-800 ${war.status === 'searching' ? 'border-indigo-500/30 text-indigo-400 animate-pulse' : war.status === 'calculating' ? 'border-fuchsia-500/30 text-fuchsia-400 animate-pulse' : 'border-red-500/30'}`}>
-                           {war.status === 'searching' ? <Search className="w-6 h-6 animate-spin-slow" /> : war.status === 'calculating' ? <Zap className="w-6 h-6 animate-pulse" /> : <ShieldAlert className="w-6 h-6 text-red-500" />}
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border bg-slate-50 dark:bg-slate-800 ${war.status === 'searching' ? 'border-indigo-200 dark:border-indigo-500/30 text-indigo-500 dark:text-indigo-400 animate-pulse' : war.status === 'calculating' ? 'border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-500 dark:text-fuchsia-400 animate-pulse' : 'border-red-200 dark:border-red-500/30 text-red-500'}`}>
+                           {war.status === 'searching' ? <Search className="w-6 h-6 animate-spin-slow" /> : war.status === 'calculating' ? <Zap className="w-6 h-6 animate-pulse" /> : <ShieldAlert className="w-6 h-6" />}
                         </div>
                       </div>
                       <div>
-                        <h4 className="text-xl font-black text-white">{war.opponent || 'Searching for Match...'}</h4>
+                        <h4 className="text-xl font-black text-slate-900 dark:text-white">{war.opponent || 'Searching for Match...'}</h4>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2">
                            <span className={`text-[10px] uppercase tracking-widest font-black px-2 py-1 rounded w-fit ${war.status === 'searching' ? 'bg-indigo-500/20 text-indigo-400' : war.status === 'preparation' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : war.status === 'calculating' ? 'bg-fuchsia-500/20 text-fuchsia-400 animate-pulse' : 'bg-red-500/20 text-red-500'}`}>
                              {war.status === 'searching' ? 'IN QUEUE' : war.status === 'preparation' ? 'PREPARING' : war.status === 'calculating' ? 'CALCULATING RESULT' : 'COMBAT LIVE'}
@@ -362,7 +365,7 @@ export default function WarLobbyDynamic() {
                       )}
 
                       {war.status === 'calculating' && (
-                        <div className="w-full sm:w-auto bg-slate-800 text-fuchsia-400 px-6 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 border border-fuchsia-500/30">
+                        <div className="w-full sm:w-auto bg-slate-100 dark:bg-slate-800 text-fuchsia-600 dark:text-fuchsia-400 px-6 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 border border-fuchsia-200 dark:border-fuchsia-500/30">
                           <Zap className="w-4 h-4 animate-pulse" /> Finalizing Submissions...
                         </div>
                       )}
@@ -376,38 +379,38 @@ export default function WarLobbyDynamic() {
 
         {/* Right Column: Global Standings Widget */}
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden h-full">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-fuchsia-500/10 blur-3xl rounded-full pointer-events-none -mr-32 -mt-32" />
+          <div className="bg-gradient-to-br from-white dark:from-slate-900 to-slate-50 dark:to-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden h-full">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-fuchsia-100 dark:bg-fuchsia-500/10 blur-3xl rounded-full pointer-events-none -mr-32 -mt-32" />
 
-            <h3 className="text-lg font-black text-white mb-6 border-b border-white/5 pb-4 flex items-center gap-2">
-              <Target className="w-5 h-5 text-indigo-400" /> Global Domination
+            <h3 className="text-lg font-black text-slate-900 dark:text-white mb-6 border-b border-slate-200 dark:border-white/5 pb-4 flex items-center gap-2">
+              <Target className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> Global Domination
             </h3>
 
             <div className="space-y-3 relative z-10">
               {globalStandings.length === 0 && <p className="text-slate-500 text-sm text-center py-4 font-medium block">Ranking algorithms calculating...</p>}
 
               {globalStandings.map(school => (
-                <div key={`${school.id}-${school.rank}`} className={`flex items-center justify-between p-3.5 rounded-xl transition-all ${school.isMe ? "bg-indigo-500/20 border-2 border-indigo-500 shadow-md shadow-indigo-900/20" : "hover:bg-slate-800/50 border-2 border-transparent bg-slate-950/30"
+                <div key={`${school.id}-${school.rank}`} className={`flex items-center justify-between p-3.5 rounded-xl transition-all ${school.isMe ? "bg-indigo-50 dark:bg-indigo-500/20 border-2 border-indigo-200 dark:border-indigo-500 shadow-md shadow-indigo-900/20" : "hover:bg-slate-100 dark:hover:bg-slate-800/50 border-2 border-transparent dark:bg-slate-950/30"
                   }`}>
                   <div className="flex items-center gap-4">
-                    <div className={`font-mono font-black text-lg w-8 text-center bg-clip-text text-transparent ${school.rank === 1 ? 'bg-gradient-to-br from-yellow-300 to-amber-600' :
-                      school.rank === 2 ? 'bg-gradient-to-br from-slate-300 to-slate-500' :
-                        school.rank === 3 ? 'bg-gradient-to-br from-amber-700 to-amber-900' :
-                          "bg-slate-500"
+                    <div className={`font-mono font-black text-lg w-8 text-center bg-clip-text text-transparent ${school.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-amber-600' :
+                      school.rank === 2 ? 'bg-gradient-to-br from-slate-400 to-slate-600 dark:from-slate-300 dark:to-slate-500' :
+                        school.rank === 3 ? 'bg-gradient-to-br from-amber-600 to-amber-800 dark:from-amber-700 dark:to-amber-900' :
+                          "bg-slate-400 dark:bg-slate-500"
                       }`}>
                       {school.rank}
                     </div>
-                    <div className={`font-bold text-sm tracking-tight ${school.isMe ? "text-white" : "text-slate-300"}`}>
+                    <div className={`font-bold text-sm tracking-tight ${school.isMe ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-300"}`}>
                       {school.name}
-                      {school.isMe && <div className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold mt-1">Your Faction</div>}
+                      {school.isMe && <div className="text-[9px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-bold mt-1">Your Faction</div>}
                     </div>
                   </div>
-                  <div className="font-mono font-black text-indigo-400 text-sm bg-indigo-500/10 px-2 py-1 rounded">{(school.score || 0).toLocaleString()}</div>
+                  <div className="font-mono font-black text-indigo-600 dark:text-indigo-400 text-sm bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded">{(school.score || 0).toLocaleString()}</div>
                 </div>
               ))}
             </div>
 
-            <Link href="/top-schools" className="block w-full mt-6 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-black text-white transition-all text-center hover:-translate-y-0.5 relative z-10 border border-white/10">
+            <Link href="/top-schools" className="block w-full mt-6 py-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-sm font-black text-slate-900 dark:text-white transition-all text-center hover:-translate-y-0.5 relative z-10 border border-slate-200 dark:border-white/10">
               Full School Rankings →
             </Link>
           </div>
