@@ -139,8 +139,12 @@ export async function POST(req: Request) {
                 userPointsChange = questionPoints;
                 pointsChangeDisplay = questionPoints;
             } else {
-                // NO penalty deduction during war — only regular feed attemots are penalized
-                if (!warId && currentPoints > 0) {
+                if (warId) {
+                    // War mode: flat -1 penalty for wrong answer
+                    userPointsChange = -1;
+                    pointsChangeDisplay = -1;
+                } else if (currentPoints > 0) {
+                    // Regular feed: points÷5 penalty
                     const calculatedPenalty = Math.floor(questionPoints / 5);
                     userPointsChange = -calculatedPenalty;
                     pointsChangeDisplay = -calculatedPenalty;
