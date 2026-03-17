@@ -66,14 +66,19 @@ const Signup: React.FC = () => {
 
     try {
       // Check username uniqueness via api route
-      const uniqueCheckRes = await fetch(`/api/check-username?username=${encodeURIComponent(username)}`);
-      if (uniqueCheckRes.ok) {
-        const uniqueCheckData = await uniqueCheckRes.json();
-        if (!uniqueCheckData.isUnique) {
-          setError('Username is already taken');
-          setLoading(false);
-          return;
+      try {
+        const uniqueCheckRes = await fetch(`/api/check-username?username=${encodeURIComponent(username)}`);
+        if (uniqueCheckRes.ok) {
+          const uniqueCheckData = await uniqueCheckRes.json();
+          if (!uniqueCheckData.isUnique) {
+            setError('Username is already taken. Please choose a different username.');
+            setLoading(false);
+            return;
+          }
         }
+        // If uniqueCheckRes is not ok, we skip the check and let Supabase handle it
+      } catch {
+        // Network error on check — continue to signup anyway
       }
 
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -83,18 +88,36 @@ const Signup: React.FC = () => {
           data: {
             username,
             fullName,
-            school,
+            school: school || '',
             classGrade,
             username_updates: [] // Track updates
           }
         }
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        // Map common Supabase error messages to user-friendly ones
+        const msg = signUpError.message || '';
+        if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already been registered')) {
+          throw new Error('This email is already registered. Please log in instead.');
+        } else if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('too many')) {
+          throw new Error('Too many signup attempts. Please wait a few minutes and try again.');
+        } else if (msg.toLowerCase().includes('invalid email')) {
+          throw new Error('Please enter a valid email address.');
+        } else if (msg.toLowerCase().includes('password')) {
+          throw new Error('Password must be at least 6 characters long.');
+        } else if (msg.toLowerCase().includes('signup') && msg.toLowerCase().includes('disabled')) {
+          throw new Error('Signups are temporarily disabled. Please try again later.');
+        } else {
+          throw signUpError;
+        }
+      }
 
+      // Supabase may return a user with identities=[] if email confirmation is required
+      // In that case, still navigate to profile (email verify screen will show)
       router.push('/profile');
     } catch (err: any) {
-      setError(err.message || 'Signup failed');
+      setError(err.message || 'Signup failed. Please check your details and try again.');
     } finally {
       setLoading(false);
     }

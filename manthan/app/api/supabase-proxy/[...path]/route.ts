@@ -22,20 +22,31 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
     headers.delete('connection');
     headers.delete('keep-alive');
     headers.delete('transfer-encoding');
+    // Remove content-encoding so we don't forward compressed bodies
+    headers.delete('content-encoding');
 
     try {
-        const fetchOptions: RequestInit & { duplex?: 'half' } = {
+        const fetchOptions: RequestInit = {
             method: req.method,
             headers,
             redirect: 'manual',
             cache: 'no-store'
         };
 
-        // Forward the body if it's not a GET/HEAD request
+        // Forward the body if it's not a GET/HEAD request.
+        // CRITICAL FIX: Buffer the body fully as an ArrayBuffer before forwarding.
+        // Passing req.body as a ReadableStream can silently fail on some Android phones
+        // and mobile networks (body arrives fragmented or empty), causing Supabase to
+        // reject the signup request with a cryptic "error saving new user" message.
         if (req.method !== 'GET' && req.method !== 'HEAD') {
-            if (req.body) {
-                fetchOptions.body = req.body;
-                fetchOptions.duplex = 'half'; // Required for Node fetch to send streams
+            try {
+                const bodyBuffer = await req.arrayBuffer();
+                if (bodyBuffer.byteLength > 0) {
+                    fetchOptions.body = bodyBuffer;
+                    headers.set('content-length', String(bodyBuffer.byteLength));
+                }
+            } catch (bodyErr: any) {
+                console.error('[Supabase Proxy] Failed to read request body:', bodyErr.message);
             }
         }
 
@@ -44,10 +55,14 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
         // Copy headers back from Supabase response
         const outHeaders = new Headers(response.headers);
 
-        // Let Vercel/Next.js handle encoding
+        // Let Vercel/Next.js handle encoding — don't forward compressed responses
         outHeaders.delete('content-encoding');
+        outHeaders.delete('transfer-encoding');
 
-        return new Response(response.body, {
+        // Buffer the response body fully to avoid partial-read issues on slow connections
+        const responseBody = await response.arrayBuffer();
+
+        return new Response(responseBody, {
             status: response.status,
             statusText: response.statusText,
             headers: outHeaders
