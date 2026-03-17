@@ -36,8 +36,11 @@ export async function GET(req: Request) {
 
         // Ensure user is General of challenger or defender
         // Get user's squad
-        const { data: member } = await supabaseAdmin.from("squad_members").select("squad_id, role").eq("user_id", userId).single();
-        if (!member || !member.squad_id) return NextResponse.json({ error: "Not part of a squad" }, { status: 403 });
+        const { data: member, error: memberErr } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).single();
+        if (memberErr || !member || !member.squad_id) {
+             console.error("squad_members query error:", memberErr);
+             return NextResponse.json({ error: "Not part of a squad" }, { status: 403 });
+        }
 
         let isChallenger = false;
         let isDefender = false;
@@ -49,8 +52,12 @@ export async function GET(req: Request) {
              return NextResponse.json({ error: "Your school is not in this war" }, { status: 403 });
         }
 
-        // Note: member.role is fetched above
-        // if (!member || member.role !== 'General') {
+        // Determine if user is the General
+        const { data: squad } = await supabaseAdmin.from("squads").select("general_id").eq("id", member.squad_id).single();
+        const isGeneral = squad && squad.general_id === userId;
+
+        // Note: we can restrict access if they aren't the General 
+        // if (!isGeneral) {
         //      return NextResponse.json({ error: "Only the General can pick questions" }, { status: 403 });
         // }
 
@@ -68,7 +75,7 @@ export async function GET(req: Request) {
             questions: questions || [],
             isChallenger,
             isDefender,
-            isGeneral: member?.role === 'General',
+            isGeneral,
             hasLockedPicks: isChallenger ? (war.challenger_questions?.length > 0) : (war.defender_questions?.length > 0)
         });
     } catch (err: any) {
@@ -103,8 +110,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: `You must pick exactly ${war.war_format} questions.` }, { status: 400 });
         }
 
-        const { data: member } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).single();
-        if (!member || !member.squad_id) return NextResponse.json({ error: "Not in a squad" }, { status: 403 });
+        const { data: member, error: memberErr } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).single();
+        if (memberErr || !member || !member.squad_id) {
+            console.error(memberErr);
+            return NextResponse.json({ error: "Not in a squad" }, { status: 403 });
+        }
 
         let isChallenger = false;
         if (member.squad_id === war.challenger_squad_id) isChallenger = true;

@@ -35,8 +35,11 @@ export async function GET(req: Request) {
         if (warErr || !war) return NextResponse.json({ error: "War not found" }, { status: 404 });
 
         // Get user's squad
-        const { data: member } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).single();
-        if (!member || !member.squad_id) return NextResponse.json({ error: "Not part of a squad" }, { status: 403 });
+        const { data: member, error: memberErr } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).single();
+        if (memberErr || !member || !member.squad_id) {
+             console.error("squad query error:", memberErr);
+             return NextResponse.json({ error: "Not part of a squad" }, { status: 403 });
+        }
 
         let isChallenger = false;
         let isDefender = false;
