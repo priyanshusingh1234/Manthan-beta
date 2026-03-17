@@ -68,6 +68,7 @@ export default function WarSolvePage() {
                     selectedOption: optionToSend ?? null,
                     startedAt,
                     timeTaken: Math.max(0, (question.time_limit || 5) * 60 - timeLeft),
+                    warId,
                 }),
             });
             const data = await res.json();

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Authentication required" }, { status: 401 });
         }
 
-        const { questionId, selectedOption, startedAt, timeTaken, challengeId } = await req.json();
+        const { questionId, selectedOption, startedAt, timeTaken, challengeId, warId } = await req.json();
 
         if (!questionId) {
             return NextResponse.json({ error: "Missing questionId" }, { status: 400 });
@@ -185,6 +185,61 @@ export async function POST(req: Request) {
                 submitted_at: new Date().toISOString(),
             });
         }
+
+        // ── WAR SUBMISSION ───────────────────────────────
+        if (warId) {
+            // Identify which school this user belongs to in this war
+            const { data: member } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).single();
+            const { data: war } = await supabaseAdmin.from("wars").select("*").eq("id", warId).single();
+
+            if (war && member) {
+                const isChallenger = member.squad_id === war.challenger_squad_id;
+                const mySchoolId = isChallenger ? war.challenger_school_id : war.defender_school_id;
+                const pointsAwarded = isCorrect ? (q.points || 0) : 0;
+
+                // Insert war submission
+                await supabaseAdmin.from("war_submissions").insert({
+                    war_id: warId,
+                    school_id: mySchoolId,
+                    student_id: userId,
+                    question_id: questionId,
+                    status: isCorrect ? "correct" : "incorrect",
+                    points_awarded: pointsAwarded,
+                });
+
+                // Check all-correct bonus: if every question assigned to my squad is now correct
+                const myQuestionIds: string[] = isChallenger ? (war.defender_questions || []) : (war.challenger_questions || []);
+                if (myQuestionIds.length > 0) {
+                    const { data: correctSubs } = await supabaseAdmin
+                        .from("war_submissions")
+                        .select("question_id")
+                        .eq("war_id", warId)
+                        .eq("school_id", mySchoolId)
+                        .eq("status", "correct");
+
+                    const correctIds = new Set((correctSubs || []).map(s => s.question_id));
+                    const allCorrect = myQuestionIds.every(id => correctIds.has(id));
+
+                    if (allCorrect) {
+                        // +5 all-correct bonus to every squad member
+                        const { data: squadUsers } = await supabaseAdmin
+                            .from("squad_members").select("user_id")
+                            .eq("squad_id", member.squad_id);
+
+                        for (const su of (squadUsers || [])) {
+                            const { data: suResp } = await supabaseAdmin.auth.admin.getUserById(su.user_id);
+                            if (suResp?.user) {
+                                const meta = suResp.user.user_metadata || {};
+                                await supabaseAdmin.auth.admin.updateUserById(su.user_id, {
+                                    user_metadata: { ...meta, totalPoints: Math.max(0, (Number(meta.totalPoints) || 0) + 5) }
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // ────────────────────────────────────────────────
 
         return NextResponse.json({
             success: true,
