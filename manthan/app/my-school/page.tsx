@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { motion } from "framer-motion";
-import { Shield, Users, Swords, Plus, Crown, AlertCircle, Clock, CheckCircle, X, ChevronRight, User as UserIcon, Search, Pencil, Save, Zap, Flame, Skull, Crosshair } from "lucide-react";
+import { Shield, Users, Swords, Plus, Crown, AlertCircle, Clock, CheckCircle, X, ChevronRight, User as UserIcon, Search, Pencil, Save, Zap, Flame, Skull, Crosshair, Award } from "lucide-react";
 import Link from "next/link";
 import TeacherBadge from "@/ticks/teacher";
 
