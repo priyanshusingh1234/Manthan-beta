@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import { Mail, Lock, Eye, EyeOff, Github, Chrome, BookOpen, Brain, Sparkles, Trophy, Users, User, Building2, GraduationCap } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Github, Chrome, BookOpen, Brain, Sparkles, Trophy, Users, User, GraduationCap } from 'lucide-react';
 import Logo from './Logo';
 import BrandingSection from './BrandingSection';
 /**
@@ -20,7 +20,7 @@ const Signup: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [school, setSchool] = useState('');
+
   const [classGrade, setClassGrade] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -88,7 +88,6 @@ const Signup: React.FC = () => {
           data: {
             username,
             fullName,
-            school: school || '',
             classGrade,
             username_updates: [] // Track updates
           }
@@ -331,32 +330,8 @@ const Signup: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Row 4 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* School/Institution Input (Required) */}
-                  <div className="group">
-                    <label htmlFor="school" className="sr-only">
-                      School/Institution (Optional)
-                    </label>
-                    <div className="relative my-2">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Building2 className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300" />
-                      </div>
-                      <input
-                        id="school"
-                        name="school"
-                        type="text"
-                        autoComplete="organization"
-                        value={school}
-                        onChange={(e) => setSchool(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:border-slate-400"
-                        placeholder="School/Institution (Optional — find schools later)"
-                      />
-                      {/* Gradient border on focus */}
-                      <div className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 blur-sm transition-opacity duration-300 group-focus-within:opacity-100"></div>
-                    </div>
-                  </div>
-
+                {/* Row 4 - Class Grade only */}
+                <div className="grid grid-cols-1 gap-3">
                   {/* Class/Grade Dropdown (Required) */}
                   <div className="group">
                     <label htmlFor="class" className="sr-only">
@@ -389,6 +364,7 @@ const Signup: React.FC = () => {
                   </div>
                 </div>
               </div>
+              <p className="text-xs text-slate-500 -mt-1">📌 You can join a school after signup from the War Room.</p>
 
               {/* Terms & Conditions */}
               <div className="flex items-center">
