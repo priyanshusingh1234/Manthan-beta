@@ -73,7 +73,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
                 points: school.total_war_points || 0,
                 rank,
                 memberCount: members.length,
-                createdAt: school.created_at
+                createdAt: school.created_at,
+                avatarUrl: school.avatar_url || 'shield',
+                description: school.description || '',
             },
             generalId,
             members,

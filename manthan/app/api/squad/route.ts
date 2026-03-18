@@ -112,6 +112,8 @@ export async function GET(req: NextRequest) {
                 name: school.name,
                 membersCount: members.length,
                 points: school.total_war_points || 0,
+                avatarUrl: school.avatar_url || 'shield',
+                description: school.description || '',
             },
             squad,
             members,

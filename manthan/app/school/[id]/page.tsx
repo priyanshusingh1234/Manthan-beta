@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { motion } from "framer-motion";
-import { Shield, Users, Swords, Crown, Target, ChevronLeft, Globe, Award, Calendar, Handshake, CheckBadge, CheckCircle, Search } from "lucide-react";
+import { Shield, Users, Swords, Crown, Target, ChevronLeft, Globe, Award, Calendar, Handshake, CheckBadge, CheckCircle, Search, Zap, Flame, Skull, Crosshair } from "lucide-react";
 import Link from "next/link";
 
 export default function PublicSchoolPage() {
@@ -112,6 +112,19 @@ export default function PublicSchoolPage() {
     const isMySchool = mySchoolId === school.id;
     const formattedDate = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(school.createdAt));
 
+    const renderAvatarIcon = (url: string | undefined, className: string = "w-6 h-6") => {
+        const iconName = url || 'shield';
+        switch (iconName) {
+            case 'sword': return <Swords className={className} />;
+            case 'crown': return <Crown className={className} />;
+            case 'zap': return <Zap className={className} />;
+            case 'flame': return <Flame className={className} />;
+            case 'skull': return <Skull className={className} />;
+            case 'crosshair': return <Crosshair className={className} />;
+            default: return <Shield className={className} />;
+        }
+    };
+
     return (
         <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-24 pt-4 sm:pt-10">
             {/* Background Decor */}
@@ -135,7 +148,7 @@ export default function PublicSchoolPage() {
                         {/* School Identity */}
                         <div className="flex items-center gap-6">
                             <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2rem] flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20 text-white border-4 border-white dark:border-slate-800">
-                                <Shield className="w-12 h-12 sm:w-16 sm:h-16 opacity-90" />
+                                {renderAvatarIcon(school.avatarUrl, "w-12 h-12 sm:w-16 sm:h-16 opacity-90")}
                             </div>
                             <div>
                                 <h1 className="text-3xl sm:text-5xl font-black mb-2 tracking-tight">{school.name}</h1>
@@ -145,7 +158,7 @@ export default function PublicSchoolPage() {
                                     <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> Founded {formattedDate}</span>
                                 </p>
                                 <p className="text-slate-600 dark:text-slate-300 max-w-xl text-sm leading-relaxed hidden sm:block">
-                                    A premier faction on Dheeyudha dedicated to commanding intelligence and dominating the war room. They currently rank #{school.rank} in the world with a battle-hardened squad of {school.memberCount} members.
+                                    {school.description || `A premier faction on Dheeyudha dedicated to commanding intelligence and dominating the war room. They currently rank #${school.rank} in the world with a battle-hardened squad of ${school.memberCount} members.`}
                                 </p>
                             </div>
                         </div>
@@ -177,7 +190,7 @@ export default function PublicSchoolPage() {
                     </div>
                     {/* Mobile description */}
                     <p className="text-slate-600 dark:text-slate-300 mt-6 text-sm leading-relaxed sm:hidden relative z-10">
-                        A premier faction on Dheeyudha dedicated to commanding intelligence and dominating the war room. They currently rank #{school.rank} in the world with a battle-hardened squad of {school.memberCount} members.
+                        {school.description || `A premier faction on Dheeyudha dedicated to commanding intelligence and dominating the war room. They currently rank #${school.rank} in the world with a battle-hardened squad of ${school.memberCount} members.`}
                     </p>
                 </div>
 

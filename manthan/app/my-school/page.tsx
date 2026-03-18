@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { motion } from "framer-motion";
-import { Shield, Users, Swords, Plus, Crown, AlertCircle, Clock, CheckCircle, X, ChevronRight, User as UserIcon, Search } from "lucide-react";
+import { Shield, Users, Swords, Plus, Crown, AlertCircle, Clock, CheckCircle, X, ChevronRight, User as UserIcon, Search, Pencil, Save, Zap, Flame, Skull, Crosshair } from "lucide-react";
 import Link from "next/link";
 import TeacherBadge from "@/ticks/teacher";
 
@@ -24,6 +24,12 @@ export default function MySchoolPage() {
     // Leave/Disband state
     const [actionLoading, setActionLoading] = useState(false);
     const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+    // Edit Profile State
+    const [isEditing, setIsEditing] = useState(false);
+    const [editDesc, setEditDesc] = useState("");
+    const [editAvatar, setEditAvatar] = useState("shield");
+    const [savingProfile, setSavingProfile] = useState(false);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -175,6 +181,34 @@ export default function MySchoolPage() {
         }
     };
 
+    const handleSaveProfile = async () => {
+        if (editDesc.trim().split(' ').length > 200) {
+            setNotification({ type: 'error', message: 'Description exceeds 200 words.' });
+            return;
+        }
+
+        setSavingProfile(true);
+        try {
+            const res = await fetch('/api/schools/update', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ avatarUrl: editAvatar, description: editDesc.trim() })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setNotification({ type: 'success', message: 'Profile updated!' });
+                setIsEditing(false);
+                fetchMySquad(session.access_token);
+            } else {
+                setNotification({ type: 'error', message: data.error || 'Failed to save.' });
+            }
+        } catch {
+            setNotification({ type: 'error', message: 'Network error.' });
+        } finally {
+            setSavingProfile(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex items-center justify-center pb-24">
@@ -249,6 +283,21 @@ export default function MySchoolPage() {
 
     const isGeneral = squadData.members?.find((m: any) => m.isMe && m.role === 'General');
 
+    const renderAvatarIcon = (url: string | undefined, className: string = "w-6 h-6") => {
+        const iconName = url || 'shield';
+        switch (iconName) {
+            case 'sword': return <Swords className={className} />;
+            case 'crown': return <Crown className={className} />;
+            case 'zap': return <Zap className={className} />;
+            case 'flame': return <Flame className={className} />;
+            case 'skull': return <Skull className={className} />;
+            case 'crosshair': return <Crosshair className={className} />;
+            default: return <Shield className={className} />;
+        }
+    };
+
+    const avatarOptions = ['shield', 'sword', 'crown', 'zap', 'flame', 'skull', 'crosshair'];
+
     // Faction Hub View
     return (
         <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-24 pt-4 sm:pt-8 md:pt-12 relative overflow-hidden">
@@ -269,22 +318,31 @@ export default function MySchoolPage() {
                     </div>
                 )}
                 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-3xl font-black">{squadData.school.name}</h1>
-                            {isGeneral && (
-                                <span className="bg-amber-100 dark:bg-amber-500/20 border border-amber-300 dark:border-amber-500/40 text-amber-700 dark:text-amber-500 text-[10px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
-                                    <Crown className="w-3 h-3" /> General
-                                </span>
-                            )}
+                <div className="flex flex-col sm:flex-row justify-between gap-6 md:gap-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-xl">
+                    <div className="flex flex-col sm:flex-row gap-6 sm:items-center">
+                        <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0 border-4 border-slate-50 dark:border-slate-950">
+                            {renderAvatarIcon(squadData.school.avatarUrl, "w-10 h-10")}
                         </div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-4">
-                            <span className="flex items-center gap-1.5"><Users className="w-4 h-4" /> {squadData.school.membersCount} Soldiers</span>
-                            <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400"><Shield className="w-4 h-4" /> {squadData.school.points.toLocaleString()} Points</span>
-                        </p>
+                        <div>
+                            <div className="flex flex-wrap items-center gap-3 mb-2">
+                                <h1 className="text-3xl font-black">{squadData.school.name}</h1>
+                                {isGeneral && (
+                                    <span className="bg-amber-100 dark:bg-amber-500/20 border border-amber-300 dark:border-amber-500/40 text-amber-700 dark:text-amber-500 text-[10px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+                                        <Crown className="w-3 h-3" /> General
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2 max-w-lg">
+                                {squadData.school.description || "A growing faction aiming for the top of the leaderboard."}
+                            </p>
+                            <p className="text-sm font-bold flex items-center gap-4 flex-wrap">
+                                <span className="flex items-center gap-1.5"><Users className="w-4 h-4 text-slate-400" /> {squadData.school.membersCount} Soldiers</span>
+                                <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400"><Award className="w-4 h-4" /> {squadData.school.points.toLocaleString()} Points</span>
+                            </p>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    
+                    <div className="flex flex-row sm:flex-col items-center sm:items-stretch justify-center gap-3 shrink-0">
                         <Link href={`/war-history?schoolId=${squadData.school.id}`} className="bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 font-bold px-6 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">
                             <Clock className="w-4 h-4" /> War History
                         </Link>
@@ -300,16 +358,27 @@ export default function MySchoolPage() {
                 {/* Left Col: Roster & Actions */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* Action Bar */}
-                    <div className="flex justify-end mb-2">
-                        {isGeneral ? (
-                            <button onClick={handleDisbandSchool} disabled={actionLoading} className="text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
-                                <AlertCircle className="w-3.5 h-3.5" /> Disband Faction
-                            </button>
-                        ) : (
-                            <button onClick={handleLeaveSchool} disabled={actionLoading} className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
-                                <X className="w-3.5 h-3.5" /> Leave Faction
+                    <div className="flex flex-wrap justify-between items-center gap-4 mb-2">
+                        {isGeneral && (
+                            <button onClick={() => {
+                                setEditAvatar(squadData.school.avatarUrl || 'shield');
+                                setEditDesc(squadData.school.description || '');
+                                setIsEditing(true);
+                            }} className="text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-500/30 px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-sm">
+                                <Pencil className="w-4 h-4" /> Edit Profile
                             </button>
                         )}
+                        <div className="flex justify-end flex-1">
+                            {isGeneral ? (
+                                <button onClick={handleDisbandSchool} disabled={actionLoading} className="text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5">
+                                    <AlertCircle className="w-3.5 h-3.5" /> Disband Faction
+                                </button>
+                            ) : (
+                                <button onClick={handleLeaveSchool} disabled={actionLoading} className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <X className="w-3.5 h-3.5" /> Leave Faction
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -411,6 +480,49 @@ export default function MySchoolPage() {
                     )}
                 </div>
             </div>
+
+            {/* Edit Profile Modal */}
+            {isEditing && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <h2 className="text-xl font-black flex items-center gap-2"><Pencil className="w-5 h-5 text-indigo-500" /> Edit Faction Profile</h2>
+                            <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X className="w-6 h-6" /></button>
+                        </div>
+                        <div className="p-6 overflow-y-auto">
+                            <h3 className="text-sm font-bold mb-3">Faction Avatar</h3>
+                            <div className="grid grid-cols-4 sm:grid-cols-7 gap-3 mb-6">
+                                {avatarOptions.map(opt => (
+                                    <button 
+                                        key={opt}
+                                        onClick={() => setEditAvatar(opt)}
+                                        className={`aspect-square rounded-2xl flex items-center justify-center transition-all ${editAvatar === opt ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-110' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:scale-105'}`}
+                                    >
+                                        {renderAvatarIcon(opt, "w-6 h-6")}
+                                    </button>
+                                ))}
+                            </div>
+                            
+                            <h3 className="text-sm font-bold mb-3">Mission Description <span className="text-xs font-normal text-slate-500 ml-1">(Max 200 words)</span></h3>
+                            <textarea
+                                value={editDesc}
+                                onChange={(e) => setEditDesc(e.target.value)}
+                                placeholder="State your faction's mission, rules, or battle cry..."
+                                className="w-full h-32 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                            ></textarea>
+                            <div className="text-right text-xs font-medium mt-2 text-slate-400">
+                                {editDesc.trim().split(/\s+/).filter(w => w.length > 0).length} / 200 words
+                            </div>
+                        </div>
+                        <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3">
+                            <button onClick={() => setIsEditing(false)} className="px-5 py-2.5 rounded-xl font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">Cancel</button>
+                            <button onClick={handleSaveProfile} disabled={savingProfile} className="px-5 py-2.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/20 disabled:opacity-50 flex items-center gap-2">
+                                {savingProfile ? 'Saving...' : <><Save className="w-4 h-4" /> Save Profile</>}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 }
