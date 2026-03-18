@@ -21,6 +21,10 @@ export default function MySchoolPage() {
     const [requests, setRequests] = useState<any[]>([]);
     const [reviewState, setReviewState] = useState<Record<string, 'idle' | 'loading' | 'done'>>({});
 
+    // Leave/Disband state
+    const [actionLoading, setActionLoading] = useState(false);
+    const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
@@ -114,9 +118,60 @@ export default function MySchoolPage() {
             setReviewState(prev => ({ ...prev, [requestId]: 'done' }));
             setRequests(prev => prev.filter(r => r.id !== requestId));
             // Refresh squad if approved
-            if (action === 'approve') fetchMySquad(session.access_token);
+            if (action === 'approve') {
+                setNotification({ type: 'success', message: 'Recruit approved!' });
+                fetchMySquad(session.access_token);
+            }
         } else {
             setReviewState(prev => ({ ...prev, [requestId]: 'idle' }));
+        }
+    };
+
+    const handleLeaveSchool = async () => {
+        if (!confirm("Are you sure you want to leave this faction? You will lose access to its War Room.")) return;
+        setActionLoading(true);
+        try {
+            const res = await fetch('/api/schools/leave', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${session.access_token}` },
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setSquadData(null);
+                const { data: { session: newSession } } = await supabase.auth.refreshSession();
+                if (newSession) setSession(newSession);
+                alert("You have left the faction.");
+            } else {
+                setNotification({ type: 'error', message: data.error || 'Failed to leave.' });
+            }
+        } catch {
+            setNotification({ type: 'error', message: 'Network error.' });
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleDisbandSchool = async () => {
+        if (!confirm("CRITICAL: Are you absolutely sure you want to completely DISBAND this faction? All members will be kicked and history will be lost.")) return;
+        setActionLoading(true);
+        try {
+            const res = await fetch('/api/schools/delete', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${session.access_token}` },
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setSquadData(null);
+                const { data: { session: newSession } } = await supabase.auth.refreshSession();
+                if (newSession) setSession(newSession);
+                alert("Faction permanently disbanded.");
+            } else {
+                setNotification({ type: 'error', message: data.error || 'Failed to disband.' });
+            }
+        } catch {
+            setNotification({ type: 'error', message: 'Network error.' });
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -204,6 +259,16 @@ export default function MySchoolPage() {
 
             {/* Header Content */}
             <div className="max-w-5xl mx-auto px-6 mb-8 relative z-10">
+                {notification && (
+                    <div className={`mb-4 p-4 rounded-xl flex items-center justify-between shadow-sm ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                        <span className="font-bold flex items-center gap-2">
+                            {notification.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                            {notification.message}
+                        </span>
+                        <button onClick={() => setNotification(null)} className="opacity-50 hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
+                    </div>
+                )}
+                
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <div className="flex items-center gap-3">
@@ -232,8 +297,21 @@ export default function MySchoolPage() {
 
             <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
                 
-                {/* Left Col: Roster */}
+                {/* Left Col: Roster & Actions */}
                 <div className="lg:col-span-2 space-y-6">
+                    {/* Action Bar */}
+                    <div className="flex justify-end mb-2">
+                        {isGeneral ? (
+                            <button onClick={handleDisbandSchool} disabled={actionLoading} className="text-xs font-bold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
+                                <AlertCircle className="w-3.5 h-3.5" /> Disband Faction
+                            </button>
+                        ) : (
+                            <button onClick={handleLeaveSchool} disabled={actionLoading} className="text-xs font-bold text-slate-500 hover:text-slate-700 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                                <X className="w-3.5 h-3.5" /> Leave Faction
+                            </button>
+                        )}
+                    </div>
+
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-black flex items-center gap-2">
                             <Users className="w-5 h-5 text-indigo-500 dark:text-indigo-400" /> Active Roster
