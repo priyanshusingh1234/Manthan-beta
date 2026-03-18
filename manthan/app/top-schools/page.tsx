@@ -291,18 +291,25 @@ export default function TopSchoolsPage() {
                                                     disabled={reqState === 'loading' || reqState === 'sent'}
                                                     className={`flex items-center gap-2 font-bold px-5 py-2.5 rounded-xl text-sm transition-all ${reqState === 'sent'
                                                             ? 'bg-green-500/20 border border-green-500/40 text-green-400 cursor-default'
-                                                            : 'bg-white text-slate-900 hover:bg-slate-100 shadow-lg hover:-translate-y-0.5'
+                                                            : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg hover:-translate-y-0.5'
                                                         } disabled:opacity-60`}
                                                 >
                                                     {reqState === 'loading' ? <Clock className="w-4 h-4 animate-spin" /> :
-                                                        reqState === 'sent' ? <><CheckCircle className="w-4 h-4" /> Request Sent</> :
-                                                            <><ChevronRight className="w-4 h-4" /> Request to Join</>}
+                                                        reqState === 'sent' ? <><CheckCircle className="w-4 h-4" /> Requested</> :
+                                                            <><ChevronRight className="w-4 h-4" /> Join</>}
                                                 </button>
                                             )}
                                             {session && !isMySchool && userSchoolId && (
                                                 <span className="text-slate-500 dark:text-slate-600 text-xs font-medium px-4">Leave your school first</span>
                                             )}
                                         </div>
+                                    </div>
+                                    
+                                    {/* Action footer link */}
+                                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/5 flex justify-end">
+                                        <Link href={`/school/${school.id}`} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors uppercase tracking-wider">
+                                            View Faction Profile <ChevronRight className="w-3.5 h-3.5" />
+                                        </Link>
                                     </div>
                                 </motion.div>
                             );
