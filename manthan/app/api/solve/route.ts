@@ -48,15 +48,6 @@ export async function POST(req: Request) {
             .eq("question_id", questionId)
             .maybeSingle();
 
-        if (existingAttempt) {
-            return NextResponse.json({ error: "You have already attempted this question" }, { status: 403 });
-        }
-
-        // 3. Evaluate answer
-        const correctOpt = typeof q.correct_option === 'number' ? q.correct_option : null;
-        const isCorrect = correctOpt !== null && selectedOption === correctOpt;
-        const questionPoints = q.points || 0;
-
         // Custom logic for coop challenges
         let challenge = null;
         if (challengeId) {
@@ -67,6 +58,31 @@ export async function POST(req: Request) {
                 .single();
             challenge = c;
         }
+
+        const isInitiatorRetry = challenge && challenge.initiator_id === userId;
+
+        if (existingAttempt && !isInitiatorRetry && !warId) {
+            return NextResponse.json({ error: "You have already attempted this question" }, { status: 403 });
+        }
+
+        if (warId) {
+            const { data: existingWarSub } = await supabaseAdmin
+                .from("war_submissions")
+                .select("id")
+                .eq("war_id", warId)
+                .eq("student_id", userId)
+                .eq("question_id", questionId)
+                .maybeSingle();
+
+            if (existingWarSub) {
+                return NextResponse.json({ error: "You have already attempted this question in this war" }, { status: 403 });
+            }
+        }
+
+        // 3. Evaluate answer
+        const correctOpt = typeof q.correct_option === 'number' ? q.correct_option : null;
+        const isCorrect = correctOpt !== null && selectedOption === correctOpt;
+        const questionPoints = q.points || 0;
 
         // 4. Update User Points
         let userPointsChange = 0;
@@ -168,11 +184,9 @@ export async function POST(req: Request) {
         });
         leaderboardCache.invalidate(); // reflect new MCQ points in TopBrains immediately
 
-        // 5. Save attempt or update existing if it's the initiator's second try
-        if (challenge && challenge.initiator_id === userId) {
-            // they already have an attempt, so we should UPDATE it to reflect the new time/answer if we wanted,
-            // or simply not insert a duplicate (which would crash due to unique constraint).
-            // Since they already attempted, we just update the attempt so it shows the new result in UI
+        // 5. Save attempt or update existing if they already solved it previously
+        if (existingAttempt) {
+            // Update the attempt so it shows the new result in UI
             await supabaseAdmin.from("question_attempts").update({
                 selected_option: selectedOption,
                 is_correct: isCorrect,
