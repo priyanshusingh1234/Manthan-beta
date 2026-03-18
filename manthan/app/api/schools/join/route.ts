@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
             // Verify the user is the General of this school
             const { data: squadData } = await supabaseAdmin
                 .from('squads')
-                .select('general_id, school_id')
+                .select('id, general_id, school_id')
                 .eq('general_id', user.id)
                 .maybeSingle();
 
@@ -81,11 +81,17 @@ export async function POST(req: NextRequest) {
             if (action === 'approve') {
                 // Remove from any other school first
                 await supabaseAdmin.from('school_members').delete().eq('user_id', joinRequest.user_id);
+                await supabaseAdmin.from('squad_members').delete().eq('user_id', joinRequest.user_id);
 
                 // Add to school_members
                 await supabaseAdmin
                     .from('school_members')
                     .insert({ school_id: joinRequest.school_id, user_id: joinRequest.user_id, is_general: false });
+
+                // Add to squad_members
+                await supabaseAdmin
+                    .from('squad_members')
+                    .insert({ squad_id: squadData.id, user_id: joinRequest.user_id });
 
                 // Update user metadata
                 const { data: schData } = await supabaseAdmin
