@@ -219,9 +219,14 @@ export default function MySchoolPage() {
                             <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400"><Shield className="w-4 h-4" /> {squadData.school.points.toLocaleString()} Points</span>
                         </p>
                     </div>
-                    <Link href="/war" className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white border border-red-200 dark:border-red-500/30 font-bold px-6 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">
-                        <Swords className="w-4 h-4" /> War Room
-                    </Link>
+                    <div className="flex items-center gap-3">
+                        <Link href={`/war-history?schoolId=${squadData.school.id}`} className="bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800 border border-indigo-200 dark:border-indigo-500/30 font-bold px-6 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">
+                            <Clock className="w-4 h-4" /> War History
+                        </Link>
+                        <Link href="/war" className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white border border-red-200 dark:border-red-500/30 font-bold px-6 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">
+                            <Swords className="w-4 h-4" /> War Room
+                        </Link>
+                    </div>
                 </div>
             </div>
 
