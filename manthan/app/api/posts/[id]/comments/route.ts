@@ -46,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
         if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { content } = await req.json();
+        const { content, replying_to_user_id } = await req.json();
         if (!content || !content.trim()) return NextResponse.json({ error: 'Empty comment' }, { status: 400 });
 
         const { data: comment, error } = await supabaseAdmin
@@ -76,12 +76,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const meta = user.user_metadata || {};
         const authorName = meta.fullName || meta.name || user.email?.split('@')[0];
 
-        // Send Notification to Post Author
-        if (post?.author_id && post.author_id !== user.id) {
+        // Send Notification to Replied User OR Post Author
+        const notifyUserId = replying_to_user_id || post?.author_id;
+
+        if (notifyUserId && notifyUserId !== user.id) {
             await supabaseAdmin.from('notifications').insert({
-                user_id: post.author_id,
-                title: 'New Comment on your Post 💬',
-                message: `${authorName} commented: "${content.substring(0, 40)}${content.length > 40 ? '...' : ''}"`,
+                user_id: notifyUserId,
+                title: replying_to_user_id ? 'New Reply on your Comment 💬' : 'New Comment on your Post 💬',
+                message: `${authorName} replied: "${content.substring(0, 40)}${content.length > 40 ? '...' : ''}"`,
                 type: 'social_comment',
                 link: '/posts'
             });

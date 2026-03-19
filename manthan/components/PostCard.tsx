@@ -16,7 +16,7 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
     const [loadingComments, setLoadingComments] = useState(false);
     const [newComment, setNewComment] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [replyingTo, setReplyingTo] = useState<string | null>(null);
+    const [replyingTo, setReplyingTo] = useState<{name: string, userId: string} | null>(null);
 
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true });
 
@@ -75,7 +75,10 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session?.access_token}`
                 },
-                body: JSON.stringify({ content: newComment.trim() })
+                body: JSON.stringify({ 
+                    content: newComment.trim(),
+                    replying_to_user_id: replyingTo?.userId || null 
+                })
             });
 
             if (res.ok) {
@@ -175,7 +178,7 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                             <div className="flex-1 relative">
                                 {replyingTo && (
                                     <div className="absolute -top-7 left-0 right-0 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 px-3 py-1 rounded-t-xl text-[11px] font-bold text-indigo-600 dark:text-indigo-400 flex items-center justify-between">
-                                        <span>Replying to {replyingTo}</span>
+                                        <span>Replying to {replyingTo.name}</span>
                                         <button type="button" onClick={() => { setReplyingTo(null); setNewComment(""); }} className="hover:text-red-500">Cancel</button>
                                     </div>
                                 )}
@@ -197,61 +200,90 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                         </button>
                     </form>
 
-                    <div className="pt-2 space-y-3 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                    <div className="pt-2 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 pr-2">
                         {loadingComments ? (
                             <div className="text-center py-4 text-xs font-bold text-slate-400 animate-pulse">Loading discussion...</div>
                         ) : comments.length === 0 ? (
                             <div className="text-center py-4 text-sm font-medium text-slate-400">No comments yet. Be the first to start the discussion!</div>
                         ) : (
-                            // Render from oldest to newest usually for threads, but here it's flat descending
-                            // Let's reverse the array just for rendering so visual lines flow logically from top to bottom
-                            [...comments].reverse().map((comment: any, idx: number, arr: any[]) => {
-                                const isReply = comment.content.startsWith('@');
-                                // Check if the previous one wasn't a reply, we can start a "thread" line
-                                const isFollowingParent = isReply && idx > 0 && !arr[idx - 1].content.startsWith('@');
+                            // Build nested tree dynamically
+                            (() => {
+                                const timeOrdered = [...comments].reverse().map(c => ({...c, replies: []}));
+                                const roots: any[] = [];
                                 
-                                return (
-                                <div key={comment.id} className={`flex gap-3 relative ${isReply ? 'ml-8 lg:ml-12 mt-1' : 'mt-4'}`}>
-                                    {isReply && (
-                                        <div className="absolute -left-6 top-0 w-6 h-5 border-b-2 border-l-2 border-slate-300 dark:border-slate-700 rounded-bl-xl z-0" />
-                                    )}
-                                    <div className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 relative z-10">
-                                        {comment.author?.avatar_url ? (
-                                            <Image src={comment.author.avatar_url} alt="avatar" fill className="object-cover" />
-                                        ) : (
-                                            <User className="w-4 h-4 absolute inset-0 m-auto text-slate-400" />
+                                timeOrdered.forEach((c, idx) => {
+                                    let isReply = false;
+                                    let parent = null;
+                                    if (c.content.startsWith('@')) {
+                                        for (let i = idx - 1; i >= 0; i--) {
+                                            const possible = timeOrdered[i];
+                                            const pName = possible.author?.name || 'User';
+                                            if (c.content.startsWith(`@${pName} `) || c.content === `@${pName}`) {
+                                                parent = possible;
+                                                isReply = true;
+                                                c.displayContent = c.content.substring(pName.length + 2);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (!isReply) c.displayContent = c.content;
+                                    if (parent) parent.replies.push(c);
+                                    else roots.push(c);
+                                });
+
+                                const renderComment = (c: any, depth: number) => (
+                                    <div key={c.id} className={`flex gap-3 relative ${depth > 0 ? 'mt-3' : 'mt-5'}`}>
+                                        {depth > 0 && (
+                                            <div className="absolute -left-5 top-0 w-5 h-5 border-b-2 border-l-2 border-slate-300 dark:border-slate-700 rounded-bl-xl z-0" />
                                         )}
-                                    </div>
-                                    <div className="flex-1 relative z-10">
-                                        <div className={`bg-white dark:bg-slate-800 border ${isReply ? 'border-indigo-100 dark:border-indigo-900/50' : 'border-slate-200 dark:border-slate-700/80'} rounded-2xl p-3 shadow-sm inline-block max-w-[95%]`}>
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                <span className="font-bold text-[13px] text-slate-900 dark:text-slate-100">{comment.author?.name || 'Anonymous'}</span>
-                                                {comment.author?.isTeacher && (
-                                                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" />
+                                        <div className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 relative z-10 border border-slate-100 dark:border-slate-800">
+                                            {c.author?.avatar_url ? (
+                                                <Image src={c.author.avatar_url} alt="avatar" fill className="object-cover" />
+                                            ) : (
+                                                <User className="w-4 h-4 absolute inset-0 m-auto text-slate-400" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 relative z-10">
+                                            <div className={`bg-white dark:bg-slate-800 border ${depth > 0 ? 'border-indigo-100 dark:border-indigo-900/50' : 'border-slate-200 dark:border-slate-700/80'} rounded-2xl p-3 shadow-sm inline-block max-w-[95%]`}>
+                                                <div className="flex items-center gap-1.5 mb-1">
+                                                    <span className="font-bold text-[13px] text-slate-900 dark:text-slate-100">{c.author?.name || 'Anonymous'}</span>
+                                                    {c.author?.isTeacher && (
+                                                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" />
+                                                    )}
+                                                </div>
+                                                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">{c.displayContent}</p>
+                                            </div>
+                                            <div className="flex items-center gap-3 text-[10px] font-bold mt-1.5 ml-2">
+                                                <span className="text-slate-400 transition-colors hover:text-slate-500 cursor-default">
+                                                    {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                                                </span>
+                                                {currentUserId && (
+                                                    <button 
+                                                        onClick={() => {
+                                                            const name = c.author?.name || 'User';
+                                                            const uid = c.author_id || c.author?.id;
+                                                            setReplyingTo({name, userId: uid});
+                                                            setNewComment(`@${name} `);
+                                                        }}
+                                                        className="text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 transition-colors cursor-pointer"
+                                                    >
+                                                        Reply
+                                                    </button>
                                                 )}
                                             </div>
-                                            <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">{comment.content}</p>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-[10px] font-bold mt-1.5 ml-2">
-                                            <span className="text-slate-400">
-                                                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                                            </span>
-                                            {currentUserId && (
-                                                <button 
-                                                    onClick={() => {
-                                                        const name = comment.author?.name || 'User';
-                                                        setReplyingTo(name);
-                                                        setNewComment(`@${name} `);
-                                                    }}
-                                                    className="text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 transition-colors cursor-pointer"
-                                                >
-                                                    Reply
-                                                </button>
+                                            
+                                            {c.replies.length > 0 && (
+                                                <div className="ml-5 relative">
+                                                    <div className="absolute left-[-1.1rem] top-0 bottom-6 w-[2px] bg-slate-200 dark:bg-slate-800 rounded-full" />
+                                                    {c.replies.map((reply: any) => renderComment(reply, depth + 1))}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
-                                </div>
-                            )})
+                                );
+
+                                return roots.map(root => renderComment(root, 0));
+                            })()
                         )}
                     </div>
                 </div>
