@@ -197,23 +197,33 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                         </button>
                     </form>
 
-                    <div className="space-y-4 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                    <div className="pt-2 space-y-3 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                         {loadingComments ? (
                             <div className="text-center py-4 text-xs font-bold text-slate-400 animate-pulse">Loading discussion...</div>
                         ) : comments.length === 0 ? (
                             <div className="text-center py-4 text-sm font-medium text-slate-400">No comments yet. Be the first to start the discussion!</div>
                         ) : (
-                            comments.map((comment: any) => (
-                                <div key={comment.id} className="flex gap-3">
-                                    <div className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 relative">
+                            // Render from oldest to newest usually for threads, but here it's flat descending
+                            // Let's reverse the array just for rendering so visual lines flow logically from top to bottom
+                            [...comments].reverse().map((comment: any, idx: number, arr: any[]) => {
+                                const isReply = comment.content.startsWith('@');
+                                // Check if the previous one wasn't a reply, we can start a "thread" line
+                                const isFollowingParent = isReply && idx > 0 && !arr[idx - 1].content.startsWith('@');
+                                
+                                return (
+                                <div key={comment.id} className={`flex gap-3 relative ${isReply ? 'ml-8 lg:ml-12 mt-1' : 'mt-4'}`}>
+                                    {isReply && (
+                                        <div className="absolute -left-6 top-0 w-6 h-5 border-b-2 border-l-2 border-slate-300 dark:border-slate-700 rounded-bl-xl z-0" />
+                                    )}
+                                    <div className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 relative z-10">
                                         {comment.author?.avatar_url ? (
                                             <Image src={comment.author.avatar_url} alt="avatar" fill className="object-cover" />
                                         ) : (
                                             <User className="w-4 h-4 absolute inset-0 m-auto text-slate-400" />
                                         )}
                                     </div>
-                                    <div className="flex-1">
-                                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-3 shadow-sm inline-block max-w-full">
+                                    <div className="flex-1 relative z-10">
+                                        <div className={`bg-white dark:bg-slate-800 border ${isReply ? 'border-indigo-100 dark:border-indigo-900/50' : 'border-slate-200 dark:border-slate-700/80'} rounded-2xl p-3 shadow-sm inline-block max-w-[95%]`}>
                                             <div className="flex items-center gap-1.5 mb-1">
                                                 <span className="font-bold text-[13px] text-slate-900 dark:text-slate-100">{comment.author?.name || 'Anonymous'}</span>
                                                 {comment.author?.isTeacher && (
@@ -241,7 +251,7 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                                         </div>
                                     </div>
                                 </div>
-                            ))
+                            )})
                         )}
                     </div>
                 </div>

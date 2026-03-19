@@ -61,10 +61,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
         if (error) throw error;
 
-        // Increment post comments count
+        // Increment post comments count and get post author
         const { data: post } = await supabaseAdmin
             .from('posts')
-            .select('comments_count')
+            .select('comments_count, author_id')
             .eq('id', params.id)
             .single();
 
@@ -74,6 +74,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             .eq('id', params.id);
 
         const meta = user.user_metadata || {};
+        const authorName = meta.fullName || meta.name || user.email?.split('@')[0];
+
+        // Send Notification to Post Author
+        if (post?.author_id && post.author_id !== user.id) {
+            await supabaseAdmin.from('notifications').insert({
+                user_id: post.author_id,
+                title: 'New Comment on your Post 💬',
+                message: `${authorName} commented: "${content.substring(0, 40)}${content.length > 40 ? '...' : ''}"`,
+                type: 'social_comment',
+                link: '/posts'
+            });
+        }
+
         return NextResponse.json({
             id: comment.id,
             content: comment.content,
