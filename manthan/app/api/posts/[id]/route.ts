@@ -20,6 +20,58 @@ function getStoragePathFromPublicUrl(imageUrl: string): string | null {
     }
 }
 
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+    try {
+        const authHeader = req.headers.get('Authorization');
+        let currentUserId = null;
+        if (authHeader) {
+            const token = authHeader.replace('Bearer ', '');
+            const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+            currentUserId = user?.id || null;
+        }
+
+        const { data: post, error } = await supabaseAdmin
+            .from('posts')
+            .select(`
+                *,
+                post_likes ( user_id )
+            `)
+            .eq('id', params.id)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+
+        // Enrichment
+        const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('*')
+            .eq('id', post.author_id)
+            .maybeSingle();
+
+        const enriched = {
+            id: post.id,
+            content: post.content,
+            image_url: post.image_url,
+            likes_count: post.likes_count || 0,
+            comments_count: post.comments_count || 0,
+            created_at: post.created_at,
+            is_liked_by_me: currentUserId ? (post.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
+            author: {
+                id: post.author_id,
+                name: profile?.full_name || 'Unknown',
+                avatar_url: profile?.avatar_url || null,
+                school: profile?.school || null,
+                isTeacher: profile?.is_teacher || false,
+            }
+        };
+
+        return NextResponse.json(enriched);
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}
+
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
     try {
         const authHeader = req.headers.get('Authorization');

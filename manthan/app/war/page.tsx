@@ -188,7 +188,7 @@ export default function WarLobbyDynamic() {
              <Swords className="w-20 h-20 text-red-500 animate-pulse" />
           </motion.div>
           
-          <h1 className="text-6xl sm:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-red-500 tracking-tighter drop-shadow-2xl mb-4 text-center">
+          <h1 className="text-4xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-red-500 tracking-tighter drop-shadow-2xl mb-4 text-center px-4">
             {warSuccessData.status === 'searching' ? 'INITIATING WAR' : 'WAR DECLARED'}
           </h1>
           
@@ -211,28 +211,28 @@ export default function WarLobbyDynamic() {
       </div>
     )}
 
-    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-24 pt-4 sm:pt-8 md:pt-12 relative overflow-hidden">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-24 pt-4 sm:pt-8 md:pt-10 relative overflow-hidden">
       <div className="pointer-events-none absolute -top-32 -left-20 w-[34rem] h-[34rem] rounded-full bg-indigo-400/10 dark:bg-indigo-500/10 blur-3xl mix-blend-overlay" />
       <div className="pointer-events-none absolute top-1/3 -right-24 w-[30rem] h-[30rem] rounded-full bg-red-400/10 dark:bg-red-500/10 blur-3xl mix-blend-overlay" />
       
       {/* Header Content */}
-      <div className="max-w-7xl mx-auto px-6 mb-8 relative z-10">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-8 relative z-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-red-600 dark:from-red-500 via-orange-600 dark:via-orange-500 to-amber-500 dark:to-amber-400 bg-clip-text text-transparent">
               WAR ROOM
             </h1>
-            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 mt-1">
-              <span className="font-bold text-slate-900 dark:text-white">{schoolData?.name}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-700" />
-              <span>{schoolData?.points} Global Power</span>
+            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider font-bold">
+              <span className="text-slate-900 dark:text-white">{schoolData?.name}</span>
+              <span className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-700" />
+              <span>{schoolData?.points} POWER</span>
             </div>
           </div>
-
+ 
           <button
             disabled={!squad || !isGeneral || declaringWar || wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0}
             onClick={handleDeclareWar}
-            className="w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/30 hover:bg-red-600 hover:text-white dark:hover:bg-red-500 px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group shadow-sm dark:shadow-red-950/30"
+            className="w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group shadow-xl shadow-red-600/20 active:scale-95"
             title={
               !squad ? 'No squad found for your school' :
               !isGeneral ? 'Only the General can declare war' :
@@ -241,7 +241,7 @@ export default function WarLobbyDynamic() {
             }
           >
             <Target className="w-4 h-4 group-hover:animate-pulse" />
-            {declaringWar ? 'Finding rival...' : 'Declare War'}
+            {declaringWar ? 'Searching...' : 'Declare War'}
           </button>
         </div>
       </div>
@@ -366,58 +366,45 @@ export default function WarLobbyDynamic() {
                 </div>
               ) : (
                 wars.map(war => (
-                  <div key={war.id} className={`bg-white dark:bg-slate-900/90 border rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6 transition-colors shadow-lg ${war.status === 'searching' ? 'border-indigo-200 dark:border-indigo-500/50 hover:border-indigo-400 shadow-indigo-500/10' : war.status === 'preparation' ? 'border-amber-200 dark:border-amber-500/50 hover:border-amber-400 shadow-amber-500/10' : war.status === 'calculating' ? 'border-fuchsia-200 dark:border-fuchsia-500/50 hover:border-fuchsia-400 shadow-fuchsia-500/10' : 'border-red-200 dark:border-red-500/40 hover:border-red-400 shadow-red-500/10'}`}>
-                    <div className="flex items-center gap-6">
-                      <div className="text-center flex flex-col items-center">
-                        <div className={`text-[10px] font-black uppercase tracking-widest mb-2 px-2 py-0.5 rounded inline-block ${war.status === 'searching' ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20' : war.status === 'preparation' ? 'text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/20' : war.status === 'calculating' ? 'text-fuchsia-600 dark:text-fuchsia-400 bg-fuchsia-50 dark:bg-fuchsia-500/20' : 'text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/20'}`}>
-                          {war.status === 'searching' ? 'MATCHMAKING' : war.isChallenger ? 'CHALLENGER' : 'DEFENDER'}
+                  <div key={war.id} className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-6 transition-colors shadow-lg ${war.status === 'searching' ? 'border-indigo-200 dark:border-indigo-500/50 hover:border-indigo-400 shadow-indigo-500/10' : war.status === 'preparation' ? 'border-amber-200 dark:border-amber-500/50 hover:border-amber-400 shadow-amber-500/10' : war.status === 'calculating' ? 'border-fuchsia-200 dark:border-fuchsia-500/50 hover:border-fuchsia-400 shadow-fuchsia-500/10' : 'border-red-200 dark:border-red-500/40 hover:border-red-400 shadow-red-500/10'}`}>
+                    <div className="flex items-center gap-4 sm:gap-6 w-full min-w-0">
+                      <div className="text-center flex flex-col items-center flex-shrink-0">
+                        <div className={`text-[9px] font-black uppercase tracking-widest mb-1.5 px-2 py-0.5 rounded inline-block ${war.status === 'searching' ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20' : war.status === 'preparation' ? 'text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/20' : war.status === 'calculating' ? 'text-fuchsia-600 dark:text-fuchsia-400 bg-fuchsia-50 dark:bg-fuchsia-500/20' : 'text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/20'}`}>
+                          {war.status === 'searching' ? 'QUEUE' : war.isChallenger ? 'INITIATOR' : 'TARGET'}
                         </div>
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border bg-slate-50 dark:bg-slate-800 ${war.status === 'searching' ? 'border-indigo-200 dark:border-indigo-500/30 text-indigo-500 dark:text-indigo-400 animate-pulse' : war.status === 'calculating' ? 'border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-500 dark:text-fuchsia-400 animate-pulse' : 'border-red-200 dark:border-red-500/30 text-red-500'}`}>
-                           {war.status === 'searching' ? <Search className="w-6 h-6 animate-spin-slow" /> : war.status === 'calculating' ? <Zap className="w-6 h-6 animate-pulse" /> : <ShieldAlert className="w-6 h-6" />}
+                        <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center border bg-slate-50 dark:bg-slate-800 ${war.status === 'searching' ? 'border-indigo-200 dark:border-indigo-500/30 text-indigo-500 dark:text-indigo-400 animate-pulse' : war.status === 'calculating' ? 'border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-500 dark:text-fuchsia-400 animate-pulse' : 'border-red-200 dark:border-red-500/30 text-red-500 shadow-inner'}`}>
+                           {war.status === 'searching' ? <Search className="w-5 h-5 animate-spin-slow" /> : war.status === 'calculating' ? <Zap className="w-5 h-5 animate-pulse" /> : <ShieldAlert className="w-5 h-5" />}
                         </div>
                       </div>
-                      <div>
-                        <h4 className="text-xl font-black text-slate-900 dark:text-white">{war.opponent || 'Searching for Match...'}</h4>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2">
-                           <span className={`text-[10px] uppercase tracking-widest font-black px-2 py-1 rounded w-fit ${war.status === 'searching' ? 'bg-indigo-500/20 text-indigo-400' : war.status === 'preparation' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : war.status === 'calculating' ? 'bg-fuchsia-500/20 text-fuchsia-400 animate-pulse' : 'bg-red-500/20 text-red-500'}`}>
-                             {war.status === 'searching' ? 'IN QUEUE' : war.status === 'preparation' ? 'PREPARING' : war.status === 'calculating' ? 'CALCULATING RESULT' : 'COMBAT LIVE'}
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white truncate">{war.opponent || 'Finding Rival...'}</h4>
+                        <div className="flex items-center gap-3 mt-1.5">
+                           <span className={`text-[9px] uppercase tracking-widest font-black px-2 py-0.5 rounded w-fit ${war.status === 'searching' ? 'bg-indigo-500/20 text-indigo-400' : war.status === 'preparation' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : war.status === 'calculating' ? 'bg-fuchsia-500/20 text-fuchsia-400 animate-pulse' : 'bg-red-500/20 text-red-500'}`}>
+                             {war.status === 'searching' ? 'MATCHMAKING' : war.status === 'preparation' ? 'STRATEGY' : war.status === 'calculating' ? 'CALCULATING' : 'COMBAT'}
                            </span>
-                           <span className="text-sm font-mono font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                           <span className="text-[10px] sm:text-xs font-mono font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                              ⏱ {war.timeLeft}
                            </span>
                         </div>
                       </div>
                     </div>
-
-                    <div className="flex flex-col sm:flex-row items-center gap-4 sm:border-l sm:border-slate-800 sm:pl-6 w-full sm:w-auto mt-4 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-800">
-                      {war.status !== 'searching' && (
-                          <div className="text-center sm:text-right hidden sm:block">
-                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1 shadow-sm">War Format</div>
-                            <div className="text-lg font-mono font-black text-white">{war.war_format} v {war.war_format}</div>
-                          </div>
-                      )}
-                      
-                      {war.status === 'searching' && (
-                        <div className="text-center flex flex-col items-center justify-center px-4">
-                           <div className="text-xs text-indigo-400 font-bold max-w-[150px]">Ghost protocol activates after 10m</div>
-                        </div>
-                      )}
-
+ 
+                    <div className="w-full sm:w-auto flex flex-col items-center gap-3 sm:border-l sm:border-slate-800 sm:pl-6 mt-2 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-white/5">
                       {war.status === 'preparation' && (
-                        <Link href={`/war-prep/${war.id}`} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-500 text-white px-6 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-transform transform hover:scale-105 active:scale-95 shadow-xl shadow-amber-900/40">
-                          <Target className="w-4 h-4" /> Pick Questions
+                        <Link href={`/war-prep/${war.id}`} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-500 text-white px-5 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-amber-900/40">
+                          <Target className="w-3.5 h-3.5" /> Pick Questions
                         </Link>
                       )}
-
+ 
                       {war.status === 'active' && (
-                        <Link href={`/war-battle/${war.id}`} className="w-full sm:w-auto bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-transform transform hover:scale-105 active:scale-95 shadow-xl shadow-red-900/50">
-                          <Swords className="w-4 h-4" /> Enter Battlefield
+                        <Link href={`/war-battle/${war.id}`} className="w-full sm:w-auto bg-red-600 hover:bg-red-500 text-white px-5 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-red-900/50">
+                          <Swords className="w-3.5 h-3.5" /> Battle Area
                         </Link>
                       )}
-
+ 
                       {war.status === 'calculating' && (
-                        <div className="w-full sm:w-auto bg-slate-100 dark:bg-slate-800 text-fuchsia-600 dark:text-fuchsia-400 px-6 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 border border-fuchsia-200 dark:border-fuchsia-500/30">
-                          <Zap className="w-4 h-4 animate-pulse" /> Finalizing Submissions...
+                        <div className="w-full sm:w-auto bg-slate-100 dark:bg-slate-800 text-fuchsia-600 dark:text-fuchsia-400 px-5 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 border border-fuchsia-200 dark:border-fuchsia-500/30">
+                          <Zap className="w-3.5 h-3.5 animate-pulse" /> Finalizing...
                         </div>
                       )}
                     </div>

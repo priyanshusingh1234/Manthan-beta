@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search, MessageSquare } from 'lucide-react';
+import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search, MessageSquare, Compass } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 import { supabase } from '@/lib/supabaseClient';
@@ -165,10 +165,10 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
   return (
     <>
       {/* Professional Mobile-Only Header */}
-      <header className="md:hidden sticky top-0 z-[60] bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800/80 px-5 pt-4 pb-3">
+      <header className="md:hidden sticky top-0 z-[60] bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/80 px-4 pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-[28px] font-extrabold text-slate-900 dark:text-white tracking-tight" style={{ fontFamily: "-apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif", letterSpacing: "-0.5px" }}>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
               {pageInfo ? pageInfo.title : 'Dheeyudha'}
             </h1>
           </div>
@@ -204,29 +204,27 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
 
         {/* Reddit-like Horizontal Links Slider */}
         {user && (
-          <div className="mt-3 overflow-x-auto scrollbar-hide flex items-center gap-2 pb-1 snap-x">
+          <div className="mt-3 overflow-x-auto scrollbar-hide flex items-center gap-1.5 pb-1 snap-x">
             {[
+              { label: 'Feed', href: '/feed', icon: Compass },
               { label: 'Community', href: '/posts', icon: MessageSquare },
-              { label: 'Search', href: '/search', icon: Search },
-              { label: 'Top Schools', href: '/top-schools', icon: Swords },
-              { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
-              { label: 'Checker Feed', href: '/checker-feed', icon: Shield },
-              { label: 'Solved', href: '/solved', icon: CheckSquare },
+              { label: 'Ranks', href: '/leaderboard', icon: Trophy },
+              { label: 'Faction', href: '/my-school', icon: Shield },
               { label: 'Docs', href: '/docs', icon: HelpCircle },
-              { label: 'About', href: '/about', icon: Info },
+              { label: 'Support', href: '/contact', icon: Mail },
             ].map((nav) => {
-              const isActive = pathname?.startsWith(nav.href);
+              const active = pathname === nav.href;
               return (
                 <Link
                   key={nav.label}
                   href={nav.href}
-                  className={`flex-shrink-0 snap-start flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-colors ${
-                    isActive 
-                      ? 'bg-blue-600 dark:bg-blue-600 border-blue-600 dark:border-blue-500 text-white shadow-sm' 
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  className={`flex-shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${
+                    active 
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-md' 
+                      : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
                   }`}
                 >
-                  <nav.icon className="w-3.5 h-3.5" strokeWidth={isActive ? 2.5 : 2} />
+                  <nav.icon className="w-3.5 h-3.5" />
                   <span>{nav.label}</span>
                 </Link>
               )

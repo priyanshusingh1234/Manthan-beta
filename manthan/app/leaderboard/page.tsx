@@ -56,47 +56,41 @@ export default async function LeaderboardPage() {
 
         {/* Podium Display (Top 3) */}
         {students.length >= 3 && (
-          <div className="flex justify-center items-end gap-2 sm:gap-6 mb-10 h-60">
+          <div className="flex justify-center items-end gap-2 sm:gap-6 mb-8 h-48 sm:h-60 mt-4 sm:mt-0">
             {/* 2nd Place */}
             <div className="relative flex flex-col items-center w-[30%] animate-slideUp" style={{ animationDelay: '100ms' }}>
-              <div className="relative mb-3 group">
-                <img src={students[1].avatar || `https://ui-avatars.com/api/?name=${students[1].name}&background=e2e8f0&color=475569`} alt={students[1].name} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-slate-200 shadow-md relative z-10 bg-white" />
-                <div className="absolute -bottom-2 right-0 bg-slate-200 text-slate-700 w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-xs z-20">2</div>
+              <div className="relative mb-2 group">
+                <img src={students[1].avatar || `https://ui-avatars.com/api/?name=${students[1].name}&background=e2e8f0&color=475569`} alt={students[1].name} className="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-md relative z-10 bg-white" />
+                <div className="absolute -bottom-1.5 right-0 bg-slate-200 text-slate-700 w-5 h-5 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-[10px] z-20">2</div>
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl w-full py-3 px-2 flex flex-col items-center border-t-[3px] border-t-slate-300">
-                <span className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-xs sm:text-sm truncate">{students[1].name}</span>
-                <span className="text-indigo-600 font-bold text-xs mt-1">{students[1].totalPoints.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">pts</span></span>
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-xl w-full py-2 px-1 flex flex-col items-center">
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-[10px] sm:text-xs truncate">{students[1].name}</span>
+                <span className="text-indigo-600 font-bold text-[10px] sm:text-xs mt-0.5">{students[1].totalPoints.toLocaleString()}</span>
               </div>
             </div>
 
             {/* 1st Place */}
-            <div className="relative flex flex-col items-center w-[35%] z-10 -translate-y-6 animate-slideUp">
-              <div className="absolute -top-8 text-amber-500 animate-pulse hidden sm:block">
-                 <Trophy className="w-6 h-6" />
-              </div>
-              <div className="relative mb-3 group">
+            <div className="relative flex flex-col items-center w-[35%] z-10 -translate-y-4 sm:-translate-y-6 animate-slideUp">
+              <div className="relative mb-2 group">
                 <div className="absolute -inset-2 rounded-full bg-amber-400/20 animate-pulse blur-md"></div>
-                <img src={students[0].avatar || `https://ui-avatars.com/api/?name=${students[0].name}&background=fef3c7&color=d97706`} alt={students[0].name} className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.3)] relative z-10 bg-white" />
-                <div className="absolute -bottom-2 right-1 bg-gradient-to-br from-amber-400 to-amber-600 text-white w-7 h-7 sm:w-8 sm:h-8 rounded-full border-[2px] border-white flex items-center justify-center font-black shadow-md z-20">1</div>
+                <img src={students[0].avatar || `https://ui-avatars.com/api/?name=${students[0].name}&background=fef3c7&color=d97706`} alt={students[0].name} className="w-18 h-18 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.2)] relative z-10 bg-white" />
+                <div className="absolute -bottom-1.5 right-1 bg-gradient-to-br from-amber-400 to-amber-600 text-white w-6 h-6 sm:w-8 sm:h-8 rounded-full border-[2px] border-white flex items-center justify-center font-black shadow-md text-xs z-20">1</div>
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 shadow-md shadow-amber-500/10 rounded-2xl w-full py-4 px-2 flex flex-col items-center border-t-[4px] border-t-amber-400">
-                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-center w-full text-sm sm:text-base truncate">{students[0].name}</span>
-                <div className="flex items-center gap-1 mt-1 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-md border border-amber-100 dark:border-amber-900/50">
-                   <Zap className="w-3" fill="currentColor" className="text-amber-500" />
-                   <span className="text-amber-700 dark:text-amber-400 font-black text-xs sm:text-sm">{students[0].totalPoints.toLocaleString()}</span>
-                </div>
+              <div className="bg-white dark:bg-slate-900 border border-amber-100 dark:border-amber-900 shadow-md rounded-xl w-full py-3 px-1 flex flex-col items-center border-t-2 border-amber-400">
+                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-center w-full text-xs sm:text-sm truncate">{students[0].name}</span>
+                <span className="text-amber-600 dark:text-amber-400 font-black text-xs">{students[0].totalPoints.toLocaleString()}</span>
               </div>
             </div>
 
             {/* 3rd Place */}
             <div className="relative flex flex-col items-center w-[30%] animate-slideUp" style={{ animationDelay: '200ms' }}>
-              <div className="relative mb-3 group">
-                <img src={students[2].avatar || `https://ui-avatars.com/api/?name=${students[2].name}&background=ffedd5&color=ea580c`} alt={students[2].name} className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-orange-300 shadow-md relative z-10 bg-white" />
-                <div className="absolute -bottom-2 right-0 bg-orange-300 text-orange-800 w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-xs z-20">3</div>
+              <div className="relative mb-2 group">
+                <img src={students[2].avatar || `https://ui-avatars.com/api/?name=${students[2].name}&background=ffedd5&color=ea580c`} alt={students[2].name} className="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-md relative z-10 bg-white" />
+                <div className="absolute -bottom-1.5 right-0 bg-orange-200 text-orange-800 w-5 h-5 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-[10px] z-20">3</div>
               </div>
-              <div className="bg-white dark:bg-slate-900 border border-orange-200 dark:border-orange-900/50 shadow-sm rounded-2xl w-full py-3 px-2 flex flex-col items-center border-t-[3px] border-t-orange-400">
-                <span className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-xs sm:text-sm truncate">{students[2].name}</span>
-                <span className="text-indigo-600 font-bold text-xs mt-1">{students[2].totalPoints.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">pts</span></span>
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-xl w-full py-2 px-1 flex flex-col items-center">
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-[10px] sm:text-xs truncate">{students[2].name}</span>
+                <span className="text-indigo-600 font-bold text-[10px] sm:text-xs mt-0.5">{students[2].totalPoints.toLocaleString()}</span>
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { getProfilesMap, upsertProfile } from "@/lib/profiles";
 import { NextRequest, NextResponse } from "next/server";
+import { createNotification } from "@/lib/createNotification";
 
 export const dynamic = 'force-dynamic';
 
@@ -85,12 +86,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const notifyUserId = replying_to_user_id || post?.author_id;
 
         if (notifyUserId && notifyUserId !== user.id) {
-            await supabaseAdmin.from('notifications').insert({
-                user_id: notifyUserId,
-                title: replying_to_user_id ? 'New Reply on your Comment 💬' : 'New Comment on your Post 💬',
-                message: `${authorName} replied: "${content.substring(0, 40)}${content.length > 40 ? '...' : ''}"`,
+            await createNotification({
+                userId: notifyUserId,
                 type: 'social_comment',
-                link: '/posts'
+                title: replying_to_user_id ? 'New Reply on your Comment 💬' : 'New Comment on your Post 💬',
+                body: `${authorName} wrote: "${content.substring(0, 40)}${content.length > 40 ? '...' : ''}"`,
+                href: `/posts/${params.id}`,
+                actorId: user.id,
+                actorName: authorName,
+                actorAvatar: meta.avatar_url,
             });
         }
 

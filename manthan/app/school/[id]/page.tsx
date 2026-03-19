@@ -158,45 +158,45 @@ export default function PublicSchoolPage() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
                         
                         {/* School Identity */}
-                        <div className="flex items-center gap-6">
-                            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2rem] flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20 text-white border-4 border-white dark:border-slate-800">
-                                {renderAvatarIcon(school.avatarUrl, "w-12 h-12 sm:w-16 sm:h-16 opacity-90")}
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-7 text-center sm:text-left">
+                            <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center flex-shrink-0 shadow-xl shadow-indigo-500/20 text-white border-4 border-white dark:border-slate-800 transform rotate-2 sm:rotate-0">
+                                {renderAvatarIcon(school.avatarUrl, "w-10 h-10 sm:w-14 sm:h-14 opacity-90")}
                             </div>
-                            <div>
-                                <h1 className="text-3xl sm:text-5xl font-black mb-2 tracking-tight">{school.name}</h1>
-                                <p className="text-slate-500 dark:text-slate-400 font-medium flex-wrap flex gap-4 items-center mb-3">
-                                    <span className="flex items-center gap-1.5"><Globe className="w-4 h-4" /> Global Rank #{school.rank}</span>
-                                    <span className="flex items-center gap-1.5"><Users className="w-4 h-4" /> {school.memberCount} Soldiers</span>
-                                    <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> Founded {formattedDate}</span>
-                                </p>
-                                <p className="text-slate-600 dark:text-slate-300 max-w-xl text-sm leading-relaxed hidden sm:block">
-                                    {school.description || `A premier faction on Dheeyudha dedicated to commanding intelligence and dominating the war room. They currently rank #${school.rank} in the world with a battle-hardened squad of ${school.memberCount} members.`}
+                            <div className="min-w-0 flex-1">
+                                <h1 className="text-3xl sm:text-4xl font-black mb-2 tracking-tight truncate">{school.name}</h1>
+                                <div className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold flex flex-wrap justify-center sm:justify-start gap-x-4 gap-y-2 mb-4 uppercase tracking-wider">
+                                    <span className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> Rank #{school.rank}</span>
+                                    <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {school.memberCount} Squad</span>
+                                    <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Est. {new Date(school.createdAt).getFullYear()}</span>
+                                </div>
+                                <p className="text-slate-600 dark:text-slate-300 max-w-xl text-sm leading-relaxed hidden sm:line-clamp-3">
+                                    {school.description || `A premier faction on Dheeyudha dedicated to commanding intelligence and dominating the war room.`}
                                 </p>
                             </div>
                         </div>
 
                         {/* Call to Action Column */}
-                        <div className="flex flex-col items-start md:items-end gap-3 shrink-0">
-                            <div className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 font-black px-6 py-3 rounded-2xl flex items-center gap-3 text-2xl shadow-sm mb-2 w-full justify-center md:w-auto">
-                                <Award className="w-6 h-6" /> {school.points.toLocaleString()} PTS
+                        <div className="flex flex-col items-center sm:items-end gap-3 shrink-0 w-full sm:w-auto">
+                            <div className="bg-indigo-600 text-white font-black px-6 py-2.5 rounded-2xl flex items-center gap-2.5 text-xl shadow-lg shadow-indigo-600/20 w-full sm:w-auto justify-center">
+                                <Award className="w-5 h-5 text-amber-400" /> {school.points.toLocaleString()}
                             </div>
                             
                             {isMySchool ? (
-                                <Link href="/my-school" className="w-full text-center bg-slate-900 border border-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:border-white font-bold px-6 py-3.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
-                                    <Shield className="w-5 h-5" /> Enter Base
+                                <Link href="/my-school" className="w-full sm:w-auto text-center bg-slate-900 border border-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:border-white font-bold px-6 py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95">
+                                    <Shield className="w-4 h-4" /> View Base
                                 </Link>
                             ) : (
                                 <button 
                                     onClick={handleJoinRequest}
                                     disabled={joinStatus !== 'idle'}
-                                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black px-8 py-3.5 rounded-xl shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                                    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black px-8 py-3 rounded-xl shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-60 active:scale-95"
                                 >
-                                    {joinStatus === 'loading' ? 'Sending Request...' : 
-                                     joinStatus === 'requested' ? <><CheckCircle className="w-5 h-5" /> Request Sent</> : 
-                                     <><Handshake className="w-5 h-5" /> Request to Join</>}
+                                    {joinStatus === 'loading' ? 'Sending...' : 
+                                     joinStatus === 'requested' ? <><CheckCircle className="w-4 h-4" /> Sent</> : 
+                                     <><Swords className="w-4 h-4" /> Join Faction</>}
                                 </button>
                             )}
-                            {joinError && <p className="text-red-500 text-xs font-bold w-full text-center mt-1">{joinError}</p>}
+                            {joinError && <p className="text-red-500 text-[10px] font-bold w-full text-center mt-1 bg-red-500/10 px-2 py-1 rounded">{joinError}</p>}
                         </div>
 
                     </div>
@@ -294,17 +294,17 @@ export default function PublicSchoolPage() {
                                                     </div>
                                                 </div>
                                                 
-                                                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1.5 rounded-lg w-full sm:w-auto mt-2 sm:mt-0 shadow-sm shrink-0">
-                                                    <div className="px-3 text-center">
-                                                        <div className="text-[10px] text-slate-400 uppercase font-bold text-center w-full">Us</div>
-                                                        <div className={`font-mono font-black ${war.status === 'completed' && war.winner_school_id === school.id ? 'text-emerald-600 dark:text-emerald-400' : ''}`}>
+                                                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-1 rounded-xl w-full sm:w-auto mt-2 sm:mt-0 shadow-inner flex-shrink-0">
+                                                    <div className="flex-1 sm:px-3 text-center py-1">
+                                                        <div className="text-[8px] text-slate-400 uppercase font-black mb-0.5">Faction</div>
+                                                        <div className={`font-mono text-xs sm:text-sm font-black ${war.status === 'completed' && war.winner_school_id === school.id ? 'text-emerald-500' : 'text-slate-500 dark:text-slate-400'}`}>
                                                             {isChallenger ? war.challenger_score : war.defender_score}
                                                         </div>
                                                     </div>
-                                                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-800"></div>
-                                                    <div className="px-3 text-center">
-                                                        <div className="text-[10px] text-slate-400 uppercase font-bold text-center w-full">Them</div>
-                                                        <div className={`font-mono font-black ${war.status === 'completed' && war.winner_school_id && war.winner_school_id !== school.id ? 'text-red-500 dark:text-red-400' : ''}`}>
+                                                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-800 self-center"></div>
+                                                    <div className="flex-1 sm:px-3 text-center py-1">
+                                                        <div className="text-[8px] text-slate-400 uppercase font-black mb-0.5">Opponent</div>
+                                                        <div className={`font-mono text-xs sm:text-sm font-black ${war.status === 'completed' && war.winner_school_id && war.winner_school_id !== school.id ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>
                                                             {!isChallenger ? war.challenger_score : war.defender_score}
                                                         </div>
                                                     </div>

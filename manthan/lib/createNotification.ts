@@ -17,7 +17,8 @@ export type NotificationType =
     | 'ai_confirmed_wrong'
     | 'points_earned'
     | 'new_question'
-    | 'coop_challenge';
+    | 'coop_challenge'
+    | 'social_comment';
 
 interface CreateNotificationParams {
     userId: string;          // who receives the notification

@@ -8,8 +8,8 @@ export default function CreateQuestionPage() {
   return (
     <main className="max-w-4xl mx-auto p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-extrabold">Create question</h1>
-        <p className="text-sm text-slate-500 mt-1">Only verified teachers can create questions.</p>
+        <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Create question</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Only verified teachers can create questions.</p>
       </div>
 
       <CreateQuestionForm />

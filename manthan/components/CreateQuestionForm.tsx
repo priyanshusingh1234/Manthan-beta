@@ -324,34 +324,47 @@ export default function CreateQuestionForm() {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6">
-      <h2 className="text-lg font-semibold mb-4">Create question</h2>
-      {message && <div className="mb-4 text-sm text-slate-600">{message}</div>}
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm p-6 border border-slate-100 dark:border-slate-800">
+      <h2 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Create question</h2>
+      {message && <div className="mb-4 text-sm text-slate-600 dark:text-slate-400 font-medium">{message}</div>}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-slate-700">Title <span className="text-red-500">*</span></label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2" />
-          {errors.title && <div className="text-xs text-red-600 mt-1">{errors.title}</div>}
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Title <span className="text-red-500">*</span></label>
+          <input 
+            value={title} 
+            onChange={(e) => setTitle(e.target.value)} 
+            className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" 
+            placeholder="Enter question title..."
+          />
+          {errors.title && <div className="text-xs text-red-600 mt-1.5 font-medium">{errors.title}</div>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700">Subject <span className="text-red-500">*</span></label>
-          <select value={subject} onChange={(e) => setSubject(e.target.value)} className="mt-1 block w-72 rounded-lg border border-slate-200 px-3 py-2">
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Subject <span className="text-red-500">*</span></label>
+          <select 
+            value={subject} 
+            onChange={(e) => setSubject(e.target.value)} 
+            className="block w-full sm:w-72 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
+          >
             <option value="">Select subject</option>
             <option value="Mathematics">Mathematics</option>
             <option value="Science">Science</option>
             <option value="English">English</option>
             <option value="SST">SST</option>
           </select>
-          {errors.subject && <div className="text-xs text-red-600 mt-1">{errors.subject}</div>}
+          {errors.subject && <div className="text-xs text-red-600 mt-1.5 font-medium">{errors.subject}</div>}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {subject !== 'English' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700">Class / Grade <span className="text-red-500">*</span></label>
-              <select value={classGrade} onChange={(e) => setClassGrade(e.target.value)} className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Class / Grade <span className="text-red-500">*</span></label>
+              <select 
+                value={classGrade} 
+                onChange={(e) => setClassGrade(e.target.value)} 
+                className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
+              >
                 <option value="">Select class</option>
                 <option value="6">6</option>
                 <option value="7">7</option>
@@ -361,27 +374,44 @@ export default function CreateQuestionForm() {
                 <option value="11">11</option>
                 <option value="12">12</option>
               </select>
-              {errors.classGrade && <div className="text-xs text-red-600 mt-1">{errors.classGrade}</div>}
+              {errors.classGrade && <div className="text-xs text-red-600 mt-1.5 font-medium">{errors.classGrade}</div>}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700">Points <span className="text-red-500">*</span></label>
-            <input type="number" value={points} onChange={(e) => setPoints(Number(e.target.value))} min={1} max={25} className="mt-1 block w-32 rounded-lg border border-slate-200 px-3 py-2" />
-            <div className="text-xs text-slate-400 mt-1">Maximum 25 points</div>
-            {errors.points && <div className="text-xs text-red-600 mt-1">{errors.points}</div>}
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Points <span className="text-red-500">*</span></label>
+            <input 
+              type="number" 
+              value={points} 
+              onChange={(e) => setPoints(Number(e.target.value))} 
+              min={1} 
+              max={25} 
+              className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" 
+            />
+            <div className="text-[10px] text-slate-400 mt-1.5 font-medium uppercase tracking-wider">Maximum 25 points</div>
+            {errors.points && <div className="text-xs text-red-600 mt-1 font-medium">{errors.points}</div>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700">Given time (minutes) <span className="text-red-500">*</span></label>
-            <input type="number" value={timeLimit} onChange={(e) => setTimeLimit(Number(e.target.value))} min={1} className="mt-1 block w-32 rounded-lg border border-slate-200 px-3 py-2" />
-            {errors.timeLimit && <div className="text-xs text-red-600 mt-1">{errors.timeLimit}</div>}
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Given time (mins) <span className="text-red-500">*</span></label>
+            <input 
+              type="number" 
+              value={timeLimit} 
+              onChange={(e) => setTimeLimit(Number(e.target.value))} 
+              min={1} 
+              className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" 
+            />
+            {errors.timeLimit && <div className="text-xs text-red-600 mt-1.5 font-medium">{errors.timeLimit}</div>}
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700">Difficulty (optional)</label>
-          <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)} className="mt-1 block w-40 rounded-lg border border-slate-200 px-3 py-2">
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Difficulty (optional)</label>
+          <select 
+            value={difficulty} 
+            onChange={(e) => setDifficulty(e.target.value as Difficulty)} 
+            className="block w-40 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
+          >
             <option value="">(none)</option>
             <option value="easy">Easy</option>
             <option value="moderate">Moderate</option>
@@ -389,81 +419,130 @@ export default function CreateQuestionForm() {
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-700">Options (optional)</label>
-          <p className="text-xs text-slate-400">If you add options, provide at least two. Leave empty for open-ended questions.</p>
-          <div className="mt-2 space-y-2">
+        <div className="pt-2">
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Options (optional)</label>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3 font-medium">If you add options, provide at least two. Leave empty for open-ended questions.</p>
+          <div className="space-y-3">
             {options.map((opt, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <label className="inline-flex items-center gap-2">
-                  <input type="radio" name="correct" checked={correctOption === i} onChange={() => setCorrectOption(i)} className="form-radio text-amber-500" />
+              <div key={i} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-200">
+                <label className="inline-flex items-center group cursor-pointer">
+                  <input 
+                    type="radio" 
+                    name="correct" 
+                    checked={correctOption === i} 
+                    onChange={() => setCorrectOption(i)} 
+                    className="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-600 text-amber-500 focus:ring-amber-500 bg-white dark:bg-slate-800" 
+                  />
                 </label>
-                <input value={opt} onChange={(e) => handleOptionChange(i, e.target.value)} className="flex-1 rounded-lg border border-slate-200 px-3 py-2" placeholder={`Option ${i + 1}`} />
-                <button type="button" onClick={() => handleRemoveOption(i)} className="px-2 py-1 rounded bg-red-50 text-red-600 text-sm">Remove</button>
+                <input 
+                  value={opt} 
+                  onChange={(e) => handleOptionChange(i, e.target.value)} 
+                  className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" 
+                  placeholder={`Option ${i + 1}`} 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => handleRemoveOption(i)} 
+                  className="p-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
               </div>
             ))}
           </div>
-          <div className="mt-2 flex items-center gap-2">
-            <button type="button" onClick={handleAddOption} disabled={options.length >= 6} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm hover:bg-slate-200">
+          <div className="mt-4 flex items-center gap-3">
+            <button 
+              type="button" 
+              onClick={handleAddOption} 
+              disabled={options.length >= 6} 
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+            >
               Add option
             </button>
-            <div className="text-xs text-slate-400">Up to 6 options</div>
+            <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Up to 6 options</div>
           </div>
-          {errors.options && <div className="text-xs text-red-600 mt-1">{errors.options}</div>}
+          {errors.options && <div className="text-xs text-red-600 mt-2 font-medium">{errors.options}</div>}
         </div>
 
         {/* Model Answer Upload — required for > 15 point questions */}
         {points > 15 && (
-          <div className="p-4 rounded-xl border-2 border-violet-200 bg-violet-50/50 space-y-2">
-            <label className="block text-sm font-bold text-violet-800">
+          <div className="p-5 rounded-2xl border-2 border-violet-100 dark:border-violet-900/30 bg-violet-50/30 dark:bg-violet-900/10 space-y-3">
+            <label className="block text-sm font-bold text-violet-800 dark:text-violet-400">
               📝 Model Answer <span className="text-red-500">*</span>
-              <span className="ml-2 text-xs font-normal text-violet-600 bg-violet-100 px-2 py-0.5 rounded-full">Required for {'>'}15 pt questions</span>
+              <span className="ml-3 text-[10px] items-center text-violet-600 dark:text-violet-500 bg-violet-100 dark:bg-violet-900/40 px-2.5 py-1 rounded-full uppercase tracking-widest font-black">Required</span>
             </label>
-            <p className="text-xs text-violet-700">Upload your handwritten or typed solution. Students will compare their answer against this. Max 10MB (JPG, PNG, PDF).</p>
-            <div className="flex items-center gap-3">
-              <input type="file" accept="image/*,.pdf" onChange={handleModelAnswerChange} className="text-sm" />
-              {modelAnswerUploading && <span className="text-xs text-violet-600 animate-pulse">Uploading model answer…</span>}
-              {modelAnswerSaved && <span className="text-xs text-emerald-600 font-semibold">✓ Model answer saved</span>}
+            <p className="text-xs text-violet-700/70 dark:text-violet-400/60 font-medium leading-relaxed">Upload your handwritten or typed solution. Students will compare their answer against this. Max 10MB (JPG, PNG, PDF).</p>
+            <div className="flex flex-wrap items-center gap-4">
+              <input type="file" accept="image/*,.pdf" onChange={handleModelAnswerChange} className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-violet-100 file:text-violet-700 hover:file:bg-violet-200 transition-all cursor-pointer" />
+              {modelAnswerUploading && <span className="text-xs text-violet-600 dark:text-violet-400 animate-pulse font-bold">Uploading...</span>}
+              {modelAnswerSaved && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-black flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                Saved
+              </span>}
             </div>
-            {errors.modelAnswer && <div className="text-xs text-red-600">{errors.modelAnswer}</div>}
+            {errors.modelAnswer && <div className="text-xs text-red-600 font-medium">{errors.modelAnswer}</div>}
             {modelAnswerPreview && (
-              <img src={modelAnswerPreview} alt="Model answer preview" className="mt-2 w-40 h-28 object-cover rounded-lg border-2 border-violet-200" />
+              <div className="mt-2 relative w-44 h-32 group">
+                <img src={modelAnswerPreview} alt="Model answer preview" className="w-full h-full object-cover rounded-xl border-2 border-violet-200 dark:border-violet-800 shadow-sm" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
+                    <span className="text-white text-[10px] font-bold">PREVIEW</span>
+                </div>
+              </div>
             )}
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-slate-700">Image (optional)</label>
-          <p className="text-xs text-slate-400">Optional illustration — max 8MB.</p>
-          <div className="mt-2 flex items-center gap-3">
-            <input type="file" accept="image/*" onChange={handleImageChange} />
-            {imageUploading && <div className="text-sm text-slate-500">Uploading…</div>}
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Illustration Image (optional)</label>
+          <div className="mt-1 flex flex-col gap-3">
+             <div className="flex items-center gap-3">
+                <input type="file" accept="image/*" onChange={handleImageChange} className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300 hover:file:bg-slate-200 transition-all cursor-pointer" />
+                {imageUploading && <div className="text-xs text-slate-500 animate-pulse font-bold">Uploading…</div>}
+             </div>
+             {errors.image && <div className="text-xs text-red-600 font-medium">{errors.image}</div>}
           </div>
-          {errors.image && <div className="text-xs text-red-600 mt-1">{errors.image}</div>}
           {imagePreview && (
-            <div className="mt-3 flex items-start gap-3">
-              <img src={imagePreview} alt="preview" className="w-32 h-20 object-cover rounded-md border" />
-              <div className="flex-1">
-                <div className="text-sm text-slate-600">Preview</div>
-                <div className="mt-2 flex items-center gap-2">
-                  <button type="button" onClick={removeImage} className="px-2 py-1 rounded bg-red-50 text-red-600 text-sm">Remove image</button>
-                </div>
-                {imagePath && (
-                  <div className="mt-2 text-xs text-slate-400">Stored path: <code className="bg-gray-100 px-1 rounded">{imagePath}</code></div>
-                )}
+            <div className="mt-4 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex flex-wrap items-start gap-4">
+              <img src={imagePreview} alt="preview" className="w-40 h-28 object-cover rounded-xl border dark:border-slate-700 shadow-sm" />
+              <div className="flex-1 min-w-[200px]">
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Image Preview</div>
+                <button 
+                  type="button" 
+                  onClick={removeImage} 
+                  className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+                >
+                  Remove image
+                </button>
               </div>
             </div>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700">Question body</label>
-          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={5} className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2" />
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Question body <span className="text-red-500">*</span></label>
+          <textarea 
+            value={body} 
+            onChange={(e) => setBody(e.target.value)} 
+            rows={5} 
+            className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all resize-none" 
+            placeholder="Write the full question description here..."
+          />
         </div>
 
-        <div className="flex items-center gap-3">
-          <button type="submit" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-white font-semibold hover:bg-amber-600">Create question</button>
-          <button type="button" onClick={() => resetForm()} className="text-sm text-slate-500">Reset</button>
+        <div className="flex items-center gap-4 pt-4">
+          <button 
+            type="submit" 
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-amber-500 text-white font-black hover:bg-amber-600 shadow-lg shadow-amber-500/30 hover:shadow-amber-500/40 transform hover:-translate-y-0.5 active:translate-y-0 transition-all"
+          >
+            Create question
+          </button>
+          <button 
+            type="button" 
+            onClick={() => resetForm()} 
+            className="text-sm font-bold text-slate-400 hover:text-red-500 transition-colors"
+          >
+            Reset
+          </button>
         </div>
       </form>
     </div>
