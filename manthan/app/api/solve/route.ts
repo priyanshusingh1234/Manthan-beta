@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { leaderboardCache } from "@/lib/leaderboardCache";
 import { createNotification } from "@/lib/createNotification";
+import { upsertProfile } from "@/lib/profiles";
 
 async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
     if (!authHeader) return null;
@@ -216,7 +217,10 @@ export async function POST(req: Request) {
                 battlesWon,
             }
         });
-        leaderboardCache.invalidate(); // reflect new MCQ points in TopBrains immediately
+        leaderboardCache.invalidate();
+
+        // Sync profiles table so leaderboard stays accurate
+        await upsertProfile(userId, { ...userMeta, totalPoints: newTotal, battlesAttempted, battlesWon });
 
         // 5. Save attempt or update existing if they already solved it previously
         if (existingAttempt) {

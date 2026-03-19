@@ -1,4 +1,5 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
+import { getProfilesMap } from "@/lib/profiles";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
@@ -51,22 +52,20 @@ export async function GET(req: NextRequest) {
                 .order('joined_at', { ascending: true });
 
             if (squadMembers && squadMembers.length > 0) {
-                // Fetch user profiles securely from Admin API
-                // To avoid multiple calls, we will list all users and find matches
-                const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-                const authUsers = usersData.users || [];
+                const memberUserIds = squadMembers.map(m => m.user_id);
+                const profilesMap = await getProfilesMap(memberUserIds);
 
                 members = squadMembers.map((member) => {
-                    const u = authUsers.find(au => au.id === member.user_id);
+                    const p = profilesMap.get(member.user_id);
                     return {
                         id: member.id,
                         user_id: member.user_id,
-                        name: (u?.user_metadata?.fullName as string) || u?.email?.split('@')[0] || 'Unknown Soldier',
-                        points: Number(u?.user_metadata?.totalPoints) || 0,
+                        name: p?.full_name || 'Unknown Soldier',
+                        points: p?.total_points || 0,
                         role: member.user_id === squad.general_id ? 'General' : 'Soldier',
                         isMe: member.user_id === user.id
                     };
-                }).sort((a, b) => b.points - a.points); // Sort by highest points
+                }).sort((a, b) => b.points - a.points);
             }
         }
 

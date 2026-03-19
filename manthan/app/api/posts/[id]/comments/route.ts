@@ -1,4 +1,5 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
+import { getProfilesMap, upsertProfile } from "@/lib/profiles";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
@@ -13,20 +14,21 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
         if (error) throw error;
 
-        // Enrich comments with author metadata
-        const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        const usersMap = new Map((authUsers.users || []).map(u => [u.id, u.user_metadata]));
+        // Fast profile lookup
+        const authorIds = [...new Set((comments || []).map((c: any) => c.author_id))];
+        const profilesMap = await getProfilesMap(authorIds);
 
         const enriched = (comments || []).map(c => {
-            const meta = usersMap.get(c.author_id) || {};
+            const profile = profilesMap.get(c.author_id);
             return {
                 id: c.id,
                 content: c.content,
+                author_id: c.author_id,
                 created_at: c.created_at,
                 author: {
-                    name: meta.fullName || meta.name || 'Unknown',
-                    avatar_url: meta.avatar_url || null,
-                    isTeacher: meta.isTeacher || false,
+                    name: profile?.full_name || 'Unknown',
+                    avatar_url: profile?.avatar_url || null,
+                    isTeacher: profile?.is_teacher || false,
                 }
             };
         });
@@ -75,6 +77,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
         const meta = user.user_metadata || {};
         const authorName = meta.fullName || meta.name || user.email?.split('@')[0];
+
+        // Keep profiles table in sync
+        await upsertProfile(user.id, meta);
 
         // Send Notification to Replied User OR Post Author
         const notifyUserId = replying_to_user_id || post?.author_id;

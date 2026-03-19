@@ -1,4 +1,5 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
+import { getProfilesMap } from "@/lib/profiles";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
@@ -25,14 +26,12 @@ export async function GET(req: NextRequest) {
 
         if (error) throw error;
 
-        // Enrich posts with author data
-        const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        const usersMap = new Map((authUsers.users || []).map(u => [u.id, u]));
+        // Fast profile lookup via profiles table (no listUsers!)
+        const authorIds = [...new Set((posts || []).map((p: any) => p.author_id))];
+        const profilesMap = await getProfilesMap(authorIds);
 
         const enriched = (posts || []).map(p => {
-            const author = usersMap.get(p.author_id);
-            const meta = author?.user_metadata || {};
-            
+            const profile = profilesMap.get(p.author_id);
             return {
                 id: p.id,
                 content: p.content,
@@ -43,10 +42,10 @@ export async function GET(req: NextRequest) {
                 is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
                 author: {
                     id: p.author_id,
-                    name: meta.fullName || meta.name || author?.email?.split('@')[0] || 'Unknown',
-                    avatar_url: meta.avatar_url || null,
-                    school: meta.school || null,
-                    isTeacher: meta.isTeacher || false,
+                    name: profile?.full_name || 'Unknown',
+                    avatar_url: profile?.avatar_url || null,
+                    school: profile?.school || null,
+                    isTeacher: profile?.is_teacher || false,
                 }
             };
         });

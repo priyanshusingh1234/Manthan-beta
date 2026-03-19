@@ -1,4 +1,5 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
+import { getProfile } from "@/lib/profiles";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
@@ -44,9 +45,8 @@ export async function GET(req: NextRequest) {
 
             let generalName = null;
             if (squadData?.general_id) {
-                const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-                const general = usersData.users.find(u => u.id === squadData.general_id);
-                generalName = general?.user_metadata?.fullName || general?.email?.split('@')[0] || null;
+                const profile = await getProfile(squadData.general_id);
+                generalName = profile?.full_name || null;
             }
 
             // Active wars count

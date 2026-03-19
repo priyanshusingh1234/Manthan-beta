@@ -1,36 +1,28 @@
-import supabaseAdmin from "@/lib/supabaseAdmin";
+import { getAllProfiles } from "@/lib/profiles";
 import { NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        // Use the Auth Admin API directly — bypasses the student_leaderboard VIEW
-        // and Supabase PostgREST caching. This reads auth.users in real-time.
-        const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-            page: 1,
-            perPage: 1000,
-        });
+        // Fast: reads from profiles table instead of auth.admin.listUsers()
+        const profiles = await getAllProfiles();
 
-        if (error) throw new Error(error.message);
-
-        // Filter to students only (non-teachers), sort by totalPoints desc
-        const students = (data.users || [])
-            .filter((u) => !u.user_metadata?.isTeacher)
-            .map((u) => ({
-                id: u.id,
-                name: (u.user_metadata?.fullName as string) || u.email?.split('@')[0] || 'Student',
-                username: (u.user_metadata?.username as string) || '',
-                school: (u.user_metadata?.school as string) || 'Unknown School',
-                avatar: (u.user_metadata?.avatar_url as string) || null,
-                points: Number(u.user_metadata?.totalPoints) || 0,
+        const students = profiles
+            .filter(p => !p.is_teacher && p.username)
+            .sort((a, b) => b.total_points - a.total_points)
+            .slice(0, 10)
+            .map((p, i) => ({
+                id: p.id,
+                rank: i + 1,
+                name: p.full_name || 'Student',
+                username: p.username || '',
+                school: p.school || 'Unknown School',
+                avatar: p.avatar_url || null,
+                points: p.total_points,
                 streak: 0,
                 schoolColor: 'bg-blue-500',
-            }))
-            .filter((u) => u.username) // must have a username to appear
-            .sort((a, b) => b.points - a.points)
-            .slice(0, 10)
-            .map((u, i) => ({ ...u, rank: i + 1 }));
+            }));
 
         return NextResponse.json({ topBrains: students }, {
             status: 200,
