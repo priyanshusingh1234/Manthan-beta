@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { Image as ImageIcon, X, Send, User, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
+import imageCompression from 'browser-image-compression';
 
 export default function CreatePostPage() {
     const router = useRouter();
@@ -27,18 +28,33 @@ export default function CreatePostPage() {
         });
     }, [router]);
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                setError('Image must be less than 5MB');
+            if (file.size > 2 * 1024 * 1024) {
+                setError('Image must be less than 2MB before compression. Please choose a smaller file.');
                 return;
             }
-            setImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => setImagePreview(reader.result as string);
-            reader.readAsDataURL(file);
             setError('');
+            setLoading(true);
+            try {
+                const options = {
+                    maxSizeMB: 0.8,
+                    maxWidthOrHeight: 1024,
+                    useWebWorker: true
+                };
+                const compressedFile = await imageCompression(file, options);
+                
+                setImageFile(compressedFile);
+                const reader = new FileReader();
+                reader.onloadend = () => setImagePreview(reader.result as string);
+                reader.readAsDataURL(compressedFile);
+            } catch (err) {
+                console.error("Compression failed", err);
+                setError("Failed to compress image.");
+            } finally {
+                setLoading(false);
+            }
         }
     };
 

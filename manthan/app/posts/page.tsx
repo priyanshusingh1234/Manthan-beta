@@ -63,11 +63,9 @@ export default function SocialFeedPage() {
                     </div>
 
                     {currentUserId && (
-                        <div className="sm:hidden mb-6">
-                            <Link href="/posts/create" className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold py-3.5 rounded-2xl shadow-lg hover:bg-indigo-500 active:scale-95 transition-all">
-                                <PlusCircle className="w-5 h-5" /> Share Something New
-                            </Link>
-                        </div>
+                        <Link href="/posts/create" className="sm:hidden fixed bottom-20 right-6 z-50 flex items-center justify-center w-14 h-14 bg-indigo-600 text-white rounded-full shadow-[0_8px_30px_rgb(79,70,229,0.5)] hover:bg-indigo-500 active:scale-90 transition-all">
+                            <PlusCircle className="w-6 h-6" />
+                        </Link>
                     )}
 
                     {loading ? (
