@@ -9,14 +9,14 @@ export async function GET() {
         const profiles = await getAllProfiles();
 
         const students = profiles
-            .filter(p => !p.is_teacher && p.username)
+            .filter(p => !p.is_teacher && (p.total_points > 0 || p.username))
             .sort((a, b) => b.total_points - a.total_points)
             .slice(0, 10)
             .map((p, i) => ({
                 id: p.id,
                 rank: i + 1,
-                name: p.full_name || 'Student',
-                username: p.username || '',
+                name: p.full_name || p.username || 'Student',
+                username: p.username || p.id,   // fall back to id so link still works
                 school: p.school || 'Unknown School',
                 avatar: p.avatar_url || null,
                 points: p.total_points,

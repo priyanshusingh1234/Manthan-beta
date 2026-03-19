@@ -74,32 +74,21 @@ export default function TopStudents() {
     useEffect(() => {
         load();
 
-        // ── MCQ point changes: question_attempts INSERT ────────────────
-        const mcqChannel = supabase
-            .channel('topstudents-mcq')
+        // ── Listen for ANY profile update (points, avatar, etc.) ────────
+        const profileChannel = supabase
+            .channel('topstudents-profiles')
             .on('postgres_changes', {
-                event: 'INSERT',
+                event: '*',
                 schema: 'public',
-                table: 'question_attempts',
-            }, () => setTimeout(load, 1500))
+                table: 'profiles',
+            }, () => setTimeout(load, 800))
             .subscribe();
 
-        // ── Written submission point changes ───────────────────────────
-        const writtenChannel = supabase
-            .channel('topstudents-written')
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'written_submissions',
-            }, () => setTimeout(load, 1500))
-            .subscribe();
-
-        // ── Fallback poll every 6s — catches avatar/profile/coop updates ─
-        const interval = setInterval(load, 6_000);
+        // ── Fallback poll every 15s ─────────────────────────────────────
+        const interval = setInterval(load, 15_000);
 
         return () => {
-            supabase.removeChannel(mcqChannel);
-            supabase.removeChannel(writtenChannel);
+            supabase.removeChannel(profileChannel);
             clearInterval(interval);
         };
     }, [load]);
