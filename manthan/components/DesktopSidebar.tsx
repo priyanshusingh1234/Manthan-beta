@@ -131,6 +131,7 @@ export default function DesktopSidebar() {
   const NAV: NavItem[] = [
     { label: 'Home', href: '/', icon: Home },
     { label: 'Feed', href: '/feed', icon: Compass },
+    { label: 'Community', href: '/posts', icon: MessageSquare },
     { label: 'My Faction', href: '/my-school', icon: ShieldAlert },
     { label: 'Top Schools', href: '/top-schools', icon: Swords },
     { label: 'Search', href: '/search', icon: Search },

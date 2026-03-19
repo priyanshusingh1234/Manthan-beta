@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search } from 'lucide-react';
+import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search, MessageSquare } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 import { supabase } from '@/lib/supabaseClient';
@@ -206,6 +206,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
         {user && (
           <div className="mt-3 overflow-x-auto scrollbar-hide flex items-center gap-2 pb-1 snap-x">
             {[
+              { label: 'Community', href: '/posts', icon: MessageSquare },
               { label: 'Search', href: '/search', icon: Search },
               { label: 'Top Schools', href: '/top-schools', icon: Swords },
               { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
