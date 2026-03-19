@@ -73,9 +73,18 @@ export async function POST(req: Request) {
           }
 
           try {
+            // Remove user from any existing school and squad databases
+            await supabaseAdmin.from('school_members').delete().eq('user_id', String(data.user_id));
+            await supabaseAdmin.from('squad_members').delete().eq('user_id', String(data.user_id));
+
+            // Clean up metadata to remove school associations
+            const newMeta = { ...existingMeta, isTeacher: true, teacherApprovedAt: new Date().toISOString() };
+            delete newMeta.school;
+            delete newMeta.school_id;
+
             // @ts-ignore - admin.updateUserById should be available on service-role client
             const { data: updatedUser, error: metaErr } = await supabaseAdmin.auth.admin.updateUserById(String(data.user_id), {
-              user_metadata: { ...existingMeta, isTeacher: true, teacherApprovedAt: new Date().toISOString() },
+              user_metadata: newMeta,
             });
             if (metaErr) console.warn('Failed to update user metadata:', metaErr);
           } catch (metaEx) {
