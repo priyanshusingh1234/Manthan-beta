@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Send, Clock, User, CheckCircle2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Send, Clock, User, CheckCircle2, MoreVertical, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
@@ -17,8 +17,11 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
     const [newComment, setNewComment] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [replyingTo, setReplyingTo] = useState<{name: string, userId: string} | null>(null);
+    const [showMenu, setShowMenu] = useState(false);
+    const [deletingPost, setDeletingPost] = useState(false);
 
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true });
+    const isOwner = Boolean(currentUserId && post.author?.id === currentUserId);
 
     const handleLike = async () => {
         if (!currentUserId) return alert("Log in to like posts!");
@@ -98,6 +101,32 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
         }
     };
 
+    const handleDeletePost = async () => {
+        if (!isOwner || deletingPost) return;
+        const confirmed = window.confirm('Delete this post? Image and comments will also be deleted.');
+        if (!confirmed) return;
+
+        setDeletingPost(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`/api/posts/${post.id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${session?.access_token}` }
+            });
+
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                alert(body.error || 'Failed to delete post');
+                return;
+            }
+
+            onUpdate();
+        } finally {
+            setDeletingPost(false);
+            setShowMenu(false);
+        }
+    };
+
     return (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             {/* Header */}
@@ -127,6 +156,33 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                         </p>
                     </div>
                 </div>
+
+                {isOwner && (
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setShowMenu((v) => !v)}
+                            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
+                            aria-label="Post actions"
+                        >
+                            <MoreVertical className="w-5 h-5" />
+                        </button>
+
+                        {showMenu && (
+                            <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg z-20 overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={handleDeletePost}
+                                    disabled={deletingPost}
+                                    className="w-full px-3 py-2.5 text-left text-sm font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2 disabled:opacity-60"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    {deletingPost ? 'Deleting...' : 'Delete'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Content */}

@@ -65,6 +65,7 @@ const StudentProfile: React.FC = () => {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', username: '', school: '', grade: '', bio: '' });
   const [message, setMessage] = useState('');
+  const [activeTab, setActiveTab] = useState<'achievements' | 'posts'>('achievements');
 
   useEffect(() => {
     let mounted = true;
@@ -516,7 +517,29 @@ const StudentProfile: React.FC = () => {
           ))}
         </div>
 
+        <div className="mb-8 relative z-10">
+          <div className="inline-flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 relative overflow-hidden">
+            <div
+              className={`absolute top-1 bottom-1 w-1/2 rounded-xl bg-white dark:bg-slate-700 shadow-sm transition-transform duration-300 ${activeTab === 'posts' ? 'translate-x-full' : 'translate-x-0'}`}
+            />
+            <button
+              onClick={() => setActiveTab('achievements')}
+              className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors ${activeTab === 'achievements' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+            >
+              Achievements
+            </button>
+            <button
+              onClick={() => setActiveTab('posts')}
+              className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors ${activeTab === 'posts' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+            >
+              My Posts
+            </button>
+          </div>
+        </div>
+
         {/* Two Column Layout */}
+        {activeTab === 'achievements' && (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
           {/* Achievements */}
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
@@ -651,8 +674,10 @@ const StudentProfile: React.FC = () => {
             </div>
           </div>
         </div>
+        </>
+        )}
 
-        <MyPostsSection />
+        {activeTab === 'posts' && <MyPostsSection />}
       </main>
     </div>
   );
