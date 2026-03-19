@@ -16,6 +16,7 @@ import Image from 'next/image';
 import TeacherBadge from '@/ticks/teacher';
 import FollowButton from '@/components/FollowButton';
 import TeacherReviewPanel from '@/components/TeacherReviewPanel';
+import MyPostsSection from '@/components/MyPostsSection';
 
 
 const TeacherProfile: React.FC = () => {
@@ -505,6 +506,8 @@ const TeacherProfile: React.FC = () => {
           {stats.map((stat, index) => (
             <div
               key={index}
+
+          <MyPostsSection />
               className="relative bg-white dark:bg-slate-900 rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-2xl"
               style={{ animationDelay: `${index * 0.1}s` }}
             >

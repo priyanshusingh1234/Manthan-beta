@@ -15,6 +15,7 @@ import TeacherBadge from '@/ticks/teacher';
 import FollowButton from '@/components/FollowButton';
 import CropModal from '@/components/profile/CropModal';
 import EditProfileModal from '@/components/profile/EditProfileModal';
+import MyPostsSection from '@/components/MyPostsSection';
 
 const StudentProfile: React.FC = () => {
   const [userData, setUserData] = useState({
@@ -650,6 +651,8 @@ const StudentProfile: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <MyPostsSection />
       </main>
     </div>
   );
