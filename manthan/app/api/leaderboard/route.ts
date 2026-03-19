@@ -5,18 +5,18 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        // Fast: reads from profiles table instead of auth.admin.listUsers()
         const profiles = await getAllProfiles();
 
+        // Show all non-teacher users, sorted by points. No username gating.
         const students = profiles
-            .filter(p => !p.is_teacher && (p.total_points > 0 || p.username))
+            .filter(p => !p.is_teacher)
             .sort((a, b) => b.total_points - a.total_points)
             .slice(0, 10)
             .map((p, i) => ({
                 id: p.id,
                 rank: i + 1,
                 name: p.full_name || p.username || 'Student',
-                username: p.username || p.id,   // fall back to id so link still works
+                username: p.username || p.id,
                 school: p.school || 'Unknown School',
                 avatar: p.avatar_url || null,
                 points: p.total_points,
