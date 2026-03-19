@@ -232,9 +232,13 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                                 });
 
                                 const renderComment = (c: any, depth: number) => (
-                                    <div key={c.id} className={`flex gap-3 relative ${depth > 0 ? 'mt-3' : 'mt-5'}`}>
+                                    <div
+                                        key={c.id}
+                                        className={`flex gap-2 sm:gap-3 relative min-w-0 ${depth > 0 ? 'mt-3' : 'mt-5'}`}
+                                        style={{ marginLeft: `${Math.min(depth, 3) * 10}px` }}
+                                    >
                                         {depth > 0 && (
-                                            <div className="absolute -left-5 top-0 w-5 h-5 border-b-2 border-l-2 border-slate-300 dark:border-slate-700 rounded-bl-xl z-0" />
+                                            <div className="absolute -left-2 sm:-left-3 top-0 w-2 sm:w-3 h-4 border-b-2 border-l-2 border-slate-300 dark:border-slate-700 rounded-bl-xl z-0" />
                                         )}
                                         <div className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 relative z-10 border border-slate-100 dark:border-slate-800">
                                             {c.author?.avatar_url ? (
@@ -243,15 +247,15 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                                                 <User className="w-4 h-4 absolute inset-0 m-auto text-slate-400" />
                                             )}
                                         </div>
-                                        <div className="flex-1 relative z-10">
-                                            <div className={`bg-white dark:bg-slate-800 border ${depth > 0 ? 'border-indigo-100 dark:border-indigo-900/50' : 'border-slate-200 dark:border-slate-700/80'} rounded-2xl p-3 shadow-sm inline-block max-w-[95%]`}>
+                                        <div className="flex-1 min-w-0 relative z-10">
+                                            <div className={`bg-white dark:bg-slate-800 border ${depth > 0 ? 'border-indigo-100 dark:border-indigo-900/50' : 'border-slate-200 dark:border-slate-700/80'} rounded-2xl p-3 shadow-sm block max-w-full`}> 
                                                 <div className="flex items-center gap-1.5 mb-1">
                                                     <span className="font-bold text-[13px] text-slate-900 dark:text-slate-100">{c.author?.name || 'Anonymous'}</span>
                                                     {c.author?.isTeacher && (
                                                         <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" />
                                                     )}
                                                 </div>
-                                                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">{c.displayContent}</p>
+                                                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words overflow-wrap-anywhere">{c.displayContent}</p>
                                             </div>
                                             <div className="flex items-center gap-3 text-[10px] font-bold mt-1.5 ml-2">
                                                 <span className="text-slate-400 transition-colors hover:text-slate-500 cursor-default">
@@ -273,8 +277,8 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                                             </div>
                                             
                                             {c.replies.length > 0 && (
-                                                <div className="ml-5 relative">
-                                                    <div className="absolute left-[-1.1rem] top-0 bottom-6 w-[2px] bg-slate-200 dark:bg-slate-800 rounded-full" />
+                                                <div className="mt-2 relative min-w-0">
+                                                    <div className="absolute left-[-0.35rem] sm:left-[-0.6rem] top-0 bottom-6 w-[2px] bg-slate-200 dark:bg-slate-800 rounded-full" />
                                                     {c.replies.map((reply: any) => renderComment(reply, depth + 1))}
                                                 </div>
                                             )}

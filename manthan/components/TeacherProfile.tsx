@@ -506,8 +506,6 @@ const TeacherProfile: React.FC = () => {
           {stats.map((stat, index) => (
             <div
               key={index}
-
-          <MyPostsSection />
               className="relative bg-white dark:bg-slate-900 rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-2xl"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
@@ -645,6 +643,9 @@ const TeacherProfile: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <MyPostsSection />
+
         {/* Flagged Written Submissions Review Panel */}
         <div className="mt-8 relative z-10">
           <TeacherReviewPanel />
