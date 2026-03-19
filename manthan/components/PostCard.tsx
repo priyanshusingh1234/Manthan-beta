@@ -16,6 +16,7 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
     const [loadingComments, setLoadingComments] = useState(false);
     const [newComment, setNewComment] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true });
 
@@ -29,7 +30,11 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
         setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
 
         try {
-            const res = await fetch(`/api/posts/${post.id}/like`, { method: 'POST' });
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`/api/posts/${post.id}/like`, { 
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${session?.access_token}` }
+            });
             if (!res.ok) throw new Error("Failed to toggle like");
         } catch (err) {
             setIsLiked(previousState);
@@ -63,9 +68,13 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
 
         setIsSubmitting(true);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch(`/api/posts/${post.id}/comments`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
                 body: JSON.stringify({ content: newComment.trim() })
             });
 
@@ -74,6 +83,7 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                 setComments([inserted, ...comments]);
                 setCommentsCount(commentsCount + 1);
                 setNewComment("");
+                setReplyingTo(null);
                 onUpdate();
             } else {
                 alert("Failed to post comment.");
@@ -162,14 +172,22 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
             {showComments && (
                 <div className="bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 p-5 rounded-b-3xl">
                     <form onSubmit={handleCommentSubmit} className="flex gap-3 mb-6">
-                        <input
-                            type="text"
-                            placeholder={currentUserId ? "Add a comment..." : "Log in to comment"}
-                            disabled={!currentUserId || isSubmitting}
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 py-3 px-4 rounded-xl text-sm font-medium outline-none disabled:opacity-50"
-                        />
+                            <div className="flex-1 relative">
+                                {replyingTo && (
+                                    <div className="absolute -top-7 left-0 right-0 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 px-3 py-1 rounded-t-xl text-[11px] font-bold text-indigo-600 dark:text-indigo-400 flex items-center justify-between">
+                                        <span>Replying to {replyingTo}</span>
+                                        <button type="button" onClick={() => { setReplyingTo(null); setNewComment(""); }} className="hover:text-red-500">Cancel</button>
+                                    </div>
+                                )}
+                                <input
+                                    type="text"
+                                    placeholder={currentUserId ? "Add a comment..." : "Log in to comment"}
+                                    disabled={!currentUserId || isSubmitting}
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
+                                    className={`w-full bg-white dark:bg-slate-900 border ${replyingTo ? 'border-indigo-500 rounded-b-xl rounded-tr-xl' : 'border-slate-200 dark:border-slate-700 rounded-xl'} focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 py-3 px-4 text-sm font-medium outline-none disabled:opacity-50`}
+                                />
+                            </div>
                         <button 
                             type="submit" 
                             disabled={!newComment.trim() || isSubmitting}
@@ -195,17 +213,31 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                                         )}
                                     </div>
                                     <div className="flex-1">
-                                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-3 shadow-sm inline-block">
+                                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-3 shadow-sm inline-block max-w-full">
                                             <div className="flex items-center gap-1.5 mb-1">
                                                 <span className="font-bold text-[13px] text-slate-900 dark:text-slate-100">{comment.author?.name || 'Anonymous'}</span>
                                                 {comment.author?.isTeacher && (
                                                     <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500" />
                                                 )}
                                             </div>
-                                            <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{comment.content}</p>
+                                            <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words">{comment.content}</p>
                                         </div>
-                                        <div className="text-[10px] font-bold text-slate-400 mt-1 ml-2">
-                                            {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                                        <div className="flex items-center gap-3 text-[10px] font-bold mt-1.5 ml-2">
+                                            <span className="text-slate-400">
+                                                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                                            </span>
+                                            {currentUserId && (
+                                                <button 
+                                                    onClick={() => {
+                                                        const name = comment.author?.name || 'User';
+                                                        setReplyingTo(name);
+                                                        setNewComment(`@${name} `);
+                                                    }}
+                                                    className="text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 transition-colors cursor-pointer"
+                                                >
+                                                    Reply
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
