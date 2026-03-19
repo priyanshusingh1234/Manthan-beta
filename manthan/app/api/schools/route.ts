@@ -25,18 +25,22 @@ export async function GET(req: NextRequest) {
 
         // For each school: count members, get general name, count active wars
         const enriched = await Promise.all((schools || []).map(async (school, index) => {
-            // Member count
-            const { count: memberCount } = await supabaseAdmin
-                .from('school_members')
-                .select('*', { count: 'exact', head: true })
-                .eq('school_id', school.id);
-
-            // General info
+            // General info and Squad info
             const { data: squadData } = await supabaseAdmin
                 .from('squads')
-                .select('general_id')
+                .select('id, general_id')
                 .eq('school_id', school.id)
                 .maybeSingle();
+
+            // Member count
+            let memberCount = 0;
+            if (squadData) {
+                const { count } = await supabaseAdmin
+                    .from('squad_members')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('squad_id', squadData.id);
+                memberCount = count || 0;
+            }
 
             let generalName = null;
             if (squadData?.general_id) {
@@ -57,7 +61,7 @@ export async function GET(req: NextRequest) {
                 name: school.name,
                 points: school.total_war_points || 0,
                 rank: index + 1,
-                memberCount: memberCount || 0,
+                memberCount: memberCount,
                 generalName,
                 hasSquad: !!squadData,
                 activeWars: warCount || 0,

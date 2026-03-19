@@ -29,6 +29,7 @@ export default function TopSchoolsPage() {
     // Request states per school
     const [requestStates, setRequestStates] = useState<Record<string, 'idle' | 'loading' | 'sent' | 'error'>>({});
     const [userSchoolId, setUserSchoolId] = useState<string | null>(null);
+    const isTeacher = session?.user?.user_metadata?.isTeacher === true;
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -212,7 +213,7 @@ export default function TopSchoolsPage() {
                         <Building2 className="w-16 h-16 text-slate-400 dark:text-slate-700 mx-auto mb-4" />
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No schools found</h3>
                         <p className="text-slate-500 dark:text-slate-400 mb-6">"{searchQuery}" doesn't exist yet.</p>
-                        {session && !userSchoolId && (
+                        {session && !userSchoolId && !isTeacher && (
                             <button
                                 onClick={() => { setNewSchoolName(searchQuery); setShowCreate(true); }}
                                 className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-xl transition-all"
@@ -285,7 +286,7 @@ export default function TopSchoolsPage() {
                                                     <Swords className="w-4 h-4" /> Open War Room
                                                 </Link>
                                             )}
-                                            {session && !isMySchool && !userSchoolId && (
+                                            {session && !isMySchool && !userSchoolId && !isTeacher && (
                                                 <button
                                                     onClick={() => handleRequestJoin(school.id)}
                                                     disabled={reqState === 'loading' || reqState === 'sent'}

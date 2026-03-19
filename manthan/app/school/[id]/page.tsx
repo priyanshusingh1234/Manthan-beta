@@ -110,7 +110,19 @@ export default function PublicSchoolPage() {
 
     const { school, members } = schoolInfo;
     const isMySchool = mySchoolId === school.id;
+    const isTeacher = session?.user?.user_metadata?.isTeacher === true;
     const formattedDate = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(school.createdAt));
+
+    if (isTeacher) {
+        return (
+            <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-900 dark:text-slate-100">
+                <Shield className="w-20 h-20 text-slate-300 dark:text-slate-800 mb-6" />
+                <h1 className="text-3xl font-black mb-2">Access Restricted</h1>
+                <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm">Teacher accounts are not permitted to view or join student factions to maintain fairness.</p>
+                <Link href="/top-schools" className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-indigo-500 transition-all">Back to Leaderboards</Link>
+            </div>
+        );
+    }
 
     const renderAvatarIcon = (url: string | undefined, className: string = "w-6 h-6") => {
         const iconName = url || 'shield';
