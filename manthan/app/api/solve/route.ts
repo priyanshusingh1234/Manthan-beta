@@ -195,6 +195,13 @@ export async function POST(req: Request) {
             }
         }
 
+        // Prevent double-dipping or overriding points if already attempted previously before the war
+        if (existingAttempt && warId) {
+            userPointsChange = 0;
+            // The user still sees 0 points change instead of gaining/losing again
+            pointsChangeDisplay = 0;
+        }
+
         const newTotal = Math.max(0, currentPoints + userPointsChange);
 
         // Update totalPoints and increment attempts counter maybe
@@ -213,13 +220,15 @@ export async function POST(req: Request) {
 
         // 5. Save attempt or update existing if they already solved it previously
         if (existingAttempt) {
-            // Update the attempt so it shows the new result in UI
-            await supabaseAdmin.from("question_attempts").update({
-                selected_option: selectedOption,
-                is_correct: isCorrect,
-                time_taken: timeTaken || 0,
-                submitted_at: new Date().toISOString(),
-            }).eq("user_id", userId).eq("question_id", questionId);
+            // Only update the attempt if it's NOT a War. For Wars, we preserve their original attempts history!
+            if (!warId) {
+                await supabaseAdmin.from("question_attempts").update({
+                    selected_option: selectedOption,
+                    is_correct: isCorrect,
+                    time_taken: timeTaken || 0,
+                    submitted_at: new Date().toISOString(),
+                }).eq("user_id", userId).eq("question_id", questionId);
+            }
         } else {
             await supabaseAdmin.from("question_attempts").insert({
                 user_id: userId,
