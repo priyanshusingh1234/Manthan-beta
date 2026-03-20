@@ -162,9 +162,28 @@ export async function GET(req: NextRequest) {
         // Build a base query helper
         const baseQ = () => {
             let q = supabaseAdmin.from('questions').select('*');
-            if (subject) q = q.eq('subject', subject) as any;
+            if (subject) {
+                // Support "Maths" or "Mathematics" interchangeably
+                if (subject.toLowerCase().startsWith('math')) {
+                    q = q.ilike('subject', 'math%') as any;
+                } else {
+                    q = q.eq('subject', subject) as any;
+                }
+            }
             return q;
         };
+
+        // LAYER 8 (New Questions Booster): Always show the 10 absolute newest unseen questions 
+        // to ensure new content is never "buried" by the algorithm.
+        const { data: recentQ } = await baseQ()
+            .order('created_at', { ascending: false })
+            .limit(10);
+        
+        (recentQ || []).forEach((r: any) => {
+            if (!userAttempted.has(String(r.id))) {
+                pool.push({ ...r, _layer: 8, _label: '✨ Just Added', _score: 120 });
+            }
+        });
 
         // LAYER 1 (~30%): Questions at user's grade — show ALL including attempted (with solved badge)
         const layer1Count = Math.ceil(limit * 0.30);
@@ -448,7 +467,7 @@ function shuffleWithinGroups(arr: any[]): any[] {
 
     // Interleave groups so feed doesn't cluster all of one type
     const result: any[] = [];
-    const layerOrder = [6, 1, 7, 2, 3, 4, 5, 0]; // Priority order for interleaving (Posts are Layer 7)
+    const layerOrder = [8, 6, 1, 7, 2, 3, 4, 5, 0]; // Priority order (8: New Booster, 6: Followed, 1: For You, 7: Posts)
     let hasMore = true;
     while (hasMore) {
         hasMore = false;
