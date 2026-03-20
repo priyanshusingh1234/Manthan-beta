@@ -217,22 +217,30 @@ export default function SinglePostPage() {
                 {/* Main Post Card - Prominent View */}
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-4">
-                        <Link href={`/profile/${post.author?.username || post.author?.id}`}>
-                            <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-indigo-500/20 relative">
-                                {post.author?.avatar_url ? (
-                                    <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
-                                ) : (
-                                    <User className="w-6 h-6 absolute inset-0 m-auto text-slate-400" />
-                                )}
-                            </div>
-                        </Link>
-                        <div className="flex-1 min-w-0">
-                            <Link href={`/profile/${post.author?.username || post.author?.id}`} className="font-black text-[17px] hover:text-indigo-600 transition-colors block leading-tight">
-                                {post.author?.name}
-                                {post.author?.isTeacher && (
-                                    <CheckCircle2 className="w-4 h-4 text-indigo-500 inline ml-1.5" />
-                                )}
-                            </Link>
+                        {(() => {
+                            const profileUrl = post.author?.isTeacher && post.author?.username ? `/teacher/${post.author.username}` : post.author?.username ? `/user/${post.author.username}` : '#';
+                            return (
+                                <>
+                                    <Link href={profileUrl}>
+                                        <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-indigo-500/20 relative">
+                                            {post.author?.avatar_url ? (
+                                                <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
+                                            ) : (
+                                                <User className="w-6 h-6 absolute inset-0 m-auto text-slate-400" />
+                                            )}
+                                        </div>
+                                    </Link>
+                                    <div className="flex-1 min-w-0">
+                                        <Link href={profileUrl} className="font-black text-[17px] hover:text-indigo-600 transition-colors block leading-tight">
+                                            {post.author?.name}
+                                            {post.author?.isTeacher && (
+                                                <CheckCircle2 className="w-4 h-4 text-indigo-500 inline ml-1.5" />
+                                            )}
+                                        </Link>
+                                </div>
+                                </>
+                            );
+                        })()}
                             <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
                                 {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })} • {post.author?.school || 'Open Faction'}
                             </p>
