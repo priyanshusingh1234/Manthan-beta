@@ -53,7 +53,7 @@ export default function Home() {
 
           {/* Questions feed placed on the home screen */}
           <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200">Latest questions</h2>
+            <h2 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200">Your Feed</h2>
             <QuestionsFeed />
           </div>
         </div>
