@@ -88,6 +88,7 @@ Respond ONLY with a valid JSON object matching this schema (no markdown formatti
             return null;
         }
 
+        // @ts-ignore
         const response = await ai.getGenerativeModel({ model: "gemini-1.5-flash" }).generateContent({
             // @ts-ignore
             contents: [{ role: 'user', parts: contents }],

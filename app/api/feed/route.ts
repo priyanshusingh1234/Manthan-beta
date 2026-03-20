@@ -154,6 +154,8 @@ export async function GET(req: NextRequest) {
 
         // ── Get question pools per layer ───────────────────────────────────
         let pool: any[] = [];
+        // Over-fetch multiplier if no subject filter to allow for round-robin diversity
+        const overFetch = subject ? 1 : 1.5;
 
         // Build a base query helper
         const baseQ = () => {
@@ -164,7 +166,7 @@ export async function GET(req: NextRequest) {
         // LAYER 8 (New Questions Booster): Always show newest unseen
         const { data: recentQ } = await baseQ()
             .order('created_at', { ascending: false })
-            .limit(10);
+            .limit(Math.ceil(10 * overFetch));
         
         (recentQ || []).forEach((r: any) => {
             if (!userAttempted.has(String(r.id))) {
@@ -173,7 +175,7 @@ export async function GET(req: NextRequest) {
         });
 
         // LAYER 1 (~30%): Questions at user's grade
-        const layer1Count = Math.ceil(limit * 0.30);
+        const layer1Count = Math.ceil(limit * 0.30 * overFetch);
         if (userGrade) {
             const { data } = await baseQ()
                 .eq('class_grade', userGrade)
@@ -204,7 +206,7 @@ export async function GET(req: NextRequest) {
 
         // LAYER 3 (~20%): What school peers solved recently
         if (userSchoolName && userId) {
-            const layer3Count = Math.ceil(limit * 0.20);
+            const layer3Count = Math.ceil(limit * 0.20 * overFetch);
             const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
             const schoolmateIds = (usersData?.users || [])
                 .filter(u => u.user_metadata?.school === userSchoolName && u.id !== userId)
@@ -217,7 +219,7 @@ export async function GET(req: NextRequest) {
                     .in('user_id', schoolmateIds)
                     .eq('is_correct', true)
                     .order('created_at', { ascending: false })
-                    .limit(50);
+                    .limit(Math.ceil(50 * overFetch));
 
                 const peerQIds = [...new Set((peerAttempts || []).map((a: any) => String(a.question_id)))]
                     .filter(id => !userAttempted.has(id))
@@ -233,7 +235,7 @@ export async function GET(req: NextRequest) {
         }
 
         // LAYER 4 (~10%): Hardest trending questions
-        const layer4Count = Math.ceil(limit * 0.10);
+        const layer4Count = Math.ceil(limit * 0.10 * overFetch);
         if (userGrade) {
             const { data: allAttempts } = await supabaseAdmin
                 .from('question_attempts')
@@ -252,7 +254,7 @@ export async function GET(req: NextRequest) {
                 .sort(([, a], [, b]) => b.total - a.total)
                 .map(([id]) => id)
                 .filter(id => !userAttempted.has(id))
-                .slice(0, layer4Count * 3);
+                .slice(0, Math.ceil(layer4Count * 3));
 
             if (trendingHard.length > 0) {
                 let query = supabaseAdmin.from('questions').select('*').in('id', trendingHard).eq('class_grade', userGrade);
@@ -263,7 +265,7 @@ export async function GET(req: NextRequest) {
         }
 
         // LAYER 5 (~10%): One level up — stretch questions
-        const layer5Count = Math.ceil(limit * 0.10);
+        const layer5Count = Math.ceil(limit * 0.10 * overFetch);
         if (userGrade) {
             const nextGrade = String(Number(userGrade) + 1);
             const { data } = await baseQ()
@@ -275,14 +277,14 @@ export async function GET(req: NextRequest) {
 
         // LAYER 6 (~20%): What people you follow recently solved
         if (followingIds.length > 0 && userId) {
-            const layer6Count = Math.ceil(limit * 0.20);
+            const layer6Count = Math.ceil(limit * 0.20 * overFetch);
             const { data: followedAttempts } = await supabaseAdmin
                 .from('question_attempts')
                 .select('question_id, user_id')
                 .in('user_id', followingIds)
                 .eq('is_correct', true)
                 .order('created_at', { ascending: false })
-                .limit(100);
+                .limit(Math.ceil(100 * overFetch));
 
             const followedQMap: Record<string, string[]> = {};
             const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
@@ -367,6 +369,48 @@ export async function GET(req: NextRequest) {
             seen.add(String(r.id));
             return true;
         });
+
+        // ── Subject Diversity Balancing (Round-Robin) ──────────────────────
+        // If no subject filter, ensure a diverse mix so one subject doesn't starve others
+        if (!subject) {
+            const groupedBySubject: Record<string, any[]> = {};
+            pool.forEach(item => {
+                const sub = item.type === 'post' ? 'Community' : (item.subject || 'General');
+                if (!groupedBySubject[sub]) groupedBySubject[sub] = [];
+                groupedBySubject[sub].push(item);
+            });
+
+            // Sort each subject group by score so we pick the best of each
+            Object.values(groupedBySubject).forEach(group => group.sort((a, b) => b._score - a._score));
+
+            const balancedPool: any[] = [];
+            const subjects = Object.keys(groupedBySubject);
+            const subjectCounts: Record<string, number> = {};
+            const subjectCap = Math.ceil(limit * 0.4); // Max 40% per subject
+
+            let added = true;
+            while (added && balancedPool.length < limit * 1.5) {
+                added = false;
+                for (const sub of subjects) {
+                    const group = groupedBySubject[sub];
+                    if (group.length > 0 && (subjectCounts[sub] || 0) < subjectCap) {
+                        balancedPool.push(group.shift());
+                        subjectCounts[sub] = (subjectCounts[sub] || 0) + 1;
+                        added = true;
+                    }
+                    if (balancedPool.length >= limit * 1.5) break;
+                }
+            }
+            // If we still have space and items, fill the rest from the remaining pieces of groups
+            if (balancedPool.length < limit) {
+                subjects.forEach(sub => {
+                    while (groupedBySubject[sub].length > 0 && balancedPool.length < limit * 1.5) {
+                        balancedPool.push(groupedBySubject[sub].shift());
+                    }
+                });
+            }
+            pool = balancedPool;
+        }
 
         // ── Sort & Shuffle ──
         pool.sort((a, b) => b._score - a._score);
