@@ -193,6 +193,15 @@ const TeacherProfile: React.FC = () => {
 
       await supabase.auth.updateUser({ data: updateData });
 
+      // Sync the profile manually so other tables/feeds get the latest metadata instantly
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+          fetch('/api/profile/sync', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${session.access_token}` }
+          }).catch(console.error);
+      }
+
       if (type === 'avatar') setUserData((s) => ({ ...s, avatar: publicUrl }));
       else setUserData((s) => ({ ...s }));
       setMessage(`${type[0].toUpperCase() + type.slice(1)} updated`);
@@ -321,6 +330,14 @@ const TeacherProfile: React.FC = () => {
       });
 
       if (error) throw error;
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+          fetch('/api/profile/sync', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${session.access_token}` }
+          }).catch(console.error);
+      }
 
       setUserData((s) => ({
         ...s,
