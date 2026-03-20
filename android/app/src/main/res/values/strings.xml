@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dheeyudha</string>
+    <string name="title_activity_main">Dheeyudha</string>
+    <string name="package_name">com.dheeyudha.app</string>
+    <string name="custom_url_scheme">com.dheeyudha.app</string>
+</resources>

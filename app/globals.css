@@ -1,0 +1,315 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Base resets and font */
+* { box-sizing: border-box; }
+html, body, #root { 
+  height: 100%; 
+  height: 100dvh;
+  width: 100%;
+  overscroll-behavior-y: none;
+  overflow-x: hidden;
+}
+body { 
+  margin: 0; 
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; 
+  -webkit-touch-callout: none;
+  touch-action: pan-y;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Android Native-Like Fluid Typography */
+@media (max-width: 640px) {
+  h1 { font-size: 1.5rem !important; } /* ~24px */
+  h2 { font-size: 1.25rem !important; } /* ~20px */
+  h3 { font-size: 1.125rem !important; } /* ~18px */
+  p, div, span { font-size: 0.875rem; } /* 14px base for mobile */
+  .text-xs { font-size: 0.625rem !important; } /* 10px */
+  .text-sm { font-size: 0.75rem !important; } /* 12px */
+  .text-base { font-size: 0.875rem !important; } /* 14px */
+  .text-lg { font-size: 1rem !important; } /* 16px */
+  .text-xl { font-size: 1.125rem !important; } /* 18px */
+  .text-xl { font-size: 1.125rem !important; } /* 18px */
+  .text-2xl { font-size: 1.25rem !important; } /* 20px */
+  .text-3xl { font-size: 1.375rem !important; } /* 22px */
+  .text-4xl { font-size: 1.5rem !important; } /* 24px */
+  .text-5xl { font-size: 1.75rem !important; } /* 28px */
+  .text-6xl { font-size: 2rem !important; } /* 32px */
+
+  /* Reduce massive paddings globally on mobile */
+  .p-8, .p-10, .p-12 { padding: 1.25rem !important; } /* ~20px */
+  .px-8, .px-10 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .py-8, .py-10, .py-12 { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
+  
+  /* Containers */
+  .rounded-\[2\.5rem\], .rounded-\[2rem\] { border-radius: 1.5rem !important; }
+}
+
+img { max-width: 100%; display: block; height: auto; }
+
+/* Safe area support for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Accessibility utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ========================================
+   Custom Animations & Battle Theme Styles
+   ======================================== */
+
+/* Color Variables for School War Theme */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  --radius: 0.5rem;
+  
+  --battle-fire: #ff4500;
+  --battle-gold: #ffd700;
+  --battle-silver: #c0c0c0;
+  --battle-bronze: #cd7f32;
+  --victory-green: #10b981;
+  --school-blue: #3b82f6;
+  --school-red: #ef4444;
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
+}
+
+/* Keyframe Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(91, 108, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(91, 108, 255, 0.6);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes gradientSlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Utility Classes */
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.5s ease-out;
+}
+
+.animate-pulse-soft {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 4s linear infinite;
+}
+
+.animate-popIn {
+  animation: popIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 150% 150%;
+  animation: gradientShift 8s ease infinite;
+}
+
+.animate-gradient-slow {
+  background-size: 200% 200%;
+  animation: gradientSlow 12s ease-in-out infinite;
+}
+
+/* Prefers Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .animate-fadeIn,
+  .animate-slideUp,
+  .animate-pulse-soft,
+  .animate-glow,
+  .animate-shimmer,
+  .animate-popIn,
+  .animate-float,
+  .animate-gradient {
+    animation: none !important;
+  }
+}
+
+/* Gradient Utilities */
+.gradient-battle {
+  background: linear-gradient(135deg, #ff4500, #ff8c00, #ffd700);
+}
+
+.gradient-victory {
+  background: linear-gradient(135deg, #10b981, #34d399);
+}
+
+.gradient-war {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+}
+
+/* Hide scrollbars but keep functionality */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Improved Touch Feedback for Android Feel */
+@media (max-width: 640px) {
+  button:active, a:active {
+    opacity: 0.7;
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
