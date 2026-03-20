@@ -163,45 +163,119 @@ export async function GET(req: NextRequest) {
             return applySubjectFilter(q, subject);
         };
 
-        // LAYER 8 (New Questions Booster): Always show newest unseen
-        const { data: recentQ } = await baseQ()
-            .order('created_at', { ascending: false })
-            .limit(Math.ceil(10 * overFetch));
-        
-        (recentQ || []).forEach((r: any) => {
-            if (!userAttempted.has(String(r.id))) {
-                pool.push({ ...r, _layer: 8, _label: '✨ Just Added', _score: 120 });
-            }
-        });
+        const CORE_SUBJECTS = ['Maths', 'Science', 'English'];
+        const now = new Date();
+        const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 60 * 60 * 1000).toISOString();
+        const shuffle = (arr: any[]) => arr.sort(() => 0.5 - Math.random());
 
-        // LAYER 1 (~30%): Questions at user's grade
-        const layer1Count = Math.ceil(limit * 0.30 * overFetch);
-        if (userGrade) {
-            const { data } = await baseQ()
-                .eq('class_grade', userGrade)
-                .order('created_at', { ascending: false })
-                .limit(layer1Count);
-            (data || []).forEach((r: any) => pool.push({ ...r, _layer: 1, _label: '✨ For You', _score: 100 }));
-        } else {
-            const { data } = await baseQ().order('created_at', { ascending: false }).limit(layer1Count);
-            (data || []).forEach((r: any) => pool.push({ ...r, _layer: 1, _label: '✨ Fresh Questions', _score: 100 }));
+        // ── STRATIFIED TIME-BUCKETED FETCHING ──
+        async function fetchSubjectTimeBuckets(subjectToFetch: string, gradeToFetch: string | null) {
+            const applyFilter = (q: any) => {
+                let query = q;
+                if (subjectToFetch.toLowerCase().startsWith('math')) {
+                    query = query.ilike('subject', '%math%');
+                } else {
+                    query = query.eq('subject', subjectToFetch);
+                }
+                if (gradeToFetch) {
+                    query = query.eq('class_grade', gradeToFetch);
+                }
+                return query;
+            };
+
+            const [resA, resB, resC] = await Promise.all([
+                applyFilter(supabaseAdmin.from('questions').select('*')).gte('created_at', daysAgo(3)).order('created_at', { ascending: false }).limit(20),
+                applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(3)).gte('created_at', daysAgo(14)).order('created_at', { ascending: false }).limit(30),
+                applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(14)).order('created_at', { ascending: false }).limit(30)
+            ]);
+            
+            return {
+                subject: subjectToFetch,
+                A: shuffle(resA.data || []),
+                B: shuffle(resB.data || []),
+                C: shuffle(resC.data || [])
+            };
         }
 
-        // LAYER 2 (max 1): Questions user already attempted
+        let bucketsData: any[] = [];
+        if (subject) {
+            bucketsData = [await fetchSubjectTimeBuckets(subject, userGrade)];
+        } else {
+            bucketsData = await Promise.all(CORE_SUBJECTS.map(sub => fetchSubjectTimeBuckets(sub, userGrade)));
+        }
+
+        // LAYER 8 (New Questions Booster): Pick equally from each subject's Bucket A
+        const layer8Count = Math.ceil(5 * overFetch);
+        let layer8AddedCount = 0;
+        let runningL8 = true;
+        
+        while (runningL8 && layer8AddedCount < layer8Count) {
+            let addedInRound = false;
+            for (const bData of bucketsData) {
+                if (layer8AddedCount >= layer8Count) break;
+                // find the first unseen in A
+                const qIdx = bData.A.findIndex((q: any) => !userAttempted.has(String(q.id)) && !pool.some((p: any) => p.id === q.id));
+                if (qIdx !== -1) {
+                    const q = bData.A.splice(qIdx, 1)[0]; 
+                    pool.push({ ...q, _layer: 8, _label: '✨ Just Added', _score: 120 });
+                    layer8AddedCount++;
+                    addedInRound = true;
+                }
+            }
+            if (!addedInRound) runningL8 = false;
+        }
+
+        // LAYER 1 (~30%): Core Feed - Pick an equal mix of A, B, C from each subject
+        const layer1Count = Math.ceil(limit * 0.35 * overFetch); // Handled dynamic mix
+        let layer1AddedCount = 0;
+        let runningL1 = true;
+
+        while (runningL1 && layer1AddedCount < layer1Count) {
+            let addedInRound = false;
+            for (const bData of bucketsData) {
+                if (layer1AddedCount >= layer1Count) break;
+                // Combine remaining A, B, C for this subject
+                const combined = [...bData.A, ...bData.B, ...bData.C];
+                const qIdx = combined.findIndex((q: any) => !userAttempted.has(String(q.id)) && !pool.some((p: any) => p.id === q.id));
+                
+                if (qIdx !== -1) {
+                    const q = combined[qIdx];
+                    // Remove from original array
+                    if (bData.A.includes(q)) bData.A.splice(bData.A.indexOf(q), 1);
+                    else if (bData.B.includes(q)) bData.B.splice(bData.B.indexOf(q), 1);
+                    else if (bData.C.includes(q)) bData.C.splice(bData.C.indexOf(q), 1);
+
+                    pool.push({ ...q, _layer: 1, _label: '✨ For You', _score: 100 });
+                    layer1AddedCount++;
+                    addedInRound = true;
+                }
+            }
+            if (!addedInRound) runningL1 = false;
+        }
+
+        // LAYER 2 (max 2): Spaced Repetition (SRS) - Review forgotten or failed questions
         if (userAttempted.size > 0) {
-            const layer2Count = 1; 
-            const failedArr = Array.from(userFailed).slice(0, 5);
-            const attemptedArr = Array.from(userAttempted).slice(0, 10);
-            const pickArr = failedArr.length > 0 ? failedArr : attemptedArr;
+            const layer2Count = 2; 
+            const failedArr = shuffle(Array.from(userFailed)).slice(0, 10);
+            const attemptedArr = shuffle(Array.from(userAttempted).filter(id => !userFailed.has(id))).slice(0, 10);
             
-            let query = supabaseAdmin.from('questions').select('*').in('id', pickArr);
-            query = applySubjectFilter(query, subject);
+            // Mix fails and older successes
+            const pickArr = [...failedArr.slice(0, 5), ...attemptedArr.slice(0, 5)];
             
-            const { data } = await query.limit(layer2Count);
-            (data || []).forEach((r: any) => {
-                const label = userFailed.has(String(r.id)) ? '🔄 You Got This Wrong — Review' : '✅ Already Solved';
-                pool.push({ ...r, _layer: 2, _label: label, _score: 60 });
-            });
+            if (pickArr.length > 0) {
+                let query = supabaseAdmin.from('questions').select('*').in('id', pickArr);
+                query = applySubjectFilter(query, subject);
+                
+                const { data } = await query.limit(layer2Count * 2);
+                const reviewQuestions = shuffle(data || []).slice(0, layer2Count);
+                
+                reviewQuestions.forEach((r: any) => {
+                    const isFailed = userFailed.has(String(r.id));
+                    const label = isFailed ? '🔄 Review: You missed this' : '🧠 SRS Review: Do you remember?';
+                    // Give failed questions a much higher priority score
+                    pool.push({ ...r, _layer: 2, _label: label, _score: isFailed ? 95 : 70 });
+                });
+            }
         }
 
         // LAYER 3 (~20%): What school peers solved recently
@@ -271,8 +345,10 @@ export async function GET(req: NextRequest) {
             const { data } = await baseQ()
                 .eq('class_grade', nextGrade)
                 .order('created_at', { ascending: false })
-                .limit(layer5Count);
-            (data || []).forEach((r: any) => pool.push({ ...r, _layer: 5, _label: '🚀 Stretch: Class ' + nextGrade, _score: 80 }));
+                .limit(layer5Count * 3); // Overfetch
+                
+            const shuffledStretch = shuffle(data || []).slice(0, layer5Count);
+            shuffledStretch.forEach((r: any) => pool.push({ ...r, _layer: 5, _label: '🚀 Stretch: Class ' + nextGrade, _score: 80 }));
         }
 
         // LAYER 6 (~20%): What people you follow recently solved
@@ -370,50 +446,13 @@ export async function GET(req: NextRequest) {
             return true;
         });
 
-        // ── Subject Diversity Balancing (Round-Robin) ──────────────────────
-        // If no subject filter, ensure a diverse mix so one subject doesn't starve others
-        if (!subject) {
-            const groupedBySubject: Record<string, any[]> = {};
-            pool.forEach(item => {
-                const sub = item.type === 'post' ? 'Community' : (item.subject || 'General');
-                if (!groupedBySubject[sub]) groupedBySubject[sub] = [];
-                groupedBySubject[sub].push(item);
-            });
-
-            // Sort each subject group by score so we pick the best of each
-            Object.values(groupedBySubject).forEach(group => group.sort((a, b) => b._score - a._score));
-
-            const balancedPool: any[] = [];
-            const subjects = Object.keys(groupedBySubject);
-            const subjectCounts: Record<string, number> = {};
-            const subjectCap = Math.ceil(limit * 0.4); // Max 40% per subject
-
-            let added = true;
-            while (added && balancedPool.length < limit * 1.5) {
-                added = false;
-                for (const sub of subjects) {
-                    const group = groupedBySubject[sub];
-                    if (group.length > 0 && (subjectCounts[sub] || 0) < subjectCap) {
-                        balancedPool.push(group.shift());
-                        subjectCounts[sub] = (subjectCounts[sub] || 0) + 1;
-                        added = true;
-                    }
-                    if (balancedPool.length >= limit * 1.5) break;
-                }
-            }
-            // If we still have space and items, fill the rest from the remaining pieces of groups
-            if (balancedPool.length < limit) {
-                subjects.forEach(sub => {
-                    while (groupedBySubject[sub].length > 0 && balancedPool.length < limit * 1.5) {
-                        balancedPool.push(groupedBySubject[sub].shift());
-                    }
-                });
-            }
-            pool = balancedPool;
-        }
-
         // ── Sort & Shuffle ──
-        pool.sort((a, b) => b._score - a._score);
+        pool.sort((a, b) => {
+            if (b._score !== a._score) return b._score - a._score;
+            const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return timeB - timeA;
+        });
         pool = shuffleWithinGroups(pool);
 
         // ── Enrich ──
