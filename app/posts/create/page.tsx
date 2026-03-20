@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { Image as ImageIcon, X, Send, User, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-import imageCompression from 'browser-image-compression';
+import { compressImage } from '@/utils/compressImage';
 
 export default function CreatePostPage() {
     const router = useRouter();
@@ -31,34 +31,22 @@ export default function CreatePostPage() {
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Increase limit to 10MB to allow modern phone photos
-            if (file.size > 10 * 1024 * 1024) {
-                setError('Image must be less than 10MB. Please choose a smaller file.');
+            // Increase limit to 20MB for modern phone cameras
+            if (file.size > 20 * 1024 * 1024) {
+                setError('Image exceeds 20MB limit. Please choose a smaller file.');
                 return;
             }
             setError('');
             setLoading(true);
             try {
-                const options = {
-                    maxSizeMB: 0.8,
-                    maxWidthOrHeight: 1024,
-                    useWebWorker: true,
-                    fileType: 'image/webp' // Target webp for better compression
-                };
+                // Use the standard utility that converts blobl to proper File and appends .webp extension
+                const finalFile = await compressImage(file, 'banner'); // 'banner' preset fits well for posts
                 
-                let fileToUse = file;
-                try {
-                    const compressedFile = await imageCompression(file, options);
-                    fileToUse = compressedFile;
-                } catch (compressionErr) {
-                    console.warn("Compression failed, using original file", compressionErr);
-                    // We don't set error here, just proceed with original if it's within a reasonable limit
-                }
+                setImageFile(finalFile);
                 
-                setImageFile(fileToUse);
-                const reader = new FileReader();
-                reader.onloadend = () => setImagePreview(reader.result as string);
-                reader.readAsDataURL(fileToUse);
+                // Show local preview immediately fast
+                const objectUrl = URL.createObjectURL(finalFile);
+                setImagePreview(objectUrl);
             } catch (err) {
                 console.error("Image processing failed", err);
                 setError("Failed to process image.");
@@ -70,7 +58,10 @@ export default function CreatePostPage() {
 
     const removeImage = () => {
         setImageFile(null);
-        setImagePreview(null);
+        if (imagePreview) {
+            URL.revokeObjectURL(imagePreview);
+            setImagePreview(null);
+        }
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -94,9 +85,12 @@ export default function CreatePostPage() {
 
                 const { error: uploadError, data } = await supabase.storage
                     .from('public-images')
-                    .upload(filePath, imageFile);
+                    .upload(filePath, imageFile, {
+                        contentType: imageFile.type || 'image/webp',
+                        upsert: false
+                    });
 
-                if (uploadError) throw new Error("Image upload failed");
+                if (uploadError) throw new Error(uploadError.message || "Image upload failed");
 
                 const { data: publicUrlData } = supabase.storage
                     .from('public-images')
