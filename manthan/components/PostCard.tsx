@@ -33,8 +33,18 @@ export default function PostCard({
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true });
     const isOwner = Boolean(currentUserId && post.author?.id === currentUserId);
 
+    function getUsername(user: any): string | null {
+        return user?.username || user?.user_metadata?.username || user?.profile?.username || null;
+    }
+
+    function isTeacherUser(user: any): boolean {
+        return Boolean(user?.isTeacher || user?.is_teacher);
+    }
+
     function getProfileUrl(user: any) {
-        return user?.isTeacher && user?.username ? `/teacher/${user.username}` : user?.username ? `/user/${user.username}` : '#';
+        const username = getUsername(user);
+        if (!username) return '#';
+        return isTeacherUser(user) ? `/teacher/${username}` : `/user/${username}`;
     }
 
     const handleLike = async () => {
@@ -252,9 +262,14 @@ export default function PostCard({
                         <div className="text-center py-6 text-slate-400">Loading comments...</div>
                     ) : (
                         <div className="space-y-6">
-                            {comments.map((comment: any) => (
+                            {comments.map((comment: any) => {
+                                const commentUsername = getUsername(comment.author);
+                                const commentProfileUrl = getProfileUrl(comment.author);
+                                const safeReplyHandle = commentUsername || 'user';
+
+                                return (
                                 <div key={comment.id} className="flex gap-3 items-start">
-                                    <Link href={getProfileUrl(comment.author)}>
+                                    <Link href={commentProfileUrl}>
                                         <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800">
                                             {comment.author.avatar_url ? (
                                                 <Image
@@ -272,7 +287,7 @@ export default function PostCard({
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
                                             <Link
-                                                href={getProfileUrl(comment.author)}
+                                                href={commentProfileUrl}
                                                 className="font-bold text-[13px] sm:text-sm truncate max-w-[120px] text-slate-900 dark:text-slate-100"
                                             >
                                                 {comment.author.name}
@@ -288,15 +303,15 @@ export default function PostCard({
                                         <button
                                             className="mt-1 text-xs text-indigo-500 font-bold hover:underline"
                                             onClick={() => {
-                                                setReplyingTo({ username: comment.author.username, userId: comment.author.id });
-                                                setNewComment(`@${comment.author.username} `);
+                                                setReplyingTo({ username: safeReplyHandle, userId: comment.author.id });
+                                                setNewComment(`@${safeReplyHandle} `);
                                             }}
                                         >
                                             Reply
                                         </button>
                                     </div>
                                 </div>
-                            ))}
+                            );})}
                         </div>
                     )}
 
