@@ -33,12 +33,11 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: 'Unauthorized or DB not configured' }, { status: 401 });
         }
 
-        // Get recent question IDs the user has CORRECTLY solved or submitted a written answer for
+        // Get recent question IDs the user has attempted or submitted a written answer for
         const { data: qAttempts } = await supabaseAdmin
             .from('question_attempts')
             .select('question_id')
             .eq('user_id', currentUserId)
-            .eq('is_correct', true)
             .order('created_at', { ascending: false })
             .limit(100);
 
