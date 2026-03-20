@@ -4,23 +4,30 @@ import { getProfilesMap } from '@/lib/profiles';
 
 export const dynamic = 'force-dynamic';
 
-function parseJwtField(bearer?: string | null, field = 'sub') {
+import { createClient } from '@supabase/supabase-js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: verify user token using anon-key client
+// ─────────────────────────────────────────────────────────────────────────────
+async function getVerifiedUser(bearer?: string | null) {
     try {
         if (!bearer) return null;
         const token = bearer.replace(/^Bearer\s+/i, '');
-        const parts = token.split('.');
-        if (parts.length < 2) return null;
-        const json = Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
-        return JSON.parse(json)?.[field] ?? null;
-    } catch (err) {
-        return null;
-    }
+        const supabaseAnon = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
+        if (error || !user) return null;
+        return user;
+    } catch { return null; }
 }
 
 export async function GET(req: Request) {
     try {
         const authHeader = req.headers.get('authorization');
-        const currentUserId = parseJwtField(authHeader, 'sub') || parseJwtField(authHeader, 'user_id');
+        const user = await getVerifiedUser(authHeader);
+        const currentUserId = user?.id;
 
         if (!currentUserId || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
             return NextResponse.json({ error: 'Unauthorized or DB not configured' }, { status: 401 });
