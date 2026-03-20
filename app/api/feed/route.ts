@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { getProfilesMap } from '@/lib/profiles';
+import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
-
-import { createClient } from '@supabase/supabase-js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: verify user token using anon-key client (same as /api/questions)
@@ -14,7 +13,6 @@ async function getVerifiedUser(bearer?: string | null) {
     try {
         if (!bearer) return null;
         const token = bearer.replace(/^Bearer\s+/i, '');
-        // Use anon-key client to verify the user JWT — this is the correct approach
         const supabaseAnon = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -55,15 +53,11 @@ function normalizeQuestion(
         imagePath: r.image_path || null,
         imageUrl: r.image_url || null,
         createdAt: r.created_at,
-        // Feed metadata — shown as label on the card
         _feedLabel: feedLabel,
-        _feedScore: 0, // set per layer below
+        _feedScore: 0, 
     };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: normalize a post row
-// ─────────────────────────────────────────────────────────────────────────────
 function normalizePost(p: any, profilesMap: Map<string, any>, currentUserId: string | null) {
     const profile = profilesMap.get(p.author_id);
     return {
@@ -90,14 +84,23 @@ function normalizePost(p: any, profilesMap: Map<string, any>, currentUserId: str
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Helper: apply subject filter uniformly across all query types
+// ─────────────────────────────────────────────────────────────────────────────
+function applySubjectFilter(query: any, subject: string) {
+    if (!subject) return query;
+    // Support "Maths" or "Mathematics" interchangeably with fuzzy matching
+    if (subject.toLowerCase().startsWith('math')) {
+        return query.ilike('subject', '%math%');
+    }
+    return query.eq('subject', subject);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/feed
-// Headers: Authorization: Bearer <token>   (optional — returns generic feed if missing)
-// Query:   subject, limit
 // ─────────────────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
     try {
         const authHeader = req.headers.get('authorization');
-        // Verify user token using anon-key client (service-role cannot verify user JWTs)
         const currentUser = await getVerifiedUser(authHeader);
         const userId = currentUser?.id ?? null;
         const subject = req.nextUrl.searchParams.get('subject') || '';
@@ -110,22 +113,16 @@ export async function GET(req: NextRequest) {
         let followingIds: string[] = [];
 
         if (userId && currentUser) {
-            // ── ALWAYS fetch the freshest metadata via admin API ──────────────────────
-            // The JWT user_metadata can be stale after a profile update until the token
-            // is refreshed on the client. Using getUserById guarantees we see the latest
-            // classGrade / school that the student saved on their profile.
             try {
                 const { data: freshUser } = await supabaseAdmin.auth.admin.getUserById(userId);
                 const freshMeta = freshUser?.user?.user_metadata ?? currentUser.user_metadata ?? {};
                 if (!targetClass) userGrade = freshMeta?.classGrade?.toString() || null;
                 userSchoolName = freshMeta?.school || null;
             } catch {
-                // Fallback to JWT metadata if admin call fails
                 if (!targetClass) userGrade = currentUser.user_metadata?.classGrade?.toString() || null;
                 userSchoolName = currentUser.user_metadata?.school || null;
             }
 
-            // Get following list
             const { data: followsData } = await supabaseAdmin
                 .from('follows')
                 .select('following_id')
@@ -148,7 +145,6 @@ export async function GET(req: NextRequest) {
                 if (!a.is_correct) userFailed.add(String(a.question_id));
             });
 
-            // Also count written submissions as attempted
             const { data: written } = await supabaseAdmin
                 .from('written_submissions')
                 .select('question_id')
@@ -162,19 +158,10 @@ export async function GET(req: NextRequest) {
         // Build a base query helper
         const baseQ = () => {
             let q = supabaseAdmin.from('questions').select('*');
-            if (subject) {
-                // Support "Maths" or "Mathematics" interchangeably
-                if (subject.toLowerCase().startsWith('math')) {
-                    q = q.ilike('subject', 'math%') as any;
-                } else {
-                    q = q.eq('subject', subject) as any;
-                }
-            }
-            return q;
+            return applySubjectFilter(q, subject);
         };
 
-        // LAYER 8 (New Questions Booster): Always show the 10 absolute newest unseen questions 
-        // to ensure new content is never "buried" by the algorithm.
+        // LAYER 8 (New Questions Booster): Always show newest unseen
         const { data: recentQ } = await baseQ()
             .order('created_at', { ascending: false })
             .limit(10);
@@ -185,7 +172,7 @@ export async function GET(req: NextRequest) {
             }
         });
 
-        // LAYER 1 (~30%): Questions at user's grade — show ALL including attempted (with solved badge)
+        // LAYER 1 (~30%): Questions at user's grade
         const layer1Count = Math.ceil(limit * 0.30);
         if (userGrade) {
             const { data } = await baseQ()
@@ -194,24 +181,21 @@ export async function GET(req: NextRequest) {
                 .limit(layer1Count);
             (data || []).forEach((r: any) => pool.push({ ...r, _layer: 1, _label: '✨ For You', _score: 100 }));
         } else {
-            // No grade — show newest
             const { data } = await baseQ().order('created_at', { ascending: false }).limit(layer1Count);
             (data || []).forEach((r: any) => pool.push({ ...r, _layer: 1, _label: '✨ Fresh Questions', _score: 100 }));
         }
 
-        // LAYER 2 (max 1): Questions user already attempted — show at most ONE per feed load.
-        // Too many solved/attempted cards crowd the feed since the student wants fresh content.
+        // LAYER 2 (max 1): Questions user already attempted
         if (userAttempted.size > 0) {
-            const layer2Count = 1; // Hard cap: only 1 solved question per feed
-            // Prefer a FAILED question for review over an already-solved one
+            const layer2Count = 1; 
             const failedArr = Array.from(userFailed).slice(0, 5);
             const attemptedArr = Array.from(userAttempted).slice(0, 10);
             const pickArr = failedArr.length > 0 ? failedArr : attemptedArr;
-            const { data } = await supabaseAdmin
-                .from('questions')
-                .select('*')
-                .in('id', pickArr)
-                .limit(layer2Count);
+            
+            let query = supabaseAdmin.from('questions').select('*').in('id', pickArr);
+            query = applySubjectFilter(query, subject);
+            
+            const { data } = await query.limit(layer2Count);
             (data || []).forEach((r: any) => {
                 const label = userFailed.has(String(r.id)) ? '🔄 You Got This Wrong — Review' : '✅ Already Solved';
                 pool.push({ ...r, _layer: 2, _label: label, _score: 60 });
@@ -221,15 +205,12 @@ export async function GET(req: NextRequest) {
         // LAYER 3 (~20%): What school peers solved recently
         if (userSchoolName && userId) {
             const layer3Count = Math.ceil(limit * 0.20);
-
-            // Get user IDs who belong to the same school
             const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
             const schoolmateIds = (usersData?.users || [])
                 .filter(u => u.user_metadata?.school === userSchoolName && u.id !== userId)
                 .map(u => u.id);
 
             if (schoolmateIds.length > 0) {
-                // Get questions recently solved by schoolmates
                 const { data: peerAttempts } = await supabaseAdmin
                     .from('question_attempts')
                     .select('question_id')
@@ -243,23 +224,21 @@ export async function GET(req: NextRequest) {
                     .slice(0, layer3Count);
 
                 if (peerQIds.length > 0) {
-                    const { data } = await supabaseAdmin
-                        .from('questions')
-                        .select('*')
-                        .in('id', peerQIds);
+                    let query = supabaseAdmin.from('questions').select('*').in('id', peerQIds);
+                    query = applySubjectFilter(query, subject);
+                    const { data } = await query;
                     (data || []).forEach((r: any) => pool.push({ ...r, _layer: 3, _label: '🏫 Trending at Your School', _score: 90 }));
                 }
             }
         }
 
-        // LAYER 4 (~10%): Hardest trending questions at user's grade (high attempts, low success)
+        // LAYER 4 (~10%): Hardest trending questions
         const layer4Count = Math.ceil(limit * 0.10);
         if (userGrade) {
             const { data: allAttempts } = await supabaseAdmin
                 .from('question_attempts')
                 .select('question_id, is_correct');
 
-            // Compute attempt stats
             const statsMap: Record<string, { total: number; correct: number }> = {};
             (allAttempts || []).forEach((a: any) => {
                 const id = String(a.question_id);
@@ -268,7 +247,6 @@ export async function GET(req: NextRequest) {
                 if (a.is_correct) statsMap[id].correct++;
             });
 
-            // Find popular but hard questions (>= 5 attempts, < 40% success)
             const trendingHard = Object.entries(statsMap)
                 .filter(([, s]) => s.total >= 5 && s.correct / s.total < 0.4)
                 .sort(([, a], [, b]) => b.total - a.total)
@@ -277,17 +255,14 @@ export async function GET(req: NextRequest) {
                 .slice(0, layer4Count * 3);
 
             if (trendingHard.length > 0) {
-                const { data } = await supabaseAdmin
-                    .from('questions')
-                    .select('*')
-                    .in('id', trendingHard)
-                    .eq('class_grade', userGrade)
-                    .limit(layer4Count);
+                let query = supabaseAdmin.from('questions').select('*').in('id', trendingHard).eq('class_grade', userGrade);
+                query = applySubjectFilter(query, subject);
+                const { data } = await query.limit(layer4Count);
                 (data || []).forEach((r: any) => pool.push({ ...r, _layer: 4, _label: '🔥 Everyone\'s Struggling With This', _score: 85 }));
             }
         }
 
-        // LAYER 5 (~10%): One level up — stretch questions (only unseen)
+        // LAYER 5 (~10%): One level up — stretch questions
         const layer5Count = Math.ceil(limit * 0.10);
         if (userGrade) {
             const nextGrade = String(Number(userGrade) + 1);
@@ -309,7 +284,6 @@ export async function GET(req: NextRequest) {
                 .order('created_at', { ascending: false })
                 .limit(100);
 
-            // Build a map: question_id -> who solved it
             const followedQMap: Record<string, string[]> = {};
             const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
             const userNameMap = Object.fromEntries(
@@ -327,11 +301,9 @@ export async function GET(req: NextRequest) {
                 .slice(0, layer6Count);
 
             if (followedQIds.length > 0) {
-                const { data } = await supabaseAdmin
-                    .from('questions')
-                    .select('*')
-                    .in('id', followedQIds)
-                    .limit(layer6Count);
+                let query = supabaseAdmin.from('questions').select('*').in('id', followedQIds);
+                query = applySubjectFilter(query, subject);
+                const { data } = await query.limit(layer6Count);
 
                 (data || []).forEach((r: any) => {
                     const solvers = followedQMap[String(r.id)] || [];
@@ -343,41 +315,40 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        // LAYER 7 (Community Posts): Show posts from people user follows or schoolmates
-        let postPool: any[] = [];
-        const { data: rawPosts } = await supabaseAdmin
-            .from('posts')
-            .select('*, post_likes(user_id)')
-            .order('created_at', { ascending: false })
-            .limit(30);
+        // LAYER 7 (Community Posts): ONLY if no subject filter is active
+        if (!subject) {
+            let postPool: any[] = [];
+            const { data: rawPosts } = await supabaseAdmin
+                .from('posts')
+                .select('*, post_likes(user_id)')
+                .order('created_at', { ascending: false })
+                .limit(30);
 
-        if (rawPosts && rawPosts.length > 0) {
-            const postAuthorIds = [...new Set(rawPosts.map(p => p.author_id))];
-            const profilesMap = await getProfilesMap(postAuthorIds);
-            
-            rawPosts.forEach(p => {
-                const isFollowed = followingIds.includes(p.author_id);
-                const isSchoolmate = userSchoolName && profilesMap.get(p.author_id)?.school === userSchoolName;
+            if (rawPosts && rawPosts.length > 0) {
+                const postAuthorIds = [...new Set(rawPosts.map(p => p.author_id))];
+                const profilesMap = await getProfilesMap(postAuthorIds);
                 
-                // Only include if it's "relevant" to who they might like
-                if (isFollowed || isSchoolmate || (p.likes_count || 0) > 5) {
-                    const norm = normalizePost(p, profilesMap, userId);
-                    if (isFollowed) { 
-                        norm._feedLabel = '👤 Post from Peer You Follow'; 
-                        norm._feedScore = 95; 
-                    } else if (isSchoolmate) { 
-                        norm._feedLabel = '🏫 Trending at Your School'; 
-                        norm._feedScore = 85; 
+                rawPosts.forEach(p => {
+                    const isFollowed = followingIds.includes(p.author_id);
+                    const isSchoolmate = userSchoolName && profilesMap.get(p.author_id)?.school === userSchoolName;
+                    
+                    if (isFollowed || isSchoolmate || (p.likes_count || 0) > 5) {
+                        const norm = normalizePost(p, profilesMap, userId);
+                        if (isFollowed) { 
+                            norm._feedLabel = '👤 Post from Peer You Follow'; 
+                            norm._feedScore = 95; 
+                        } else if (isSchoolmate) { 
+                            norm._feedLabel = '🏫 Trending at Your School'; 
+                            norm._feedScore = 85; 
+                        }
+                        postPool.push(norm);
                     }
-                    postPool.push(norm);
-                }
-            });
+                });
+            }
+            pool.push(...postPool);
         }
-        
-        // Add postPool to the main pool
-        pool.push(...postPool);
 
-        // ── Fallback: if pool is too small, pad with general questions ─────
+        // ── Fallback ─────
         if (pool.length < 10) {
             const { data } = await baseQ()
                 .order('created_at', { ascending: false })
@@ -389,7 +360,7 @@ export async function GET(req: NextRequest) {
             });
         }
 
-        // ── Remove duplicates ──────────────────────────────────────────────
+        // ── Deduplicate ──
         const seen = new Set<string>();
         pool = pool.filter(r => {
             if (seen.has(String(r.id))) return false;
@@ -397,12 +368,11 @@ export async function GET(req: NextRequest) {
             return true;
         });
 
-        // ── Sort: by _score descending, then shuffle within same score ─────
+        // ── Sort & Shuffle ──
         pool.sort((a, b) => b._score - a._score);
-        // Light shuffle within groups of same layer to avoid rigid ordering
         pool = shuffleWithinGroups(pool);
 
-        // ── Enrich with user info + attempt stats ─────────────────────────
+        // ── Enrich ──
         const qIds = pool.map(r => String(r.id));
         const creatorIds = [...new Set(pool.filter(r => r.type !== 'post').map(r => r.created_by).filter(Boolean))] as string[];
 
@@ -465,9 +435,8 @@ function shuffleWithinGroups(arr: any[]): any[] {
         }
     });
 
-    // Interleave groups so feed doesn't cluster all of one type
     const result: any[] = [];
-    const layerOrder = [8, 6, 1, 7, 2, 3, 4, 5, 0]; // Priority order (8: New Booster, 6: Followed, 1: For You, 7: Posts)
+    const layerOrder = [8, 6, 1, 7, 2, 3, 4, 5, 0];
     let hasMore = true;
     while (hasMore) {
         hasMore = false;
