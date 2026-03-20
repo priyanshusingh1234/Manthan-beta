@@ -60,11 +60,15 @@ export default async function LeaderboardPage() {
             {/* 2nd Place */}
             <div className="relative flex flex-col items-center w-[30%] animate-slideUp" style={{ animationDelay: '100ms' }}>
               <div className="relative mb-2 group">
-                <img src={students[1].avatar || `https://ui-avatars.com/api/?name=${students[1].name}&background=e2e8f0&color=475569`} alt={students[1].name} className="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-md relative z-10 bg-white" />
+                <Link href={`/user/${students[1].username}`}>
+                  <img src={students[1].avatar || `https://ui-avatars.com/api/?name=${students[1].name}&background=e2e8f0&color=475569`} alt={students[1].name} className="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-md relative z-10 bg-white" />
+                </Link>
                 <div className="absolute -bottom-1.5 right-0 bg-slate-200 text-slate-700 w-5 h-5 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-[10px] z-20">2</div>
               </div>
               <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-xl w-full py-2 px-1 flex flex-col items-center">
-                <span className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-[10px] sm:text-xs truncate">{students[1].name}</span>
+                <Link href={`/user/${students[1].username}`} className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-[10px] sm:text-xs truncate">
+                  {students[1].name}
+                </Link>
                 <span className="text-indigo-600 font-bold text-[10px] sm:text-xs mt-0.5">{students[1].totalPoints.toLocaleString()}</span>
               </div>
             </div>
@@ -73,11 +77,15 @@ export default async function LeaderboardPage() {
             <div className="relative flex flex-col items-center w-[35%] z-10 -translate-y-4 sm:-translate-y-6 animate-slideUp">
               <div className="relative mb-2 group">
                 <div className="absolute -inset-2 rounded-full bg-amber-400/20 animate-pulse blur-md"></div>
-                <img src={students[0].avatar || `https://ui-avatars.com/api/?name=${students[0].name}&background=fef3c7&color=d97706`} alt={students[0].name} className="w-18 h-18 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.2)] relative z-10 bg-white" />
+                <Link href={`/user/${students[0].username}`}>
+                  <img src={students[0].avatar || `https://ui-avatars.com/api/?name=${students[0].name}&background=fef3c7&color=d97706`} alt={students[0].name} className="w-18 h-18 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.2)] relative z-10 bg-white" />
+                </Link>
                 <div className="absolute -bottom-1.5 right-1 bg-gradient-to-br from-amber-400 to-amber-600 text-white w-6 h-6 sm:w-8 sm:h-8 rounded-full border-[2px] border-white flex items-center justify-center font-black shadow-md text-xs z-20">1</div>
               </div>
               <div className="bg-white dark:bg-slate-900 border border-amber-100 dark:border-amber-900 shadow-md rounded-xl w-full py-3 px-1 flex flex-col items-center border-t-2 border-amber-400">
-                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-center w-full text-xs sm:text-sm truncate">{students[0].name}</span>
+                <Link href={`/user/${students[0].username}`} className="font-extrabold text-slate-900 dark:text-slate-100 text-center w-full text-xs sm:text-sm truncate">
+                  {students[0].name}
+                </Link>
                 <span className="text-amber-600 dark:text-amber-400 font-black text-xs">{students[0].totalPoints.toLocaleString()}</span>
               </div>
             </div>
@@ -85,11 +93,15 @@ export default async function LeaderboardPage() {
             {/* 3rd Place */}
             <div className="relative flex flex-col items-center w-[30%] animate-slideUp" style={{ animationDelay: '200ms' }}>
               <div className="relative mb-2 group">
-                <img src={students[2].avatar || `https://ui-avatars.com/api/?name=${students[2].name}&background=ffedd5&color=ea580c`} alt={students[2].name} className="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-md relative z-10 bg-white" />
+                <Link href={`/user/${students[2].username}`}>
+                  <img src={students[2].avatar || `https://ui-avatars.com/api/?name=${students[2].name}&background=ffedd5&color=ea580c`} alt={students[2].name} className="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-md relative z-10 bg-white" />
+                </Link>
                 <div className="absolute -bottom-1.5 right-0 bg-orange-200 text-orange-800 w-5 h-5 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-[10px] z-20">3</div>
               </div>
               <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-xl w-full py-2 px-1 flex flex-col items-center">
-                <span className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-[10px] sm:text-xs truncate">{students[2].name}</span>
+                <Link href={`/user/${students[2].username}`} className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-[10px] sm:text-xs truncate">
+                  {students[2].name}
+                </Link>
                 <span className="text-indigo-600 font-bold text-[10px] sm:text-xs mt-0.5">{students[2].totalPoints.toLocaleString()}</span>
               </div>
             </div>
@@ -121,7 +133,7 @@ export default async function LeaderboardPage() {
                       {rank}
                     </div>
 
-                    <div className="relative shrink-0 ml-1">
+                    <Link href={`/user/${student.username}`} className="relative shrink-0 ml-1">
                       {student.avatar ? (
                         <img src={student.avatar} alt={student.name} className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-800 bg-slate-100" />
                       ) : (
@@ -129,10 +141,12 @@ export default async function LeaderboardPage() {
                           {String(student.name[0]).toUpperCase()}
                         </div>
                       )}
-                    </div>
+                    </Link>
 
                     <div className="ml-3 flex-1 min-w-0">
-                      <div className="font-bold text-[15px] text-slate-900 dark:text-slate-100 truncate">{student.name}</div>
+                      <Link href={`/user/${student.username}`} className="font-bold text-[15px] text-slate-900 dark:text-slate-100 truncate">
+                        {student.name}
+                      </Link>
                       <div className="text-xs font-medium text-slate-500 truncate flex items-center gap-1">
                          <MapPin className="w-3 h-3 shrink-0" />
                          <span className="truncate">{student.school}</span>

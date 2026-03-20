@@ -92,7 +92,7 @@ export default function SuggestedUsersCard() {
                     return (
                         <div key={user.id} className="flex items-center gap-3 w-full px-2 group cursor-pointer transition-transform hover:-translate-x-1">
                             {/* Avatar */}
-                            <Link href={`/profile/${user.id}`} className="shrink-0 relative h-10 w-10">
+                            <Link href={user.isTeacher && user.username ? `/teacher/${user.username}` : user.username ? `/user/${user.username}` : '#'} className="shrink-0 relative h-10 w-10">
                                 <div className="absolute inset-0 rounded-full bg-indigo-500/20 blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
                                 <div className="relative h-10 w-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
                                     {user.avatar ? (
@@ -105,7 +105,7 @@ export default function SuggestedUsersCard() {
 
                             {/* Info */}
                             <div className="flex-1 min-w-0 flex justify-center flex-col h-full items-start">
-                                <Link href={`/profile/${user.id}`} className="flex items-center gap-1.5 min-w-0 max-w-full">
+                                <Link href={user.isTeacher && user.username ? `/teacher/${user.username}` : user.username ? `/user/${user.username}` : '#'} className="flex items-center gap-1.5 min-w-0 max-w-full">
                                     <p className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate flex-shrink">
                                         {user.name}
                                     </p>

@@ -134,7 +134,7 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
             {/* Header */}
             <div className="p-5 flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                    <Link href={`/profile/${post.author?.username || post.author?.id}`}>
+                    <Link href={post.author?.isTeacher && post.author?.username ? `/teacher/${post.author.username}` : post.author?.username ? `/user/${post.author.username}` : '#'}>
                         <div className="relative w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800">
                             {post.author?.avatar_url ? (
                                 <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
@@ -144,7 +144,7 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                         </div>
                     </Link>
                     <div>
-                        <Link href={`/profile/${post.author?.username || post.author?.id}`} className="font-bold text-[15px] hover:text-indigo-600 transition-colors text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                        <Link href={post.author?.isTeacher && post.author?.username ? `/teacher/${post.author.username}` : post.author?.username ? `/user/${post.author.username}` : '#'} className="font-bold text-[15px] hover:text-indigo-600 transition-colors text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                             {post.author?.name || 'Unknown Scholar'}
                             {post.author?.isTeacher && <TeacherBadge />}
                         </Link>

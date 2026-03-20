@@ -355,23 +355,26 @@ function CommentItem({ comment, onReply, isReply = false }: { comment: Comment, 
     const isTeacher = comment.author.isTeacher;
     const timeAgo = formatDistanceToNow(new Date(comment.created_at), { addSuffix: true });
 
+    const profileUrl = comment.author.isTeacher && comment.author.username ? `/teacher/${comment.author.username}` : comment.author.username ? `/user/${comment.author.username}` : '#';
     return (
         <div className={`flex gap-2.5 sm:gap-4 ${isReply ? 'mt-3 sm:mt-4' : 'mt-6 sm:mt-8 first:mt-0'}`}>
             {/* Avatar - Never Shrink */}
-            <div className={`${isReply ? 'w-8 h-8' : 'w-10 h-10'} rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 relative flex-shrink-0 border border-slate-200 dark:border-slate-800 shadow-sm`}>
-                {comment.author.avatar_url ? (
-                    <Image src={comment.author.avatar_url} alt="avatar" fill className="object-cover" />
-                ) : (
-                    <User className="w-full h-full p-2 text-slate-400" />
-                )}
-            </div>
+            <Link href={profileUrl}>
+                <div className={`${isReply ? 'w-8 h-8' : 'w-10 h-10'} rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 relative flex-shrink-0 border border-slate-200 dark:border-slate-800 shadow-sm`}>
+                    {comment.author.avatar_url ? (
+                        <Image src={comment.author.avatar_url} alt="avatar" fill className="object-cover" />
+                    ) : (
+                        <User className="w-full h-full p-2 text-slate-400" />
+                    )}
+                </div>
+            </Link>
             
             {/* Content Area - Ensure it doesn't overlap */}
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <span className={`font-black text-[13px] sm:text-sm truncate max-w-[150px] ${isTeacher ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                    <Link href={profileUrl} className={`font-black text-[13px] sm:text-sm truncate max-w-[150px] ${isTeacher ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-900 dark:text-slate-100'}`}>
                         {comment.author.name}
-                    </span>
+                    </Link>
                     {isTeacher && <CheckCircle2 className="w-3 h-3 text-indigo-500" />}
                     <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">{timeAgo}</span>
                 </div>

@@ -209,7 +209,8 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
               { label: 'Feed', href: '/feed', icon: Compass },
               { label: 'Community', href: '/posts', icon: MessageSquare },
               { label: 'Ranks', href: '/leaderboard', icon: Trophy },
-              { label: 'Faction', href: '/my-school', icon: Shield },
+              { label: 'Top Schools', href: '/top-schools', icon: GraduationCap },
+              { label: 'Solved', href: '/solved', icon: CheckSquare },
               { label: 'Docs', href: '/docs', icon: HelpCircle },
               { label: 'Support', href: '/contact', icon: Mail },
             ].map((nav) => {
