@@ -4,6 +4,9 @@ import { Trophy, Target, Zap, Star, MapPin, GraduationCap } from 'lucide-react';
 import TeacherBadge from '@/ticks/teacher';
 import FollowButton from '@/components/FollowButton';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type Props = { params: { username: string } };
 
 export default async function StudentProfilePage({ params }: Props) {
