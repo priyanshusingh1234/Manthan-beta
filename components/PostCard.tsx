@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
 const TeacherBadge = dynamic(() => import('@/ticks/teacher'), { ssr: false });
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 
 export default function PostCard({
     post,
@@ -134,7 +136,7 @@ export default function PostCard({
             if (res.ok) {
                 const inserted = await res.json();
                 setComments((c) => [inserted, ...c]);
-                setCommentsCount((prev) => prev + 1);
+                setCommentsCount((prev: number) => prev + 1);
                 setNewComment('');
                 setReplyingTo(null);
             }
@@ -253,14 +255,23 @@ export default function PostCard({
                     onClick={async () => {
                         const url = typeof window !== 'undefined' ? `${window.location.origin}/posts/${post.id}` : '';
                         const title = post?.title || (post?.content ? post.content.slice(0, 60) : 'Check out this post!');
-                        if (navigator.share) {
-                            try {
+                        
+                        try {
+                            if (Capacitor.isNativePlatform()) {
+                                await Share.share({
+                                    title,
+                                    text: title,
+                                    url,
+                                    dialogTitle: 'Share this post'
+                                });
+                            } else if (navigator.share) {
                                 await navigator.share({ title, text: title, url });
-                            } catch {}
-                        } else if (navigator.clipboard) {
-                            try {
+                            } else if (navigator.clipboard) {
                                 await navigator.clipboard.writeText(url);
-                            } catch {}
+                                alert('Link copied to clipboard!');
+                            }
+                        } catch (err) {
+                            console.error('Sharing failed:', err);
                         }
                     }}
                 >

@@ -31,8 +31,9 @@ export default function CreatePostPage() {
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                setError('Image must be less than 2MB before compression. Please choose a smaller file.');
+            // Increase limit to 10MB to allow modern phone photos
+            if (file.size > 10 * 1024 * 1024) {
+                setError('Image must be less than 10MB. Please choose a smaller file.');
                 return;
             }
             setError('');
@@ -41,17 +42,26 @@ export default function CreatePostPage() {
                 const options = {
                     maxSizeMB: 0.8,
                     maxWidthOrHeight: 1024,
-                    useWebWorker: true
+                    useWebWorker: true,
+                    fileType: 'image/webp' // Target webp for better compression
                 };
-                const compressedFile = await imageCompression(file, options);
                 
-                setImageFile(compressedFile);
+                let fileToUse = file;
+                try {
+                    const compressedFile = await imageCompression(file, options);
+                    fileToUse = compressedFile;
+                } catch (compressionErr) {
+                    console.warn("Compression failed, using original file", compressionErr);
+                    // We don't set error here, just proceed with original if it's within a reasonable limit
+                }
+                
+                setImageFile(fileToUse);
                 const reader = new FileReader();
                 reader.onloadend = () => setImagePreview(reader.result as string);
-                reader.readAsDataURL(compressedFile);
+                reader.readAsDataURL(fileToUse);
             } catch (err) {
-                console.error("Compression failed", err);
-                setError("Failed to compress image.");
+                console.error("Image processing failed", err);
+                setError("Failed to process image.");
             } finally {
                 setLoading(false);
             }
