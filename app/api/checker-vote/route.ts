@@ -21,8 +21,9 @@ const CHECKER_CORRECT_REWARD_POINTS = 1;
 const SPAMMER_PENALTY = 1;
 const STUDENT_EXTRA_PENALTY = 3;
 
-// Initialize Gemini
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Initialize Gemini safely
+const GEMINI_KEY = process.env.GOOGLE_GENAI_API_KEY || "";
+const ai = GEMINI_KEY ? new GoogleGenAI({ apiKey: GEMINI_KEY }) : null;
 
 type AIVerdict = { isCorrect: boolean; breakdown: string; raw: string };
 
@@ -82,11 +83,15 @@ Respond ONLY with a valid JSON object matching this schema (no markdown formatti
         if (teacherImagePart) contents.push(teacherImagePart);
         if (studentImagePart) contents.push(studentImagePart);
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+        if (!ai) {
+            console.error("Gemini AI not initialized (missing API key)");
+            return null;
+        }
+
+        const response = await ai.getGenerativeModel({ model: "gemini-1.5-flash" }).generateContent({
             // @ts-ignore
-            contents: contents,
-            config: {
+            contents: [{ role: 'user', parts: contents }],
+            generationConfig: {
                 responseMimeType: "application/json",
             }
         });
