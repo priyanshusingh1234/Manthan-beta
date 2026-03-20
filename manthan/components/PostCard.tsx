@@ -1,7 +1,9 @@
 "use client";
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Send, Clock, User, CheckCircle2, MoreVertical, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Send, Clock, User, MoreVertical, Trash2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+const TeacherBadge = dynamic(() => import('@/ticks/teacher'), { ssr: false });
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
@@ -144,11 +146,7 @@ export default function PostCard({ post, currentUserId, onUpdate }: { post: any,
                     <div>
                         <Link href={`/profile/${post.author?.username || post.author?.id}`} className="font-bold text-[15px] hover:text-indigo-600 transition-colors text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                             {post.author?.name || 'Unknown Scholar'}
-                            {post.author?.isTeacher && (
-                                <span className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-widest font-black inline-flex items-center gap-1">
-                                    <CheckCircle2 className="w-3 h-3" /> Teacher
-                                </span>
-                            )}
+                            {post.author?.isTeacher && <TeacherBadge />}
                         </Link>
                         <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                             <Clock className="w-3 h-3" /> {timeAgo} 

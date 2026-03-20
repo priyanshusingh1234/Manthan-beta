@@ -152,50 +152,54 @@ export default async function StudentProfilePage({ params }: Props) {
                         </div>
                     </div>
 
-                    <div className={"grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8 w-full"}>
-                        {stats.map((stat, i) => {
-                            const Icon = stat.icon;
-                            return (
-                                <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center text-center w-full">
-                                    <div className={`${stat.bgColor} dark:bg-slate-800 w-12 h-12 rounded-xl flex items-center justify-center mb-3`}>
-                                        <Icon className={`${stat.color} w-6 h-6`} />
-                                    </div>
-                                    <div className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</div>
-                                    <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">{stat.label}</div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Recent Activity (Dummy for Public View) */}
-                    <div className="mt-8 bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 w-full mb-10">
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                            <Trophy className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
-                            Recent Victories
-                        </h2>
-                        <div className="space-y-4">
-                            {[
-                                { o: 'Algebra Championship', d: '2 hours ago', p: '+50 pts' },
-                                { o: 'Physics Motion Quiz', d: '1 day ago', p: '+30 pts' },
-                                { o: 'History Trivia Clash', d: '3 days ago', p: '+45 pts' },
-                            ].map((v, i) => (
-                                <div key={i} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center font-bold">
-                                            {v.o.charAt(0)}
+                    {!isTeacher && (
+                        <div className={"grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8 w-full"}>
+                            {stats.map((stat, i) => {
+                                const Icon = stat.icon;
+                                return (
+                                    <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center text-center w-full">
+                                        <div className={`${stat.bgColor} dark:bg-slate-800 w-12 h-12 rounded-xl flex items-center justify-center mb-3`}>
+                                            <Icon className={`${stat.color} w-6 h-6`} />
                                         </div>
-                                        <div>
-                                            <h3 className="font-bold text-slate-800 dark:text-slate-200">{v.o}</h3>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">{v.d}</p>
-                                        </div>
+                                        <div className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</div>
+                                        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">{stat.label}</div>
                                     </div>
-                                    <div className="font-bold text-green-500 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full text-sm">
-                                        {v.p}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
-                    </div>
+                    )}
+
+                    {/* Hide recent activity for teachers */}
+                    {!isTeacher && (
+                        <div className="mt-8 bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 w-full mb-10">
+                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                                <Trophy className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
+                                Recent Victories
+                            </h2>
+                            <div className="space-y-4">
+                                {[
+                                    { o: 'Algebra Championship', d: '2 hours ago', p: '+50 pts' },
+                                    { o: 'Physics Motion Quiz', d: '1 day ago', p: '+30 pts' },
+                                    { o: 'History Trivia Clash', d: '3 days ago', p: '+45 pts' },
+                                ].map((v, i) => (
+                                    <div key={i} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center font-bold">
+                                                {v.o.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-slate-800 dark:text-slate-200">{v.o}</h3>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">{v.d}</p>
+                                            </div>
+                                        </div>
+                                        <div className="font-bold text-green-500 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full text-sm">
+                                            {v.p}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                 </div>
             </div >

@@ -183,7 +183,7 @@ export default function NotificationsPage() {
     const filtered = filterNotifications(notifications, activeFilter);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 pb-24">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 transition-colors">
             <div className="max-w-2xl mx-auto px-4 py-8">
 
                 {/* Header */}

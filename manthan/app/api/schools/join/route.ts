@@ -18,6 +18,10 @@ export async function POST(req: NextRequest) {
         // action: 'request' | 'approve' | 'reject'
 
         if (action === 'request') {
+            // Prevent teachers from joining schools
+            if (user.user_metadata?.isTeacher) {
+                return NextResponse.json({ error: 'Teachers cannot join schools.' }, { status: 403 });
+            }
             // Student requests to join a school
             const { data: existingMember } = await supabaseAdmin
                 .from('school_members')
