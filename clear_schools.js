@@ -14,7 +14,7 @@ try {
         }
     });
 } catch {
-    console.error('❌ Could not read .env.local — make sure it exists in the manthan/ folder.');
+    console.error('❌ Could not read .env.local — make sure it exists in the root folder.');
     process.exit(1);
 }
 

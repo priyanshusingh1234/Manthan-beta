@@ -28,6 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
                 created_at: c.created_at,
                 author: {
                     name: profile?.full_name || 'Unknown',
+                    username: profile?.username || null,
                     avatar_url: profile?.avatar_url || null,
                     isTeacher: profile?.is_teacher || false,
                 }
@@ -103,7 +104,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             content: comment.content,
             created_at: comment.created_at,
             author: {
+                id: user.id,
                 name: meta.fullName || meta.name || user.email?.split('@')[0],
+                username: meta.username || null,
                 avatar_url: meta.avatar_url,
                 isTeacher: meta.isTeacher || false,
             }

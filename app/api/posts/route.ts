@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
                 author: {
                     id: p.author_id,
                     name: profile?.full_name || 'Unknown',
+                    username: profile?.username || null,
                     avatar_url: profile?.avatar_url || null,
                     school: profile?.school || null,
                     isTeacher: profile?.is_teacher || false,

@@ -21,6 +21,7 @@ export default function PostCard({
 }) {
     const [isLiked, setIsLiked] = useState(post.is_liked_by_me || false);
     const [likesCount, setLikesCount] = useState(post.likes_count || 0);
+    const [commentsCount, setCommentsCount] = useState(post.comments_count || 0);
     const [showComments, setShowComments] = useState(false);
     const [comments, setComments] = useState<any[]>(post.recent_comments || []);
     const [loadingComments, setLoadingComments] = useState(false);
@@ -38,12 +39,13 @@ export default function PostCard({
     }
 
     function isTeacherUser(user: any): boolean {
-        return Boolean(user?.isTeacher || user?.is_teacher);
+        return Boolean(user?.isTeacher || user?.is_teacher || user?.user_metadata?.isTeacher);
     }
 
     function getProfileUrl(user: any) {
+        if (!user) return null;
         const username = getUsername(user);
-        if (!username) return '#';
+        if (!username) return isOwner ? '/profile' : null;
         return isTeacherUser(user) ? `/teacher/${username}` : `/user/${username}`;
     }
 
@@ -132,6 +134,7 @@ export default function PostCard({
             if (res.ok) {
                 const inserted = await res.json();
                 setComments((c) => [inserted, ...c]);
+                setCommentsCount((prev) => prev + 1);
                 setNewComment('');
                 setReplyingTo(null);
             }
@@ -146,26 +149,35 @@ export default function PostCard({
                 <div className="flex items-center gap-3">
                     {(() => {
                         const profileUrl = getProfileUrl(post.author);
-                        return (
+                        const isTeacher = isTeacherUser(post.author);
+                        
+                        const AuthorInfo = (
                             <>
-                                <Link href={profileUrl}>
-                                    <div className="relative w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800">
-                                        {post.author?.avatar_url ? (
-                                            <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
-                                        ) : (
-                                            <User className="w-5 h-5 absolute inset-0 m-auto text-slate-400" />
-                                        )}
-                                    </div>
-                                </Link>
-                                <Link
-                                    href={profileUrl}
+                                <div className="relative w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800">
+                                    {post.author?.avatar_url ? (
+                                        <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
+                                    ) : (
+                                        <User className="w-5 h-5 absolute inset-0 m-auto text-slate-400" />
+                                    )}
+                                </div>
+                                <div
                                     className="font-bold text-[15px] hover:text-indigo-600 transition-colors text-slate-900 dark:text-slate-100 flex items-center gap-1.5"
                                 >
                                     {post.author?.name || 'Unknown Scholar'}
-                                    {post.author?.isTeacher && <TeacherBadge />}
-                                </Link>
+                                    {isTeacher && <TeacherBadge />}
+                                </div>
                             </>
                         );
+
+                        if (profileUrl) {
+                            return (
+                                <Link href={profileUrl} className="flex items-center gap-3 group/author">
+                                    {AuthorInfo}
+                                </Link>
+                            );
+                        }
+                        
+                        return <div className="flex items-center gap-3">{AuthorInfo}</div>;
                     })()}
                     <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                         <Clock className="w-3 h-3" /> {timeAgo}
@@ -233,7 +245,7 @@ export default function PostCard({
                     onClick={toggleComments}
                     className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition-colors font-black text-sm"
                 >
-                    <MessageCircle className="w-6 h-6" /> {comments.length}
+                    <MessageCircle className="w-6 h-6" /> {commentsCount}
                 </button>
                 <div className="ml-auto" />
                 <button
@@ -267,31 +279,43 @@ export default function PostCard({
                                 const commentProfileUrl = getProfileUrl(comment.author);
                                 const safeReplyHandle = commentUsername || 'user';
 
+                                 const AuthorAvatar = (
+                                    <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800">
+                                        {comment.author.avatar_url ? (
+                                            <Image
+                                                src={comment.author.avatar_url}
+                                                alt="avatar"
+                                                width={36}
+                                                height={36}
+                                                className="object-cover w-9 h-9"
+                                            />
+                                        ) : (
+                                            <User className="w-5 h-5 m-auto text-slate-400" />
+                                        )}
+                                    </div>
+                                );
+
                                 return (
                                 <div key={comment.id} className="flex gap-3 items-start">
-                                    <Link href={commentProfileUrl}>
-                                        <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800">
-                                            {comment.author.avatar_url ? (
-                                                <Image
-                                                    src={comment.author.avatar_url}
-                                                    alt="avatar"
-                                                    width={36}
-                                                    height={36}
-                                                    className="object-cover w-9 h-9"
-                                                />
-                                            ) : (
-                                                <User className="w-5 h-5 m-auto text-slate-400" />
-                                            )}
-                                        </div>
-                                    </Link>
+                                    {commentProfileUrl ? (
+                                        <Link href={commentProfileUrl}>{AuthorAvatar}</Link>
+                                    ) : (
+                                        AuthorAvatar
+                                    )}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <Link
-                                                href={commentProfileUrl}
-                                                className="font-bold text-[13px] sm:text-sm truncate max-w-[120px] text-slate-900 dark:text-slate-100"
-                                            >
-                                                {comment.author.name}
-                                            </Link>
+                                            {commentProfileUrl ? (
+                                                <Link
+                                                    href={commentProfileUrl}
+                                                    className="font-bold text-[13px] sm:text-sm truncate max-w-[120px] text-slate-900 dark:text-slate-100 hover:text-indigo-600 transition-colors"
+                                                >
+                                                    {comment.author.name}
+                                                </Link>
+                                            ) : (
+                                                <span className="font-bold text-[13px] sm:text-sm truncate max-w-[120px] text-slate-900 dark:text-slate-100">
+                                                    {comment.author.name}
+                                                </span>
+                                            )}
                                             {comment.author.isTeacher && <TeacherBadge />}
                                             <span className="text-xs text-slate-400 ml-2">
                                                 {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
