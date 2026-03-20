@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
+import { getProfilesMap } from '@/lib/profiles';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,9 +25,6 @@ async function getVerifiedUser(bearer?: string | null) {
     } catch { return null; }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: normalize a question row into the standard card shape
-// ─────────────────────────────────────────────────────────────────────────────
 function normalizeQuestion(
     r: any,
     userInfoMap: Record<string, any>,
@@ -60,6 +58,34 @@ function normalizeQuestion(
         // Feed metadata — shown as label on the card
         _feedLabel: feedLabel,
         _feedScore: 0, // set per layer below
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: normalize a post row
+// ─────────────────────────────────────────────────────────────────────────────
+function normalizePost(p: any, profilesMap: Map<string, any>, currentUserId: string | null) {
+    const profile = profilesMap.get(p.author_id);
+    return {
+        id: p.id,
+        type: 'post',
+        content: p.content,
+        image_url: p.image_url,
+        likes_count: p.likes_count || 0,
+        comments_count: p.comments_count || 0,
+        created_at: p.created_at,
+        is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
+        author: {
+            id: p.author_id,
+            name: profile?.full_name || 'Student',
+            username: profile?.username || null,
+            avatar_url: profile?.avatar_url || null,
+            school: profile?.school || null,
+            isTeacher: profile?.is_teacher || false,
+        },
+        _feedLabel: '📣 Community Update',
+        _feedScore: 75,
+        _layer: 7
     };
 }
 
@@ -298,6 +324,40 @@ export async function GET(req: NextRequest) {
             }
         }
 
+        // LAYER 7 (Community Posts): Show posts from people user follows or schoolmates
+        let postPool: any[] = [];
+        const { data: rawPosts } = await supabaseAdmin
+            .from('posts')
+            .select('*, post_likes(user_id)')
+            .order('created_at', { ascending: false })
+            .limit(30);
+
+        if (rawPosts && rawPosts.length > 0) {
+            const postAuthorIds = [...new Set(rawPosts.map(p => p.author_id))];
+            const profilesMap = await getProfilesMap(postAuthorIds);
+            
+            rawPosts.forEach(p => {
+                const isFollowed = followingIds.includes(p.author_id);
+                const isSchoolmate = userSchoolName && profilesMap.get(p.author_id)?.school === userSchoolName;
+                
+                // Only include if it's "relevant" to who they might like
+                if (isFollowed || isSchoolmate || (p.likes_count || 0) > 5) {
+                    const norm = normalizePost(p, profilesMap, userId);
+                    if (isFollowed) { 
+                        norm._feedLabel = '👤 Post from Peer You Follow'; 
+                        norm._feedScore = 95; 
+                    } else if (isSchoolmate) { 
+                        norm._feedLabel = '🏫 Trending at Your School'; 
+                        norm._feedScore = 85; 
+                    }
+                    postPool.push(norm);
+                }
+            });
+        }
+        
+        // Add postPool to the main pool
+        pool.push(...postPool);
+
         // ── Fallback: if pool is too small, pad with general questions ─────
         if (pool.length < 10) {
             const { data } = await baseQ()
@@ -325,20 +385,18 @@ export async function GET(req: NextRequest) {
 
         // ── Enrich with user info + attempt stats ─────────────────────────
         const qIds = pool.map(r => String(r.id));
-        const creatorIds = [...new Set(pool.map(r => r.created_by).filter(Boolean))] as string[];
+        const creatorIds = [...new Set(pool.filter(r => r.type !== 'post').map(r => r.created_by).filter(Boolean))] as string[];
 
+        const profilesMap = await getProfilesMap(creatorIds);
         const userInfoMap: Record<string, any> = {};
-        await Promise.all(creatorIds.map(async id => {
-            try {
-                const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
-                const meta = (u as any)?.user_metadata ?? (u as any)?.user?.user_metadata ?? {};
-                userInfoMap[id] = {
-                    name: meta?.fullName || meta?.full_name || meta?.name || 'Teacher',
-                    avatar: meta?.avatar_url || meta?.avatar || null,
-                    username: meta?.username || null,
-                };
-            } catch { userInfoMap[id] = { name: 'Teacher', avatar: null, username: null }; }
-        }));
+        for (const id of creatorIds) {
+            const p = profilesMap.get(id);
+            userInfoMap[id] = {
+                name: p?.full_name || 'Teacher',
+                avatar: p?.avatar_url || null,
+                username: p?.username || null
+            };
+        }
 
         const attemptsMap: Record<string, { total: number; solved: number }> = {};
         if (qIds.length > 0) {
@@ -356,7 +414,13 @@ export async function GET(req: NextRequest) {
 
         const questions = pool
             .slice(0, limit)
-            .map(r => normalizeQuestion(r, userInfoMap, attemptsMap, userAttempted, userFailed, r._label || ''));
+            .map(r => {
+                if (r.type === 'post') return r;
+                return { 
+                    ...normalizeQuestion(r, userInfoMap, attemptsMap, userAttempted, userFailed, r._label || ''),
+                    type: 'question'
+                };
+            });
 
         return NextResponse.json({ questions, meta: { total: questions.length, userId, userGrade, userSchool: userSchoolName, followingCount: followingIds.length } });
     } catch (err: any) {
@@ -384,7 +448,7 @@ function shuffleWithinGroups(arr: any[]): any[] {
 
     // Interleave groups so feed doesn't cluster all of one type
     const result: any[] = [];
-    const layerOrder = [6, 1, 2, 3, 4, 5, 0]; // Priority order for interleaving
+    const layerOrder = [6, 1, 7, 2, 3, 4, 5, 0]; // Priority order for interleaving (Posts are Layer 7)
     let hasMore = true;
     while (hasMore) {
         hasMore = false;

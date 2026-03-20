@@ -1,14 +1,15 @@
 "use client";
-
 import React, { useEffect, useState, useCallback } from 'react';
 import QuestionCard from './QuestionCard';
+import PostCard from './PostCard';
 import { supabase } from '@/lib/supabaseClient';
 import { Loader2, RefreshCw } from 'lucide-react';
 
-type Question = any;
+type FeedItem = any;
 
 export default function QuestionsFeed() {
-  const [questions, setQuestions] = useState<Question[] | null>(null);
+  const [items, setItems] = useState<FeedItem[] | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -20,6 +21,9 @@ export default function QuestionsFeed() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      const currentId = session?.user?.id || null;
+      setUserId(currentId);
+
       const headers: HeadersInit = {};
       if (session) {
         headers['Authorization'] = `Bearer ${session.access_token}`;
@@ -29,7 +33,7 @@ export default function QuestionsFeed() {
       const res = await fetch(`/api/feed?t=${Date.now()}`, { headers, cache: 'no-store' });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      setQuestions(Array.isArray(data) ? data : (data?.questions || []));
+      setItems(Array.isArray(data) ? data : (data?.questions || []));
     } catch (error: any) {
       console.error(error);
       setErr(error?.message || String(error));
@@ -59,7 +63,7 @@ export default function QuestionsFeed() {
       {/* Refresh button */}
       <div className="flex items-center justify-between pb-1">
         <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-          {questions?.length ?? 0} questions tailored for you
+          {items?.length ?? 0} updates tailored for you
         </p>
         <button
           onClick={() => loadData(true)}
@@ -71,18 +75,22 @@ export default function QuestionsFeed() {
         </button>
       </div>
 
-      {(!questions || questions.length === 0) ? (
-        <div className="py-6 text-sm text-slate-500">No questions yet — create the first one!</div>
+      {(!items || items.length === 0) ? (
+        <div className="py-6 text-sm text-slate-500">Nothing to show yet.</div>
       ) : (
-        questions.map((q: Question) => (
-          <div key={`${q.id}-${Date.now()}`} className="space-y-1">
-            {/* Feed context label — e.g. "✨ For You", "🔥 Everyone's Struggling With This" */}
-            {q._feedLabel && (
+        items.map((item: FeedItem) => (
+          <div key={item.id} className="space-y-1">
+            {/* Feed context label — e.g. "✨ For You", "📣 Community Post" */}
+            {item._feedLabel && (
               <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 px-1 tracking-wide">
-                {q._feedLabel}
+                {item._feedLabel}
               </p>
             )}
-            <QuestionCard q={q} />
+            {item.type === 'post' ? (
+              <PostCard post={item} currentUserId={userId} onUpdate={() => loadData(true)} />
+            ) : (
+              <QuestionCard q={item} />
+            )}
           </div>
         ))
       )}
