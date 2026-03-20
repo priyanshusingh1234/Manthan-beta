@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
+import { getProfilesMap } from '@/lib/profiles';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,9 +26,21 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: 'Unauthorized or DB not configured' }, { status: 401 });
         }
 
-        // Get all question IDs the user has attempted or submitted a written answer for
-        const { data: qAttempts } = await supabaseAdmin.from('question_attempts').select('question_id').eq('user_id', currentUserId);
-        const { data: wSubs } = await supabaseAdmin.from('written_submissions').select('id, question_id').eq('student_id', currentUserId);
+        // Get recent question IDs the user has CORRECTLY solved or submitted a written answer for
+        const { data: qAttempts } = await supabaseAdmin
+            .from('question_attempts')
+            .select('question_id')
+            .eq('user_id', currentUserId)
+            .eq('is_correct', true)
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        const { data: wSubs } = await supabaseAdmin
+            .from('written_submissions')
+            .select('id, question_id')
+            .eq('student_id', currentUserId)
+            .order('created_at', { ascending: false })
+            .limit(50);
 
         let solvedQids = new Set<string>();
         let userWrittenSubmissions: Record<string, string> = {};
@@ -42,29 +55,34 @@ export async function GET(req: Request) {
             return NextResponse.json([]);
         }
 
+        const validQids = Array.from(solvedQids).slice(0, 100);
+
         const { data: questions, error } = await supabaseAdmin
             .from('questions')
             .select('*')
-            .in('id', Array.from(solvedQids))
+            .in('id', validQids)
             .order('created_at', { ascending: false });
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         const rows = questions || [];
 
-        // Fetch poster names
-        const userIds = Array.from(new Set(rows.map((r: any) => r.created_by).filter(Boolean))) as string[];
+        // Fetch poster names efficiently using the profiles table
+        const userIds = Array.from(new Set(rows.map((r: any) => String(r.created_by)).filter(Boolean))) as string[];
+        const profilesMap = await getProfilesMap(userIds);
+        
         const userInfoMap: Record<string, { name: string; avatar?: string | null; username?: string | null }> = {};
-        await Promise.all(userIds.map(async (id) => {
-            try {
-                const { data: fetchedUser } = await supabaseAdmin.auth.admin.getUserById(String(id));
-                const meta = (fetchedUser as any)?.user_metadata ?? (fetchedUser as any)?.user?.user_metadata ?? {};
-                const name = meta?.fullName || meta?.full_name || meta?.name || (fetchedUser as any)?.email || 'Teacher';
-                const avatar = meta?.avatar_url || meta?.avatar || null;
-                userInfoMap[id] = { name, avatar, username: meta?.username || null };
-            } catch (err) {
+        for (const id of userIds) {
+            const profile = profilesMap.get(id);
+            if (profile) {
+                userInfoMap[id] = {
+                    name: profile.full_name || 'Teacher',
+                    avatar: profile.avatar_url,
+                    username: profile.username
+                };
+            } else {
                 userInfoMap[id] = { name: 'Teacher', avatar: null, username: null };
             }
-        }));
+        }
 
         // Fetch attempt counts for these questions
         const questionIds = rows.map((r: any) => r.id);

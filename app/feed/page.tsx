@@ -24,13 +24,18 @@ export default function FeedPage() {
         supabase.auth.getSession().then(async ({ data: { session } }) => {
             const params = new URLSearchParams({ limit: '40' });
             if (selectedSubject) params.set('subject', selectedSubject);
+            // Also pass class to API so server pre-filters when possible
+            if (selectedClass) params.set('class', selectedClass);
 
             const headers: Record<string, string> = {};
             if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
 
+            // Add cache-busting so filter changes always fetch fresh data
+            params.set('t', Date.now().toString());
+
             // Fetch feed + solved IDs in parallel for maximum speed
             const [feedRes, solvedRes] = await Promise.all([
-                fetch(`/api/feed?${params}`, { headers }),
+                fetch(`/api/feed?${params}`, { headers, cache: 'no-store' }),
                 session?.access_token
                     ? fetch('/api/questions/solved', { headers })
                     : Promise.resolve(null),
@@ -65,15 +70,17 @@ export default function FeedPage() {
         });
 
         return () => { mounted = false; };
-    }, [selectedSubject]);
+    }, [selectedSubject, selectedClass]);
 
     // Filter logic
     const filteredQuestions = questions.filter((q: any) => {
         if (selectedSubject && q.subject !== selectedSubject) return false;
 
         if (selectedClass) {
-            // Handle "All" class mapping, or actual number matching
-            if (q.classGrade !== selectedClass && q.class_grade !== selectedClass && q.classGrade !== 'All' && q.class_grade !== 'All') {
+            // Handle "All" class mapping, or actual number matching.
+            // Convert everything to string because the DB might store it as a number or string.
+            const qClass = String(q.classGrade || q.class_grade || '');
+            if (qClass !== selectedClass && qClass !== 'All') {
                 return false;
             }
         }

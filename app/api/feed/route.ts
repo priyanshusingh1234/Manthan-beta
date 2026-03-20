@@ -75,17 +75,29 @@ export async function GET(req: NextRequest) {
         const currentUser = await getVerifiedUser(authHeader);
         const userId = currentUser?.id ?? null;
         const subject = req.nextUrl.searchParams.get('subject') || '';
+        const targetClass = req.nextUrl.searchParams.get('class') || null;
         const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || '30'), 60);
 
         // ── Get user profile ─────────────────────────────────────────────────────────
-        let userGrade: string | null = null;
+        let userGrade: string | null = targetClass || null;
         let userSchoolName: string | null = null;
         let followingIds: string[] = [];
 
         if (userId && currentUser) {
-            // Reuse the already-verified user object — no extra API call needed
-            userGrade = currentUser.user_metadata?.classGrade?.toString() || null;
-            userSchoolName = currentUser.user_metadata?.school || null;
+            // ── ALWAYS fetch the freshest metadata via admin API ──────────────────────
+            // The JWT user_metadata can be stale after a profile update until the token
+            // is refreshed on the client. Using getUserById guarantees we see the latest
+            // classGrade / school that the student saved on their profile.
+            try {
+                const { data: freshUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+                const freshMeta = freshUser?.user?.user_metadata ?? currentUser.user_metadata ?? {};
+                if (!targetClass) userGrade = freshMeta?.classGrade?.toString() || null;
+                userSchoolName = freshMeta?.school || null;
+            } catch {
+                // Fallback to JWT metadata if admin call fails
+                if (!targetClass) userGrade = currentUser.user_metadata?.classGrade?.toString() || null;
+                userSchoolName = currentUser.user_metadata?.school || null;
+            }
 
             // Get following list
             const { data: followsData } = await supabaseAdmin
@@ -142,14 +154,18 @@ export async function GET(req: NextRequest) {
             (data || []).forEach((r: any) => pool.push({ ...r, _layer: 1, _label: '✨ Fresh Questions', _score: 100 }));
         }
 
-        // LAYER 2 (~15%): Questions user already attempted — show for review/awareness
+        // LAYER 2 (max 1): Questions user already attempted — show at most ONE per feed load.
+        // Too many solved/attempted cards crowd the feed since the student wants fresh content.
         if (userAttempted.size > 0) {
-            const layer2Count = Math.ceil(limit * 0.15);
-            const attemptedArr = Array.from(userAttempted).slice(0, layer2Count * 3);
+            const layer2Count = 1; // Hard cap: only 1 solved question per feed
+            // Prefer a FAILED question for review over an already-solved one
+            const failedArr = Array.from(userFailed).slice(0, 5);
+            const attemptedArr = Array.from(userAttempted).slice(0, 10);
+            const pickArr = failedArr.length > 0 ? failedArr : attemptedArr;
             const { data } = await supabaseAdmin
                 .from('questions')
                 .select('*')
-                .in('id', attemptedArr)
+                .in('id', pickArr)
                 .limit(layer2Count);
             (data || []).forEach((r: any) => {
                 const label = userFailed.has(String(r.id)) ? '🔄 You Got This Wrong — Review' : '✅ Already Solved';
