@@ -82,7 +82,8 @@ export async function GET(req: NextRequest) {
                     avatar: meta.avatar_url || meta.avatar || null,
                     isTeacher: meta.isTeacher || false,
                     reason,
-                    score
+                    score,
+                    totalPoints: Number(meta.totalPoints) || 0,
                 };
             });
 

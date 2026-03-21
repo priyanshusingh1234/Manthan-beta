@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
 const TeacherBadge = dynamic(() => import('@/ticks/teacher'), { ssr: false });
+const TopperBadge = dynamic(() => import('@/ticks/topper'), { ssr: false });
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 
@@ -167,6 +168,7 @@ export default function PostCard({
                                 >
                                     {post.author?.name || 'Unknown Scholar'}
                                     {isTeacher && <TeacherBadge />}
+                                    {Number(post.author?.totalPoints) >= 1500 && <TopperBadge />}
                                 </div>
                             </>
                         );

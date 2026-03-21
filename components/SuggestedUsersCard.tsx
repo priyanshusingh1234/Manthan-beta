@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import TeacherBadge from '@/ticks/teacher';
+import TopperBadge from '@/ticks/topper';
 import Link from 'next/link';
 import { UserPlus, Check } from 'lucide-react';
 import Image from 'next/image';
@@ -14,6 +15,7 @@ interface Suggestion {
     avatar: string | null;
     isTeacher: boolean;
     reason: string;
+    totalPoints?: number;
 }
 
 export default function SuggestedUsersCard() {
@@ -110,6 +112,7 @@ export default function SuggestedUsersCard() {
                                         {user.name}
                                     </p>
                                     {user.isTeacher && <TeacherBadge />}
+                                    {Number(user.totalPoints) >= 1500 && <TopperBadge />}
                                 </Link>
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate w-full mt-0.5">
                                     {user.reason}
