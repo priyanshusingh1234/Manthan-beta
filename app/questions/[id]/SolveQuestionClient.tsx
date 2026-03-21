@@ -29,6 +29,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
     const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [recoveredViaCoop, setRecoveredViaCoop] = useState(false);
 
     const [challengeInitiator, setChallengeInitiator] = useState<string | null>(null);
 
@@ -67,8 +68,19 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 .limit(1)
                 .maybeSingle();
 
+            // Check if user already won this question via co-op
+            const { data: wonCoop } = await supabase
+                .from("coop_challenges")
+                .select("id")
+                .eq("initiator_id", user.id)
+                .eq("question_id", question.id)
+                .eq("status", "won")
+                .limit(1)
+                .maybeSingle();
+
             if (mounted) {
                 if (data) setAlreadyAttempted(data);
+                if (wonCoop) setRecoveredViaCoop(true);
                 setCurrentUserId(user.id);
                 setAuthChecked(true);
             }
@@ -250,14 +262,22 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     Your answer was <span className="font-bold">{alreadyAttempted.is_correct ? "Correct" : "Incorrect"}</span>.
                 </p>
                 <div className="pt-6 flex flex-col gap-3 max-w-sm mx-auto">
-                    {!alreadyAttempted.is_correct && !challengeId && (
+                    {recoveredViaCoop && (
+                        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl mb-2 text-sm text-emerald-800 text-left relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl -mr-8 -mt-8 pointer-events-none" />
+                            <span className="font-bold flex items-center gap-1.5 mb-1"><Trophy className="w-4 h-4 text-amber-500" /> Points Recovered!</span>
+                            You tagged a friend and they solved this correctly for you! You both split the points.
+                        </div>
+                    )}
+
+                    {!alreadyAttempted.is_correct && !challengeId && !recoveredViaCoop && (
                         <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/50 p-4 rounded-2xl mb-2 text-sm text-indigo-800 dark:text-indigo-300 text-left">
                             <span className="font-bold flex items-center gap-1.5 mb-1"><Users className="w-4 h-4" /> Co-op Recovery Available!</span>
                             You can't retry this alone, but if you tag a friend and they solve it correctly, you'll both split the points!
                         </div>
                     )}
 
-                    {!alreadyAttempted.is_correct && !challengeId && (
+                    {!alreadyAttempted.is_correct && !challengeId && !recoveredViaCoop && (
                         <button
                             onClick={() => setIsChallengeModalOpen(true)}
                             className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 dark:shadow-indigo-500/20"
