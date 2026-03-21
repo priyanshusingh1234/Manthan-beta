@@ -134,8 +134,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
             await createNotification({
                 userId: challenge.initiator_id,
                 type: 'coop_challenge',
-                title: `${partnerName} accepted your co-op challenge!`,
-                body: `They're on their way to solve the question. Watch the live status!`,
+                title: `Challenge Accepted`,
+                body: `@${partnerRes.data?.user?.user_metadata?.username || partnerName} has accepted your Co-op challenge and is currently solving.`,
                 href: `/questions/${challenge.question_id}?challenge=${challengeId}`,
                 actorId: user.id,
                 actorName: partnerName,
@@ -170,8 +170,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         await createNotification({
             userId: challenge.initiator_id,
             type: 'coop_challenge',
-            title: `${partnerName} declined your co-op challenge.`,
-            body: `Unfortunately they won't be joining this time. Try challenging someone else!`,
+            title: `Challenge Declined`,
+            body: `@${partnerRes.data?.user?.user_metadata?.username || partnerName} has declined your Co-op challenge request.`,
             href: `/questions/${challenge.question_id}`,
             actorId: user.id,
             actorName: partnerName,

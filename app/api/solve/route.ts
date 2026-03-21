@@ -151,6 +151,15 @@ export async function POST(req: Request) {
                             totalPoints: Math.max(0, otherCurrent + splitPoints),
                         }
                     });
+
+                    // Notify the other user of the victory
+                    await createNotification({
+                        userId: otherUserId,
+                        type: 'coop_challenge',
+                        title: `Co-op Victory 🏆`,
+                        body: `You and @${userMeta.username || userMeta.fullName || 'Player'} successfully recovered the points (+${splitPoints} pts).`,
+                        href: `/questions/${questionId}`,
+                    });
                 }
             } else {
                 // Wrong answer in challenge
@@ -171,8 +180,8 @@ export async function POST(req: Request) {
                     await createNotification({
                         userId: challenge.initiator_id,
                         type: 'coop_challenge',
-                        title: `${partnerName} couldn't save you!`,
-                        body: `They got the answer wrong. Your co-op challenge is officially lost.`,
+                        title: `Co-op Failed ✗`,
+                        body: `Co-op attempt unsuccessful. The points were not recovered.`,
                         href: `/questions/${questionId}`,
                     });
                 }

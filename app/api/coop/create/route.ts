@@ -75,10 +75,10 @@ export async function POST(request: Request) {
         await createNotification({
             userId: partnerId,
             type: 'coop_challenge',
-            title: `You have been challenged by ${challengerName}!`,
+            title: `Co-op Request from @${challengerUsername || challengerName}`,
             body: message?.trim()
-                ? `${challengerName}: "${message.trim()}"`
-                : `${challengerName} got a question wrong and needs your help to recover points. Accept within 24 hours!`,
+                ? `@${challengerUsername || challengerName}: "${message.trim()}"`
+                : `@${challengerUsername || challengerName} has invited you to a Co-op challenge.`,
             href: `/questions/${questionId}?challenge=${newChallenge.id}`,
             actorId: user.id,
             actorName: challengerName,
