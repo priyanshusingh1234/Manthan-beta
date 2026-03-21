@@ -107,24 +107,28 @@ export default function CoopSpectatorScreen({
         );
     }
 
-    // Determine partner (the one who isn't the current user)
-    const partner = data.initiator.id === currentUserId ? data.partner : data.initiator;
+    const initiator = data.initiator;
+    const partner = data.partner;
+    const isInitiator = initiator.id === currentUserId;
+    const otherPlayer = isInitiator ? partner : initiator;
+
     const partnerSub = partner.submission;
     const partnerStatus = partnerSub?.status ?? null;
 
     const challengeWon = data.challenge.status === "won";
+    const challengeLost = data.challenge.status === "lost";
     const partnerSubmitted = !!partnerSub && SUBMITTED_STATUSES.includes(partnerStatus!);
-    const partnerCorrect = SUCCESS_STATUSES.includes(partnerStatus ?? "");
-    const partnerWrong = WRONG_STATUSES.includes(partnerStatus ?? "");
+    const partnerCorrect = challengeWon || SUCCESS_STATUSES.includes(partnerStatus ?? "");
+    const partnerWrong = challengeLost || WRONG_STATUSES.includes(partnerStatus ?? "");
 
-    function PartnerAvatar() {
-        if (partner.avatar) {
+    function OtherPlayerAvatar() {
+        if (otherPlayer.avatar) {
             // eslint-disable-next-line @next/next/no-img-element
-            return <img src={partner.avatar} alt={partner.name} className="w-16 h-16 rounded-full object-cover border-3 border-white shadow-lg" />;
+            return <img src={otherPlayer.avatar} alt={otherPlayer.name} className="w-16 h-16 rounded-full object-cover border-3 border-white shadow-lg" />;
         }
         return (
             <div className="w-16 h-16 rounded-full bg-white/25 text-white font-black text-2xl flex items-center justify-center border-2 border-white/40 shadow-lg">
-                {partner.name[0]?.toUpperCase()}
+                {otherPlayer.name[0]?.toUpperCase()}
             </div>
         );
     }
@@ -166,9 +170,9 @@ export default function CoopSpectatorScreen({
                     {/* Partner avatar */}
                     <div className="flex flex-col items-center text-center gap-3">
                         <div className="relative">
-                            <PartnerAvatar />
+                            <OtherPlayerAvatar />
                             {/* Live pulse ring — only when waiting */}
-                            {!partnerSubmitted && !challengeWon && !partnerWrong && (
+                            {!partnerSubmitted && !challengeWon && !partnerWrong && isInitiator && (
                                 <span className="absolute -top-1 -right-1 flex h-5 w-5">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                                     <span className="relative inline-flex rounded-full h-5 w-5 bg-amber-500 border-2 border-white items-center justify-center">
@@ -193,8 +197,8 @@ export default function CoopSpectatorScreen({
                         </div>
 
                         <div>
-                            <p className="text-white font-black text-lg leading-tight">{partner.name}</p>
-                            <p className="text-white/60 text-xs">@{partner.username}</p>
+                            <p className="text-white font-black text-lg leading-tight">{otherPlayer.name}</p>
+                            <p className="text-white/60 text-xs">@{otherPlayer.username}</p>
                         </div>
 
                         {/* Status headline */}
@@ -212,7 +216,7 @@ export default function CoopSpectatorScreen({
                                     <span className="font-bold text-sm">Submitted — awaiting verification</span>
                                 </div>
                             ) : (
-                                <p className="text-white/70 text-sm">Solving right now... give them a moment!</p>
+                                <p className="text-white/70 text-sm">{isInitiator ? "Solving right now... give them a moment!" : "You are currently solving this!"}</p>
                             )}
                         </div>
                     </div>
@@ -224,9 +228,9 @@ export default function CoopSpectatorScreen({
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 text-center">Challenge Breakdown</p>
 
                 <div className="flex items-center gap-3">
-                    {/* You */}
+                    {/* Initiator */}
                     <div className="flex-1 bg-slate-50 rounded-2xl p-3 text-center border border-slate-200">
-                        <p className="text-xs font-bold text-slate-500 mb-1">You (Initiator)</p>
+                        <p className="text-xs font-bold text-slate-500 mb-1">{isInitiator ? "You (Initiator)" : "Initiator"}</p>
                         <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-200 text-slate-600 text-[11px] font-bold">
                             <XCircle className="w-3 h-3" /> Got it wrong
                         </div>
@@ -238,12 +242,12 @@ export default function CoopSpectatorScreen({
                     <div className={`flex-1 rounded-2xl p-3 text-center border transition-all ${challengeWon || partnerCorrect
                         ? "bg-emerald-50 border-emerald-200"
                         : partnerWrong
-                            ? "bg-red-50 border-red-200"
-                            : partnerSubmitted
-                                ? "bg-amber-50 border-amber-200"
-                                : "bg-indigo-50 border-indigo-200"
+                             ? "bg-red-50 border-red-200"
+                             : partnerSubmitted
+                                 ? "bg-amber-50 border-amber-200"
+                                 : "bg-indigo-50 border-indigo-200"
                         }`}>
-                        <p className="text-xs font-bold text-slate-500 mb-1">Partner</p>
+                        <p className="text-xs font-bold text-slate-500 mb-1">{!isInitiator ? "You (Partner)" : "Partner"}</p>
                         {challengeWon || partnerCorrect ? (
                             <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-200 text-emerald-800 text-[11px] font-bold">
                                 <CheckCircle2 className="w-3 h-3" /> Correct ✓
@@ -266,12 +270,18 @@ export default function CoopSpectatorScreen({
 
                 {/* If won — points summary */}
                 {(challengeWon || partnerCorrect) && (
-                    <div className="mt-4 flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
-                        <span className="text-sm font-semibold text-emerald-700 flex items-center gap-1.5">
-                            <Zap className="w-4 h-4 text-amber-500 fill-current" />
-                            Points earned (each)
-                        </span>
-                        <span className="text-2xl font-black text-emerald-700">+{splitPoints}</span>
+                    <div className="mt-4 flex flex-col gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold text-emerald-700 flex items-center gap-1.5">
+                                <Zap className="w-4 h-4 text-amber-500 fill-current" />
+                                Total Reward (50/50 Split)
+                            </span>
+                            <span className="text-2xl font-black text-emerald-700">+{splitPoints * 2 + (questionPoints % 2 !== 0 ? -1 : 0)} pts</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-emerald-600 font-medium px-1 border-t border-emerald-200/60 pt-2">
+                            <span>Initiator: <span className="font-bold">+{splitPoints}</span></span>
+                            <span>Partner: <span className="font-bold">+{splitPoints}</span></span>
+                        </div>
                     </div>
                 )}
 

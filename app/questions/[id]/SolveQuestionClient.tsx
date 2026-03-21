@@ -215,8 +215,8 @@ export default function SolveQuestionClient({ question }: { question: any }) {
         );
     }
 
-    // Initiator visited their own challenge link — show spectator screen, NOT the question
-    if (alreadyAttempted && challengeId && challengeInitiator === currentUserId) {
+    // Any participant visited their challenge link and already attempted it — show spectator screen
+    if (alreadyAttempted && challengeId) {
         return (
             <CoopSpectatorScreen
                 challengeId={challengeId}
