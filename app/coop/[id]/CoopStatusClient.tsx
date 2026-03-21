@@ -44,11 +44,19 @@ function statusLabel(status: string | undefined) {
     }
 }
 
-function PlayerCard({ player, splitPoints }: { player: PlayerState; splitPoints: number }) {
+function PlayerCard({ player, splitPoints, challengeMeta }: { player: PlayerState; splitPoints: number; challengeMeta: CoopData }) {
+    const initiator = challengeMeta.initiator;
+    const isInitiator = player.id === initiator.id;
     const sub = player.submission;
-    const info = statusLabel(sub?.status);
-    const won = ["auto_approved", "ai_confirmed_correct", "points_given"].includes(sub?.status || "");
-    const lost = sub?.status === "ai_confirmed_wrong";
+    const challengeWon = challengeMeta.challenge.status === "won";
+    
+    // For MCQs, there are no 'written_submissions'. If the challenge is won, it's a win for both.
+    const won = challengeWon || ["auto_approved", "ai_confirmed_correct", "points_given"].includes(sub?.status || "");
+    const lost = !won && challengeMeta.challenge.status === "lost";
+    
+    const info = won 
+        ? { label: "Win ✓", color: "text-emerald-700 bg-emerald-100", icon: <CheckCircle2 className="w-4 h-4" /> }
+        : statusLabel(sub?.status);
 
     return (
         <div className={`relative bg-white rounded-[2rem] p-6 border-2 shadow-sm flex flex-col gap-4 transition-all ${won ? "border-emerald-300" : lost ? "border-red-200" : player.isCurrentUser ? "border-indigo-300" : "border-slate-200"
@@ -172,9 +180,9 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
 
     const splitPoints = Math.ceil((data.question?.points || 0) / 2);
     const challengeWon = data.challenge.status === "won";
-    const initiatorWon = ["auto_approved", "ai_confirmed_correct", "points_given"].includes(data.initiator.submission?.status || "");
-    const partnerWon = ["auto_approved", "ai_confirmed_correct", "points_given"].includes(data.partner.submission?.status || "");
-    const bothSubmitted = !!data.initiator.submission && !!data.partner.submission;
+    const initiatorWon = challengeWon || ["auto_approved", "ai_confirmed_correct", "points_given"].includes(data.initiator.submission?.status || "");
+    const partnerWon = challengeWon || ["auto_approved", "ai_confirmed_correct", "points_given"].includes(data.partner.submission?.status || "");
+    const bothSubmitted = challengeWon || (!!data.initiator.submission && !!data.partner.submission);
 
     // Time remaining
     const expiresAt = new Date(data.challenge.expiresAt).getTime();
@@ -231,12 +239,12 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
                 <div className="flex items-center gap-3 text-sm text-slate-500">
                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs ${initiatorWon ? "bg-emerald-100 text-emerald-700" : data.initiator.submission ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"}`}>
                         <div className={`w-2 h-2 rounded-full ${initiatorWon ? "bg-emerald-500" : data.initiator.submission ? "bg-amber-400 animate-pulse" : "bg-slate-300"}`} />
-                        {data.initiator.name.split(" ")[0]}: {initiatorWon ? "Verified ✓" : data.initiator.submission ? "Submitted" : "Not yet"}
+                        {data.initiator.name.split(" ")[0]}: {initiatorWon ? "Win ✓" : data.initiator.submission ? "Submitted" : "Not yet"}
                     </div>
                     <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
                     <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs ${partnerWon ? "bg-emerald-100 text-emerald-700" : data.partner.submission ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"}`}>
                         <div className={`w-2 h-2 rounded-full ${partnerWon ? "bg-emerald-500" : data.partner.submission ? "bg-amber-400 animate-pulse" : "bg-slate-300"}`} />
-                        {data.partner.name.split(" ")[0]}: {partnerWon ? "Verified ✓" : data.partner.submission ? "Submitted" : "Not yet"}
+                        {data.partner.name.split(" ")[0]}: {partnerWon ? "Win ✓" : data.partner.submission ? "Submitted" : "Not yet"}
                     </div>
                 </div>
                 <div className="mt-3 text-xs text-slate-400 flex items-center gap-1">
@@ -248,8 +256,8 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
 
             {/* Player cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <PlayerCard player={data.initiator} splitPoints={splitPoints} />
-                <PlayerCard player={data.partner} splitPoints={splitPoints} />
+                <PlayerCard player={data.initiator} splitPoints={splitPoints} challengeMeta={data} />
+                <PlayerCard player={data.partner} splitPoints={splitPoints} challengeMeta={data} />
             </div>
 
             {/* CTA — solve your part */}
