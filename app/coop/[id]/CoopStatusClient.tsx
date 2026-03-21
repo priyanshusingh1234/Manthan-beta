@@ -261,24 +261,32 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
             </div>
 
             {/* CTA — solve your part */}
-            {!bothSubmitted && data.challenge.status !== "won" && (
+            {!bothSubmitted && data.challenge.status !== "won" && data.challenge.status !== "lost" && (
                 <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 flex items-center justify-between gap-4">
                     <div>
                         <p className="font-bold text-indigo-800 text-sm">
-                            {data.currentUserId === data.initiator.id && !data.initiator.submission
-                                ? "You haven't submitted your answer yet!"
+                            {data.currentUserId === data.initiator.id
+                                ? "Waiting for your partner to submit!"
                                 : data.currentUserId === data.partner.id && !data.partner.submission
                                     ? "Your partner is waiting — submit your answer!"
-                                    : "Waiting for the other player to submit"}
+                                    : "Waiting for the checker to review"}
                         </p>
-                        <p className="text-indigo-600 text-xs mt-0.5">Head to the question and upload your solution</p>
+                        <p className="text-indigo-600 text-xs mt-0.5">
+                            {data.currentUserId === data.initiator.id
+                                ? "They must solve it correctly to save your points."
+                                : data.currentUserId === data.partner.id && !data.partner.submission
+                                    ? "Head to the arena and solve the challenge."
+                                    : "Hold tight! The submission is under review."}
+                        </p>
                     </div>
-                    <button
-                        onClick={() => router.push(`/questions/${data.challenge.questionId}?challenge=${challengeId}`)}
-                        className="shrink-0 bg-indigo-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-indigo-500 transition text-sm"
-                    >
-                        Solve Now →
-                    </button>
+                    {data.currentUserId === data.partner.id && !data.partner.submission && (
+                        <button
+                            onClick={() => router.push(`/questions/${data.challenge.questionId}?challenge=${challengeId}`)}
+                            className="shrink-0 bg-indigo-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-indigo-500 transition text-sm"
+                        >
+                            Solve Now →
+                        </button>
+                    )}
                 </div>
             )}
 
