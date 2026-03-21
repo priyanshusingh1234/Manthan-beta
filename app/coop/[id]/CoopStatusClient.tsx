@@ -53,10 +53,14 @@ function PlayerCard({ player, splitPoints, challengeMeta }: { player: PlayerStat
     // For MCQs, there are no 'written_submissions'. If the challenge is won, it's a win for both.
     const won = challengeWon || ["auto_approved", "ai_confirmed_correct", "points_given"].includes(sub?.status || "");
     const lost = !won && challengeMeta.challenge.status === "lost";
+    const expiresAt = new Date(challengeMeta.challenge.expiresAt).getTime();
+    const isExpired = Date.now() > expiresAt;
     
     const info = won 
         ? { label: "Win ✓", color: "text-emerald-700 bg-emerald-100", icon: <CheckCircle2 className="w-4 h-4" /> }
-        : statusLabel(sub?.status);
+        : isExpired && !sub
+            ? { label: "Expired ✗", color: "text-red-700 bg-red-100", icon: <XCircle className="w-4 h-4" /> }
+            : statusLabel(sub?.status);
 
     return (
         <div className={`relative bg-white rounded-[2rem] p-6 border-2 shadow-sm flex flex-col gap-4 transition-all ${won ? "border-emerald-300" : lost ? "border-red-200" : player.isCurrentUser ? "border-indigo-300" : "border-slate-200"
@@ -187,6 +191,8 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
     // Time remaining
     const expiresAt = new Date(data.challenge.expiresAt).getTime();
     const timeLeft = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000 / 60));
+    const hoursLeft = Math.floor(timeLeft / 60);
+    const displayTime = timeLeft > 60 ? `${hoursLeft}h ${timeLeft % 60}m` : `${timeLeft}m`;
 
     return (
         <div className="max-w-2xl mx-auto space-y-6 pb-16 animate-in fade-in slide-in-from-bottom-4">
@@ -247,10 +253,29 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
                         {data.partner.name.split(" ")[0]}: {partnerWon ? "Win ✓" : data.partner.submission ? "Submitted" : "Not yet"}
                     </div>
                 </div>
-                <div className="mt-3 text-xs text-slate-400 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    {timeLeft > 0 ? `${timeLeft} minutes left to solve` : "Challenge expired"}
-                    <span className="ml-auto">Auto-refreshes every 8s</span>
+                <div className="mt-3 text-xs flex items-center gap-1.5 overflow-hidden">
+                    {challengeWon ? (
+                        <div className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Challenge Successfully Completed
+                        </div>
+                    ) : (
+                        <>
+                            <Clock className={`w-3.5 h-3.5 ${timeLeft > 0 && timeLeft < 15 ? "animate-pulse text-amber-500" : timeLeft <= 0 ? "text-red-500" : "text-slate-400"}`} />
+                            {timeLeft > 0 ? (
+                                <span className="text-slate-500 font-medium">
+                                    {displayTime} left to solve
+                                </span >
+                            ) : (
+                                <span className="text-red-600 font-black uppercase tracking-tighter">
+                                    Challenge Expired ✗
+                                </span>
+                            )}
+                        </>
+                    )}
+                    <div className="ml-auto flex items-center gap-1 text-[10px] text-slate-300 font-bold uppercase tracking-widest bg-white/50 px-2 py-0.5 rounded-full border border-slate-100 shadow-sm">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                        Live
+                    </div>
                 </div>
             </div>
 
