@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { leaderboardCache } from "@/lib/leaderboardCache";
 import { createNotification } from "@/lib/createNotification";
+import { verifyWithGemini, AIVerdict } from "@/lib/aiVerification";
+import { processCoopWin, processCoopLoss } from "@/lib/coopUtils";
 
 async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
     if (!authHeader) return null;
@@ -202,20 +204,130 @@ export async function PATCH(req: Request) {
             })
             .eq("id", submissionId);
 
-        // 🔔 Notify student they earned points
-        await createNotification({
-            userId: userId,
-            type: 'points_earned',
-            title: `+${pointsToAward} points earned!`,
-            body: `Your answer was submitted for community verification. You've earned ${pointsToAward} points provisionally.`,
-            href: `/submission/${submissionId}/ai-review`,
-        });
+        if (sub.challenge_id) {
+            // 🚀 FAST-TRACK AI FOR CO-OP CHALLENGES
+            const { data: teacherSol } = await supabaseAdmin
+                .from("teacher_solutions")
+                .select("solution_url")
+                .eq("question_id", sub.question_id)
+                .maybeSingle();
 
-        return NextResponse.json({
-            success: true,
-            pointsAwarded: pointsToAward,
-            newTotal,
-        });
+            const questionText = (sub.questions as any)?.body || (sub.questions as any)?.title || "Solve this.";
+
+            let aiResult: AIVerdict | null = null;
+            try {
+                aiResult = await Promise.race([
+                    verifyWithGemini(sub.submission_url, questionText, teacherSol?.solution_url || null),
+                    new Promise<AIVerdict | null>((_, reject) => setTimeout(() => reject(new Error("AI Verification Timeout")), 30000))
+                ]);
+            } catch (err) {
+                console.error("Co-op Fast-Track AI Error:", err);
+                aiResult = null;
+            }
+
+            if (!aiResult) {
+                // Fallback: leave as pending_check if AI is overloaded
+                await supabaseAdmin.from("written_submissions").update({ status: "pending_check" }).eq("id", submissionId);
+                return NextResponse.json({ success: true, pointsAwarded: pointsToAward, newTotal, message: "AI overloaded, queued for check." });
+            }
+
+            // Save the AI breakdown to storage
+            try {
+                const breakdownBuf = Buffer.from(JSON.stringify({
+                    verdict: aiResult.isCorrect ? "correct" : "wrong",
+                    breakdown: aiResult.breakdown,
+                    raw: aiResult.raw,
+                    timestamp: new Date().toISOString()
+                }), "utf8");
+                await supabaseAdmin.storage
+                    .from("written-answers")
+                    .upload(`ai-reviews/${submissionId}.json`, breakdownBuf, {
+                        contentType: "application/json",
+                        upsert: true
+                    });
+            } catch (uploadErr) {
+                console.error("Failed to upload AI breakdown to tracking bucket:", uploadErr);
+            }
+
+            if (aiResult.isCorrect) {
+                // ✅ AI says it's correct!
+                await supabaseAdmin
+                    .from("written_submissions")
+                    .update({ status: "auto_approved", updated_at: new Date().toISOString() })
+                    .eq("id", submissionId);
+
+                await createNotification({
+                    userId: userId,
+                    type: 'ai_confirmed_correct',
+                    title: '✅ AI confirmed your answer is correct!',
+                    body: `Your written answer was verified by AI and marked correct. Points are secured!`,
+                    href: `/submission/${submissionId}/ai-review`,
+                });
+
+                await processCoopWin(sub);
+
+                return NextResponse.json({
+                    success: true,
+                    pointsAwarded: pointsToAward,
+                    newTotal,
+                    message: "Fast-Track AI verified correct!",
+                });
+            } else {
+                // ❌ AI says it's wrong!
+                await supabaseAdmin
+                    .from("written_submissions")
+                    .update({ status: "ai_confirmed_wrong", updated_at: new Date().toISOString() })
+                    .eq("id", submissionId);
+
+                // Revert the points + 20% penalty
+                const standardPenalty = Math.floor(questionPoints / 5);
+                const totalDeduction = pointsToAward + standardPenalty;
+                const newStudentTotal = Math.max(0, currentPoints - totalDeduction);
+                const updatedBattlesWon = Math.max(0, battlesWon - 1);
+
+                await supabaseAdmin.auth.admin.updateUserById(userId, {
+                    user_metadata: {
+                        ...userMeta,
+                        totalPoints: newStudentTotal,
+                        battlesWon: updatedBattlesWon,
+                    },
+                });
+                leaderboardCache.invalidate();
+
+                await createNotification({
+                    userId: userId,
+                    type: 'ai_confirmed_wrong',
+                    title: '❌ AI reviewed your answer — it was wrong',
+                    body: `During fast-track AI review, your answer was determined incorrect. Standard penalty applied.`,
+                    href: `/submission/${submissionId}/ai-review`,
+                });
+
+                await processCoopLoss(sub);
+
+                return NextResponse.json({
+                    success: true,
+                    pointsAwarded: -standardPenalty,
+                    newTotal: newStudentTotal,
+                    message: "Fast-Track AI verified wrong.",
+                });
+            }
+        } else {
+            // STANDARD Flow (Community verification)
+            // 🔔 Notify student they earned points
+            await createNotification({
+                userId: userId,
+                type: 'points_earned',
+                title: `+${pointsToAward} points earned!`,
+                body: `Your answer was submitted for community verification. You've earned ${pointsToAward} points provisionally.`,
+                href: `/submission/${submissionId}/ai-review`,
+            });
+
+            return NextResponse.json({
+                success: true,
+                pointsAwarded: pointsToAward,
+                newTotal,
+            });
+        }
     } catch (err: any) {
         console.error(err);
         return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });

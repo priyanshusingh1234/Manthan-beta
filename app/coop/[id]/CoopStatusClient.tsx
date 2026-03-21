@@ -194,6 +194,30 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
     const hoursLeft = Math.floor(timeLeft / 60);
     const displayTime = timeLeft > 60 ? `${hoursLeft}h ${timeLeft % 60}m` : `${timeLeft}m`;
 
+    const handleWithdraw = async () => {
+        if (!confirm("Are you sure you want to withdraw? You will lose the standard 20% point penalty for this question, but you will avoid the AI Spam penalty. The challenge will permanently fail.")) return;
+        
+        try {
+            const res = await fetch(`/api/coop/${challengeId}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ action: "withdraw" })
+            });
+            const result = await res.json();
+            if (!res.ok) {
+                alert(result.error || "Failed to withdraw");
+                return;
+            }
+            alert(`Withdrawn successfully. ${result.message || ''}`);
+            fetchStatus(token);
+        } catch (e: any) {
+            alert("Error: " + e.message);
+        }
+    };
+
     return (
         <div className="max-w-2xl mx-auto space-y-6 pb-16 animate-in fade-in slide-in-from-bottom-4">
 
@@ -305,12 +329,20 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
                         </p>
                     </div>
                     {data.currentUserId === data.partner.id && !data.partner.submission && (
-                        <button
-                            onClick={() => router.push(`/questions/${data.challenge.questionId}?challenge=${challengeId}`)}
-                            className="shrink-0 bg-indigo-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-indigo-500 transition text-sm"
-                        >
-                            Solve Now →
-                        </button>
+                        <div className="flex items-center gap-3 shrink-0">
+                            <button
+                                onClick={handleWithdraw}
+                                className="text-slate-500 hover:text-red-500 font-semibold px-4 py-2.5 rounded-xl transition text-sm underline decoration-slate-300 hover:decoration-red-300 underline-offset-4"
+                            >
+                                Withdraw (-{Math.floor((data.question?.points || 0) / 5)} pts)
+                            </button>
+                            <button
+                                onClick={() => router.push(`/questions/${data.challenge.questionId}?challenge=${challengeId}`)}
+                                className="bg-indigo-600 text-white font-bold px-5 py-2.5 rounded-xl hover:bg-indigo-500 transition text-sm shadow-sm"
+                            >
+                                Solve Now →
+                            </button>
+                        </div>
                     )}
                 </div>
             )}

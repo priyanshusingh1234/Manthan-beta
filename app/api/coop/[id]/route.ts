@@ -92,8 +92,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
         if (authErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const { action } = await req.json(); // action: "accept" | "reject"
-        if (!action || !['accept', 'reject'].includes(action)) {
+        const { action } = await req.json(); // action: "accept" | "reject" | "withdraw"
+        if (!action || !['accept', 'reject', 'withdraw'].includes(action)) {
             return NextResponse.json({ error: "Invalid action" }, { status: 400 });
         }
 
@@ -102,20 +102,26 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         // Fetch challenge
         const { data: challenge, error: cErr } = await supabaseAdmin
             .from("coop_challenges")
-            .select("id, question_id, initiator_id, partner_id, status, expires_at")
+            .select("id, question_id, initiator_id, partner_id, status, expires_at, questions(points)")
             .eq("id", challengeId)
             .single();
 
         if (cErr || !challenge) return NextResponse.json({ error: "Challenge not found" }, { status: 404 });
 
-        // Only the partner can accept/reject
+        // Only the partner can accept/reject/withdraw
         if (challenge.partner_id !== user.id) {
-            return NextResponse.json({ error: "Only the challenged partner can accept or reject" }, { status: 403 });
+            return NextResponse.json({ error: "Only the challenged partner can accept or reject/withdraw" }, { status: 403 });
         }
 
-        // Challenge must still be pending
-        if (challenge.status !== 'pending') {
-            return NextResponse.json({ error: `Challenge is already ${challenge.status}` }, { status: 409 });
+        if (action === 'withdraw') {
+            if (challenge.status !== 'active') {
+                return NextResponse.json({ error: `Withdraw requires active challenge` }, { status: 409 });
+            }
+        } else {
+            // Challenge must still be pending for accept/reject
+            if (challenge.status !== 'pending') {
+                return NextResponse.json({ error: `Challenge is already ${challenge.status}` }, { status: 409 });
+            }
         }
 
         const partnerRes = await supabaseAdmin.auth.admin.getUserById(user.id);
@@ -178,7 +184,24 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
             actorAvatar: partnerRes.data?.user?.user_metadata?.avatar_url || null,
         });
 
-        return NextResponse.json({ success: true, status: 'rejected' });
+        // 4. If this is a withdrawal from an active challenge, apply the standard 20% penalty now
+        let withdrawMessage = "";
+        if (action === 'withdraw') {
+            const questionPoints = Number((challenge.questions as any)?.points || 0);
+            const standardPenalty = Math.floor(questionPoints / 5);
+            
+            if (standardPenalty > 0) {
+                 const { data: partnerData } = await supabaseAdmin.auth.admin.getUserById(user.id);
+                 const pMeta = partnerData?.user?.user_metadata || {};
+                 const newTotal = Math.max(0, (Number(pMeta.totalPoints) || 0) - standardPenalty);
+                 await supabaseAdmin.auth.admin.updateUserById(user.id, {
+                     user_metadata: { ...pMeta, totalPoints: newTotal }
+                 });
+                 withdrawMessage = ` (-${standardPenalty} pts)`;
+            }
+        }
+
+        return NextResponse.json({ success: true, status: 'rejected', message: withdrawMessage });
     } catch (err: any) {
         console.error("[coop/patch] Error:", err);
         return NextResponse.json({ error: err.message }, { status: 500 });
