@@ -149,13 +149,20 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
     }, [existingSubmission, uploadedSubmission]);
 
     // ── File handling ─────────────────────────────────────────────
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.size > 10 * 1024 * 1024) { alert("File must be ≤ 10MB"); return; }
         setSelectedFile(file);
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(URL.createObjectURL(file));
+        
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+
+        // Auto-upload for mobile to prevent cheating/switching
+        if (isMobile) {
+            handleUpload(file);
+        }
     };
 
     const clearFile = () => {
@@ -165,11 +172,12 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
     };
 
     // ── Upload Answer ─────────────────────────────────────────────
-    const handleUpload = async () => {
-        if (!selectedFile || !token) return;
+    const handleUpload = async (fileOverride?: File) => {
+        const fileToUpload = fileOverride || selectedFile;
+        if (!fileToUpload || !token) return;
         setUploading(true);
         try {
-            const compressed = await compressImage(selectedFile, "answer");
+            const compressed = await compressImage(fileToUpload, "answer");
             const form = new FormData();
             form.append("file", compressed);
             form.append("questionId", question.id);

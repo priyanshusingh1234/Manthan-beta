@@ -689,29 +689,29 @@ const StudentProfile: React.FC = () => {
                 recentBattles.slice(0, 3).map((q, index) => (
                   <div
                     key={index}
-                    className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 group/battle cursor-pointer"
+                    className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 group/battle cursor-pointer"
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-full flex items-center justify-center font-black text-lg shadow-inner group-hover/battle:scale-105 transition-transform overflow-hidden">
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-full flex items-center justify-center font-black text-base sm:text-lg shadow-inner group-hover/battle:scale-105 transition-transform overflow-hidden shrink-0">
                            {q.createdByAvatar ? (
                              // eslint-disable-next-line @next/next/no-img-element
-                             <img src={q.createdByAvatar} alt="author" width={48} height={48} className="object-cover" />
+                             <img src={q.createdByAvatar} alt="author" width={48} height={48} className="object-cover w-full h-full" />
                            ) : (
                              <span className="text-slate-400">{q.subject?.charAt(0) || '?'}</span>
                            )}
                         </div>
-                        <div>
-                          <h3 className="font-bold text-lg text-slate-900 dark:text-white group-hover/battle:text-purple-600 transition-colors truncate max-w-[150px]">{q.title}</h3>
-                          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{q.subject}</p>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-sm sm:text-lg text-slate-900 dark:text-white group-hover/battle:text-purple-600 transition-colors truncate">{q.title}</h3>
+                          <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">{q.subject}</p>
                         </div>
                       </div>
-                      <div className="px-4 py-1.5 rounded-full text-[10px] font-black tracking-wide uppercase bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50">
+                      <div className="shrink-0 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-wide uppercase bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50">
                         Solved
                       </div>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 dark:text-slate-500 pt-3 border-t border-slate-50 dark:border-slate-800/50">
-                      <span className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 px-3 py-1 rounded-lg">+{q.points} Points</span>
+                    <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 pt-2 sm:pt-3 border-t border-slate-50 dark:border-slate-800/50">
+                      <span className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg">+{q.points} <span className="hidden sm:inline">Points</span></span>
                       <span>{new Date(q.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
                     </div>
                   </div>
