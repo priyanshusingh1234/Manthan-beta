@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send, Users } from "lucide-react";
+import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send, Users, Trophy } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import TeacherBadge from "@/ticks/teacher";
 import ChallengeFriendModal from "@/components/ChallengeFriendModal";
