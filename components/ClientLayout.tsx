@@ -3,14 +3,17 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Header from '@/components/Header';
 import DesktopSidebar from '@/components/DesktopSidebar';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import PushNotificationPrompt from '@/components/PushNotificationPrompt';
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 const BottomNav = dynamic(() => import('@/components/BottomNav'), { ssr: false });
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const [isMobile, setIsMobile] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -26,6 +29,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
       return () => window.removeEventListener('resize', checkMobile);
     }
+  }, []);
+
+  // Handle Capacitor Back Button
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const backButtonListener = App.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) {
+        window.history.back();
+      } else {
+        // Optional: Perform a custom action or just let it stay on the home page
+        // If we don't call App.exitApp(), the app won't close.
+        console.log('No back history, staying on current page.');
+      }
+    });
+
+    return () => {
+      backButtonListener.then(l => l.remove());
+    };
   }, []);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
