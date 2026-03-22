@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Bell, BellOff, X } from 'lucide-react';
+import { Bell, X } from 'lucide-react';
 import { subscribeToPushNotifications } from '@/lib/pushUtils';
+import { Capacitor } from '@capacitor/core';
 
 export default function PushNotificationPrompt() {
     const [isVisible, setIsVisible] = useState(false);
@@ -11,43 +12,68 @@ export default function PushNotificationPrompt() {
     useEffect(() => {
         // Only run on client
         if (typeof window === 'undefined') return;
-        if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
 
-        // Check if user has already granted or denied permission
-        if (Notification.permission !== 'default') return;
+        const checkPermission = async () => {
+            const isNative = Capacitor.isNativePlatform();
+            
+            if (isNative) {
+                const { PushNotifications } = await import('@capacitor/push-notifications');
+                const status = await PushNotifications.checkPermissions();
+                if (status.receive !== 'prompt' && status.receive !== 'default') return;
+            } else {
+                if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+                if (Notification.permission !== 'default') return;
+            }
 
-        // Check if we already asked them and they dismissed it
-        const dismissed = localStorage.getItem('push_prompt_dismissed');
-        if (dismissed === 'true') return;
+            // Check if we already asked them and they dismissed it
+            const dismissed = localStorage.getItem('push_prompt_dismissed');
+            if (dismissed === 'true') return;
 
-        // Delay popup slightly so it's not aggressive on first load
-        const timer = setTimeout(() => {
-            setIsVisible(true);
-        }, 3000);
+            // Delay popup slightly so it's not aggressive on first load
+            const timer = setTimeout(() => {
+                setIsVisible(true);
+            }, 3000);
 
-        return () => clearTimeout(timer);
+            return timer;
+        };
+
+        const timerPromise = checkPermission();
+
+        return () => {
+            timerPromise.then(timer => timer && clearTimeout(timer));
+        };
     }, []);
 
     const handleAllow = async () => {
         setIsSubscribing(true);
         try {
-            const permission = await Notification.requestPermission();
+            const isNative = Capacitor.isNativePlatform();
+            let permission = 'denied';
+
+            if (isNative) {
+                const { PushNotifications } = await import('@capacitor/push-notifications');
+                const res = await PushNotifications.requestPermissions();
+                permission = res.receive;
+            } else {
+                permission = await Notification.requestPermission();
+            }
+
             if (permission === 'granted') {
                 await subscribeToPushNotifications();
                 
-                new Notification('Welcome to Dheeyudha!', {
-                    body: 'You are now subscribed to real-time updates.',
-                    icon: '/favicon.ico'
-                });
+                if (!isNative) {
+                    new Notification('Welcome to Dheeyudha!', {
+                        body: 'You are now subscribed to real-time updates.',
+                        icon: '/favicon.ico'
+                    });
+                }
                 
                 setIsVisible(false);
-                // We won't prompt them again since Notification.permission is now 'granted'
             } else {
                 dismiss();
             }
         } catch (error) {
             console.error('Failed to subscribe:', error);
-            // Don't auto-dismiss on error, but stop loading state
         } finally {
             setIsSubscribing(false);
         }

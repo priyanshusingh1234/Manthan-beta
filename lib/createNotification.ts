@@ -1,5 +1,6 @@
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import webpush from 'web-push';
+import { firebaseAdmin } from '@/lib/firebaseAdmin';
 
 // Configure Web Push with VAPID keys from the .env file
 if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -9,6 +10,7 @@ if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
         process.env.VAPID_PRIVATE_KEY
     );
 }
+
 export type NotificationType =
     | 'new_follower'
     | 'answer_approved'
@@ -53,37 +55,69 @@ export async function createNotification(params: CreateNotificationParams): Prom
 
         if (error) {
             console.error('[createNotification] DB error:', error.message);
-        } else if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-            // If the notification successfully inserted, broadcast to user's push subscriptions
+        } else {
+            // Broadcast to user's push subscriptions
             const { data: subs } = await supabaseAdmin
                 .from('push_subscriptions')
                 .select('endpoint, p256dh_key, auth_key')
                 .eq('user_id', params.userId);
 
             if (subs && subs.length > 0) {
-                const payload = JSON.stringify({
+                // Prepare payloads
+                const webPayload = JSON.stringify({
                     title: params.title,
                     body: params.body,
                     url: params.href || '/',
                 });
 
-                // Fire web-push to all endpoints in parallel
+                // Fire pushes to all endpoints in parallel
                 await Promise.allSettled(
                     subs.map(async (sub) => {
-                        const pushSubscription = {
-                            endpoint: sub.endpoint,
-                            keys: {
-                                p256dh: sub.p256dh_key,
-                                auth: sub.auth_key,
+                        // --- CASE A: NATIVE (CAPACITOR/FCM) ---
+                        if (sub.p256dh_key === 'native') {
+                            if (firebaseAdmin.apps.length > 0) {
+                                try {
+                                    await firebaseAdmin.messaging().send({
+                                        token: sub.endpoint,
+                                        notification: {
+                                            title: params.title,
+                                            body: params.body,
+                                        },
+                                        data: {
+                                            url: params.href || '/',
+                                        },
+                                        android: {
+                                            priority: 'high',
+                                            notification: {
+                                                channelId: 'default',
+                                                icon: 'stock_ticker_update',
+                                                color: '#4f46e5',
+                                            }
+                                        }
+                                    });
+                                } catch (fcmErr) {
+                                    console.error('[createNotification] FCM Push failed:', fcmErr);
+                                }
                             }
-                        };
-                        try {
-                            await webpush.sendNotification(pushSubscription, payload);
-                        } catch (pushErr: any) {
-                            // If endpoint is dead/unsubscribed, we could clean it up here
-                            console.error('[createNotification] Push failed for endpoint:', sub.endpoint);
-                            if (pushErr?.statusCode === 410 || pushErr?.statusCode === 404) {
-                                await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+                            return;
+                        }
+
+                        // --- CASE B: WEB PUSH ---
+                        if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+                            const pushSubscription = {
+                                endpoint: sub.endpoint,
+                                keys: {
+                                    p256dh: sub.p256dh_key,
+                                    auth: sub.auth_key,
+                                }
+                            };
+                            try {
+                                await webpush.sendNotification(pushSubscription, webPayload);
+                            } catch (pushErr: any) {
+                                console.error('[createNotification] Web Push failed:', sub.endpoint);
+                                if (pushErr?.statusCode === 410 || pushErr?.statusCode === 404) {
+                                    await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+                                }
                             }
                         }
                     })

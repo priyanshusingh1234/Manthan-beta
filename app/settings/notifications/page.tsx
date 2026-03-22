@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ChevronLeft, Bell, BellOff, Smartphone, Mail, VolumeX } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { subscribeToPushNotifications } from '@/lib/pushUtils';
+import { Capacitor } from '@capacitor/core';
 
 export default function NotificationSettings() {
     const [mounted, setMounted] = useState(false);
@@ -18,8 +19,18 @@ export default function NotificationSettings() {
     useEffect(() => {
         setMounted(true);
         // Check current push notification permission status natively
-        if (typeof window !== 'undefined' && 'Notification' in window) {
-            setPushNotifications(Notification.permission === 'granted');
+        if (typeof window !== 'undefined') {
+            if (Capacitor.isNativePlatform()) {
+                // Native platform check for permission
+                import('@capacitor/push-notifications').then(({ PushNotifications }) => {
+                    PushNotifications.checkPermissions().then((status) => {
+                        setPushNotifications(status.receive === 'granted');
+                    });
+                });
+            } else if ('Notification' in window) {
+                // Web platform check
+                setPushNotifications(Notification.permission === 'granted');
+            }
         }
     }, []);
 
@@ -29,21 +40,34 @@ export default function NotificationSettings() {
             return;
         }
 
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        const isNative = Capacitor.isNativePlatform();
+        if (!isNative && (!('serviceWorker' in navigator) || !('PushManager' in window))) {
             alert('This browser does not support desktop/push notifications.');
             return;
         }
 
-        const permission = await Notification.requestPermission();
+        let permission = 'denied';
+        if (isNative) {
+            const { PushNotifications } = await import('@capacitor/push-notifications');
+            const res = await PushNotifications.requestPermissions();
+            permission = res.receive;
+        } else {
+            permission = await Notification.requestPermission();
+        }
+
         if (permission === 'granted') {
             try {
                 await subscribeToPushNotifications();
 
                 setPushNotifications(true);
-                new Notification('Push Notifications Enabled!', {
-                    body: 'You will now receive real-time updates from Dheeyudha.',
-                    icon: '/favicon.ico'
-                });
+                if (isNative) {
+                    // Capacitor usually doesn't show standard web Notification
+                } else {
+                    new Notification('Push Notifications Enabled!', {
+                        body: 'You will now receive real-time updates from Dheeyudha.',
+                        icon: '/favicon.ico'
+                    });
+                }
 
             } catch (err: any) {
                 console.error('[WebPush] Error during subscription:', err);

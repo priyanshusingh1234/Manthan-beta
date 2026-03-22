@@ -9,6 +9,54 @@ import PushNotificationPrompt from '@/components/PushNotificationPrompt';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 
+// Dynamic import for PushNotifications to avoid SSR issues
+const initNativePush = async (userId: string) => {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    const { PushNotifications } = await import('@capacitor/push-notifications');
+
+    // Register listeners
+    await PushNotifications.addListener('registration', async (token) => {
+      console.log('[NativePush] Token:', token.value);
+      // Save this token to the database
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          subscription: {
+            endpoint: token.value,
+            // Mark as native for server-side distinction
+            keys: { auth: 'native', p256dh: 'native' }
+          }
+        })
+      });
+    });
+
+    await PushNotifications.addListener('registrationError', (err) => {
+      console.error('[NativePush] Registration error:', err.error);
+    });
+
+    await PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      console.log('[NativePush] Received:', notification);
+    });
+
+    await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+      console.log('[NativePush] Action performed:', notification);
+    });
+
+    // Check permissions and register
+    const permStatus = await PushNotifications.checkPermissions();
+    if (permStatus.receive === 'granted') {
+      await PushNotifications.register();
+    }
+
+  } catch (err) {
+    console.error('[NativePush] Init error:', err);
+  }
+};
+
 const BottomNav = dynamic(() => import('@/components/BottomNav'), { ssr: false });
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -55,6 +103,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setIsAuthenticated(!!user);
+      if (user && Capacitor.isNativePlatform()) {
+        initNativePush(user.id);
+      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -69,6 +120,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session?.user);
+      if (session?.user && Capacitor.isNativePlatform()) {
+        initNativePush(session.user.id);
+      }
       if (session?.access_token) {
         fetch('/api/report/generate-notification', {
           method: 'POST',
@@ -137,11 +191,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isLandingPage = pathname === '/';
   const isTrailerPage = pathname === '/trailer';
 
-  // Hide the sidebar if:
-  // 1. We are on an auth page
-  // 2. We are definitely NOT authenticated
-  // 3. We are on the landing page (home) AND we're still checking auth (prevents flash for logged-out users)
-  // 4. We are on the trailer showcase page
   const hideSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage;
 
   return (
