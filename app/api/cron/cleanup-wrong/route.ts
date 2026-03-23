@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 
+export const dynamic = 'force-dynamic';
 // Allow Vercel function to run longer
 export const maxDuration = 120; // 2 minutes
 

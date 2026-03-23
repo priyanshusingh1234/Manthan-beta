@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
+export const dynamic = 'force-dynamic';
+
 // This route can be called periodically by Vercel Cron or any scheduler
 // Define it as a GET request so it can be pinged easily
 export async function GET(req: Request) {
