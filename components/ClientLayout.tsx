@@ -49,6 +49,14 @@ const initNativePush = async (userId: string) => {
     // Check permissions and register
     const permStatus = await PushNotifications.checkPermissions();
     if (permStatus.receive === 'granted') {
+      await PushNotifications.createChannel({
+        id: 'default',
+        name: 'Alerts',
+        description: 'Important notifications like follows and challenges',
+        importance: 5,
+        visibility: 1,
+        vibration: true
+      });
       await PushNotifications.register();
     }
 

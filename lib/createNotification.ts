@@ -90,7 +90,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             priority: 'high',
                                             notification: {
                                                 channelId: 'default',
-                                                icon: 'stock_ticker_update',
+                                                icon: 'ic_launcher',
                                                 color: '#4f46e5',
                                             }
                                         }
