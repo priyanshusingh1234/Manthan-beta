@@ -13,7 +13,6 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
     const [followersCount, setFollowersCount] = useState(initialFollowers);
     const [followingCount, setFollowingCount] = useState(initialFollowing);
     const [loading, setLoading] = useState(true);
-    const [actionLoading, setActionLoading] = useState(false);
 
     // Modal states
     const [modalOpen, setModalOpen] = useState(false);
@@ -69,10 +68,16 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
             return;
         }
 
-        setActionLoading(true);
+        // --- OPTIMISTIC UPDATE ---
+        const previousIsFollowing = isFollowing;
+        const previousFollowersCount = followersCount;
+
+        setIsFollowing(!previousIsFollowing);
+        setFollowersCount(prev => previousIsFollowing ? Math.max(0, prev - 1) : prev + 1);
+        // -------------------------
 
         try {
-            if (isFollowing) {
+            if (previousIsFollowing) {
                 // Unfollow
                 const { error } = await supabase
                     .from('follows')
@@ -80,10 +85,7 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                     .eq('follower_id', currentUser.id)
                     .eq('following_id', profileUserId);
 
-                if (!error) {
-                    setIsFollowing(false);
-                    setFollowersCount(prev => Math.max(0, prev - 1));
-                }
+                if (error) throw error;
             } else {
                 // Follow - use API endpoint to create notification
                 const { data: { session } } = await supabase.auth.getSession();
@@ -103,15 +105,13 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                 if (!response.ok) {
                     throw new Error('Failed to follow user');
                 }
-
-                setIsFollowing(true);
-                setFollowersCount(prev => prev + 1);
             }
         } catch (err) {
-            console.error("Follow toggle failed:", err);
-            alert("Failed to follow user. Please try again.");
-        } finally {
-            setActionLoading(false);
+            console.error("Follow toggle failed, reverting:", err);
+            // REVERT ON FAILURE
+            setIsFollowing(previousIsFollowing);
+            setFollowersCount(previousFollowersCount);
+            alert("Failed to update follow status. Please try again.");
         }
     };
 
@@ -140,7 +140,7 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
         return (
             <button
                 onClick={handleToggleFollow}
-                disabled={actionLoading}
+                disabled={loading}
                 className={`
                     shrink-0 ml-2 rounded-full p-2 flex items-center justify-center transition-all duration-300 disabled:opacity-50
                     ${isFollowing
@@ -149,9 +149,7 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                 `}
                 aria-label={isFollowing ? 'Following' : 'Follow'}
             >
-                {actionLoading ? (
-                    <Loader2 size={16} className="animate-spin" />
-                ) : isFollowing ? (
+                {isFollowing ? (
                     <>
                         <Check size={16} strokeWidth={3} className="group-hover:hidden" />
                         <X size={16} strokeWidth={3} className="hidden group-hover:block" />
@@ -190,15 +188,13 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                 {!loading && (!currentUser || currentUser.id !== profileUserId) && (
                     <button
                         onClick={handleToggleFollow}
-                        disabled={actionLoading}
+                        disabled={loading}
                         className={`flex-1 sm:flex-none flex items-center justify-center gap-2 group px-8 py-3 rounded-2xl font-bold transition-all duration-300 ring-2 ring-transparent active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed ${isFollowing
                             ? 'bg-slate-100 text-slate-700 hover:bg-red-50 hover:text-red-600 hover:ring-red-100 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-red-900/40 dark:hover:text-red-400 dark:hover:ring-red-900/50'
                             : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-200 hover:shadow-indigo-300 dark:shadow-indigo-900/20'
                             }`}
                     >
-                        {actionLoading ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : isFollowing ? (
+                        {isFollowing ? (
                             <>
                                 <UserCheck className="w-5 h-5 group-hover:hidden" />
                                 <UserPlus className="w-5 h-5 hidden group-hover:block" />
