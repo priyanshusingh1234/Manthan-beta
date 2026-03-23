@@ -51,9 +51,11 @@ export async function subscribeToPushNotifications() {
         throw new Error('Push notifications are not supported by this browser.');
     }
 
-    const register = await navigator.serviceWorker.register('/sw.js', {
+    await navigator.serviceWorker.register('/sw.js', {
         scope: '/'
     });
+
+    const register = await navigator.serviceWorker.ready;
 
     const subscription = await register.pushManager.subscribe({
         userVisibleOnly: true,
