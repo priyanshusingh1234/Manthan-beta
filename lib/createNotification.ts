@@ -90,7 +90,6 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             priority: 'high',
                                             notification: {
                                                 channelId: 'default',
-                                                icon: 'ic_launcher',
                                                 color: '#4f46e5',
                                             }
                                         }
