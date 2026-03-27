@@ -409,7 +409,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
                     <div className="mt-6 flex flex-col gap-3">
                         {/* Co-op / Help Button */}
-                        {!hasSolved && (
+                        {!result.isCorrect && (
                             <button
                                 onClick={() => setIsChallengeModalOpen(true)}
                                 className="flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 dark:shadow-indigo-500/20"
