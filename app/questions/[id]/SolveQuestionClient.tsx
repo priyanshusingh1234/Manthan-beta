@@ -137,14 +137,13 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             // Vibrate phone on wrong answer if on mobile
             if (data && !data.isCorrect) {
                  // Try native Capacitor haptics first
-                 try {
-                     Haptics.notification({ type: NotificationType.Error });
-                 } catch (e) {
-                     // Fallback to web vibration
-                     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                         navigator.vibrate([200, 100, 200]);
-                     }
-                 }
+                 Haptics.notification({ type: NotificationType.Error })
+                     .catch((e) => {
+                         // Fallback to web vibration if Capacitor fails or is not available
+                         if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                             navigator.vibrate([200, 100, 200]);
+                         }
+                     });
             }
         } catch (err: any) {
             alert("Network error: " + err.message);
