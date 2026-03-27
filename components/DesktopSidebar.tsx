@@ -21,8 +21,10 @@ import {
   Info,
   BarChart2,
   Swords,
-  ShieldAlert
+  ShieldAlert,
+  Share2
 } from 'lucide-react';
+import { Share } from '@capacitor/share';
 import TeacherBadge from '@/ticks/teacher';
 import Logo from './Logo';
 import { supabase } from '@/lib/supabaseClient';
@@ -246,6 +248,33 @@ export default function DesktopSidebar() {
               </div>
             </Link>
           )}
+        </div>
+
+        {/* Share Action Area */}
+        <div className="mt-3">
+          <button
+            onClick={async () => {
+              try {
+                await Share.share({
+                  title: 'Join Dheeyudha',
+                  text: 'Are you smart enough? Join me in the War of Intellect on Dheeyudha! 🧠🔥',
+                  url: 'https://dheeyudha.com',
+                  dialogTitle: 'Invite Friends',
+                });
+              } catch (e) {
+                console.error('Error sharing', e);
+              }
+            }}
+            className="group flex w-full items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400/10 to-teal-400/10 border border-emerald-200/50 hover:bg-gradient-to-r hover:from-emerald-400/20 hover:to-teal-400/20 transition-all duration-200"
+          >
+            <div className="bg-emerald-100 rounded-lg p-1.5 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-200">
+              <Share2 className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col items-start">
+              <span className="font-semibold text-sm text-emerald-700 group-hover:text-emerald-800">Invite Friends</span>
+              <span className="text-[10px] text-emerald-600/70">Earn points when they join</span>
+            </div>
+          </button>
         </div>
 
         {/* Help Section */}

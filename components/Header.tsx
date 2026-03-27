@@ -165,7 +165,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
   return (
     <>
       {/* Professional Mobile-Only Header */}
-      <header className="md:hidden sticky top-0 z-[60] bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/80 px-4 pt-4 pb-3">
+      <header className="md:hidden sticky top-0 z-[60] bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/80 px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">

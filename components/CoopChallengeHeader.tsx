@@ -125,12 +125,12 @@ export default function CoopChallengeHeader({ challengeId, questionPoints, curre
             <div className="relative z-10 p-6 sm:p-8">
                 {/* Top row: badge + timer */}
                 <div className="flex items-center justify-between mb-6">
-                    <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white text-xs font-black px-3 py-1.5 rounded-full border border-white/20">
+                    <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white text-[10px] font-black px-3 py-1.5 rounded-full border border-white/20 uppercase tracking-wider">
                         <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                         </span>
-                        CO-OP CHALLENGE
+                        HELP REQUEST (LIVE)
                     </div>
 
                     <div className="flex items-center gap-1.5 text-white/80 text-xs font-semibold">

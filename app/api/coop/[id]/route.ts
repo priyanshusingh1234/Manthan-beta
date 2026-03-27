@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         // Fetch challenge
         const { data: challenge, error: cErr } = await supabaseAdmin
             .from("coop_challenges")
-            .select("id, question_id, initiator_id, partner_id, status, created_at, expires_at")
+            .select("id, question_id, initiator_id, partner_id, status, created_at, expires_at, message")
             .eq("id", challengeId)
             .single();
 
@@ -57,6 +57,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                 questionId: challenge.question_id,
                 createdAt: challenge.created_at,
                 expiresAt: challenge.expires_at,
+                message: challenge.message,
             },
             question: question || null,
             initiator: {
@@ -140,8 +141,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
             await createNotification({
                 userId: challenge.initiator_id,
                 type: 'coop_challenge',
-                title: `Challenge Accepted`,
-                body: `@${partnerRes.data?.user?.user_metadata?.username || partnerName} has accepted your Co-op challenge and is currently solving.`,
+                title: `Help Request Accepted`,
+                body: `@${partnerRes.data?.user?.user_metadata?.username || partnerName} has accepted your Help Request and is currently solving.`,
                 href: `/questions/${challenge.question_id}?challenge=${challengeId}`,
                 actorId: user.id,
                 actorName: partnerName,
@@ -172,12 +173,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
                 submitted_at: new Date().toISOString(),
             }, { onConflict: 'user_id,question_id', ignoreDuplicates: true });
 
-        // 3. Notify initiator that the challenge was rejected
+        // 3. Notify initiator that the help request was declined
         await createNotification({
             userId: challenge.initiator_id,
             type: 'coop_challenge',
-            title: `Challenge Declined`,
-            body: `@${partnerRes.data?.user?.user_metadata?.username || partnerName} has declined your Co-op challenge request.`,
+            title: `Help Request Declined`,
+            body: `@${partnerRes.data?.user?.user_metadata?.username || partnerName} has declined your Help Request.`,
             href: `/questions/${challenge.question_id}`,
             actorId: user.id,
             actorName: partnerName,

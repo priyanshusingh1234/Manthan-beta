@@ -51,21 +51,22 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'You already have an active challenge for this question.' }, { status: 400 });
         }
 
-        // 2. Insert the challenge
+        // 2. Insert the help request
         const { data: newChallenge, error: insertError } = await supabaseAdmin
             .from('coop_challenges')
             .insert({
                 question_id: questionId,
                 initiator_id: user.id,
                 partner_id: partnerId,
-                status: 'pending'
+                status: 'pending',
+                message: message?.trim() || null
             })
             .select()
             .single();
 
         if (insertError) {
-            console.error('Error inserting challenge:', insertError);
-            return NextResponse.json({ error: 'Failed to create challenge' }, { status: 500 });
+            console.error('Error inserting help request:', insertError);
+            return NextResponse.json({ error: 'Failed to create help request' }, { status: 500 });
         }
 
         // 3. Send Notification to Partner
@@ -75,10 +76,10 @@ export async function POST(request: Request) {
         await createNotification({
             userId: partnerId,
             type: 'coop_challenge',
-            title: `Co-op Request from @${challengerUsername || challengerName}`,
+            title: `Help Request from @${challengerUsername || challengerName}`,
             body: message?.trim()
                 ? `@${challengerUsername || challengerName}: "${message.trim()}"`
-                : `@${challengerUsername || challengerName} has invited you to a Co-op challenge.`,
+                : `@${challengerUsername || challengerName} has requested your help on a question.`,
             href: `/questions/${questionId}?challenge=${newChallenge.id}`,
             actorId: user.id,
             actorName: challengerName,

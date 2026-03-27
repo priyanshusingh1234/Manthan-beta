@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import QuestionCard from './QuestionCard';
 import PostCard from './PostCard';
 import { supabase } from '@/lib/supabaseClient';
+import { ActivityTracker } from '@/lib/activityTracker';
 import { Loader2, RefreshCw } from 'lucide-react';
 
 type FeedItem = any;
@@ -32,8 +33,35 @@ export default function QuestionsFeed() {
       // Add a cache-busting timestamp so the server reshuffles the feed
       const res = await fetch(`/api/feed?t=${Date.now()}`, { headers, cache: 'no-store' });
       if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setItems(Array.isArray(data) ? data : (data?.questions || []));
+      const rawData = await res.json();
+      let feedItems = Array.isArray(rawData) ? rawData : (rawData?.questions || []);
+
+      // 🔥 Apply Local Algorithmic Weights
+      try {
+        const stats = await ActivityTracker.getStats();
+        const weights = stats.subjectWeights;
+
+        feedItems = feedItems.map((item: any, index: number) => {
+          let score = 100 - index; // Base score from server order
+          const sub = item.subject?.toLowerCase().trim();
+          
+          if (sub && weights[sub]) {
+            score *= weights[sub];
+            // If weight is high (>1.5), mark as recommended
+            if (weights[sub] > 1.5) {
+              item._feedLabel = `✨ Recommended: ${item.subject}`;
+            }
+          }
+          return { ...item, _localScore: score };
+        });
+
+        // Re-sort locally
+        feedItems.sort((a: any, b: any) => (b._localScore || 0) - (a._localScore || 0));
+      } catch (e) {
+        console.error("[Feed] Error applying local weights:", e);
+      }
+
+      setItems(feedItems);
     } catch (error: any) {
       console.error(error);
       setErr(error?.message || String(error));

@@ -166,7 +166,7 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
         return (
             <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 text-slate-400">
                 <Loader2 className="w-10 h-10 animate-spin text-indigo-400" />
-                <p className="font-medium animate-pulse">Loading co-op status...</p>
+                <p className="font-medium animate-pulse">Loading help status...</p>
             </div>
         );
     }
@@ -174,8 +174,8 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
     if (!data) {
         return (
             <div className="text-center py-20 text-slate-500">
-                <p className="text-xl font-bold">Challenge not found</p>
-                <button onClick={() => router.push("/")} className="mt-4 px-6 py-2.5 bg-slate-900 text-white font-bold rounded-xl">
+                <p className="text-xl font-bold">Help request not found</p>
+                <button onClick={() => router.push("/")} className="mt-4 px-6 py-2.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold rounded-xl">
                     Back to Dashboard
                 </button>
             </div>
@@ -212,7 +212,7 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
                 return;
             }
             alert(`Withdrawn successfully. ${result.message || ''}`);
-            fetchStatus(token);
+            if (token) fetchStatus(token);
         } catch (e: any) {
             alert("Error: " + e.message);
         }
@@ -230,7 +230,7 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
                 <div className="flex items-center justify-center gap-2 mb-2">
                     {challengeWon ? <Trophy className="w-7 h-7" /> : <Users className="w-7 h-7" />}
                     <h1 className="text-2xl font-black">
-                        {challengeWon ? "Co-op Victory! 🎉" : "Co-op Challenge"}
+                        {challengeWon ? "Help Success! 🎉" : "Help Request"}
                     </h1>
                 </div>
                 <p className="text-white/80 text-sm">
@@ -256,9 +256,9 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
             )}
 
             {/* Progress indicator */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-4">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm px-6 py-4">
                 <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-bold text-slate-700">Challenge Progress</span>
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Request Progress</span>
                     <button
                         onClick={() => token && fetchStatus(token)}
                         className="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 font-semibold"
@@ -279,8 +279,8 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
                 </div>
                 <div className="mt-3 text-xs flex items-center gap-1.5 overflow-hidden">
                     {challengeWon ? (
-                        <div className="flex items-center gap-1.5 text-emerald-600 font-bold">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Challenge Successfully Completed
+                        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Help Successfully Completed
                         </div>
                     ) : (
                         <>
@@ -317,14 +317,14 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
                             {data.currentUserId === data.initiator.id
                                 ? "Waiting for your partner to submit!"
                                 : data.currentUserId === data.partner.id && !data.partner.submission
-                                    ? "Your partner is waiting — submit your answer!"
+                                    ? "Your partner is waiting — solve your part!"
                                     : "Waiting for the checker to review"}
                         </p>
-                        <p className="text-indigo-600 text-xs mt-0.5">
+                        <p className="text-indigo-600 dark:text-indigo-400 text-xs mt-0.5">
                             {data.currentUserId === data.initiator.id
                                 ? "They must solve it correctly to save your points."
                                 : data.currentUserId === data.partner.id && !data.partner.submission
-                                    ? "Head to the arena and solve the challenge."
+                                    ? "Head to the arena and provide help."
                                     : "Hold tight! The submission is under review."}
                         </p>
                     </div>
@@ -350,7 +350,7 @@ export default function CoopStatusClient({ challengeId }: { challengeId: string 
             {/* Back */}
             <button
                 onClick={() => router.push("/")}
-                className="w-full bg-slate-900 text-white font-bold py-3.5 rounded-2xl hover:bg-slate-800 transition"
+                className="w-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold py-3.5 rounded-2xl hover:bg-slate-800 dark:hover:bg-slate-200 transition shadow-lg"
             >
                 Back to Dashboard
             </button>

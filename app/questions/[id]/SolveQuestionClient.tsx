@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send, Users, Trophy } from "lucide-react";
+import { Haptics, NotificationType } from '@capacitor/haptics';
+import { ActivityTracker } from '@/lib/activityTracker';
 import { supabase } from "@/lib/supabaseClient";
 import TeacherBadge from "@/ticks/teacher";
 import ChallengeFriendModal from "@/components/ChallengeFriendModal";
@@ -124,6 +126,26 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             }
 
             setResult(data);
+            
+            // 🔥 Track activity locally for algorithmic feed improvements
+            if (question.subject) {
+                 await ActivityTracker.trackSolve(question.subject, data.isCorrect);
+                 // Every solve syncs to cloud for persistence
+                 ActivityTracker.syncToCloud();
+            }
+            
+            // Vibrate phone on wrong answer if on mobile
+            if (data && !data.isCorrect) {
+                 // Try native Capacitor haptics first
+                 try {
+                     Haptics.notification({ type: NotificationType.Error });
+                 } catch (e) {
+                     // Fallback to web vibration
+                     if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                         navigator.vibrate([200, 100, 200]);
+                     }
+                 }
+            }
         } catch (err: any) {
             alert("Network error: " + err.message);
             setIsSubmitting(false);
@@ -280,10 +302,10 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     {!alreadyAttempted.is_correct && !challengeId && !recoveredViaCoop && (
                         <button
                             onClick={() => setIsChallengeModalOpen(true)}
-                            className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 dark:shadow-indigo-500/20"
+                            className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 dark:shadow-indigo-500/20 mb-3"
                         >
                             <Users className="w-5 h-5" />
-                            Tag a Friend to Retry!
+                            Ask for Help
                         </button>
                     )}
                     <button
@@ -294,7 +316,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     </button>
                 </div>
 
-                {/* Challenge Modal */}
+                {/* Help Request Modal */}
                 {currentUserId && (
                     <ChallengeFriendModal
                         isOpen={isChallengeModalOpen}
@@ -384,13 +406,14 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     )}
 
                     <div className="mt-6 flex flex-col gap-3">
-                        {!result.isCorrect && (
+                        {/* Co-op / Help Button */}
+                        {!hasSolved && (
                             <button
                                 onClick={() => setIsChallengeModalOpen(true)}
-                                className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 dark:shadow-indigo-500/20"
+                                className="flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold px-8 py-3.5 rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20 dark:shadow-indigo-500/20"
                             >
                                 <Users className="w-5 h-5" />
-                                Tag a Friend to Recover Points!
+                                Ask for Help
                             </button>
                         )}
                         <button

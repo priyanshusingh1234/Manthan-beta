@@ -114,10 +114,10 @@ export default function ChallengeFriendModal({
                 }, 2000);
             } else {
                 const data = await res.json();
-                alert(data.error || "Failed to send challenge");
+                alert(data.error || "Failed to send help request");
             }
         } catch {
-            alert("Error sending challenge");
+            alert("Error sending help request");
         } finally {
             setSending(false);
         }
@@ -127,7 +127,7 @@ export default function ChallengeFriendModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative flex flex-col max-h-[85vh] animate-in zoom-in-95">
+            <div className="bg-white dark:bg-slate-950 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative flex flex-col max-h-[85vh] animate-in zoom-in-95">
 
                 {/* ── Gradient header ── */}
                 <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 px-5 pt-5 pb-8 relative overflow-hidden">
@@ -147,10 +147,10 @@ export default function ChallengeFriendModal({
                             </div>
                             <div>
                                 <h2 className="text-base font-black text-white">
-                                    {step === 1 ? "Tag a Friend" : "Write your message"}
+                                    {step === 1 ? "Ask for Help" : "Write your message"}
                                 </h2>
                                 <p className="text-[11px] text-white/70">
-                                    {step === 1 ? "Pick who to challenge" : `Sending to ${selectedFriend?.name.split(' ')[0]}`}
+                                    {step === 1 ? "Pick a student to help you" : `Sending to ${selectedFriend?.name.split(' ')[0]}`}
                                 </p>
                             </div>
                         </div>
@@ -181,7 +181,7 @@ export default function ChallengeFriendModal({
                                     placeholder="Search by name or @username..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all shadow-sm"
+                                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl pl-10 pr-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all shadow-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
                                 />
                                 {loading && (
                                     <Loader2 className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-indigo-400 animate-spin" />
@@ -191,9 +191,9 @@ export default function ChallengeFriendModal({
 
                         <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1 min-h-[200px]">
                             {searchQuery.trim().length < 2 ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
-                                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center">
-                                        <Search className="w-6 h-6 text-indigo-300" />
+                                <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-600 gap-3">
+                                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+                                        <Search className="w-6 h-6 text-indigo-300 dark:text-indigo-700" />
                                     </div>
                                     <p className="text-sm font-medium">Type to search students</p>
                                     <p className="text-xs text-slate-400">Min 2 characters</p>
@@ -213,7 +213,7 @@ export default function ChallengeFriendModal({
                                     <button
                                         key={user.id}
                                         onClick={() => pickFriend(user)}
-                                        className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100 group text-left"
+                                        className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors border border-transparent hover:border-indigo-100 dark:hover:border-indigo-900/30 group text-left"
                                     >
                                         <div className="flex items-center gap-3">
                                             {user.avatar ? (
@@ -225,12 +225,12 @@ export default function ChallengeFriendModal({
                                                 </div>
                                             )}
                                             <div>
-                                                <p className="font-bold text-slate-800 text-sm group-hover:text-indigo-700">{user.name}</p>
-                                                <p className="text-xs text-slate-500">@{user.username}</p>
+                                                <p className="font-bold text-slate-800 dark:text-slate-200 text-sm group-hover:text-indigo-700 dark:group-hover:text-indigo-400">{user.name}</p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">@{user.username}</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-1 text-xs font-bold text-indigo-600 bg-indigo-50 group-hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-colors">
-                                            <Swords className="w-3.5 h-3.5" /> Tag
+                                        <div className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/40 px-3 py-1.5 rounded-xl transition-colors">
+                                            <Users className="w-3.5 h-3.5" /> Ask
                                         </div>
                                     </button>
                                 ))
@@ -243,21 +243,21 @@ export default function ChallengeFriendModal({
                 {step === 2 && selectedFriend && (
                     <div className="flex flex-col flex-1 p-5 gap-4 overflow-y-auto">
                         {/* Selected friend preview */}
-                        <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-2xl border border-indigo-100">
+                        <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/30">
                             {selectedFriend.avatar ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={selectedFriend.avatar} alt={selectedFriend.name} className="w-10 h-10 rounded-full object-cover border-2 border-white shadow" />
+                                <img src={selectedFriend.avatar} alt={selectedFriend.name} className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow" />
                             ) : (
-                                <div className="w-10 h-10 rounded-full bg-indigo-200 text-indigo-700 font-black flex items-center justify-center text-sm">
+                                <div className="w-10 h-10 rounded-full bg-indigo-200 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-200 font-black flex items-center justify-center text-sm">
                                     {selectedFriend.name?.[0]?.toUpperCase()}
                                 </div>
                             )}
                             <div>
-                                <p className="font-black text-slate-800 text-sm">{selectedFriend.name}</p>
-                                <p className="text-xs text-slate-500">@{selectedFriend.username}</p>
+                                <p className="font-black text-slate-800 dark:text-slate-100 text-sm">{selectedFriend.name}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">@{selectedFriend.username}</p>
                             </div>
-                            <div className="ml-auto flex items-center gap-1 text-xs font-bold text-indigo-600 bg-white px-3 py-1.5 rounded-xl border border-indigo-200">
-                                <Zap className="w-3 h-3 text-amber-500" /> Co-op
+                            <div className="ml-auto flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800">
+                                <Zap className="w-3 h-3 text-amber-500" /> Help
                             </div>
                         </div>
 
@@ -273,8 +273,8 @@ export default function ChallengeFriendModal({
                                         key={q}
                                         onClick={() => setMessage(q)}
                                         className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${message === q
-                                            ? 'bg-indigo-600 text-white border-indigo-600'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+                                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200 dark:shadow-indigo-900/20'
+                                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400'
                                             }`}
                                     >
                                         {q}
@@ -293,8 +293,8 @@ export default function ChallengeFriendModal({
                                 onChange={(e) => setMessage(e.target.value)}
                                 maxLength={160}
                                 rows={3}
-                                placeholder="Add a personal note to your challenge request..."
-                                className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-400 transition-colors resize-none"
+                                placeholder="Add a personal note to your help request..."
+                                className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors resize-none"
                             />
                             <p className="text-right text-[10px] text-slate-400 mt-1">{message.length}/160</p>
                         </div>
@@ -311,9 +311,9 @@ export default function ChallengeFriendModal({
                             {sending ? (
                                 <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>
                             ) : sent ? (
-                                <><CheckCircle2 className="w-4 h-4" /> Challenge Sent! 🎉</>
+                                <><CheckCircle2 className="w-4 h-4" /> Help Request Sent! 🎉</>
                             ) : (
-                                <><Send className="w-4 h-4" /> Send Challenge</>
+                                <><Send className="w-4 h-4" /> Send Help Request</>
                             )}
                         </button>
                         <p className="text-center text-[11px] text-slate-400">

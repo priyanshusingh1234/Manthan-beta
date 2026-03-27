@@ -1,0 +1,7 @@
+<svg width="2000" height="600" viewBox="0 0 350 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(15, 20) scale(0.8)">
+    <path d="M 15 15 H 55 C 80 15 95 30 95 50 C 95 70 80 85 55 85 H 15 V 15 Z M 55 35 L 40 50 L 55 65 L 70 50 Z" fill="#2563eb" fill-rule="evenodd" />
+  </g>
+  <text x="105" y="65" font-family="sans-serif" font-size="40" font-weight="700" fill="#1a1a1a" letter-spacing="-1.2">dheeyudha</text>
+  <text x="107" y="88" font-family="sans-serif" font-size="10" font-weight="600" fill="#737373" letter-spacing="2.5">WAR OF INTELLECT</text>
+</svg>

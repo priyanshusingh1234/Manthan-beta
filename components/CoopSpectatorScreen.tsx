@@ -102,7 +102,7 @@ export default function CoopSpectatorScreen({
         return (
             <div className="flex flex-col items-center justify-center p-20 text-slate-400 gap-4">
                 <Loader2 className="w-10 h-10 animate-spin text-indigo-400" />
-                <p className="font-medium animate-pulse">Loading co-op status...</p>
+                <p className="font-medium animate-pulse">Loading help status...</p>
             </div>
         );
     }
@@ -159,7 +159,7 @@ export default function CoopSpectatorScreen({
                                 )}
                                 <span className={`relative inline-flex rounded-full h-2 w-2 ${challengeWon ? "bg-emerald-300" : partnerWrong ? "bg-slate-400" : "bg-red-500"}`} />
                             </span>
-                            {challengeWon ? "CO-OP VICTORY" : partnerWrong ? "CO-OP FAILED" : "CO-OP LIVE"}
+                            {challengeWon ? "HELP SUCCESS" : partnerWrong ? "HELP FAILED" : "HELP REQUEST LIVE"}
                         </div>
                         <div className="flex items-center gap-1.5 text-white/70 text-xs font-semibold">
                             <Clock className="w-3.5 h-3.5" />
@@ -224,14 +224,14 @@ export default function CoopSpectatorScreen({
             </div>
 
             {/* ── You vs Partner card ─────────────────────────── */}
-            <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 text-center">Challenge Breakdown</p>
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 border border-slate-100 dark:border-slate-800 shadow-sm transition-colors">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 text-center">Help Request Breakdown</p>
 
                 <div className="flex items-center gap-3">
                     {/* Initiator */}
-                    <div className="flex-1 bg-slate-50 rounded-2xl p-3 text-center border border-slate-200">
+                    <div className="flex-1 bg-slate-50 dark:bg-slate-950 rounded-2xl p-3 text-center border border-slate-200 dark:border-slate-800">
                         <p className="text-xs font-bold text-slate-500 mb-1">{isInitiator ? "You (Initiator)" : "Initiator"}</p>
-                        <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-200 text-slate-600 text-[11px] font-bold">
+                        <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[11px] font-bold">
                             <XCircle className="w-3 h-3" /> Got it wrong
                         </div>
                     </div>
@@ -240,28 +240,28 @@ export default function CoopSpectatorScreen({
 
                     {/* Partner */}
                     <div className={`flex-1 rounded-2xl p-3 text-center border transition-all ${challengeWon || partnerCorrect
-                        ? "bg-emerald-50 border-emerald-200"
+                        ? "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800"
                         : partnerWrong
-                             ? "bg-red-50 border-red-200"
+                             ? "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800"
                              : partnerSubmitted
-                                 ? "bg-amber-50 border-amber-200"
-                                 : "bg-indigo-50 border-indigo-200"
+                                 ? "bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800"
+                                 : "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800"
                         }`}>
                         <p className="text-xs font-bold text-slate-500 mb-1">{!isInitiator ? "You (Partner)" : "Partner"}</p>
                         {challengeWon || partnerCorrect ? (
-                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-200 text-emerald-800 text-[11px] font-bold">
+                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-200 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold">
                                 <CheckCircle2 className="w-3 h-3" /> Correct ✓
                             </div>
                         ) : partnerWrong ? (
-                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-200 text-red-800 text-[11px] font-bold">
+                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-200 dark:bg-red-900/40 text-red-800 dark:text-red-300 text-[11px] font-bold">
                                 <XCircle className="w-3 h-3" /> Wrong ✗
                             </div>
                         ) : partnerSubmitted ? (
-                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-200 text-amber-800 text-[11px] font-bold">
+                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-200 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[11px] font-bold">
                                 <Clock className="w-3 h-3" /> In Review
                             </div>
                         ) : (
-                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-200 text-indigo-800 text-[11px] font-bold">
+                            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-200 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 text-[11px] font-bold">
                                 <Loader2 className="w-3 h-3 animate-spin" /> Solving...
                             </div>
                         )}
@@ -270,15 +270,15 @@ export default function CoopSpectatorScreen({
 
                 {/* If won — points summary */}
                 {(challengeWon || partnerCorrect) && (
-                    <div className="mt-4 flex flex-col gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
+                    <div className="mt-4 flex flex-col gap-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-2xl px-4 py-3 shadow-sm">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-emerald-700 flex items-center gap-1.5">
+                            <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
                                 <Zap className="w-4 h-4 text-amber-500 fill-current" />
                                 Total Reward (50/50 Split)
                             </span>
-                            <span className="text-2xl font-black text-emerald-700">+{splitPoints * 2 + (questionPoints % 2 !== 0 ? -1 : 0)} pts</span>
+                            <span className="text-2xl font-black text-emerald-700 dark:text-emerald-400">+{splitPoints * 2 + (questionPoints % 2 !== 0 ? -1 : 0)} pts</span>
                         </div>
-                        <div className="flex items-center justify-between text-xs text-emerald-600 font-medium px-1 border-t border-emerald-200/60 pt-2">
+                        <div className="flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-500 font-medium px-1 border-t border-emerald-200/60 dark:border-emerald-800/60 pt-2">
                             <span>Initiator: <span className="font-bold">+{splitPoints}</span></span>
                             <span>Partner: <span className="font-bold">+{splitPoints}</span></span>
                         </div>
@@ -296,15 +296,15 @@ export default function CoopSpectatorScreen({
             <div className="flex flex-col gap-3">
                 <button
                     onClick={() => router.push(`/coop/${challengeId}`)}
-                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-bold py-3.5 rounded-2xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/20"
+                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-2xl transition shadow-lg shadow-indigo-600/20"
                 >
                     <Users className="w-5 h-5" />
-                    View Full Challenge Status
+                    View Full Status
                     <ArrowRight className="w-4 h-4" />
                 </button>
                 <button
                     onClick={() => router.push("/")}
-                    className="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl hover:bg-slate-50 transition"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3.5 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition"
                 >
                     Back to Dashboard
                 </button>

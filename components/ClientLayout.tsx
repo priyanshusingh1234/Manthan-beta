@@ -8,6 +8,8 @@ import dynamic from 'next/dynamic';
 import PushNotificationPrompt from '@/components/PushNotificationPrompt';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { ActivityTracker } from '@/lib/activityTracker';
 
 // Dynamic import for PushNotifications to avoid SSR issues
 const initNativePush = async (userId: string) => {
@@ -106,6 +108,29 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     };
   }, []);
 
+  // Handle Capacitor Status Bar UI
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const setupUI = async () => {
+      try {
+        const isDark = document.documentElement.classList.contains('dark');
+        await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
+        await StatusBar.setBackgroundColor({ color: isDark ? '#0f172a' : '#ffffff' });
+      } catch (e) {
+        console.error('Failed to setup status bar:', e);
+      }
+    };
+
+    setupUI();
+    
+    // Listen for theme changes using MutationObserver on html tag
+    const observer = new MutationObserver(setupUI);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -113,6 +138,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setIsAuthenticated(!!user);
       if (user && Capacitor.isNativePlatform()) {
         initNativePush(user.id);
+      }
+      if (user) {
+        ActivityTracker.restoreFromCloud();
       }
     });
 
@@ -130,6 +158,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setIsAuthenticated(!!session?.user);
       if (session?.user && Capacitor.isNativePlatform()) {
         initNativePush(session.user.id);
+      }
+      if (session?.user) {
+        ActivityTracker.restoreFromCloud();
       }
       if (session?.access_token) {
         fetch('/api/report/generate-notification', {
@@ -204,7 +235,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <>
       {!hideSidebar && <DesktopSidebar />}
-      <div className={`${hideSidebar ? 'lg:pl-0' : 'lg:pl-64'} ${showBottomNav && !hideSidebar ? 'pb-24' : ''}`}>
+      <div className={`${hideSidebar ? 'lg:pl-0' : 'lg:pl-64'} ${showBottomNav && !hideSidebar ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : ''}`}>
         {!hideSidebar && <Header isMobile={isMobile} />}
         {children}
         {showBottomNav && !hideSidebar && <BottomNav />}
