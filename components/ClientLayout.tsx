@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic';
 import PushNotificationPrompt from '@/components/PushNotificationPrompt';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
-import { StatusBar, Style } from '@capacitor/status-bar';
+import { StatusBar } from '@capacitor/status-bar';
 import { ActivityTracker } from '@/lib/activityTracker';
 
 // Dynamic import for PushNotifications to avoid SSR issues
@@ -115,7 +115,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const setupUI = async () => {
       try {
         const isDark = document.documentElement.classList.contains('dark');
-        await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
+        await StatusBar.setStyle({ style: isDark ? 'DARK' : 'LIGHT' } as any);
         await StatusBar.setBackgroundColor({ color: isDark ? '#0f172a' : '#ffffff' });
       } catch (e) {
         console.error('Failed to setup status bar:', e);

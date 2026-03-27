@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send, Users, Trophy } from "lucide-react";
-import { Haptics, NotificationType } from '@capacitor/haptics';
+import { Haptics } from '@capacitor/haptics';
 import { ActivityTracker } from '@/lib/activityTracker';
 import { supabase } from "@/lib/supabaseClient";
 import TeacherBadge from "@/ticks/teacher";
@@ -136,14 +136,17 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             
             // Vibrate phone on wrong answer if on mobile
             if (data && !data.isCorrect) {
-                 // Try native Capacitor haptics first
-                 Haptics.notification({ type: NotificationType.Error })
-                     .catch((e) => {
-                         // Fallback to web vibration if Capacitor fails or is not available
+                 try {
+                     Haptics.vibrate({ duration: 300 }).catch(() => {
                          if (typeof navigator !== 'undefined' && navigator.vibrate) {
                              navigator.vibrate([200, 100, 200]);
                          }
                      });
+                 } catch (e) {
+                     if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                         navigator.vibrate([200, 100, 200]);
+                     }
+                 }
             }
         } catch (err: any) {
             alert("Network error: " + err.message);
