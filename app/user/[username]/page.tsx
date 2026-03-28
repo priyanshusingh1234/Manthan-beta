@@ -14,11 +14,30 @@ export const revalidate = 0;
 type Props = { params: { username: string } };
 
 export async function generateMetadata({ params }: Props): Promise<any> {
-    const { data: profile } = await supabaseAdmin.from('profiles').select('full_name, total_points, username').ilike('username', params.username).single();
+    const { data: profile } = await supabaseAdmin.from('profiles').select('id, full_name, total_points, username').ilike('username', params.username).single();
     if (!profile) return { title: 'User Not Found | Dheeyudha' };
     
     const name = profile.full_name || `@${profile.username}`;
     const points = profile.total_points || 0;
+
+    // Determine badge image for social sharing
+    let badgeImageUrl = '/logo-full.png'; // fallback
+    try {
+        const { data: allUsers } = await supabaseAdmin.from('profiles')
+            .select('id')
+            .order('total_points', { ascending: false })
+            .limit(3);
+            
+        const top3Ids = allUsers?.map(u => u.id) || [];
+        const rank = top3Ids.indexOf(profile.id);
+        
+        if (rank === 0) badgeImageUrl = '/badges/gold.png';
+        else if (rank === 1) badgeImageUrl = '/badges/silver.png';
+        else if (rank === 2) badgeImageUrl = '/badges/bronze.png';
+    } catch (e) { console.error("Error fetching rank for metadata:", e); }
+    
+    // Ensure absolute URL for social platforms
+    const finalImageUrl = `https://dheeyudhha-pi.vercel.app${badgeImageUrl}`;
     
     return {
         title: `${name} has earned ${points} points on Dheeyudha! 🧠`,
@@ -27,6 +46,14 @@ export async function generateMetadata({ params }: Props): Promise<any> {
             title: `${name}'s Profile | Dheeyudha Achievement`,
             description: `${name} has reached a milestone of ${points} points! See their badges and rank in the global leaderboard.`,
             type: 'profile',
+            images: [
+                {
+                    url: finalImageUrl,
+                    width: 1200,
+                    height: 630,
+                    alt: `${name}'s Badge`,
+                }
+            ],
         }
     };
 }

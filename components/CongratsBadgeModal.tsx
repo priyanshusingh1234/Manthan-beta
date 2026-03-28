@@ -6,6 +6,9 @@ import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import { Trophy, Share2, X, PartyPopper, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
+
 export default function CongratsBadgeModal() {
     const [userRank, setUserRank] = useState<number | null>(null);
     const [show, setShow] = useState(false);
@@ -60,30 +63,49 @@ export default function CongratsBadgeModal() {
     };
 
     const handleShare = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Fetch username for deep profile linking
+        const { data: profile } = await supabase.from('profiles').select('username').eq('id', user.id).single();
+        const username = profile?.username || '';
+        
         const shareTitle = `I just earned a ${userRank === 1 ? 'GOLD' : userRank === 2 ? 'SILVER' : 'BRONZE'} badge! 🏆`;
         const shareText = `I'm currently Rank #${userRank} on Dheeyudha! 🧠 Join the ultimate battle of brains and see if you can beat my score. @dheeyudha #Education #GamifiedLearning`;
-        const shareUrl = `https://dheeyudhha-pi.vercel.app/leaderboard`; // Or current user's profile
+        
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://dheeyudhha-pi.vercel.app';
+        const shareUrl = username ? `${origin}/user/${username}` : `${origin}/leaderboard`; 
 
-        const data = {
-            title: shareTitle,
-            text: shareText,
-            url: shareUrl,
-        };
-
-        if (navigator.share) {
-            try {
-                await navigator.share(data);
-            } catch (err) {
-                console.error("Shared cancelled or failed:", err);
+        try {
+            // Priority 1: Capacitor Native Sharing (for official Android/iOS apps)
+            if (Capacitor.isNativePlatform()) {
+                await Share.share({
+                    title: shareTitle,
+                    text: shareText,
+                    url: shareUrl,
+                    dialogTitle: 'Share your achievement',
+                });
+                return;
             }
-        } else {
-            // Fallback: Copy to clipboard
-            try {
+
+            // Priority 2: Web Share API (for mobile browsers like Chrome on Android)
+            if (navigator.share) {
+                await navigator.share({
+                    title: shareTitle,
+                    text: shareText,
+                    url: shareUrl,
+                });
+                return;
+            }
+
+            // Priority 3: Fallback - Only if none of the above are available
+            if (navigator.clipboard) {
                 await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
-                alert("Share text copied to clipboard!");
-            } catch (err) {
-                alert("Failed to copy link.");
+                alert("Share link copied! You can now paste it in any app.");
             }
+        } catch (err) {
+            console.error("Sharing operation failed:", err);
+            // Ignore 'AbortError' which happens when user cancels the share sheet
         }
     };
 

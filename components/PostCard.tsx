@@ -278,13 +278,19 @@ export default function PostCard({
                         try {
                             if (Capacitor.isNativePlatform()) {
                                 await Share.share({ title, text: title, url, dialogTitle: 'Share this post' });
-                            } else if (navigator.share) {
+                                return;
+                            } 
+                            
+                            if (navigator.share) {
                                 await navigator.share({ title, text: title, url });
-                            } else if (navigator.clipboard) {
+                                return;
+                            } 
+                            
+                            if (navigator.clipboard) {
                                 await navigator.clipboard.writeText(url);
                                 alert('Link copied!');
                             }
-                        } catch (err) { console.error('Sharing failed:', err); }
+                        } catch (err) { console.error('Sharing operation failed:', err); }
                     }}
                 >
                     <Share2 className="w-[22px] h-[22px] sm:w-[26px] sm:h-[26px]" />
