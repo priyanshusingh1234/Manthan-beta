@@ -63,6 +63,7 @@ export async function POST(request: Request) {
                 initiator_id: user.id,
                 partner_id: partnerId,
                 status: 'pending',
+                message: message?.trim() || null,
             })
             .select()
             .single();

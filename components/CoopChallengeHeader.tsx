@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Swords, Trophy, Zap, Clock, Users, ArrowRight } from "lucide-react";
+import { Swords, Trophy, Zap, Clock, Users, ArrowRight, MessageSquare } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 type PlayerInfo = {
@@ -24,6 +24,7 @@ export default function CoopChallengeHeader({ challengeId, questionPoints, curre
     const [expiresAt, setExpiresAt] = useState<string | null>(null);
     const [timeLeft, setTimeLeft] = useState<string>("");
     const [loaded, setLoaded] = useState(false);
+    const [helpMessage, setHelpMessage] = useState<string | null>(null);
 
     const splitPoints = Math.ceil(questionPoints / 2);
 
@@ -50,6 +51,7 @@ export default function CoopChallengeHeader({ challengeId, questionPoints, curre
                 avatar: data.partner.avatar,
             });
             setExpiresAt(data.challenge.expiresAt);
+            setHelpMessage(data.challenge.message || null);
             setLoaded(true);
         })();
     }, [challengeId]);
@@ -138,6 +140,14 @@ export default function CoopChallengeHeader({ challengeId, questionPoints, curre
                         {timeLeft || "Loading..."}
                     </div>
                 </div>
+
+                {/* Help Message */}
+                {helpMessage && (
+                    <div className="mb-5 flex items-start gap-2.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-4 py-3">
+                        <MessageSquare className="w-4 h-4 text-white/70 shrink-0 mt-0.5" />
+                        <p className="text-white/90 text-sm font-semibold italic leading-snug">&ldquo;{helpMessage}&rdquo;</p>
+                    </div>
+                )}
 
                 {/* Player vs Player */}
                 <div className="flex items-center justify-between gap-4">
