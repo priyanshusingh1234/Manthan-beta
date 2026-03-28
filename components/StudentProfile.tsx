@@ -22,6 +22,10 @@ import EditProfileModal from '@/components/profile/EditProfileModal';
 import MyPostsSection from '@/components/MyPostsSection';
 import { useTopRanks } from '@/hooks/useTopRanks';
 
+type BadgeKey = 'gold' | 'silver' | 'bronze' | 'topper';
+
+const MAX_EQUIPPED_BADGES = 3;
+
 const StudentProfile: React.FC = () => {
   const { getRank } = useTopRanks();
   const [userData, setUserData] = useState({
@@ -72,6 +76,108 @@ const StudentProfile: React.FC = () => {
   const [editForm, setEditForm] = useState({ name: '', username: '', school: '', grade: '', bio: '' });
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'achievements' | 'posts' | 'badges'>('achievements');
+  const [equippedBadges, setEquippedBadges] = useState<BadgeKey[]>([]);
+  const [equipSaving, setEquipSaving] = useState(false);
+
+  const availableBadges: Array<{ key: BadgeKey; title: string; description: string; earned: boolean }> = [
+    {
+      key: 'gold',
+      title: 'Rank #1 Champion',
+      description: 'Holding the crown as the smartest mind in Dheeyudha.',
+      earned: profileRank === 1,
+    },
+    {
+      key: 'silver',
+      title: 'Rank #2 Elite',
+      description: 'One of the elite minds competing for the top spot.',
+      earned: profileRank === 2,
+    },
+    {
+      key: 'bronze',
+      title: 'Rank #3 Pro',
+      description: 'A seasoned warrior in the top tier of students.',
+      earned: profileRank === 3,
+    },
+    {
+      key: 'topper',
+      title: 'Lifetime Topper',
+      description: 'Awarded for achieving over 1,500 lifetime points in battles.',
+      earned: userData.totalPoints >= 1500,
+    },
+  ];
+
+  const earnedBadges = availableBadges.filter((badge) => badge.earned);
+  const lockedBadges = availableBadges.filter((badge) => !badge.earned);
+
+  const renderBadgeIcon = (badgeKey: BadgeKey) => {
+    if (badgeKey === 'gold') return <GoldBadge />;
+    if (badgeKey === 'silver') return <SilverBadge />;
+    if (badgeKey === 'bronze') return <BronzeBadge />;
+    return <TopperBadge />;
+  };
+
+  const sanitizeBadgeList = (list: unknown): BadgeKey[] => {
+    if (!Array.isArray(list)) return [];
+    return list.filter((item): item is BadgeKey => ['gold', 'silver', 'bronze', 'topper'].includes(String(item)));
+  };
+
+  const saveEquippedBadges = async (nextBadges: BadgeKey[]) => {
+    if (!currentUser) return false;
+
+    try {
+      setEquipSaving(true);
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          equipped_badges: nextBadges,
+        }
+      });
+
+      if (error) throw error;
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        fetch('/api/profile/sync', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        }).catch(console.error);
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Failed to save equipped badges', err);
+      setMessage('Could not save badge selection. Please try again.');
+      return false;
+    } finally {
+      setEquipSaving(false);
+    }
+  };
+
+  const toggleEquipBadge = async (badgeKey: BadgeKey) => {
+    const target = availableBadges.find((badge) => badge.key === badgeKey);
+    if (!target?.earned || equipSaving) return;
+
+    const currentlyEquipped = equippedBadges.includes(badgeKey);
+    const nextBadges = currentlyEquipped
+      ? equippedBadges.filter((key) => key !== badgeKey)
+      : [...equippedBadges, badgeKey];
+
+    if (!currentlyEquipped && nextBadges.length > MAX_EQUIPPED_BADGES) {
+      setMessage(`You can equip up to ${MAX_EQUIPPED_BADGES} badges.`);
+      return;
+    }
+
+    const previous = equippedBadges;
+    setEquippedBadges(nextBadges);
+
+    const ok = await saveEquippedBadges(nextBadges);
+    if (!ok) {
+      setEquippedBadges(previous);
+      return;
+    }
+
+    setMessage(currentlyEquipped ? 'Badge unequipped' : 'Badge equipped');
+    setTimeout(() => setMessage(''), 1800);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -84,6 +190,7 @@ const StudentProfile: React.FC = () => {
         const metaUsername = typeof meta.username === 'string' ? meta.username : '';
         const metaAvatar = typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined;
         const metaBio = typeof meta.bio === 'string' ? meta.bio : undefined;
+        const metaEquippedBadges = sanitizeBadgeList(meta.equipped_badges || meta.equippedBadges);
 
         setEditForm({
           name: metaFullName || user.email || '',
@@ -106,6 +213,7 @@ const StudentProfile: React.FC = () => {
           battlesAttempted: Number(meta.battlesAttempted) || 0,
           battlesWon: Number(meta.battlesWon) || 0,
         }));
+        setEquippedBadges(metaEquippedBadges);
       }
     });
     // Fetch real solved questions
@@ -133,6 +241,15 @@ const StudentProfile: React.FC = () => {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const earnedKeys = new Set(earnedBadges.map((badge) => badge.key));
+    const sanitized = equippedBadges.filter((key) => earnedKeys.has(key));
+    if (sanitized.length !== equippedBadges.length) {
+      setEquippedBadges(sanitized);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileRank, userData.totalPoints]);
 
   const uploadToStorage = async (bucket: string, path: string, file: File) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -645,40 +762,93 @@ const StudentProfile: React.FC = () => {
         {/* Badges Tab Content */}
         {activeTab === 'badges' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 relative z-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Rank Badge Display in Profile */}
-              {profileRank && profileRank <= 3 && (
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center group">
-                  <div className="scale-[2] mb-12 mt-6 drop-shadow-2xl">
-                    {profileRank === 1 ? <GoldBadge /> : profileRank === 2 ? <SilverBadge /> : <BronzeBadge />}
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-6 mb-6 shadow-sm">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">Equipped Badges</h3>
+                <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                  {equippedBadges.length}/{MAX_EQUIPPED_BADGES}
+                </span>
+              </div>
+              {equippedBadges.length > 0 ? (
+                <div className="flex flex-wrap gap-3">
+                  {equippedBadges.map((key) => (
+                    <div
+                      key={key}
+                      className="h-12 sm:h-14 min-w-[52px] px-3 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/80 dark:bg-indigo-900/20 flex items-center justify-center"
+                    >
+                      <div className="scale-[1.2] sm:scale-[1.35]">{renderBadgeIcon(key)}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-400">Tap a badge below to equip it on your profile.</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              {earnedBadges.map((badge) => {
+                const isEquipped = equippedBadges.includes(badge.key);
+                return (
+                  <button
+                    key={badge.key}
+                    type="button"
+                    onClick={() => toggleEquipBadge(badge.key)}
+                    disabled={equipSaving}
+                    className={`text-left p-5 sm:p-6 rounded-3xl border transition-all duration-200 active:scale-[0.99] ${isEquipped
+                      ? 'border-indigo-400 dark:border-indigo-500 bg-indigo-50/70 dark:bg-indigo-900/20 shadow-lg shadow-indigo-500/10'
+                      : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-200 dark:hover:border-indigo-700 hover:shadow-md'} ${equipSaving ? 'opacity-70' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0">
+                        <div className="scale-[1.55]">{renderBadgeIcon(badge.key)}</div>
+                      </div>
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${isEquipped
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}
+                      >
+                        {isEquipped ? 'Equipped' : 'Tap to Equip'}
+                      </span>
+                    </div>
+
+                    <h3 className="mt-4 text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">{badge.title}</h3>
+                    <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{badge.description}</p>
+
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                      <span className={`text-sm font-black ${isEquipped ? 'text-rose-500' : 'text-indigo-600 dark:text-indigo-400'}`}>
+                        {isEquipped ? 'Unequip' : 'Equip Badge'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+
+              {lockedBadges.map((badge) => (
+                <div
+                  key={badge.key}
+                  className="p-5 sm:p-6 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 opacity-75"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                      <div className="scale-[1.45] grayscale">{renderBadgeIcon(badge.key)}</div>
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      Locked
+                    </span>
                   </div>
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
-                    {profileRank === 1 ? 'Rank #1 Champion' : profileRank === 2 ? 'Rank #2 Elite' : 'Rank #3 Pro'}
-                  </h3>
-                  <p className="text-slate-500 text-sm font-medium leading-relaxed px-4">
-                    {profileRank === 1 ? 'Holding the crown as the smartest mind in Dheeyudha.' : profileRank === 2 ? 'One of the elite minds competing for the top spot.' : 'A seasoned warrior in the top tier of students.'}
-                  </p>
+                  <h3 className="mt-4 text-base sm:text-lg font-black text-slate-700 dark:text-slate-300">{badge.title}</h3>
+                  <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">{badge.description}</p>
                 </div>
-              )}
+              ))}
+            </div>
 
-              {/* Topper Badge Card */}
-              {userData.totalPoints >= 1500 && (
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center">
-                  <div className="scale-[1.8] mb-10 mt-4"><TopperBadge /></div>
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Lifetime Topper</h3>
-                  <p className="text-slate-500 text-sm font-medium px-4">Awarded for achieving over 1,500 lifetime points in battles.</p>
+            {earnedBadges.length === 0 && (
+              <div className="mt-6 py-14 text-center flex flex-col items-center gap-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800">
+                <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300">
+                  <Award className="w-8 h-8" />
                 </div>
-              )}
-
-              {/* Placeholder for no badges */}
-              {!profileRank && userData.totalPoints < 1500 && (
-                <div className="col-span-full py-20 text-center flex flex-col items-center gap-4">
-                   <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300">
-                      <Award className="w-10 h-10" />
-                   </div>
-                   <p className="text-slate-400 font-bold italic tracking-tight">No special badges earned yet.</p>
-                </div>
-              )}
+                <p className="text-slate-400 font-bold italic tracking-tight">No special badges earned yet.</p>
+              </div>
+            )}
             </div>
           </div>
         )}

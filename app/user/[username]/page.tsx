@@ -12,14 +12,22 @@ import FollowButton from '@/components/FollowButton';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+const APP_URL = 'https://dheeyudhha-pi.vercel.app';
+
 type Props = { params: { username: string } };
 
 export async function generateMetadata({ params }: Props): Promise<any> {
-    const { data: profile } = await supabaseAdmin.from('profiles').select('id, full_name, total_points, username').ilike('username', params.username).single();
+    const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, total_points, username, school, avatar_url, is_teacher')
+        .ilike('username', params.username)
+        .single();
     if (!profile) return { title: 'User Not Found | Dheeyudha' };
     
     const name = profile.full_name || `@${profile.username}`;
-    const points = profile.total_points || 0;
+    const points = Number(profile.total_points) || 0;
+    const school = profile.school || 'Dheeyudha Learner';
+    const profileType = profile.is_teacher ? 'Teacher' : 'Student';
 
     // Determine badge image for social sharing
     let badgeImageUrl = '/logo-full.png'; // fallback
@@ -37,24 +45,40 @@ export async function generateMetadata({ params }: Props): Promise<any> {
         else if (rank === 2) badgeImageUrl = '/badges/bronze.png';
     } catch (e) { console.error("Error fetching rank for metadata:", e); }
     
-    // Ensure absolute URL for social platforms
-    const finalImageUrl = `https://dheeyudhha-pi.vercel.app${badgeImageUrl}`;
+    // Use avatar as OG image when available; fallback to rank badge image.
+    const avatarUrl = typeof profile.avatar_url === 'string' && profile.avatar_url.trim() ? profile.avatar_url : null;
+    const finalImageUrl = avatarUrl
+        ? (avatarUrl.startsWith('http') ? avatarUrl : `${APP_URL}${avatarUrl}`)
+        : `${APP_URL}${badgeImageUrl}`;
+    const canonicalUrl = `${APP_URL}/user/${encodeURIComponent(profile.username)}`;
     
     return {
-        title: `${name} has earned ${points} points on Dheeyudha! 🧠`,
-        description: `Check out ${name}'s learning journey and rank on Dheeyudha, the ultimate battle of brains.`,
+        title: `${name} (@${profile.username}) | ${profileType} Profile on Dheeyudha`,
+        description: `${name} is a ${profileType.toLowerCase()} on Dheeyudha with ${points.toLocaleString()} points from ${school}. View profile, performance, and badges.`,
+        alternates: {
+            canonical: canonicalUrl,
+        },
         openGraph: {
-            title: `${name}'s Profile | Dheeyudha Achievement`,
-            description: `${name} has reached a milestone of ${points} points! See their badges and rank in the global leaderboard.`,
+            title: `${name} on Dheeyudha`,
+            description: `${profileType} from ${school} with ${points.toLocaleString()} points on Dheeyudha.`,
+            url: canonicalUrl,
+            siteName: 'Dheeyudha',
             type: 'profile',
             images: [
                 {
                     url: finalImageUrl,
                     width: 1200,
                     height: 630,
-                    alt: `${name}'s Badge`,
+                    alt: `${name} avatar and profile preview`,
                 }
             ],
+            locale: 'en_US',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: `${name} on Dheeyudha`,
+            description: `${profileType} from ${school} with ${points.toLocaleString()} points.`,
+            images: [finalImageUrl],
         }
     };
 }

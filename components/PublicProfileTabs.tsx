@@ -5,6 +5,7 @@ import { Trophy, Award, Star, Medal, Sword, Brain, Shield, Target, Zap } from 'l
 import Link from 'next/link';
 import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import TopperBadge from '@/ticks/topper';
+import { useTopRanks } from '@/hooks/useTopRanks';
 
 const iconsMapping: Record<string, any> = {
     trophy: Trophy,
@@ -19,7 +20,7 @@ const iconsMapping: Record<string, any> = {
 interface PublicProfileTabsProps {
   userId: string;
   username: string;
-  myRank: number;
+  myRank: number | null;
   totalPoints: number;
   stats: any[];
   recentSolvedQs: any[];
@@ -27,6 +28,7 @@ interface PublicProfileTabsProps {
 }
 
 export default function PublicProfileTabs({ 
+  userId,
   username, 
   myRank, 
   totalPoints, 
@@ -34,13 +36,26 @@ export default function PublicProfileTabs({
   recentSolvedQs,
   isTeacher
 }: PublicProfileTabsProps) {
+  const { getRank } = useTopRanks();
   const [activeTab, setActiveTab] = useState<'stats' | 'badges' | 'solved'>('stats');
+  const liveRank = userId ? getRank(userId) : null;
+  const normalizedLiveRank = (liveRank !== undefined && liveRank !== null && Number(liveRank) > 0)
+    ? Number(liveRank)
+    : null;
+  const normalizedServerRank = (myRank !== undefined && myRank !== null && Number(myRank) > 0)
+    ? Number(myRank)
+    : null;
+  const effectiveRank = (normalizedLiveRank && normalizedLiveRank <= 3)
+    ? normalizedLiveRank
+    : (normalizedServerRank && normalizedServerRank <= 3)
+      ? normalizedServerRank
+      : normalizedServerRank ?? normalizedLiveRank;
 
   const achievementsArr = [
     { icon: Medal, title: 'First Victory', description: 'Won your first battle', earned: true },
     { icon: Sword, title: 'Battle Master', description: 'Won 100 battles', earned: totalPoints > 1000 },
     { icon: Brain, title: 'Quiz Genius', description: 'Perfect score in 10 quizzes', earned: true },
-    { icon: Award, title: 'Top Tier', description: 'Ranked in top 50 globally', earned: myRank <= 50 },
+    { icon: Award, title: 'Top Tier', description: 'Ranked in top 50 globally', earned: (effectiveRank || 99999) <= 50 },
   ];
 
   return (
@@ -133,13 +148,13 @@ export default function PublicProfileTabs({
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Rank Badge */}
-              {myRank <= 3 && (
+              {(effectiveRank || 99999) <= 3 && (
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center group">
                   <div className="scale-[2] mb-12 mt-6 drop-shadow-2xl">
-                    {myRank === 1 ? <GoldBadge /> : myRank === 2 ? <SilverBadge /> : <BronzeBadge />}
+                    {effectiveRank === 1 ? <GoldBadge /> : effectiveRank === 2 ? <SilverBadge /> : <BronzeBadge />}
                   </div>
                   <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
-                    {myRank === 1 ? 'Rank #1 Champion' : myRank === 2 ? 'Rank #2 Elite' : 'Rank #3 Pro'}
+                    {effectiveRank === 1 ? 'Rank #1 Champion' : effectiveRank === 2 ? 'Rank #2 Elite' : 'Rank #3 Pro'}
                   </h3>
                   <p className="text-slate-500 text-sm font-medium leading-relaxed px-4">
                     One of the top-tier minds competing on Dheeyudha.
@@ -157,7 +172,7 @@ export default function PublicProfileTabs({
               )}
 
               {/* Placeholder for no badges */}
-              {myRank > 3 && totalPoints < 1500 && (
+                {(effectiveRank || 99999) > 3 && totalPoints < 1500 && (
                 <div className="col-span-full py-20 text-center flex flex-col items-center gap-4 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
                    <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300">
                       <Award className="w-10 h-10" />
