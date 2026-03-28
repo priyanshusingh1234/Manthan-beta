@@ -32,7 +32,7 @@ export default function CongratsBadgeModal() {
                     
                     if (myRank !== -1 && myRank < 3) {
                         const actualRank = myRank + 1;
-                        const lastShownKey = `badge_congrats_seen_${user.id}_rank${actualRank}`;
+                        const lastShownKey = `badge_congrats_seen_v2_${user.id}_rank${actualRank}`;
                         const alreadyShown = localStorage.getItem(lastShownKey);
                         
                         if (!alreadyShown) {
@@ -55,7 +55,7 @@ export default function CongratsBadgeModal() {
         if (userRank) {
             supabase.auth.getUser().then(({ data: { user } }) => {
                if (user) {
-                 localStorage.setItem(`badge_congrats_seen_${user.id}_rank${userRank}`, 'true');
+                 localStorage.setItem(`badge_congrats_seen_v2_${user.id}_rank${userRank}`, 'true');
                }
             });
         }
@@ -102,6 +102,12 @@ export default function CongratsBadgeModal() {
             if (navigator.clipboard) {
                 await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
                 alert("Share link copied! You can now paste it in any app.");
+            }
+            
+            // Mark as seen after successful share
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            if (currentUser) {
+                localStorage.setItem(`badge_congrats_seen_v2_${currentUser.id}_rank${userRank}`, 'true');
             }
         } catch (err) {
             console.error("Sharing operation failed:", err);
