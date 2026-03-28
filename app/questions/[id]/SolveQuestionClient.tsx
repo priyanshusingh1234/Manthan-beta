@@ -34,6 +34,8 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const [recoveredViaCoop, setRecoveredViaCoop] = useState(false);
 
     const [challengeInitiator, setChallengeInitiator] = useState<string | null>(null);
+    const [challengePartner, setChallengePartner] = useState<string | null>(null);
+    const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
 
     useEffect(() => {
         let mounted = true;
@@ -53,11 +55,13 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             if (challengeId) {
                 const { data: challengeInfo } = await supabase
                     .from("coop_challenges")
-                    .select("initiator_id")
+                    .select("initiator_id, partner_id, status")
                     .eq("id", challengeId)
                     .single();
                 if (mounted && challengeInfo) {
                     setChallengeInitiator(challengeInfo.initiator_id);
+                    setChallengePartner(challengeInfo.partner_id);
+                    setChallengeStatus(challengeInfo.status);
                 }
             }
 
@@ -251,8 +255,14 @@ export default function SolveQuestionClient({ question }: { question: any }) {
         );
     }
 
+    // If user is the PARTNER in a pending/active challenge, always let them solve
+    // even if they have attempted this question before (that was their own attempt, not the coop one)
+    const isCoopPartner = !!(challengeId && challengePartner && currentUserId && challengePartner === currentUserId);
+    const challengeIsOpen = challengeStatus === 'pending' || challengeStatus === 'active';
+
     // Any participant visited their challenge link and already attempted it — show spectator screen
-    if (alreadyAttempted && challengeId) {
+    // Exception: the partner gets to solve regardless (that's the whole point!)
+    if (alreadyAttempted && challengeId && !(isCoopPartner && challengeIsOpen)) {
         return (
             <CoopSpectatorScreen
                 challengeId={challengeId}
