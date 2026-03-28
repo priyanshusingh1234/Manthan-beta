@@ -405,7 +405,8 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
       </div>
 
       {/* Header spacer */}
-      <div className="hidden sm:block h-20 sm:h-24 md:h-28" />
+      <div className="md:hidden h-[calc(env(safe-area-inset-top)+100px)]" />
+      <div className="hidden md:block h-20 sm:h-24 md:h-28" />
     </header>
     </>
   );

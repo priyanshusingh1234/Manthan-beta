@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { UserPlus, UserCheck, Loader2, Users, X, Check, CheckCircle2 } from 'lucide-react';
+import { UserPlus, UserCheck, Loader2, Users, X, Check, CheckCircle2, Search } from 'lucide-react';
 import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import TeacherBadge from '@/ticks/teacher';
@@ -214,7 +214,7 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
 
             {/* Followers/Following Modal - Instagram style */}
             {modalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center">
+                <div className="fixed inset-0 z-[201] flex items-end sm:items-center justify-center">
                     {/* Backdrop */}
                     <div
                         className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity"
@@ -222,10 +222,10 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                     />
                     
                     {/* Modal Content */}
-                    <div className="relative bg-white dark:bg-slate-900 w-full h-full sm:h-[600px] sm:max-w-md sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
+                    <div className="relative bg-white dark:bg-slate-900 w-full h-[92vh] sm:h-[600px] sm:max-w-md sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
                         
-                        {/* Header */}
-                        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center bg-white dark:bg-slate-900 sticky top-0 z-10">
+                        {/* Header with safe area support */}
+                        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center bg-white dark:bg-slate-900 sticky top-0 z-10 pt-[calc(env(safe-area-inset-top)+1rem)] sm:pt-5">
                             <button
                                 onClick={() => setModalOpen(false)}
                                 className="sm:hidden p-1 mr-4 text-slate-800 dark:text-white"
@@ -243,75 +243,68 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                             </button>
                         </div>
 
-                        {/* Search Bar - Aesthetic only for now */}
-                        <div className="px-5 py-3 border-b border-slate-50 dark:border-slate-800/50">
+                        {/* Search Bar */}
+                        <div className="px-5 py-3 border-b border-slate-50 dark:border-slate-800/50 bg-white dark:bg-slate-900">
                             <div className="relative group">
                                 <input 
                                     type="text" 
-                                    placeholder="Search" 
-                                    className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-xl py-2.5 px-10 text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                                    placeholder="Search users..."
+                                    className="w-full bg-slate-100 dark:bg-slate-800/50 border-none rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all"
                                 />
-                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                    <Users className="w-4 h-4 opacity-50" />
-                                </div>
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             </div>
                         </div>
 
-                        {/* List */}
-                        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
+                        {/* User List */}
+                        <div className="flex-1 overflow-y-auto px-1 py-1">
                             {modalLoading ? (
-                                <div className="flex flex-col items-center justify-center py-20 text-slate-400 text-sm font-medium">
-                                    <Loader2 className="w-10 h-10 animate-spin mb-4 text-indigo-500" />
-                                    <span>Syncing {modalType}...</span>
+                                <div className="flex flex-col items-center justify-center h-full py-10">
+                                    <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-3" />
+                                    <p className="text-sm font-bold text-slate-500 tracking-tight">Syncing community...</p>
                                 </div>
-                            ) : modalUsers.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-24 text-slate-400 text-center px-8">
-                                    <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
-                                        <Users className="w-10 h-10 text-slate-300 dark:text-slate-600" />
-                                    </div>
-                                    <p className="font-bold text-slate-600 dark:text-slate-300 text-lg">No {modalType} yet</p>
-                                    <p className="text-sm mt-2 opacity-70">Connections will appear here as the community grows.</p>
+                            ) : modalUsers.length > 0 ? (
+                                <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                                    {modalUsers.map((u) => (
+                                        <div key={u.id} className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="relative shrink-0">
+                                                    <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 group-hover:ring-2 ring-indigo-500/20 transition-all">
+                                                        {u.avatar ? (
+                                                            <Image src={u.avatar} alt={u.name} width={48} height={48} className="object-cover w-full h-full" referrerPolicy="no-referrer" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-lg font-black text-indigo-600 bg-gradient-to-tr from-slate-100 to-slate-200">
+                                                                {u.name[0]?.toUpperCase()}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <h4 className="font-bold text-slate-900 dark:text-white truncate">{u.name}</h4>
+                                                        {u.isTeacher && <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 fill-blue-500/10" />}
+                                                    </div>
+                                                    <p className="text-xs font-bold text-slate-400 truncate tracking-tight">@{u.username}</p>
+                                                </div>
+                                            </div>
+
+                                            <Link
+                                                href={`/user/${u.username}`}
+                                                onClick={() => setModalOpen(false)}
+                                                className="shrink-0 px-4 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-black rounded-lg transition-all active:scale-95 border border-slate-200 dark:border-slate-700"
+                                            >
+                                                View Profile
+                                            </Link>
+                                        </div>
+                                    ))}
                                 </div>
                             ) : (
-                                modalUsers.map(u => (
-                                    <div 
-                                        key={u.id}
-                                        className="flex items-center justify-between gap-4 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group"
-                                    >
-                                        <Link
-                                            href={u.isTeacher ? `/teacher/${u.username}` : `/user/${u.username}`}
-                                            onClick={() => setModalOpen(false)}
-                                            className="flex items-center gap-4 flex-1 min-w-0"
-                                        >
-                                            <div className="relative shrink-0">
-                                                {u.avatar ? (
-                                                    <img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 dark:border-slate-700 bg-slate-100" />
-                                                ) : (
-                                                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-lg font-black text-white">
-                                                        {u.name[0]?.toUpperCase()}
-                                                    </div>
-                                                )}
-                                                {u.isTeacher && (
-                                                    <div className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-900 rounded-full p-0.5">
-                                                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <div className="font-black text-slate-900 dark:text-white truncate flex items-center gap-1">
-                                                    {u.name}
-                                                </div>
-                                                <div className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate tracking-tight">@{u.username}</div>
-                                            </div>
-                                        </Link>
-                                        
-                                        {currentUser && currentUser.id !== u.id && (
-                                            <button className="shrink-0 px-4 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 rounded-lg text-xs font-black transition-all">
-                                                Follow
-                                            </button>
-                                        )}
+                                <div className="flex flex-col items-center justify-center h-full py-20 px-10 text-center">
+                                    <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-6">
+                                        <Users className="w-10 h-10 text-slate-200 dark:text-slate-700" />
                                     </div>
-                                ))
+                                    <h4 className="text-lg font-black text-slate-800 dark:text-white mb-1">No {modalType} yet</h4>
+                                    <p className="text-sm font-bold text-slate-400">Connections will appear here as the community grows.</p>
+                                </div>
                             )}
                         </div>
                     </div>
