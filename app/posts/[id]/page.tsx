@@ -25,7 +25,12 @@ export async function generateMetadata({ params }: Props): Promise<any> {
 
     const title = `${authorName}'s Post on Dheeyudha`;
     const description = post.content ? post.content.slice(0, 160) : 'Check out this discussion on Dheeyudha.';
-    const finalImageUrl = post.image_url ? post.image_url : 'https://dheeyudhha-pi.vercel.app/og-social.png';
+    
+    // Ensure image URL is absolute
+    let finalImageUrl = 'https://dheeyudhha-pi.vercel.app/og-social.png';
+    if (post.image_url) {
+        finalImageUrl = post.image_url.startsWith('http') ? post.image_url : `https://dheeyudhha-pi.vercel.app${post.image_url}`;
+    }
 
     return {
         title: `${title} | Brain Battle`,
@@ -33,7 +38,13 @@ export async function generateMetadata({ params }: Props): Promise<any> {
         openGraph: {
             title,
             description,
-            images: [finalImageUrl],
+            images: [
+                {
+                    url: finalImageUrl,
+                    width: 1200,
+                    height: 630,
+                }
+            ],
             type: 'article',
         },
         twitter: {

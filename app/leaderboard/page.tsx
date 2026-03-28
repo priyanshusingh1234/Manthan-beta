@@ -76,7 +76,7 @@ export default async function LeaderboardPage() {
                     rank={2}
                     totalPoints={students[1].totalPoints}
                     nameClassName="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200"
-                    className="flex items-center justify-center gap-1 truncate"
+                    className="flex items-center justify-center gap-1 min-w-0"
                   />
                 </Link>
                 <span className="text-indigo-600 font-bold text-[10px] sm:text-xs mt-0.5">{students[1].totalPoints.toLocaleString()}</span>
@@ -100,7 +100,7 @@ export default async function LeaderboardPage() {
                     rank={1}
                     totalPoints={students[0].totalPoints}
                     nameClassName="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-slate-100"
-                    className="flex items-center justify-center gap-1 truncate"
+                    className="flex items-center justify-center gap-1 min-w-0"
                   />
                 </Link>
                 <span className="text-amber-600 dark:text-amber-400 font-black text-xs">{students[0].totalPoints.toLocaleString()}</span>
@@ -123,7 +123,7 @@ export default async function LeaderboardPage() {
                     rank={3}
                     totalPoints={students[2].totalPoints}
                     nameClassName="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200"
-                    className="flex items-center justify-center gap-1 truncate"
+                    className="flex items-center justify-center gap-1 min-w-0"
                   />
                 </Link>
                 <span className="text-indigo-600 font-bold text-[10px] sm:text-xs mt-0.5">{students[2].totalPoints.toLocaleString()}</span>
@@ -174,7 +174,7 @@ export default async function LeaderboardPage() {
                           userId={student.id}
                           totalPoints={student.totalPoints}
                           nameClassName="font-bold text-[15px] text-slate-900 dark:text-slate-100"
-                          className="flex items-center gap-1.5 truncate"
+                          className="flex items-center gap-1.5 min-w-0"
                         />
                       </Link>
                       <div className="text-xs font-medium text-slate-500 truncate flex items-center gap-1">

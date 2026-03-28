@@ -14,6 +14,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import TeacherBadge from '@/ticks/teacher';
 import TopperBadge from '@/ticks/topper';
+import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
+import BadgedName from '@/components/BadgedName';
 import FollowButton from '@/components/FollowButton';
 import CropModal from '@/components/profile/CropModal';
 import EditProfileModal from '@/components/profile/EditProfileModal';
@@ -59,12 +61,15 @@ const StudentProfile: React.FC = () => {
 
   // Editable profile state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const profileUserId = currentUser?.id;
+  const profileRank = Number(userData.rankNumber) || null;
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', username: '', school: '', grade: '', bio: '' });
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'achievements' | 'posts'>('achievements');
+  const [activeTab, setActiveTab] = useState<'achievements' | 'posts' | 'badges'>('achievements');
 
   useEffect(() => {
     let mounted = true;

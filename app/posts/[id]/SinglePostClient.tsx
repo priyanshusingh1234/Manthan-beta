@@ -106,7 +106,7 @@ export default function SinglePostClient({ postId }: { postId: string }) {
                                 isTeacher={post.author?.is_teacher || post.author?.isTeacher}
                                 totalPoints={Number(post.author?.totalPoints)}
                                 nameClassName="font-black text-[14px] sm:text-[16px] text-slate-900 dark:text-slate-100"
-                                className="flex items-center gap-1.5 truncate"
+                                className="flex items-center gap-1.5 min-w-0"
                             />
                             <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 uppercase tracking-tight">
                                 <Clock className="w-2.5 h-2.5" /> {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}

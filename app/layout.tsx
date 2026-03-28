@@ -25,15 +25,24 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Dheeyudha | Join the Knowledge Battle',
     description: 'Compete, learn, and conquer challenges with students from across schools.',
-    url: 'https://manthan-beta-c975.vercel.app',
+    url: 'https://dheeyudhha-pi.vercel.app',
     siteName: 'Dheeyudha',
     type: 'website',
     locale: 'en_IN',
+    images: [
+      {
+        url: 'https://dheeyudhha-pi.vercel.app/og-social.png',
+        width: 1200,
+        height: 630,
+        alt: 'Dheeyudha - Brain Battle',
+      }
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Dheeyudha | Join the Knowledge Battle',
     description: 'Compete, learn, and conquer challenges with students from across schools.',
+    images: ['https://dheeyudhha-pi.vercel.app/og-social.png'],
     creator: '@dheeyudha',
   },
   robots: {

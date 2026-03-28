@@ -6,6 +6,7 @@ import TeacherBadge from '@/ticks/teacher';
 import TopperBadge from '@/ticks/topper';
 import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import BadgedName from '@/components/BadgedName';
+import PublicProfileTabs from '@/components/PublicProfileTabs';
 import FollowButton from '@/components/FollowButton';
 
 export const dynamic = 'force-dynamic';
@@ -303,80 +304,23 @@ export default async function StudentProfilePage({ params }: Props) {
                         </div>
                     </div>
 
+                    {/* Interactive Profile Content (Tabs: Stats, Badges, Solved) */}
                     {!isTeacher && (
-                        <div className={"grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 sm:mt-8 w-full px-1 sm:px-0"}>
-                            {stats.map((stat, i) => {
-                                const Icon = stat.icon;
-                                return (
-                                    <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center text-center w-full group hover:shadow-lg transition-all">
-                                        <div className={`${stat.bgColor} dark:bg-slate-800 w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-2 sm:mb-3 group-hover:scale-110 transition-transform`}>
-                                            <Icon className={`${stat.color} w-5 h-5 sm:w-6 sm:h-6`} />
-                                        </div>
-                                        <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">{stat.value}</div>
-                                        <div className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5 sm:mt-1">{stat.label}</div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {/* Solved Questions Section - Native style expansion */}
-                    {!isTeacher && (
-                        <div className="bg-white dark:bg-slate-900 rounded-3xl sm:rounded-[2.5rem] shadow-sm sm:shadow-lg p-5 sm:p-8 border-x-0 sm:border border-y sm:border-slate-100 dark:sm:border-slate-800 relative overflow-hidden group/solved mt-6 sm:mt-8 mb-10 border-slate-100 dark:border-slate-800">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 opacity-50 group-hover/solved:opacity-100 transition-opacity"></div>
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="p-3 bg-emerald-50 dark:bg-emerald-900/40 rounded-2xl border border-emerald-100 dark:border-emerald-800 shadow-inner group-hover/solved:scale-110 transition-transform">
-                                    <Star className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600 dark:text-emerald-400 drop-shadow-sm" />
-                                </div>
-                                <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Real Solved Questions</h2>
-                            </div>
-                            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mb-6 sm:mb-8 font-medium italic">Latest triumphs in learning</p>
-
-                            <div className="space-y-4">
-                                {(!recentSolvedQs || recentSolvedQs.length === 0) ? (
-                                    <div className="py-12 text-center text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700">No questions solved yet.</div>
-                                ) : (
-                                    recentSolvedQs.map((q: any, i: number) => (
-                                        <Link key={i} href={`/questions/${q.id}`} className="block group/q">
-                                            <div
-                                                className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-800 hover:shadow-xl hover:shadow-emerald-500/5 hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
-                                            >
-                                                <div className="flex items-center justify-between mb-3 sm:mb-4">
-                                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-full flex items-center justify-center font-black text-base sm:text-lg shadow-inner group-hover/q:scale-105 transition-transform overflow-hidden font-mono shrink-0">
-                                                            <span className="text-slate-400">{q.subject?.charAt(0) || '?'}</span>
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <h3 className="font-bold text-sm sm:text-lg text-slate-900 dark:text-white group-hover/q:text-emerald-600 transition-colors truncate">{q.title}</h3>
-                                                            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">{q.subject}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="shrink-0 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-wide uppercase bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50">
-                                                        Solved
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 pt-2 sm:pt-3 border-t border-slate-50 dark:border-slate-800/50">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg">+{q.points} <span className="hidden sm:inline">Points</span></span>
-                                                    </div>
-                                                    <span>{new Date(q.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    ))
-                                )}
-                            </div>
-                            
-                            {recentSolvedQs && recentSolvedQs.length > 0 && (
-                                <div className="mt-8">
-                                    <Link href={`/user/${username}/solved`} className="block group/btn">
-                                        <button className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-2xl transition-all duration-300 active:scale-95 shadow-xl hover:shadow-emerald-500/20 flex items-center justify-center gap-2">
-                                            <span>See All Achievements</span>
-                                            <Trophy className="w-4 h-4 group-hover/btn:rotate-12 transition-transform" />
-                                        </button>
-                                    </Link>
-                                </div>
-                            )}
+                        <div className="mt-8 sm:mt-12 w-full">
+                            <PublicProfileTabs 
+                                userId={fetchedUser.id}
+                                username={username}
+                                myRank={myRank}
+                                totalPoints={totalPoints}
+                                stats={[
+                                    { icon: 'trophy', label: 'Battles Won', value: battlesWon.toString(), color: 'text-yellow-500', bgColor: 'bg-yellow-50 dark:bg-yellow-900/20' },
+                                    { icon: 'target', label: 'Win Rate', value: `${winRate}%`, color: 'text-green-500', bgColor: 'bg-green-50 dark:bg-green-900/20' },
+                                    { icon: 'zap', label: 'Attempts', value: (qAttempts?.length || 0).toString(), color: 'text-orange-500', bgColor: 'bg-orange-50 dark:bg-orange-900/20' },
+                                    { icon: 'star', label: 'Points', value: totalPoints.toLocaleString(), color: 'text-blue-500', bgColor: 'bg-blue-50 dark:bg-blue-900/20' },
+                                ]}
+                                recentSolvedQs={recentSolvedQs}
+                                isTeacher={isTeacher}
+                            />
                         </div>
                     )}
 
