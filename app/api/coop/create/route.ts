@@ -41,11 +41,15 @@ export async function POST(request: Request) {
         // 1. Check if an active challenge already exists for this question by this user
         const { data: existingChallenge, error: existingErr } = await supabaseAdmin
             .from('coop_challenges')
-            .select('*')
+            .select('id')
             .eq('question_id', questionId)
             .eq('initiator_id', user.id)
-            .not('status', 'in', '("won","lost","rejected")')
-            .single();
+            .not('status', 'in', '(won,lost,rejected)')
+            .maybeSingle();
+
+        if (existingErr) {
+            console.error('Error checking existing challenge:', existingErr);
+        }
 
         if (existingChallenge) {
             return NextResponse.json({ error: 'You already have an active challenge for this question.' }, { status: 400 });

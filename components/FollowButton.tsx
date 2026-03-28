@@ -270,7 +270,7 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                                                 <div className="relative shrink-0">
                                                     <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 group-hover:ring-2 ring-indigo-500/20 transition-all">
                                                         {u.avatar ? (
-                                                            <Image src={u.avatar} alt={u.name} width={48} height={48} className="object-cover w-full h-full" referrerPolicy="no-referrer" />
+                                                            <img src={u.avatar!} alt={u.name} width={48} height={48} className="object-cover w-full h-full" referrerPolicy="no-referrer" />
                                                         ) : (
                                                             <div className="w-full h-full flex items-center justify-center text-lg font-black text-indigo-600 bg-gradient-to-tr from-slate-100 to-slate-200">
                                                                 {u.name[0]?.toUpperCase()}
