@@ -69,7 +69,7 @@ export default async function StudentProfilePage({ params }: Props) {
         // Fast, case-insensitive ID lookup from profiles table
         const { data: profile } = await supabaseAdmin
             .from('profiles')
-            .select('id') 
+            .select('id, total_points, is_teacher') 
             .ilike('username', username)
             .single();
 
@@ -135,18 +135,23 @@ export default async function StudentProfilePage({ params }: Props) {
             console.log("Follows table might not exist yet.");
         }
 
-        const totalPoints = Number(fetchedUser.total_points || meta.totalPoints || 0);
+        const profilePoints = Number(profile?.total_points) || 0;
+        const totalPoints = profilePoints || Number(fetchedUser.total_points || meta.totalPoints || 0);
         const battlesAttempted = Number(fetchedUser.battles_attempted || meta.battlesAttempted || 0);
         const battlesWon = Number(fetchedUser.battles_won || meta.battlesWon || 0);
         const winRate = battlesAttempted > 0 ? Math.round((battlesWon / battlesAttempted) * 100) : 0;
 
         // Fetch Global Rank
-        const { count: higherRanked } = await supabaseAdmin
-            .from('profiles')
-            .select('*', { count: 'exact', head: true })
-            .eq('is_teacher', false)
-            .gt('total_points', totalPoints);
-        const myRank = (higherRanked || 0) + 1;
+        const isStudentProfile = !profile?.is_teacher;
+        let myRank: number | null = null;
+        if (isStudentProfile) {
+            const { count: higherRanked } = await supabaseAdmin
+                .from('profiles')
+                .select('*', { count: 'exact', head: true })
+                .eq('is_teacher', false)
+                .gt('total_points', totalPoints);
+            myRank = (higherRanked || 0) + 1;
+        }
 
         // --- ENHANCED ANALYSIS ---
         // Fetch attempts separately to avoid join issues
@@ -215,7 +220,8 @@ export default async function StudentProfilePage({ params }: Props) {
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent sm:via-transparent" />
                     </div>
-                </div>                <div className="max-w-5xl mx-auto sm:px-6 lg:px-8 -mt-16 sm:-mt-28 relative z-10 w-full">
+                </div>
+                <div className="max-w-5xl mx-auto sm:px-6 lg:px-8 -mt-16 sm:-mt-28 relative z-10 w-full">
                     {/* Profile Card - Native Look on Mobile */}
                     <div className="bg-white dark:bg-slate-900 rounded-t-[3rem] sm:rounded-3xl shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.1)] sm:shadow-xl p-5 sm:p-10 border-t sm:border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-6 sm:gap-8 items-center sm:items-start text-center sm:text-left w-full">
                         {avatar ? (
@@ -228,6 +234,7 @@ export default async function StudentProfilePage({ params }: Props) {
                         <div className="flex-1 w-full">
                             <BadgedName 
                                 name={name}
+                                userId={fetchedUser.id}
                                 rank={myRank}
                                 isTeacher={isTeacher}
                                 totalPoints={totalPoints}
@@ -256,7 +263,8 @@ export default async function StudentProfilePage({ params }: Props) {
                             <div className="mt-6">
                                 <FollowButton profileUserId={fetchedUser.id} initialFollowers={initialFollowers} initialFollowing={initialFollowing} />
                             </div>
-                        </div>                        {/* Rank Badge & Analysis - Native layout on mobile */}
+                        </div>
+                        {/* Rank Badge & Analysis - Native layout on mobile */}
                         <div className="mt-8 sm:mt-0 flex flex-col gap-4 shrink-0 sm:w-[240px] w-full">
                             {/* Learning Profile Analysis */}
                             <div className="bg-white dark:bg-slate-900 border sm:border-slate-100 dark:sm:border-slate-800 p-6 rounded-3xl sm:rounded-[2rem] shadow-sm sm:shadow-md relative overflow-hidden group/analysis border-slate-100 dark:border-slate-800">

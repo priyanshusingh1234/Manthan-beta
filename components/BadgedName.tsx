@@ -26,8 +26,20 @@ export default function BadgedName({
   nameClassName = "font-bold text-slate-900 dark:text-white"
 }: BadgedNameProps) {
   const { getRank } = useTopRanks();
-  const rawRank = (propRank !== undefined && propRank !== null) ? propRank : (userId ? getRank(userId) : null);
-  const rank = (rawRank && Number(rawRank) > 0) ? Number(rawRank) : null;
+  const liveRank = userId ? getRank(userId) : null;
+  const normalizedPropRank = (propRank !== undefined && propRank !== null && Number(propRank) > 0)
+    ? Number(propRank)
+    : null;
+  const normalizedLiveRank = (liveRank !== undefined && liveRank !== null && Number(liveRank) > 0)
+    ? Number(liveRank)
+    : null;
+
+  // Prefer whichever source confirms the user is in top 3.
+  const rank = (normalizedPropRank && normalizedPropRank <= 3)
+    ? normalizedPropRank
+    : (normalizedLiveRank && normalizedLiveRank <= 3)
+      ? normalizedLiveRank
+      : normalizedPropRank ?? normalizedLiveRank;
   // Ensure we get a boolean, avoiding rendering 'NaN' if totalPoints is NaN
   const isTopper = typeof totalPoints === 'number' && totalPoints >= 1500;
 
