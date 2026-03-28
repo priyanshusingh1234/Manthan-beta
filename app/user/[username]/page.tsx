@@ -108,13 +108,14 @@ export default async function StudentProfilePage({ params }: Props) {
             );
         }
 
-        const name = fetchedUser.full_name || `@${fetchedUser.username}` || 'Student';
-        const avatar = fetchedUser.avatar_url || null;
-        const banner = (fetchedUser as any).banner_url || null; // Banner might be in metadata or a column
-        const bio = (fetchedUser as any).bio || null;
-        const school = fetchedUser.school || null;
-        const grade = (fetchedUser as any).classGrade || (fetchedUser as any).grade || null;
-        const isTeacher = !!fetchedUser.is_teacher;
+        const meta = (fetchedUser as any).user_metadata || {};
+        const name = fetchedUser.full_name || meta.fullName || meta.full_name || meta.name || (fetchedUser.username ? `@${fetchedUser.username}` : (meta.username ? `@${meta.username}` : 'Student'));
+        const avatar = fetchedUser.avatar_url || meta.avatar_url || meta.avatar || null;
+        const banner = (fetchedUser as any).banner_url || meta.banner_url || null;
+        const bio = (fetchedUser as any).bio || meta.bio || null;
+        const school = fetchedUser.school || meta.school || null;
+        const grade = (fetchedUser as any).classGrade || (fetchedUser as any).grade || meta.classGrade || meta.grade || null;
+        const isTeacher = !!fetchedUser.is_teacher || !!meta.isTeacher;
 
         let initialFollowers = 0;
         let initialFollowing = 0;
@@ -134,9 +135,7 @@ export default async function StudentProfilePage({ params }: Props) {
             console.log("Follows table might not exist yet.");
         }
 
-        const totalPoints = Number(fetchedUser.total_points || 0);
-        // Fallback or additional stats from meta if they are NOT in the profiles table yet
-        const meta = (fetchedUser as any).user_metadata || {};
+        const totalPoints = Number(fetchedUser.total_points || meta.totalPoints || 0);
         const battlesAttempted = Number(fetchedUser.battles_attempted || meta.battlesAttempted || 0);
         const battlesWon = Number(fetchedUser.battles_won || meta.battlesWon || 0);
         const winRate = battlesAttempted > 0 ? Math.round((battlesWon / battlesAttempted) * 100) : 0;
