@@ -61,8 +61,12 @@ export async function POST(req: Request) {
         }
 
         const isInitiatorRetry = challenge && challenge.initiator_id === userId;
+        // The partner is the person being asked for help — they must be allowed to solve
+        // even if they previously attempted this question on their own.
+        const isCoopPartner = challenge && challenge.partner_id === userId
+            && (challenge.status === 'pending' || challenge.status === 'active');
 
-        if (existingAttempt && !isInitiatorRetry && !warId) {
+        if (existingAttempt && !isInitiatorRetry && !isCoopPartner && !warId) {
             return NextResponse.json({ error: "You have already attempted this question" }, { status: 403 });
         }
 
