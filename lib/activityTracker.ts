@@ -59,7 +59,18 @@ export const ActivityTracker = {
         totalSolves: 0 
       };
     }
-    return JSON.parse(value);
+    
+    try {
+      const parsed = JSON.parse(value);
+      return {
+        subjectWeights: parsed.subjectWeights || {},
+        errorPatterns: parsed.errorPatterns || {},
+        totalSolves: typeof parsed.totalSolves === 'number' ? parsed.totalSolves : 0
+      };
+    } catch (e) {
+      console.error("[ActivityTracker] parse error", e);
+      return { subjectWeights: {}, errorPatterns: {}, totalSolves: 0 };
+    }
   },
 
   /**
