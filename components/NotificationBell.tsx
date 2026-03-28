@@ -42,7 +42,7 @@ function NotifIcon({ type }: { type: string }) {
     return <div className={`${base} bg-slate-100 text-slate-500`}><Bell className="w-4 h-4" /></div>;
 }
 
-export default function NotificationBell() {
+export default function NotificationBell({ isMobile = false }: { isMobile?: boolean }) {
     const [open, setOpen] = useState(false);
     const [filter, setFilter] = useState('All');
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -147,7 +147,14 @@ export default function NotificationBell() {
             {/* Bell Button */}
             <button
                 id="notification-bell-btn"
-                onClick={() => { setOpen(o => !o); if (!open) fetchNotifications(); }}
+                onClick={() => { 
+                    if (isMobile) {
+                        router.push('/notifications');
+                        return;
+                    }
+                    setOpen(o => !o); 
+                    if (!open) fetchNotifications(); 
+                }}
                 className="relative w-10 h-10 rounded-full bg-slate-200/50 dark:bg-slate-800/80 md:bg-white/15 md:dark:bg-white/15 hover:bg-slate-300/50 dark:hover:bg-slate-700 md:hover:bg-white/25 md:dark:hover:bg-white/25 border border-slate-200 dark:border-slate-700 md:border-white/20 md:dark:border-white/20 flex items-center justify-center text-slate-700 dark:text-slate-200 md:text-white md:dark:text-white transition-all shadow-sm md:shadow-md active:scale-95"
                 aria-label="Notifications"
             >
