@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
@@ -12,6 +12,7 @@ const TeacherBadge = dynamic(() => import('@/ticks/teacher'), { ssr: false });
 const TopperBadge = dynamic(() => import('@/ticks/topper'), { ssr: false });
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
+import BadgedName from './BadgedName';
 
 export default function PostCard({
     post,
@@ -167,11 +168,14 @@ export default function PostCard({
 
                         const AuthorText = (
                             <div className="flex flex-col min-w-0">
-                                <div className="font-black text-[14px] sm:text-[16px] text-slate-900 dark:text-slate-100 flex items-center gap-1.5 truncate">
-                                    {post.author?.name || 'Unknown Scholar'}
-                                    {isTeacher && <TeacherBadge />}
-                                    {Number(post.author?.totalPoints) >= 1500 && <TopperBadge />}
-                                </div>
+                                <BadgedName 
+                                    name={post.author?.name || 'Unknown Scholar'}
+                                    userId={post.author?.id}
+                                    isTeacher={isTeacher}
+                                    totalPoints={Number(post.author?.totalPoints)}
+                                    nameClassName="font-black text-[14px] sm:text-[16px] text-slate-900 dark:text-slate-100"
+                                    className="flex items-center gap-1.5 truncate"
+                                />
                                 <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 uppercase tracking-tight">
                                     <Clock className="w-2.5 h-2.5" /> {timeAgo}
                                     {post.author?.school && <span className="truncate max-w-[100px] sm:max-w-none"> • {post.author.school}</span>}
@@ -291,7 +295,7 @@ export default function PostCard({
             {showComments && (
                 <div className="px-5 pb-4">
                     {loadingComments ? (
-                        <div className="text-center py-6 text-slate-400">Loading comments...</div>
+                        <div className="text-center py-6 text-slate-400 font-bold italic">Loading comments...</div>
                     ) : (
                         <div className="space-y-6">
                             {comments.map((comment: any) => {
@@ -299,83 +303,76 @@ export default function PostCard({
                                 const commentProfileUrl = getProfileUrl(comment.author);
                                 const safeReplyHandle = commentUsername || 'user';
 
-                                 const AuthorAvatar = (
-                                    <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800">
-                                        {comment.author.avatar_url ? (
-                                            <Image
-                                                src={comment.author.avatar_url}
-                                                alt="avatar"
-                                                width={36}
-                                                height={36}
-                                                className="object-cover w-9 h-9"
-                                            />
-                                        ) : (
-                                            <User className="w-5 h-5 m-auto text-slate-400" />
-                                        )}
+                                return (
+                                    <div key={comment.id} className="flex gap-3 items-start group/comment">
+                                        <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 shrink-0">
+                                            {comment.author.avatar_url ? (
+                                                <Image src={comment.author.avatar_url} alt="avatar" width={36} height={36} className="object-cover w-9 h-9" />
+                                            ) : (
+                                                <User className="w-5 h-5 m-auto text-slate-400" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                {commentProfileUrl ? (
+                                                    <Link href={commentProfileUrl}>
+                                                        <BadgedName 
+                                                            name={comment.author.name}
+                                                            userId={comment.author.id}
+                                                            isTeacher={comment.author.isTeacher}
+                                                            totalPoints={Number(comment.author.totalPoints)}
+                                                            nameClassName="font-bold text-[13px] sm:text-sm text-slate-900 dark:text-slate-100 hover:text-indigo-600 transition-colors"
+                                                        />
+                                                    </Link>
+                                                ) : (
+                                                    <BadgedName 
+                                                        name={comment.author.name}
+                                                        userId={comment.author.id}
+                                                        isTeacher={comment.author.isTeacher}
+                                                        totalPoints={Number(comment.author.totalPoints)}
+                                                        nameClassName="font-bold text-[13px] sm:text-sm text-slate-900 dark:text-slate-100"
+                                                    />
+                                                )}
+                                                <span className="text-[10px] font-bold text-slate-400">
+                                                    {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                                                </span>
+                                            </div>
+                                            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-2xl px-4 py-2 text-sm text-slate-700 dark:text-slate-200 shadow-sm">
+                                                {comment.content}
+                                            </div>
+                                            <button
+                                                className="mt-1.5 text-[11px] text-indigo-500 font-black hover:text-indigo-600 uppercase tracking-wider px-1"
+                                                onClick={() => {
+                                                    setReplyingTo({ username: safeReplyHandle, userId: comment.author.id });
+                                                    setNewComment(`@${safeReplyHandle} `);
+                                                }}
+                                            >
+                                                Reply
+                                            </button>
+                                        </div>
                                     </div>
                                 );
-
-                                return (
-                                <div key={comment.id} className="flex gap-3 items-start">
-                                    {commentProfileUrl ? (
-                                        <Link href={commentProfileUrl}>{AuthorAvatar}</Link>
-                                    ) : (
-                                        AuthorAvatar
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            {commentProfileUrl ? (
-                                                <Link
-                                                    href={commentProfileUrl}
-                                                    className="font-bold text-[13px] sm:text-sm truncate max-w-[120px] text-slate-900 dark:text-slate-100 hover:text-indigo-600 transition-colors"
-                                                >
-                                                    {comment.author.name}
-                                                </Link>
-                                            ) : (
-                                                <span className="font-bold text-[13px] sm:text-sm truncate max-w-[120px] text-slate-900 dark:text-slate-100">
-                                                    {comment.author.name}
-                                                </span>
-                                            )}
-                                            {comment.author.isTeacher && <TeacherBadge />}
-                                            <span className="text-xs text-slate-400 ml-2">
-                                                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                                            </span>
-                                        </div>
-                                        <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 rounded-2xl px-4 py-2 mt-1">
-                                            <span className="text-sm text-slate-700 dark:text-slate-200">{comment.content}</span>
-                                        </div>
-                                        <button
-                                            className="mt-1 text-xs text-indigo-500 font-bold hover:underline"
-                                            onClick={() => {
-                                                setReplyingTo({ username: safeReplyHandle, userId: comment.author.id });
-                                                setNewComment(`@${safeReplyHandle} `);
-                                            }}
-                                        >
-                                            Reply
-                                        </button>
-                                    </div>
-                                </div>
-                            );})}
+                            })}
                         </div>
                     )}
 
-                    <form onSubmit={handleCommentSubmit} className="mt-4 flex gap-3 items-start">
-                        <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex-shrink-0 flex items-center justify-center font-black text-indigo-600 text-sm">
+                    <form onSubmit={handleCommentSubmit} className="mt-8 flex gap-3 items-start">
+                        <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex-shrink-0 flex items-center justify-center font-black text-indigo-600 text-sm border border-indigo-100 dark:border-indigo-900/30">
                             ME
                         </div>
                         <div className="flex-1">
                             {replyingTo && (
-                                <div className="mb-2 text-xs text-indigo-600">
+                                <div className="mb-2 text-xs font-bold text-indigo-600 flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 rounded-lg w-fit">
                                     Replying to @{replyingTo.username}
                                     <button
                                         type="button"
-                                        className="ml-2 text-rose-500"
+                                        className="text-rose-500 hover:scale-110 transition-transform"
                                         onClick={() => {
                                             setReplyingTo(null);
                                             setNewComment('');
                                         }}
                                     >
-                                        Cancel
+                                        <X size={14} />
                                     </button>
                                 </div>
                             )}
@@ -383,13 +380,13 @@ export default function PostCard({
                                 placeholder="Add to the conversation..."
                                 value={newComment}
                                 onChange={(e) => setNewComment(e.target.value)}
-                                className="w-full bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 text-sm min-h-[70px]"
+                                className="w-full bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-3xl p-4 text-sm min-h-[90px] focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                             />
                             <div className="flex justify-end mt-2">
                                 <button
                                     type="submit"
                                     disabled={!newComment.trim() || isSubmitting}
-                                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-4 py-2 rounded-xl text-sm disabled:opacity-50"
+                                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-2.5 rounded-2xl text-sm disabled:opacity-50 active:scale-95 transition-all shadow-lg shadow-indigo-500/20"
                                 >
                                     {isSubmitting ? 'Posting...' : 'Post Comment'}
                                 </button>

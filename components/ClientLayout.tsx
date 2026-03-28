@@ -10,6 +10,7 @@ import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { StatusBar } from '@capacitor/status-bar';
 import { ActivityTracker } from '@/lib/activityTracker';
+import CongratsBadgeModal from '@/components/CongratsBadgeModal';
 
 // Dynamic import for PushNotifications to avoid SSR issues
 const initNativePush = async (userId: string) => {
@@ -241,6 +242,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {showBottomNav && !hideSidebar && <BottomNav />}
       </div>
       {isAuthenticated && <PushNotificationPrompt />}
+      {isAuthenticated && <CongratsBadgeModal />}
     </>
   );
 }

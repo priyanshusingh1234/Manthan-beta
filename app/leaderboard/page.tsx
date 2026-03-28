@@ -2,6 +2,8 @@ import supabaseAdmin from "@/lib/supabaseAdmin";
 import Link from "next/link";
 import { Trophy, Medal, MapPin, Sparkles, Zap, Award } from "lucide-react";
 import TopperBadge from "@/ticks/topper";
+import { GoldBadge, SilverBadge, BronzeBadge } from "@/ticks/RankBadges";
+import BadgedName from "@/components/BadgedName";
 
 export const revalidate = 0; // Always fetch fresh data
 
@@ -67,9 +69,15 @@ export default async function LeaderboardPage() {
                 <div className="absolute -bottom-1.5 right-0 bg-slate-200 text-slate-700 w-5 h-5 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-[10px] z-20">2</div>
               </div>
               <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-xl w-full py-2 px-1 flex flex-col items-center">
-                <Link href={`/user/${students[1].username}`} className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-[10px] sm:text-xs truncate flex items-center justify-center gap-1">
-                  {students[1].name}
-                  {students[1].totalPoints >= 1500 && <TopperBadge />}
+                <Link href={`/user/${students[1].username}`} className="w-full">
+                  <BadgedName 
+                    name={students[1].name}
+                    userId={students[1].id}
+                    rank={2}
+                    totalPoints={students[1].totalPoints}
+                    nameClassName="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200"
+                    className="flex items-center justify-center gap-1 truncate"
+                  />
                 </Link>
                 <span className="text-indigo-600 font-bold text-[10px] sm:text-xs mt-0.5">{students[1].totalPoints.toLocaleString()}</span>
               </div>
@@ -85,9 +93,15 @@ export default async function LeaderboardPage() {
                 <div className="absolute -bottom-1.5 right-1 bg-gradient-to-br from-amber-400 to-amber-600 text-white w-6 h-6 sm:w-8 sm:h-8 rounded-full border-[2px] border-white flex items-center justify-center font-black shadow-md text-xs z-20">1</div>
               </div>
               <div className="bg-white dark:bg-slate-900 border border-amber-100 dark:border-amber-900 shadow-md rounded-xl w-full py-3 px-1 flex flex-col items-center border-t-2 border-amber-400">
-                <Link href={`/user/${students[0].username}`} className="font-extrabold text-slate-900 dark:text-slate-100 text-center w-full text-xs sm:text-sm truncate flex items-center justify-center gap-1">
-                  {students[0].name}
-                  {students[0].totalPoints >= 1500 && <TopperBadge />}
+                <Link href={`/user/${students[0].username}`} className="w-full">
+                  <BadgedName 
+                    name={students[0].name}
+                    userId={students[0].id}
+                    rank={1}
+                    totalPoints={students[0].totalPoints}
+                    nameClassName="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-slate-100"
+                    className="flex items-center justify-center gap-1 truncate"
+                  />
                 </Link>
                 <span className="text-amber-600 dark:text-amber-400 font-black text-xs">{students[0].totalPoints.toLocaleString()}</span>
               </div>
@@ -102,9 +116,15 @@ export default async function LeaderboardPage() {
                 <div className="absolute -bottom-1.5 right-0 bg-orange-200 text-orange-800 w-5 h-5 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-[10px] z-20">3</div>
               </div>
               <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-xl w-full py-2 px-1 flex flex-col items-center">
-                <Link href={`/user/${students[2].username}`} className="font-bold text-slate-800 dark:text-slate-200 text-center w-full text-[10px] sm:text-xs truncate flex items-center justify-center gap-1">
-                  {students[2].name}
-                  {students[2].totalPoints >= 1500 && <TopperBadge />}
+                <Link href={`/user/${students[2].username}`} className="w-full">
+                  <BadgedName 
+                    name={students[2].name}
+                    userId={students[2].id}
+                    rank={3}
+                    totalPoints={students[2].totalPoints}
+                    nameClassName="text-[10px] sm:text-xs font-bold text-slate-800 dark:text-slate-200"
+                    className="flex items-center justify-center gap-1 truncate"
+                  />
                 </Link>
                 <span className="text-indigo-600 font-bold text-[10px] sm:text-xs mt-0.5">{students[2].totalPoints.toLocaleString()}</span>
               </div>
@@ -148,9 +168,14 @@ export default async function LeaderboardPage() {
                     </Link>
 
                     <div className="ml-3 flex-1 min-w-0">
-                      <Link href={`/user/${student.username}`} className="font-bold text-[15px] text-slate-900 dark:text-slate-100 truncate flex items-center gap-1">
-                        {student.name}
-                        {student.totalPoints >= 1500 && <TopperBadge />}
+                      <Link href={`/user/${student.username}`} className="w-full flex">
+                        <BadgedName 
+                          name={student.name}
+                          userId={student.id}
+                          totalPoints={student.totalPoints}
+                          nameClassName="font-bold text-[15px] text-slate-900 dark:text-slate-100"
+                          className="flex items-center gap-1.5 truncate"
+                        />
                       </Link>
                       <div className="text-xs font-medium text-slate-500 truncate flex items-center gap-1">
                         <MapPin className="w-3 h-3 shrink-0" />

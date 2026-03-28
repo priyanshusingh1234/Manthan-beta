@@ -4,12 +4,32 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 import { Trophy, Target, Zap, Star, MapPin, GraduationCap, TrendingUp, BookOpen, Users, ChevronRight } from 'lucide-react';
 import TeacherBadge from '@/ticks/teacher';
 import TopperBadge from '@/ticks/topper';
+import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
+import BadgedName from '@/components/BadgedName';
 import FollowButton from '@/components/FollowButton';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 type Props = { params: { username: string } };
+
+export async function generateMetadata({ params }: Props): Promise<any> {
+    const { data: profile } = await supabaseAdmin.from('profiles').select('full_name, total_points, username').ilike('username', params.username).single();
+    if (!profile) return { title: 'User Not Found | Dheeyudha' };
+    
+    const name = profile.full_name || `@${profile.username}`;
+    const points = profile.total_points || 0;
+    
+    return {
+        title: `${name} has earned ${points} points on Dheeyudha! 🧠`,
+        description: `Check out ${name}'s learning journey and rank on Dheeyudha, the ultimate battle of brains.`,
+        openGraph: {
+            title: `${name}'s Profile | Dheeyudha Achievement`,
+            description: `${name} has reached a milestone of ${points} points! See their badges and rank in the global leaderboard.`,
+            type: 'profile',
+        }
+    };
+}
 
 export default async function StudentProfilePage({ params }: Props) {
     const username = params.username;
@@ -92,6 +112,14 @@ export default async function StudentProfilePage({ params }: Props) {
         const battlesWon = Number(meta?.battlesWon) || 0;
         const winRate = battlesAttempted > 0 ? Math.round((battlesWon / battlesAttempted) * 100) : 0;
 
+        // Fetch Global Rank
+        const { count: higherRanked } = await supabaseAdmin
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('is_teacher', false)
+            .gt('total_points', totalPoints);
+        const myRank = (higherRanked || 0) + 1;
+
         // --- ENHANCED ANALYSIS ---
         // Fetch attempts separately to avoid join issues
         const { data: qAttempts } = await supabaseAdmin
@@ -170,11 +198,14 @@ export default async function StudentProfilePage({ params }: Props) {
                         )}
  
                         <div className="flex-1 w-full">
-                            <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3">
-                                {name}
-                                {isTeacher && <TeacherBadge />}
-                                {totalPoints >= 1500 && <TopperBadge />}
-                            </h1>
+                            <BadgedName 
+                                name={name}
+                                rank={myRank}
+                                isTeacher={isTeacher}
+                                totalPoints={totalPoints}
+                                nameClassName="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white"
+                                className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3"
+                            />
                             <p className="text-lg font-mono text-indigo-500 dark:text-indigo-400 mt-1 font-semibold">@{username}</p>
 
                             <div className="flex flex-wrap gap-4 mt-4 justify-center sm:justify-start text-sm font-medium text-slate-600 dark:text-slate-400 w-full">
@@ -230,14 +261,15 @@ export default async function StudentProfilePage({ params }: Props) {
                                 </div>
                             </div>
  
-                            <div className="relative group perspective-1000">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 rounded-3xl sm:rounded-[2rem] blur-sm opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                            <div className="relative group perspective-1000 w-full shadow-2xl rounded-3xl sm:rounded-[2rem]">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 rounded-3xl sm:rounded-[2rem] blur-sm opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
                                 <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 text-white p-6 rounded-3xl sm:rounded-[2rem] shadow-xl text-center h-full flex flex-col justify-center transform transition-transform group-hover:-translate-y-1">
-                                    <div className="text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-1 sm:mb-2">Global Standing</div>
-                                    <div className="text-3xl sm:text-4xl font-black mb-1 sm:mb-2 tracking-tighter">Genius</div>
-                                    <div className="text-[10px] items-center justify-center flex gap-1.5 font-bold text-slate-400 bg-black/20 py-1 sm:py-1.5 px-4 rounded-full border border-white/5">
+                                    <div className="flex justify-center mb-4 scale-150 transform transition-transform group-hover:scale-[1.7] group-hover:rotate-12 duration-500">
+                                        {myRank === 1 ? <GoldBadge /> : myRank === 2 ? <SilverBadge /> : myRank === 3 ? <BronzeBadge /> : <div className="p-4 bg-white/10 rounded-full"><Trophy className="w-10 h-10 text-amber-400" /></div>}
+                                    </div>
+                                    <div className="text-[10px] items-center justify-center flex gap-1.5 font-bold text-slate-400 bg-black/20 py-1 sm:py-1.5 px-4 rounded-full border border-white/5 mx-auto w-fit">
                                         <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                                        Rank #?
+                                        Rank #{myRank}
                                     </div>
                                 </div>
                             </div>

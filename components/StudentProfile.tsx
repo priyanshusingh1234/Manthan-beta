@@ -482,11 +482,13 @@ const StudentProfile: React.FC = () => {
                   </div>
                 )}
 
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tighter flex items-center gap-2 flex-wrap">
-                  {userData.name}
-                  {currentUser?.user_metadata?.isTeacher && <TeacherBadge />}
-                  {userData.totalPoints >= 1500 && <TopperBadge />}
-                </h1>
+                <BadgedName 
+                  name={userData.name}
+                  userId={profileUserId}
+                  isTeacher={currentUser?.user_metadata?.isTeacher}
+                  totalPoints={userData.totalPoints}
+                  nameClassName="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tighter"
+                />
                 <p className="text-slate-500 text-sm font-bold tracking-tight mt-0.5">@{userData.username || 'username'}</p>
 
                 <div className="mt-3 flex flex-col gap-1">
@@ -609,23 +611,70 @@ const StudentProfile: React.FC = () => {
 
         <div className="mb-8 relative z-10">
           <div className="inline-flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 relative overflow-hidden">
-            <div
-              className={`absolute top-1 bottom-1 w-1/2 rounded-xl bg-white dark:bg-slate-700 shadow-sm transition-transform duration-300 ${activeTab === 'posts' ? 'translate-x-full' : 'translate-x-0'}`}
-            />
-            <button
-              onClick={() => setActiveTab('achievements')}
-              className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors ${activeTab === 'achievements' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
-            >
-              Achievements
-            </button>
-            <button
-              onClick={() => setActiveTab('posts')}
-              className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors ${activeTab === 'posts' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
-            >
-              My Posts
-            </button>
+             <div
+               className={`absolute top-1 bottom-1 w-1/3 rounded-xl bg-white dark:bg-slate-700 shadow-sm transition-transform duration-300 ${activeTab === 'posts' ? 'translate-x-[200%]' : activeTab === 'badges' ? 'translate-x-full' : 'translate-x-0'}`}
+             />
+             <button
+               onClick={() => setActiveTab('achievements')}
+               className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors w-1/3 ${activeTab === 'achievements' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+             >
+               Stats
+             </button>
+             <button
+               onClick={() => setActiveTab('badges')}
+               className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors w-1/3 ${activeTab === 'badges' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+             >
+               Badges
+             </button>
+             <button
+               onClick={() => setActiveTab('posts')}
+               className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors w-1/3 ${activeTab === 'posts' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+             >
+               Posts
+             </button>
           </div>
         </div>
+
+        {/* Badges Tab Content */}
+        {activeTab === 'badges' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Rank Badge Display in Profile */}
+              {profileRank && profileRank <= 3 && (
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center group">
+                  <div className="scale-[2] mb-12 mt-6 drop-shadow-2xl">
+                    {profileRank === 1 ? <GoldBadge /> : profileRank === 2 ? <SilverBadge /> : <BronzeBadge />}
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
+                    {profileRank === 1 ? 'Rank #1 Champion' : profileRank === 2 ? 'Rank #2 Elite' : 'Rank #3 Pro'}
+                  </h3>
+                  <p className="text-slate-500 text-sm font-medium leading-relaxed px-4">
+                    {profileRank === 1 ? 'Holding the crown as the smartest mind in Dheeyudha.' : profileRank === 2 ? 'One of the elite minds competing for the top spot.' : 'A seasoned warrior in the top tier of students.'}
+                  </p>
+                </div>
+              )}
+
+              {/* Topper Badge Card */}
+              {userData.totalPoints >= 1500 && (
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center">
+                  <div className="scale-[1.8] mb-10 mt-4"><TopperBadge /></div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Lifetime Topper</h3>
+                  <p className="text-slate-500 text-sm font-medium px-4">Awarded for achieving over 1,500 lifetime points in battles.</p>
+                </div>
+              )}
+
+              {/* Placeholder for no badges */}
+              {!profileRank && userData.totalPoints < 1500 && (
+                <div className="col-span-full py-20 text-center flex flex-col items-center gap-4">
+                   <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300">
+                      <Award className="w-10 h-10" />
+                   </div>
+                   <p className="text-slate-400 font-bold italic tracking-tight">No special badges earned yet.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Two Column Layout */}
         {activeTab === 'achievements' && (
