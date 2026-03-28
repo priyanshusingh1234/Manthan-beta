@@ -849,7 +849,6 @@ const StudentProfile: React.FC = () => {
                 <p className="text-slate-400 font-bold italic tracking-tight">No special badges earned yet.</p>
               </div>
             )}
-            </div>
           </div>
         )}
 
