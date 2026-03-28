@@ -163,7 +163,7 @@ export async function GET(req: NextRequest) {
             return applySubjectFilter(q, subject);
         };
 
-        const CORE_SUBJECTS = ['Maths', 'Science', 'English'];
+        const CORE_SUBJECTS = ['Maths', 'Science', 'English', 'SST'];
         const now = new Date();
         const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 60 * 60 * 1000).toISOString();
         const shuffle = (arr: any[]) => arr.sort(() => 0.5 - Math.random());
