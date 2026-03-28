@@ -64,6 +64,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
                 avatar_url: profile?.avatar_url || null,
                 school: profile?.school || null,
                 isTeacher: profile?.is_teacher || false,
+                totalPoints: Number(profile?.total_points) || 0,
             }
         };
 

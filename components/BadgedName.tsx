@@ -22,7 +22,7 @@ export default function BadgedName({
   rank: propRank, 
   isTeacher, 
   totalPoints, 
-  className = "flex items-center gap-1.5 flex-wrap min-w-0",
+  className = "",
   nameClassName = "font-bold text-slate-900 dark:text-white"
 }: BadgedNameProps) {
   const { getRank } = useTopRanks();
@@ -31,15 +31,15 @@ export default function BadgedName({
   const isTopper = typeof totalPoints === 'number' && totalPoints >= 1500;
 
   return (
-    <div className={className}>
+    <div className={`flex items-center gap-1.5 flex-wrap min-w-0 ${className}`}>
       <span className={`${nameClassName} truncate`}>{name}</span>
       
       {/* Container for badges ensuring they stay visible and don't shrink */}
       <div className="flex items-center gap-1 shrink-0">
         {isTeacher && <TeacherBadge />}
-        {rank === 1 && <GoldBadge />}
-        {rank === 2 && <SilverBadge />}
-        {rank === 3 && <BronzeBadge />}
+        {Number(rank) === 1 && <GoldBadge />}
+        {Number(rank) === 2 && <SilverBadge />}
+        {Number(rank) === 3 && <BronzeBadge />}
         {isTopper && <TopperBadge />}
       </div>
     </div>

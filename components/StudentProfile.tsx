@@ -20,8 +20,10 @@ import FollowButton from '@/components/FollowButton';
 import CropModal from '@/components/profile/CropModal';
 import EditProfileModal from '@/components/profile/EditProfileModal';
 import MyPostsSection from '@/components/MyPostsSection';
+import { useTopRanks } from '@/hooks/useTopRanks';
 
 const StudentProfile: React.FC = () => {
+  const { getRank } = useTopRanks();
   const [userData, setUserData] = useState({
     name: 'Guest',
     school: '',
@@ -63,7 +65,7 @@ const StudentProfile: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const profileUserId = currentUser?.id;
-  const profileRank = Number(userData.rankNumber) || null;
+  const profileRank = profileUserId ? getRank(profileUserId) : null;
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);

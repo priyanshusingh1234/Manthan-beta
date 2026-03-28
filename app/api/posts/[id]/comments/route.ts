@@ -27,10 +27,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
                 author_id: c.author_id,
                 created_at: c.created_at,
                 author: {
+                    id: profile?.id || c.author_id,
                     name: profile?.full_name || 'Unknown',
                     username: profile?.username || null,
                     avatar_url: profile?.avatar_url || null,
                     isTeacher: profile?.is_teacher || false,
+                    totalPoints: Number(profile?.total_points) || 0,
                 }
             };
         });
@@ -109,6 +111,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 username: meta.username || null,
                 avatar_url: meta.avatar_url,
                 isTeacher: meta.isTeacher || false,
+                totalPoints: Number(meta.totalPoints) || 0,
             }
         });
     } catch (err: any) {
