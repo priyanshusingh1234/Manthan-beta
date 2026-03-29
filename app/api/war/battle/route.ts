@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
+import { createNotification } from "@/lib/createNotification";
 
 async function getVerifiedUser(authHeader?: string | null) {
     if (!authHeader) return null;
@@ -25,6 +26,15 @@ async function getSquadMembers(squadId: string) {
             avatar: u.user_metadata?.avatar_url || null,
             classGrade: u.user_metadata?.classGrade || "?",
         }));
+}
+
+async function getSquadMemberIds(squadId?: string | null) {
+    if (!squadId) return [] as string[];
+    const { data: members } = await supabaseAdmin
+        .from("squad_members")
+        .select("user_id")
+        .eq("squad_id", squadId);
+    return Array.from(new Set((members || []).map((m: any) => String(m.user_id)).filter(Boolean)));
 }
 
     function clamp(n: number, min = 0, max = 1) {
@@ -105,11 +115,12 @@ async function getSquadMembers(squadId: string) {
         }
 
         const elapsedMs = Math.max(0, now - activeStartMs);
-        // Ghost fires roughly once every 30s during active phase so feed keeps moving.
-        const cadenceAttempts = Math.floor(elapsedMs / 30000);
+        // Ghost fires aggressively so wars feel alive even with slower polling.
+        const cadenceAttempts = Math.floor(elapsedMs / 15000);
         let attemptCount = Math.floor(questionIds.length * progress);
         if (status === "active") {
-            attemptCount = Math.min(questionIds.length, Math.max(attemptCount, cadenceAttempts));
+            const minBurst = Math.min(questionIds.length, Math.max(2, Math.ceil(questionIds.length * 0.6)));
+            attemptCount = Math.min(questionIds.length, Math.max(attemptCount, cadenceAttempts, minBurst));
         }
         if (attemptCount <= 0) return [];
 
@@ -284,7 +295,7 @@ export async function GET(req: Request) {
                 challenger_score: cScore,
                 defender_score: dScore,
                 winner_school_id: winnerSchoolId,
-            }).eq("id", warId).select().single();
+            }).eq("id", warId).eq("status", "active").select().maybeSingle();
 
             if (updatedWar) {
                 war = updatedWar;
@@ -301,6 +312,44 @@ export async function GET(req: Request) {
                         });
                     }
                 }
+            }
+
+            if (updatedWar) {
+                const sideAIds = await getSquadMemberIds(updatedWar.challenger_squad_id);
+                const sideBIds = await getSquadMemberIds(updatedWar.defender_squad_id);
+
+                const { data: schools } = await supabaseAdmin
+                    .from("schools")
+                    .select("id, name")
+                    .in("id", [updatedWar.challenger_school_id, updatedWar.defender_school_id]);
+                const schoolMap: Record<string, string> = Object.fromEntries((schools || []).map((s: any) => [s.id, s.name]));
+
+                const leftName = schoolMap[updatedWar.challenger_school_id] || "School A";
+                const rightName = schoolMap[updatedWar.defender_school_id] || "School B";
+                const scoreLine = `${leftName} ${cScore} - ${dScore} ${rightName}`;
+
+                const notifyGroup = async (ids: string[], title: string, href: string) => {
+                    await Promise.allSettled(ids.map((uid) => createNotification({
+                        userId: uid,
+                        type: "war_result",
+                        title,
+                        body: scoreLine,
+                        href,
+                    })));
+                };
+
+                const challengerWon = winnerSchoolId === updatedWar.challenger_school_id;
+                const defenderWon = winnerSchoolId === updatedWar.defender_school_id;
+                await notifyGroup(
+                    sideAIds,
+                    challengerWon ? "Victory! War won" : defenderWon ? "War finished: Defeat" : "War finished: Draw",
+                    `/war-history?schoolId=${updatedWar.challenger_school_id}`
+                );
+                await notifyGroup(
+                    sideBIds,
+                    defenderWon ? "Victory! War won" : challengerWon ? "War finished: Defeat" : "War finished: Draw",
+                    `/war-history?schoolId=${updatedWar.defender_school_id}`
+                );
             }
         }
 

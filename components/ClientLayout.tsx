@@ -29,6 +29,26 @@ function normalizeInAppPath(input?: string | null): string | null {
   }
 }
 
+function safeNavigate(path: string, navigate: (path: string) => void) {
+  try {
+    navigate(path);
+  } catch {
+    if (typeof window !== 'undefined') {
+      window.location.assign(path);
+    }
+    return;
+  }
+
+  if (typeof window !== 'undefined') {
+    setTimeout(() => {
+      const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (current !== path) {
+        window.location.assign(path);
+      }
+    }, 300);
+  }
+}
+
 // Dynamic import for PushNotifications to avoid SSR issues
 const initNativePush = async (userId: string, navigate: (path: string) => void) => {
   if (!Capacitor.isNativePlatform()) return;
@@ -39,10 +59,18 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
     nativePushInitialized = true;
 
     const navigateFromPayload = (payload: any) => {
+      const data = payload?.notification?.data || payload?.data || {};
+
       const rawUrl =
         payload?.url ||
         payload?.href ||
         payload?.link ||
+        payload?.notification?.url ||
+        payload?.notification?.link ||
+        data?.url ||
+        data?.href ||
+        data?.link ||
+        data?.deep_link ||
         payload?.notification?.data?.url ||
         payload?.notification?.data?.href ||
         payload?.notification?.data?.link ||
@@ -50,7 +78,7 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
         null;
 
       const path = normalizeInAppPath(rawUrl);
-      if (path) navigate(path);
+      if (path) safeNavigate(path, navigate);
     };
 
     // Register listeners

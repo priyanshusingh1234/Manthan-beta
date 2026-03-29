@@ -97,7 +97,7 @@ async function getSquadMemberIds(squadId?: string | null) {
 }
 
 async function notifyUsers(userIds: string[], payload: {
-    type: 'war_declared' | 'war_preparation' | 'war_started';
+    type: 'war_declared' | 'war_preparation' | 'war_started' | 'war_result';
     title: string;
     body: string;
     href: string;
@@ -115,7 +115,7 @@ async function notifyUsers(userIds: string[], payload: {
 }
 
 async function notifySquad(squadId: string | null | undefined, payload: {
-    type: 'war_declared' | 'war_preparation' | 'war_started';
+    type: 'war_declared' | 'war_preparation' | 'war_started' | 'war_result';
     title: string;
     body: string;
     href: string;
@@ -123,6 +123,59 @@ async function notifySquad(squadId: string | null | undefined, payload: {
     if (!squadId) return;
     const ids = await getSquadMemberIds(squadId);
     await notifyUsers(ids, payload);
+}
+
+function calcSchoolScore(submissions: any[], schoolId: string) {
+    return (submissions || [])
+        .filter((s: any) => s.school_id === schoolId && s.status === 'correct')
+        .reduce((sum: number, s: any) => sum + (s.points_awarded || 0), 0);
+}
+
+async function notifyWarResult(params: {
+    challengerSchoolId: string;
+    defenderSchoolId: string;
+    challengerSquadId: string;
+    defenderSquadId: string;
+    winnerSchoolId: string | null;
+    challengerScore: number;
+    defenderScore: number;
+}) {
+    const {
+        challengerSchoolId,
+        defenderSchoolId,
+        challengerSquadId,
+        defenderSquadId,
+        winnerSchoolId,
+        challengerScore,
+        defenderScore,
+    } = params;
+
+    const { data: schoolRows } = await supabaseAdmin
+        .from('schools')
+        .select('id, name')
+        .in('id', [challengerSchoolId, defenderSchoolId]);
+    const schoolNameMap: Record<string, string> = Object.fromEntries((schoolRows || []).map((s: any) => [s.id, s.name]));
+
+    const challengerName = schoolNameMap[challengerSchoolId] || 'Your school';
+    const defenderName = schoolNameMap[defenderSchoolId] || 'Opponent';
+    const scoreLine = `${challengerName} ${challengerScore} - ${defenderScore} ${defenderName}`;
+
+    const challengerWon = winnerSchoolId === challengerSchoolId;
+    const defenderWon = winnerSchoolId === defenderSchoolId;
+
+    await notifySquad(challengerSquadId, {
+        type: 'war_result',
+        title: challengerWon ? 'Victory! War won' : defenderWon ? 'War finished: Defeat' : 'War finished: Draw',
+        body: scoreLine,
+        href: `/war-history?schoolId=${challengerSchoolId}`,
+    });
+
+    await notifySquad(defenderSquadId, {
+        type: 'war_result',
+        title: defenderWon ? 'Victory! War won' : challengerWon ? 'War finished: Defeat' : 'War finished: Draw',
+        body: scoreLine,
+        href: `/war-history?schoolId=${defenderSchoolId}`,
+    });
 }
 
 // GET /api/war?school_id=<id>  — fetch active wars for a school
@@ -246,7 +299,44 @@ export async function GET(req: NextRequest) {
             if (updated.status === 'calculating') {
                 const endsAtTime = new Date(updated.ends_at).getTime();
                 if (now > endsAtTime) {
-                    await supabaseAdmin.from('wars').update({ status: 'completed' }).eq('id', updated.id);
+                    const { data: submissions } = await supabaseAdmin
+                        .from('war_submissions')
+                        .select('school_id, points_awarded, status')
+                        .eq('war_id', updated.id);
+
+                    const challengerScore = calcSchoolScore(submissions || [], updated.challenger_school_id);
+                    const defenderScore = calcSchoolScore(submissions || [], updated.defender_school_id);
+                    const winnerSchoolId = challengerScore > defenderScore
+                        ? updated.challenger_school_id
+                        : defenderScore > challengerScore
+                            ? updated.defender_school_id
+                            : null;
+
+                    const { data: completedWar } = await supabaseAdmin
+                        .from('wars')
+                        .update({
+                            status: 'completed',
+                            challenger_score: challengerScore,
+                            defender_score: defenderScore,
+                            winner_school_id: winnerSchoolId,
+                        })
+                        .eq('id', updated.id)
+                        .eq('status', 'calculating')
+                        .select('*')
+                        .maybeSingle();
+
+                    if (completedWar) {
+                        await notifyWarResult({
+                            challengerSchoolId: completedWar.challenger_school_id,
+                            defenderSchoolId: completedWar.defender_school_id,
+                            challengerSquadId: completedWar.challenger_squad_id,
+                            defenderSquadId: completedWar.defender_squad_id,
+                            winnerSchoolId,
+                            challengerScore,
+                            defenderScore,
+                        });
+                    }
+
                     updated.status = 'completed';
                     continue; // exclude from active list maybe? Or keep so frontend can see it completed
                 }

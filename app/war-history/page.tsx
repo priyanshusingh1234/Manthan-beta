@@ -4,23 +4,50 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Shield, Swords, Clock, Target, Users, Search, ChevronLeft, Calendar } from "lucide-react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabaseClient";
 
 function WarHistoryContent() {
     const searchParams = useSearchParams();
-    const schoolId = searchParams.get("schoolId");
+    const schoolIdFromQuery = searchParams.get("schoolId");
     
     const [wars, setWars] = useState<any[]>([]);
+    const [resolvedSchoolId, setResolvedSchoolId] = useState<string | null>(schoolIdFromQuery);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!schoolId) {
-            setLoading(false);
-            return;
-        }
-        
-        const fetchHistory = async () => {
+        const loadHistory = async () => {
             try {
-                const res = await fetch(`/api/war/history?schoolId=${schoolId}`);
+                let finalSchoolId = schoolIdFromQuery;
+
+                // If query param is missing (e.g., from push deep-link), resolve from logged-in user.
+                if (!finalSchoolId) {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) {
+                        setResolvedSchoolId(null);
+                        setWars([]);
+                        return;
+                    }
+
+                    finalSchoolId = user.user_metadata?.school_id || null;
+                    if (!finalSchoolId && user.user_metadata?.school) {
+                        const { data: schoolRow } = await supabase
+                            .from('schools')
+                            .select('id')
+                            .eq('name', user.user_metadata.school)
+                            .maybeSingle();
+                        finalSchoolId = schoolRow?.id || null;
+                    }
+                }
+
+                if (!finalSchoolId) {
+                    setResolvedSchoolId(null);
+                    setWars([]);
+                    return;
+                }
+
+                setResolvedSchoolId(finalSchoolId);
+
+                const res = await fetch(`/api/war/history?schoolId=${finalSchoolId}`);
                 const data = await res.json();
                 if (res.ok) {
                     setWars(data.wars || []);
@@ -31,8 +58,8 @@ function WarHistoryContent() {
                 setLoading(false);
             }
         };
-        fetchHistory();
-    }, [schoolId]);
+        loadHistory();
+    }, [schoolIdFromQuery]);
 
     if (loading) {
         return (
@@ -42,7 +69,7 @@ function WarHistoryContent() {
         );
     }
 
-    if (!schoolId) {
+    if (!resolvedSchoolId) {
         return (
             <div className="text-center py-20">
                 <Shield className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-700 mb-4" />
@@ -63,7 +90,7 @@ function WarHistoryContent() {
             ) : (
                 <div className="space-y-4">
                     {wars.map((war) => {
-                        const isChallenger = war.challenger_school_id === schoolId;
+                        const isChallenger = war.challenger_school_id === resolvedSchoolId;
                         const mySchoolName = isChallenger ? war.challenger_school?.name : war.defender_school?.name;
                         const opponentName = isChallenger ? war.defender_school?.name : war.challenger_school?.name;
                         const myScore = isChallenger ? war.challenger_score : war.defender_score;
@@ -74,7 +101,7 @@ function WarHistoryContent() {
                         // Output win / loss
                         let resultBadge = null;
                         if (war.status === 'completed') {
-                            if (war.winner_school_id === schoolId) {
+                            if (war.winner_school_id === resolvedSchoolId) {
                                 resultBadge = <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30 px-3 py-1 text-xs font-black uppercase tracking-wider rounded-lg shadow-sm">Victory</span>;
                             } else if (war.winner_school_id) {
                                 resultBadge = <span className="bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-500/30 px-3 py-1 text-xs font-black uppercase tracking-wider rounded-lg shadow-sm">Defeated</span>;
@@ -110,16 +137,16 @@ function WarHistoryContent() {
                                     </div>
 
                                     <div className="flex items-stretch justify-between sm:justify-end gap-0 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden shrink-0 mt-2 sm:mt-0">
-                                        <div className={`px-5 py-3 text-center transition-colors ${!isLive && war.winner_school_id === schoolId ? 'bg-emerald-50 dark:bg-emerald-500/10' : ''}`}>
+                                        <div className={`px-5 py-3 text-center transition-colors ${!isLive && war.winner_school_id === resolvedSchoolId ? 'bg-emerald-50 dark:bg-emerald-500/10' : ''}`}>
                                             <div className="text-[10px] uppercase font-black text-slate-400 mb-0.5 tracking-wider">Your Points</div>
-                                            <div className={`text-2xl font-black font-mono leading-none ${!isLive && war.winner_school_id === schoolId ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                                            <div className={`text-2xl font-black font-mono leading-none ${!isLive && war.winner_school_id === resolvedSchoolId ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>
                                                 {myScore || 0}
                                             </div>
                                         </div>
                                         <div className="w-px bg-slate-200 dark:bg-slate-800"></div>
-                                        <div className={`px-5 py-3 text-center transition-colors ${!isLive && war.winner_school_id !== schoolId && war.winner_school_id ? 'bg-red-50 dark:bg-red-500/10' : ''}`}>
+                                        <div className={`px-5 py-3 text-center transition-colors ${!isLive && war.winner_school_id !== resolvedSchoolId && war.winner_school_id ? 'bg-red-50 dark:bg-red-500/10' : ''}`}>
                                             <div className="text-[10px] uppercase font-black text-slate-400 mb-0.5 tracking-wider">Enemy Points</div>
-                                            <div className={`text-xl font-black font-mono leading-none flex items-center h-full pt-0.5 ${!isLive && war.winner_school_id !== schoolId && war.winner_school_id ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-500'}`}>
+                                            <div className={`text-xl font-black font-mono leading-none flex items-center h-full pt-0.5 ${!isLive && war.winner_school_id !== resolvedSchoolId && war.winner_school_id ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-500'}`}>
                                                 {oppScore || 0}
                                             </div>
                                         </div>

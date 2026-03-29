@@ -24,7 +24,8 @@ export type NotificationType =
     | 'social_comment'
     | 'war_declared'
     | 'war_preparation'
-    | 'war_started';
+    | 'war_started'
+    | 'war_result';
 
 interface CreateNotificationParams {
     userId: string;          // who receives the notification
@@ -89,12 +90,21 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         },
                                         data: {
                                             url: params.href || '/',
+                                            href: params.href || '/',
+                                            deep_link: params.href || '/',
+                                            click_action: 'OPEN_APP',
                                         },
                                         android: {
                                             priority: 'high',
                                             notification: {
                                                 channelId: 'default',
                                                 color: '#4f46e5',
+                                                clickAction: 'OPEN_APP',
+                                            }
+                                        },
+                                        webpush: {
+                                            fcmOptions: {
+                                                link: params.href || '/'
                                             }
                                         }
                                     });

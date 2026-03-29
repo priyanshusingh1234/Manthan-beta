@@ -98,6 +98,16 @@ export async function POST(req: Request) {
 
             currentWar = war;
 
+            const { count: warAttemptCount } = await supabaseAdmin
+                .from("war_submissions")
+                .select("id", { count: "exact", head: true })
+                .eq("war_id", warId)
+                .eq("student_id", userId);
+
+            if ((warAttemptCount || 0) >= 2) {
+                return NextResponse.json({ error: "War limit reached: each player can solve at most 2 questions." }, { status: 403 });
+            }
+
             const { data: existingWarSub } = await supabaseAdmin
                 .from("war_submissions")
                 .select("id")
