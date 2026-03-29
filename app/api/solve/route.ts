@@ -197,9 +197,9 @@ export async function POST(req: Request) {
                 pointsChangeDisplay = questionPoints;
             } else {
                 if (warId) {
-                    // War mode: flat -1 penalty for wrong answer
-                    userPointsChange = -1;
-                    pointsChangeDisplay = -1;
+                    // War mode: no wrong-answer penalty
+                    userPointsChange = 0;
+                    pointsChangeDisplay = 0;
                 } else if (currentPoints > 0) {
                     // Regular feed: points÷5 penalty
                     const calculatedPenalty = Math.floor(questionPoints / 5);

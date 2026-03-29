@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { Shield, Target, AlertCircle, CheckCircle2, Search, ArrowRight, Loader2 } from "lucide-react";
+import { Shield, Target, AlertCircle, CheckCircle2, Search, ArrowRight, Loader2, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function WarPrepPage() {
@@ -19,6 +19,7 @@ export default function WarPrepPage() {
     const [isGeneral, setIsGeneral] = useState(false);
     const [hasLocked, setHasLocked] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [prepTimeLeft, setPrepTimeLeft] = useState("--:--");
 
     useEffect(() => {
         const fetchPrepData = async () => {
@@ -50,6 +51,28 @@ export default function WarPrepPage() {
 
         fetchPrepData();
     }, [warId, router]);
+
+    useEffect(() => {
+        if (!war?.declared_at || war?.status !== 'preparation') return;
+
+        const tick = () => {
+            const start = new Date(war.declared_at).getTime();
+            const end = start + 10 * 60 * 1000;
+            const diff = end - Date.now();
+            if (diff <= 0) {
+                setPrepTimeLeft("00:00");
+                return;
+            }
+            const totalSecs = Math.floor(diff / 1000);
+            const m = Math.floor(totalSecs / 60);
+            const s = totalSecs % 60;
+            setPrepTimeLeft(`${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+        };
+
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, [war?.declared_at, war?.status]);
 
     const toggleQuestion = (id: string) => {
         if (hasLocked || !isGeneral) return;
@@ -127,6 +150,10 @@ export default function WarPrepPage() {
                     </div>
 
                     <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl min-w-[250px]">
+                        <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                            <span className="text-sm font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5"><Clock className="w-4 h-4" /> Prep Clock</span>
+                            <span className="font-mono font-black text-xl text-red-600 dark:text-red-400">{prepTimeLeft}</span>
+                        </div>
                         <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                             <span className="text-sm font-bold text-slate-500 dark:text-slate-400">Payload Selected</span>
                             <span className="font-mono font-black text-xl text-amber-600 dark:text-amber-500">{selectedIds.length} / {war.war_format}</span>

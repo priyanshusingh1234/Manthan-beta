@@ -33,6 +33,41 @@ async function getOrCreateGhostSchool() {
     return { schoolId: ghostSchool.id, squadId: ghostSquad.id };
 }
 
+async function pickGhostQuestionIds(warFormat: number, excludeIds: string[] = []) {
+    const needed = Math.max(1, Number(warFormat) || 1);
+    const { data: questions } = await supabaseAdmin
+        .from('questions')
+        .select('id, difficulty, points')
+        .order('created_at', { ascending: false })
+        .limit(250);
+
+    const pool = (questions || []).filter(q => !excludeIds.includes(q.id));
+    if (!pool.length) return [] as string[];
+
+    const hard = pool.filter(q => q.difficulty === 'hard');
+    const medium = pool.filter(q => q.difficulty === 'medium' || q.difficulty === 'moderate');
+    const easy = pool.filter(q => q.difficulty === 'easy');
+
+    const picked: string[] = [];
+    const tiers = [hard, medium, easy, pool];
+
+    for (const tier of tiers) {
+        if (picked.length >= needed) break;
+        if (!tier.length) continue;
+        const choice = tier[Math.floor(Math.random() * tier.length)];
+        if (choice && !picked.includes(choice.id)) picked.push(choice.id);
+    }
+
+    while (picked.length < needed) {
+        const choice = pool[Math.floor(Math.random() * pool.length)];
+        if (!choice) break;
+        if (!picked.includes(choice.id)) picked.push(choice.id);
+        if (picked.length >= pool.length) break;
+    }
+
+    return picked.slice(0, needed);
+}
+
 // GET /api/war?school_id=<id>  — fetch active wars for a school
 export async function GET(req: NextRequest) {
     try {
@@ -63,11 +98,13 @@ export async function GET(req: NextRequest) {
                     const newStatus = 'preparation';
                     const newDeclaredAt = new Date().toISOString();
                     const newEndsAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins total (10 prep + 5 active)
+                    const ghostQuestionIds = await pickGhostQuestionIds(updated.war_format, updated.challenger_questions || []);
 
                     await supabaseAdmin.from('wars').update({
                         defender_school_id: ghost.schoolId,
                         defender_squad_id: ghost.squadId,
                         defender_weight: updated.challenger_weight, 
+                        defender_questions: ghostQuestionIds,
                         status: newStatus,
                         declared_at: newDeclaredAt,
                         ends_at: newEndsAt
@@ -75,9 +112,30 @@ export async function GET(req: NextRequest) {
 
                     updated.defender_school_id = ghost.schoolId;
                     updated.defender_squad_id = ghost.squadId;
+                    updated.defender_questions = ghostQuestionIds;
                     updated.status = newStatus;
                     updated.declared_at = newDeclaredAt;
                     updated.ends_at = newEndsAt;
+                }
+            }
+
+            // Ensure ghost always has picks even for older wars created before auto-pick logic
+            if (updated.status === 'preparation' && updated.defender_school_id && (!updated.defender_questions || updated.defender_questions.length === 0)) {
+                const { data: defSchool } = await supabaseAdmin
+                    .from('schools')
+                    .select('name')
+                    .eq('id', updated.defender_school_id)
+                    .maybeSingle();
+
+                if (defSchool?.name === 'Ghost School') {
+                    const ghostQuestionIds = await pickGhostQuestionIds(updated.war_format, updated.challenger_questions || []);
+                    if (ghostQuestionIds.length > 0) {
+                        await supabaseAdmin
+                            .from('wars')
+                            .update({ defender_questions: ghostQuestionIds })
+                            .eq('id', updated.id);
+                        updated.defender_questions = ghostQuestionIds;
+                    }
                 }
             }
 

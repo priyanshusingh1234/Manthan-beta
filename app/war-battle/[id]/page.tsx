@@ -578,7 +578,7 @@ export default function WarBattleDashboard() {
                     </div>
                     <div className="flex flex-wrap gap-3 text-amber-700 dark:text-amber-400 font-medium text-xs">
                         <span>✓ Correct → question points</span>
-                        <span>✗ Wrong → −(points÷5) penalty</span>
+                        <span>✗ Wrong → no penalty</span>
                         <span>🏆 All correct → +5 bonus</span>
                         <span>⚔️ Win war → +5 bonus</span>
                     </div>

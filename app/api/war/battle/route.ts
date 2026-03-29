@@ -27,6 +27,121 @@ async function getSquadMembers(squadId: string) {
         }));
 }
 
+    function clamp(n: number, min = 0, max = 1) {
+        return Math.max(min, Math.min(max, n));
+    }
+
+    function hashString(input: string) {
+        let h = 2166136261;
+        for (let i = 0; i < input.length; i++) {
+            h ^= input.charCodeAt(i);
+            h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+        }
+        return h >>> 0;
+    }
+
+    function seededRandom(seed: number) {
+        let s = seed >>> 0;
+        return () => {
+            s += 0x6D2B79F5;
+            let t = s;
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    function difficultyAccuracy(difficulty?: string | null) {
+        if (difficulty === "easy") return 0.8;
+        if (difficulty === "hard") return 0.38;
+        return 0.58;
+    }
+
+    function generateGhostMembers(warId: string, side: "challenger" | "defender", count = 6) {
+        const prefixes = ["Phantom", "Cipher", "Nova", "Raven", "Echo", "Zero", "Astra", "Vortex", "Glitch", "Onyx"];
+        const titles = ["Cadet", "Scout", "Sniper", "Strategist", "Captain", "Commander", "Warden", "Sage"];
+        const rand = seededRandom(hashString(`${warId}:${side}:members`));
+        const members: Array<{ id: string; name: string; points: number; avatar: null; classGrade: string }> = [];
+
+        for (let i = 0; i < count; i++) {
+            const p = prefixes[Math.floor(rand() * prefixes.length)];
+            const t = titles[Math.floor(rand() * titles.length)];
+            const serial = String(Math.floor(rand() * 90) + 10);
+            members.push({
+                id: `ghost-${side}-${i + 1}`,
+                name: `${p} ${t}-${serial}`,
+                points: Math.floor(900 + rand() * 2200),
+                avatar: null,
+                classGrade: String(8 + Math.floor(rand() * 5)),
+            });
+        }
+
+        return members;
+    }
+
+    function buildGhostSubmissions(options: {
+        warId: string;
+        ghostSchoolId: string;
+        questionIds: string[];
+        questionMap: Record<string, any>;
+        ghostMembers: Array<{ id: string }>;
+        existing: any[];
+        status: string;
+        endsAt: string;
+    }) {
+        const { warId, ghostSchoolId, questionIds, questionMap, ghostMembers, existing, status, endsAt } = options;
+        if (!questionIds.length || !ghostMembers.length) return [] as any[];
+
+        const existingPairs = new Set((existing || []).map(s => `${s.school_id}:${s.question_id}`));
+        const now = Date.now();
+        const endMs = new Date(endsAt).getTime();
+        const activeStartMs = endMs - 5 * 60 * 1000;
+
+        let progress = 1;
+        if (status === "active") {
+            progress = clamp((now - activeStartMs) / (5 * 60 * 1000), 0, 1);
+        } else if (status === "preparation") {
+            progress = 0;
+        }
+
+        const attemptCount = Math.floor(questionIds.length * progress);
+        if (attemptCount <= 0) return [];
+
+        const orderedIds = [...questionIds].sort((a, b) => hashString(`${warId}:q:${a}`) - hashString(`${warId}:q:${b}`));
+        const activeWindowMs = Math.max(1, (status === "active" ? now : endMs) - activeStartMs);
+        const synth: any[] = [];
+
+        for (let i = 0; i < Math.min(attemptCount, orderedIds.length); i++) {
+            const qid = orderedIds[i];
+            const q = questionMap[qid];
+            if (!q) continue;
+            if (existingPairs.has(`${ghostSchoolId}:${qid}`)) continue;
+
+            const shotRand = seededRandom(hashString(`${warId}:${ghostSchoolId}:${qid}`));
+            const isCorrect = shotRand() < difficultyAccuracy(q.difficulty);
+            const shotAt = new Date(activeStartMs + Math.floor(((i + 1) / (attemptCount + 1)) * activeWindowMs)).toISOString();
+
+            synth.push({
+                id: `ghost-sub-${warId}-${qid}`,
+                war_id: warId,
+                school_id: ghostSchoolId,
+                student_id: ghostMembers[i % ghostMembers.length].id,
+                question_id: qid,
+                status: isCorrect ? "correct" : "incorrect",
+                points_awarded: isCorrect ? (q.points || 0) : 0,
+                created_at: shotAt,
+            });
+        }
+
+        return synth;
+    }
+
+    function calcSchoolScore(submissions: any[], schoolId: string) {
+        return (submissions || [])
+            .filter(s => s.school_id === schoolId && s.status === "correct")
+            .reduce((sum, s) => sum + (s.points_awarded || 0), 0);
+    }
+
 export async function GET(req: Request) {
     try {
         const url = new URL(req.url);
@@ -42,33 +157,6 @@ export async function GET(req: Request) {
         const warFetch = await supabaseAdmin.from("wars").select("*").eq("id", warId).single();
         if (warFetch.error || !warFetch.data) return NextResponse.json({ error: "War not found" }, { status: 404 });
         let war: any = warFetch.data;
-
-        // Auto-end war if timer has expired and still active
-        if (war.status === "active" && war.ends_at && new Date(war.ends_at).getTime() < Date.now()) {
-            const { data: allSubs } = await supabaseAdmin.from("war_submissions").select("school_id, points_awarded, status").eq("war_id", warId);
-            const calcScore = (sid: string) => (allSubs || []).filter(s => s.school_id === sid && s.status === "correct").reduce((sum, s) => sum + (s.points_awarded || 0), 0);
-            const cScore = calcScore(war.challenger_school_id);
-            const dScore = calcScore(war.defender_school_id);
-            const winnerSchoolId = cScore > dScore ? war.challenger_school_id : dScore > cScore ? war.defender_school_id : null;
-            const winnerSquadId = winnerSchoolId === war.challenger_school_id ? war.challenger_squad_id : war.defender_squad_id;
-            const { data: updatedWar } = await supabaseAdmin.from("wars").update({
-                status: "completed", challenger_score: cScore, defender_score: dScore, winner_school_id: winnerSchoolId
-            }).eq("id", warId).select().single();
-            if (updatedWar) war = updatedWar;
-            // +5 win bonus per squad member
-            if (winnerSquadId) {
-                const { data: winMembers } = await supabaseAdmin.from("squad_members").select("user_id").eq("squad_id", winnerSquadId);
-                for (const wm of (winMembers || [])) {
-                    const { data: wmUser } = await supabaseAdmin.auth.admin.getUserById(wm.user_id);
-                    if (wmUser?.user) {
-                        const meta = wmUser.user.user_metadata || {};
-                        await supabaseAdmin.auth.admin.updateUserById(wm.user_id, {
-                            user_metadata: { ...meta, totalPoints: Math.max(0, (Number(meta.totalPoints) || 0) + 5) }
-                        });
-                    }
-                }
-            }
-        }
 
         // Identify user's squad
         const { data: member, error: memberErr } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).single();
@@ -90,11 +178,21 @@ export async function GET(req: Request) {
         const schoolMap: Record<string, string> = {};
         (schools || []).forEach(s => { schoolMap[s.id] = s.name; });
 
+        const ghostChallenger = schoolMap[war.challenger_school_id] === "Ghost School";
+        const ghostDefender = schoolMap[war.defender_school_id] === "Ghost School";
+
         // Fetch members of both squads
-        const [challengerMembers, defenderMembers] = await Promise.all([
+        let [challengerMembers, defenderMembers] = await Promise.all([
             war.challenger_squad_id ? getSquadMembers(war.challenger_squad_id) : Promise.resolve([]),
             war.defender_squad_id ? getSquadMembers(war.defender_squad_id) : Promise.resolve([]),
         ]);
+
+        if (ghostChallenger && challengerMembers.length === 0) {
+            challengerMembers = generateGhostMembers(warId, "challenger");
+        }
+        if (ghostDefender && defenderMembers.length === 0) {
+            defenderMembers = generateGhostMembers(warId, "defender");
+        }
 
         // Which questions does my squad have to solve
         const myQuestionIds: string[] = isChallenger ? (war.defender_questions || []) : (war.challenger_questions || []);
@@ -135,14 +233,67 @@ export async function GET(req: Request) {
             .select("*")
             .eq("war_id", warId);
 
+        let mergedSubmissions = [...(submissions || [])];
+
+        if ((ghostChallenger || ghostDefender) && (war.status === "active" || war.status === "calculating" || war.status === "completed")) {
+            const ghostSchoolId = ghostChallenger ? war.challenger_school_id : war.defender_school_id;
+            const ghostQuestionIds: string[] = ghostChallenger ? (war.defender_questions || []) : (war.challenger_questions || []);
+            const ghostMembers = ghostChallenger ? challengerMembers : defenderMembers;
+
+            const ghostSubs = buildGhostSubmissions({
+                warId,
+                ghostSchoolId,
+                questionIds: ghostQuestionIds,
+                questionMap: qMap,
+                ghostMembers,
+                existing: mergedSubmissions,
+                status: war.status,
+                endsAt: war.ends_at,
+            });
+
+            mergedSubmissions = [...mergedSubmissions, ...ghostSubs];
+        }
+
+        // Auto-end war if timer has expired and still active (including ghost synthetic score)
+        if (war.status === "active" && war.ends_at && new Date(war.ends_at).getTime() < Date.now()) {
+            const cScore = calcSchoolScore(mergedSubmissions, war.challenger_school_id);
+            const dScore = calcSchoolScore(mergedSubmissions, war.defender_school_id);
+            const winnerSchoolId = cScore > dScore ? war.challenger_school_id : dScore > cScore ? war.defender_school_id : null;
+            const winnerSquadId = winnerSchoolId === war.challenger_school_id ? war.challenger_squad_id : war.defender_squad_id;
+
+            const { data: updatedWar } = await supabaseAdmin.from("wars").update({
+                status: "completed",
+                challenger_score: cScore,
+                defender_score: dScore,
+                winner_school_id: winnerSchoolId,
+            }).eq("id", warId).select().single();
+
+            if (updatedWar) {
+                war = updatedWar;
+            }
+
+            if (winnerSquadId) {
+                const { data: winMembers } = await supabaseAdmin.from("squad_members").select("user_id").eq("squad_id", winnerSquadId);
+                for (const wm of (winMembers || [])) {
+                    const { data: wmUser } = await supabaseAdmin.auth.admin.getUserById(wm.user_id);
+                    if (wmUser?.user) {
+                        const meta = wmUser.user.user_metadata || {};
+                        await supabaseAdmin.auth.admin.updateUserById(wm.user_id, {
+                            user_metadata: { ...meta, totalPoints: Math.max(0, (Number(meta.totalPoints) || 0) + 5) }
+                        });
+                    }
+                }
+            }
+        }
+
         const mySchoolId = isChallenger ? war.challenger_school_id : war.defender_school_id;
         const opponentSchoolId = isChallenger ? war.defender_school_id : war.challenger_school_id;
 
         // Calculate live scores from submissions (correct answers only)
-        const myScore = (submissions || [])
+                const myScore = mergedSubmissions
             .filter(s => s.school_id === mySchoolId && s.status === "correct")
             .reduce((sum, s) => sum + (s.points_awarded || 0), 0);
-        const opponentScore = (submissions || [])
+                const opponentScore = mergedSubmissions
             .filter(s => s.school_id === opponentSchoolId && s.status === "correct")
             .reduce((sum, s) => sum + (s.points_awarded || 0), 0);
 
@@ -150,7 +301,7 @@ export async function GET(req: Request) {
             war: { ...war, live_challenger_score: myScore, live_defender_score: opponentScore },
             myQuestions,
             opponentQuestions,
-            submissions: submissions || [],
+            submissions: mergedSubmissions,
             mySchoolId,
             opponentSchoolId,
             mySchoolName: schoolMap[mySchoolId] || "Your School",

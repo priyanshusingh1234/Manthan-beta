@@ -19,6 +19,7 @@ export default function WarLobbyDynamic() {
   const [warError, setWarError] = useState<string | null>(null);
   const [warSuccessData, setWarSuccessData] = useState<any>(null);
   const [isGeneral, setIsGeneral] = useState(false);
+  const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -43,6 +44,35 @@ export default function WarLobbyDynamic() {
       authListener?.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const formatLiveTimeLeft = (war: any) => {
+    if ((war.status === 'searching' || war.status === 'preparation') && war.declared_at) {
+      const declaredAt = new Date(war.declared_at).getTime();
+      const phaseEnd = declaredAt + 10 * 60 * 1000;
+      const diff = phaseEnd - nowMs;
+      if (diff <= 0) return war.status === 'searching' ? 'Matching...' : 'Starting...';
+      const m = Math.floor(diff / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      return `${m}m ${s}s`;
+    }
+
+    if ((war.status === 'active' || war.status === 'calculating') && war.ends_at) {
+      const diff = new Date(war.ends_at).getTime() - nowMs;
+      if (diff <= 0) return 'Ended';
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m ${s}s`;
+    }
+
+    return war.timeLeft || '--';
+  };
 
   const fetchData = async (token: string) => {
     try {
@@ -383,7 +413,7 @@ export default function WarLobbyDynamic() {
                              {war.status === 'searching' ? 'MATCHMAKING' : war.status === 'preparation' ? 'STRATEGY' : war.status === 'calculating' ? 'CALCULATING' : 'COMBAT'}
                            </span>
                            <span className="text-[10px] sm:text-xs font-mono font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                             ⏱ {war.timeLeft}
+                             ⏱ {formatLiveTimeLeft(war)}
                            </span>
                         </div>
                       </div>

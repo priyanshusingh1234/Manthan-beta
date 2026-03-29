@@ -136,7 +136,7 @@ export default function WarSolvePage() {
                     <p className="text-slate-500 dark:text-slate-400 mb-6">
                         {result.isCorrect
                             ? `+${result.pointsChange} points earned for your school!`
-                            : `${Math.abs(result.pointsChange)} points lost.`}
+                            : `No penalty for a miss in war mode.`}
                     </p>
 
                     {!result.isCorrect && question?.options && result.correctOption !== undefined && (
@@ -186,7 +186,7 @@ export default function WarSolvePage() {
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="text-xs text-slate-500 dark:text-slate-400 font-bold hidden sm:block">
-                        -{Math.floor((question?.points || 0) / 5)} pts if wrong
+                        No penalty if wrong
                     </div>
                     <div className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 px-3 py-1.5 rounded-full font-black text-sm">
                         <Zap className="w-3.5 h-3.5" /> {question?.points || 0} pts
