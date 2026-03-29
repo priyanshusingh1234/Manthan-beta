@@ -88,7 +88,8 @@ export async function POST(req: Request) {
         }
 
         // Upload file to Supabase storage
-        const fileExt = file.name.split(".").pop() || "jpg";
+        const fileName = (file as any).name || "image.jpg";
+        const fileExt = fileName.split(".").pop() || "jpg";
         const path = `written-answers/${questionId}/${userId}-${Date.now()}.${fileExt}`;
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);

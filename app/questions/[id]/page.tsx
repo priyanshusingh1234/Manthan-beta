@@ -41,6 +41,11 @@ export default async function SolveQuestionPage({
 
     const clientQuestion = {
         ...q,
+        // Normalize fields for components that expect camelCase
+        classGrade: q.class_grade,
+        timeLimit: q.time_limit,
+        imagePath: q.image_path,
+        imageUrl: q.image_url,
         teacherName: teacherMetadata.fullName || teacherMetadata.full_name || teacherMetadata.name || "Teacher",
         teacherUsername: teacherMetadata.username || null,
         teacherAvatar: teacherMetadata.avatar_url || teacherMetadata.avatar || null,

@@ -51,7 +51,8 @@ export async function POST(req: Request) {
         }
 
         // Upload to storage
-        const fileExt = file.name.split(".").pop() || "jpg";
+        const fileName = (file as any).name || "solution.jpg";
+        const fileExt = fileName.split(".").pop() || "jpg";
         const path = `teacher-solutions/${questionId}/${teacherId}-${Date.now()}.${fileExt}`;
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);

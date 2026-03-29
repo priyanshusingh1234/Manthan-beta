@@ -67,11 +67,11 @@ export default function QuestionCard({ question }: QuestionCardProps) {
             )}
 
             {/* Question image */}
-            {question.publicUrl && (
+            {(question.publicUrl || question.image_url) && (
                 <div className="mb-6 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800 flex items-center justify-center p-4">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                        src={question.publicUrl}
+                        src={question.publicUrl || question.image_url}
                         alt="Question"
                         className="max-h-80 object-contain rounded-xl"
                     />

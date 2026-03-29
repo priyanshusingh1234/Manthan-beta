@@ -105,7 +105,7 @@ export default function CoopChallengeHeader({ challengeId, questionPoints, curre
                     </span>
                 </div>
                 <div className="text-center">
-                    <p className="text-white font-bold text-sm leading-tight">{player.name.split(" ")[0]}</p>
+                    <p className="text-white font-bold text-sm leading-tight">{(player.name || "Student").split(" ")[0]}</p>
                     <p className="text-white/60 text-xs">@{player.username}</p>
                 </div>
             </div>

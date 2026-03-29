@@ -351,6 +351,7 @@ export default function CreateQuestionForm() {
             <option value="Mathematics">Mathematics</option>
             <option value="Science">Science</option>
             <option value="English">English</option>
+            <option value="English Literature">English Literature</option>
             <option value="SST">SST</option>
           </select>
           {errors.subject && <div className="text-xs text-red-600 mt-1.5 font-medium">{errors.subject}</div>}

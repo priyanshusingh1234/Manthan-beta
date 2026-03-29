@@ -159,7 +159,7 @@ export default function TopStudents() {
                                         </div>
                                         {/* Name */}
                                         <p className={`text-xs font-black text-slate-800 dark:text-slate-100 text-center truncate max-w-[70px] ${isFirst ? 'text-sm' : ''}`}>
-                                            {student.name.split(' ')[0]}
+                                            {(student.name || "Student").split(' ')[0]}
                                         </p>
                                         {/* Points chip */}
                                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r ${p.gradient} text-white shadow-sm`}>

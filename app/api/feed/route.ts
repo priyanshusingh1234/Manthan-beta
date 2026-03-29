@@ -163,7 +163,7 @@ export async function GET(req: NextRequest) {
             return applySubjectFilter(q, subject);
         };
 
-        const CORE_SUBJECTS = ['Maths', 'Science', 'English', 'SST'];
+        const CORE_SUBJECTS = ['Maths', 'Science', 'English', 'SST', 'English Literature'];
         const now = new Date();
         const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 60 * 60 * 1000).toISOString();
         const shuffle = (arr: any[]) => arr.sort(() => 0.5 - Math.random());
@@ -446,14 +446,26 @@ export async function GET(req: NextRequest) {
             return true;
         });
 
-        // ── Sort & Shuffle ──
-        pool.sort((a, b) => {
-            if (b._score !== a._score) return b._score - a._score;
-            const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-            const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-            return timeB - timeA;
-        });
-        pool = shuffleWithinGroups(pool);
+        // ── WRITTEN QUESTION DIVERSITY (Prioritize until 40% target) ──
+        // Ensure that at least 40% of the final feed consists of written questions if available.
+        // We overfetch slightly to ensure we have enough written candidates to hit the quota.
+        const writtenItems = pool.filter(p => !p.type && (p.points || 0) > 15);
+        const nonWrittenItems = pool.filter(p => p.type === 'post' || (p.points || 0) <= 15);
+        
+        const targetWritten = Math.floor(limit * 0.4);
+        const selectedWritten = writtenItems.slice(0, targetWritten);
+        // If we have fewer than targetWritten, we just take all we have.
+        
+        // Combine them back ensuring stratified order is preserved as much as possible
+        // but prioritized by the 40% quota.
+        let finalPool = [...selectedWritten, ...nonWrittenItems, ...writtenItems.slice(targetWritten)];
+        
+        // ── Stratified Sort ──
+        // This restores the layer-based ordering (Just Added > Peer Solved > For You, etc.)
+        finalPool = shuffleWithinGroups(finalPool);
+        
+        pool = finalPool;
+
 
         // ── Enrich ──
         const qIds = pool.map(r => String(r.id));

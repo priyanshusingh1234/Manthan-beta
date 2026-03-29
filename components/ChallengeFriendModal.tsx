@@ -150,7 +150,7 @@ export default function ChallengeFriendModal({
                                     {step === 1 ? "Ask for Help" : "Write your message"}
                                 </h2>
                                 <p className="text-[11px] text-white/70">
-                                    {step === 1 ? "Pick a student to help you" : `Sending to ${selectedFriend?.name.split(' ')[0]}`}
+                                    {step === 1 ? "Pick a student to help you" : `Sending to ${(selectedFriend?.name || "Student").split(' ')[0]}`}
                                 </p>
                             </div>
                         </div>
@@ -317,7 +317,7 @@ export default function ChallengeFriendModal({
                             )}
                         </button>
                         <p className="text-center text-[11px] text-slate-400">
-                            {selectedFriend.name.split(' ')[0]} will see your message in their notifications
+                            {(selectedFriend?.name || "Student").split(' ')[0]} will see your message in their notifications
                         </p>
                     </div>
                 )}
