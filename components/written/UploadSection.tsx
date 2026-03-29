@@ -24,7 +24,7 @@ export default function UploadSection({
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
-        setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+        setIsMobile(/iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && /Macintosh/.test(navigator.userAgent)));
     }, []);
 
     return (
@@ -57,12 +57,11 @@ export default function UploadSection({
                     </span>
                     <span className="text-slate-400 dark:text-slate-500 text-xs pointer-events-none uppercase font-bold tracking-widest">
                         {isMobile ? "Environmental Capture" : "JPG, PNG up to 10MB"}
-                    </span>
-                    <input
+                    </span>                    <input
                         id="answer-upload"
                         type="file"
                         accept="image/*"
-                        capture={isMobile ? "environment" : undefined}
+                        capture="environment"
                         className="sr-only"
                         onChange={onFileChange}
                     />
@@ -92,18 +91,17 @@ export default function UploadSection({
                             <FileImage className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate">{selectedFile?.name || "Captured Answer"}</span>
                         </div>
-                        {!isMobile && (
-                            <label htmlFor="answer-upload-change" className="ml-3 text-xs text-violet-600 dark:text-violet-400 font-bold cursor-pointer hover:text-violet-800 dark:hover:text-violet-300 shrink-0">
-                                Change
-                                <input
-                                    id="answer-upload-change"
-                                    type="file"
-                                    accept="image/*"
-                                    className="sr-only"
-                                    onChange={onFileChange}
-                                />
-                            </label>
-                        )}
+                        <label htmlFor="answer-upload-change" className="ml-3 text-xs text-violet-600 dark:text-violet-400 font-bold cursor-pointer hover:text-violet-800 dark:hover:text-violet-300 shrink-0">
+                            Change
+                            <input
+                                id="answer-upload-change"
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="sr-only"
+                                onChange={onFileChange}
+                            />
+                        </label>
                     </div>
                 </div>
             )}

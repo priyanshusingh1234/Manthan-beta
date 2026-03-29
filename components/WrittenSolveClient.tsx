@@ -155,7 +155,7 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
         if (file.size > 10 * 1024 * 1024) { alert("File must be ≤ 10MB"); return; }
         setSelectedFile(file);
         
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && /Macintosh/.test(navigator.userAgent));
         const url = URL.createObjectURL(file);
         setPreviewUrl(url);
 

@@ -474,7 +474,7 @@ export default function CreateQuestionForm() {
             </label>
             <p className="text-xs text-violet-700/70 dark:text-violet-400/60 font-medium leading-relaxed">Upload your handwritten or typed solution. Students will compare their answer against this. Max 10MB (JPG, PNG, PDF).</p>
             <div className="flex flex-wrap items-center gap-4">
-              <input type="file" accept="image/*,.pdf" onChange={handleModelAnswerChange} className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-violet-100 file:text-violet-700 hover:file:bg-violet-200 transition-all cursor-pointer" />
+              <input type="file" accept="image/*,.pdf" capture="environment" onChange={handleModelAnswerChange} className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-violet-100 file:text-violet-700 hover:file:bg-violet-200 transition-all cursor-pointer" />
               {modelAnswerUploading && <span className="text-xs text-violet-600 dark:text-violet-400 animate-pulse font-bold">Uploading...</span>}
               {modelAnswerSaved && <span className="text-xs text-emerald-600 dark:text-emerald-400 font-black flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
@@ -497,7 +497,7 @@ export default function CreateQuestionForm() {
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Illustration Image (optional)</label>
           <div className="mt-1 flex flex-col gap-3">
              <div className="flex items-center gap-3">
-                <input type="file" accept="image/*" onChange={handleImageChange} className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300 hover:file:bg-slate-200 transition-all cursor-pointer" />
+                <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300 hover:file:bg-slate-200 transition-all cursor-pointer" />
                 {imageUploading && <div className="text-xs text-slate-500 animate-pulse font-bold">Uploading…</div>}
              </div>
              {errors.image && <div className="text-xs text-red-600 font-medium">{errors.image}</div>}
