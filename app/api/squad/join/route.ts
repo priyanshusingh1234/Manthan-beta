@@ -2,6 +2,7 @@ import supabaseAdmin from "@/lib/supabaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
+const SQUAD_MEMBER_CAP = 30;
 
 // GET /api/squad/join?squad=<squadId>
 // Returns public info about the squad so the invite page can render it
@@ -109,13 +110,22 @@ export async function POST(req: NextRequest) {
         }
 
         // 4. Add user to squad_members
+        const { count: currentCount } = await supabaseAdmin
+            .from('squad_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('squad_id', squadId);
+
+        if ((currentCount || 0) >= SQUAD_MEMBER_CAP) {
+            return NextResponse.json({ error: `This squad is full (${SQUAD_MEMBER_CAP}/${SQUAD_MEMBER_CAP}). Cannot join.` }, { status: 400 });
+        }
+
         const { error: joinError } = await supabaseAdmin
             .from('squad_members')
             .insert({ squad_id: squadId, user_id: user.id });
 
         if (joinError) {
-            if (joinError.message.includes('Squad already has 50 members')) {
-                return NextResponse.json({ error: 'This squad is full (50/50). Cannot join.' }, { status: 400 });
+            if (joinError.message.includes('Squad already has 50 members') || joinError.message.includes('Squad already has 30 members')) {
+                return NextResponse.json({ error: `This squad is full (${SQUAD_MEMBER_CAP}/${SQUAD_MEMBER_CAP}). Cannot join.` }, { status: 400 });
             }
             throw joinError;
         }

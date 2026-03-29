@@ -19,6 +19,8 @@ export default function WarLobbyDynamic() {
   const [warError, setWarError] = useState<string | null>(null);
   const [warSuccessData, setWarSuccessData] = useState<any>(null);
   const [isGeneral, setIsGeneral] = useState(false);
+  const [selectedTeamSize, setSelectedTeamSize] = useState<number>(5);
+  const teamSizeOptions = [5, 10, 15, 20, 25, 30];
   const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
@@ -144,6 +146,7 @@ export default function WarLobbyDynamic() {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ team_size: selectedTeamSize }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -258,21 +261,38 @@ export default function WarLobbyDynamic() {
               <span>{schoolData?.points} POWER</span>
             </div>
           </div>
- 
-          <button
-            disabled={!squad || !isGeneral || declaringWar || wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0}
-            onClick={handleDeclareWar}
-            className="w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group shadow-xl shadow-red-600/20 active:scale-95"
-            title={
-              !squad ? 'No squad found for your school' :
-              !isGeneral ? 'Only the General can declare war' :
-              wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0 ? 'Already in an ongoing war' :
-              'Find and challenge a rival school'
-            }
-          >
-            <Target className="w-4 h-4 group-hover:animate-pulse" />
-            {declaringWar ? 'Searching...' : 'Declare War'}
-          </button>
+
+          <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch gap-2">
+            <select
+              value={selectedTeamSize}
+              onChange={(e) => setSelectedTeamSize(Number(e.target.value))}
+              disabled={!squad || !isGeneral || declaringWar || wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 dark:text-slate-200"
+              title="War team size"
+            >
+              {teamSizeOptions.map((size) => (
+                <option key={size} value={size} disabled={roster.length < size}>
+                  {size}v{size} {roster.length < size ? `(need ${size})` : ''}
+                </option>
+              ))}
+            </select>
+
+            <button
+              disabled={!squad || !isGeneral || declaringWar || wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0 || roster.length < selectedTeamSize}
+              onClick={handleDeclareWar}
+              className="w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group shadow-xl shadow-red-600/20 active:scale-95"
+              title={
+                !squad ? 'No squad found for your school' :
+                !isGeneral ? 'Only the General can declare war' :
+                roster.length < selectedTeamSize ? `Need at least ${selectedTeamSize} squad members` :
+                wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0 ? 'Already in an ongoing war' :
+                'Find and challenge a rival school'
+              }
+            >
+              <Target className="w-4 h-4 group-hover:animate-pulse" />
+              {declaringWar ? 'Searching...' : `Declare ${selectedTeamSize}v${selectedTeamSize}`}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -296,10 +316,10 @@ export default function WarLobbyDynamic() {
                   <Shield className="w-6 h-6 text-indigo-500" />
                   Elite Squad
                 </h2>
-                <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 max-w-sm leading-relaxed">Your 50-man squad for the next global battle. Recruit heavily to prepare for Wars.</p>
+                <p className="text-slate-600 dark:text-slate-400 text-sm mt-1 max-w-sm leading-relaxed">Your 30-member war squad. Build depth and pick your battle size wisely.</p>
               </div>
               <div className="mt-4 sm:mt-0 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 px-5 py-2 rounded-full text-xs font-bold font-mono shadow-inner">
-                {roster.length}/50 RECRUITED
+                {roster.length}/30 RECRUITED
               </div>
             </div>
 
@@ -352,7 +372,7 @@ export default function WarLobbyDynamic() {
                   ))}
 
                   {/* Empty slots placeholders (Show up to 3 empty boxes to prompt adding) */}
-                  {Array.from({ length: Math.min(3, 50 - roster.length) }).map((_, i) => (
+                  {Array.from({ length: Math.min(3, 30 - roster.length) }).map((_, i) => (
                     <div key={`empty-${i}`} className="h-[142px] p-5 rounded-2xl border bg-slate-50 dark:bg-slate-900/50 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/5 transition-all flex flex-col items-center justify-center text-center cursor-pointer group shadow-sm dark:shadow-none">
                       <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 flex items-center justify-center transition-all mb-3 group-hover:scale-110">
                         <Search className="w-5 h-5" />

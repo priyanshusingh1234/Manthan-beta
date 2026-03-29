@@ -13,13 +13,16 @@ export default function WarPrepPage() {
     
     const [war, setWar] = useState<any>(null);
     const [questions, setQuestions] = useState<any[]>([]);
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [locking, setLocking] = useState(false);
     const [isGeneral, setIsGeneral] = useState(false);
     const [hasLocked, setHasLocked] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [prepTimeLeft, setPrepTimeLeft] = useState("--:--");
+    const [myPickedCount, setMyPickedCount] = useState(0);
+    const [opponentPickedCount, setOpponentPickedCount] = useState(0);
+    const [requiredPicks, setRequiredPicks] = useState(5);
 
     useEffect(() => {
         const fetchPrepData = async () => {
@@ -41,6 +44,9 @@ export default function WarPrepPage() {
                     setQuestions(data.questions);
                     setIsGeneral(data.isGeneral);
                     setHasLocked(data.hasLockedPicks);
+                    setMyPickedCount(data.myPickedCount || 0);
+                    setOpponentPickedCount(data.opponentPickedCount || 0);
+                    setRequiredPicks(data.requiredPicks || 5);
                 }
             } catch (err: any) {
                 setError("Failed to load preparation data.");
@@ -75,17 +81,12 @@ export default function WarPrepPage() {
     }, [war?.declared_at, war?.status]);
 
     const toggleQuestion = (id: string) => {
-        if (hasLocked || !isGeneral) return;
-        
-        setSelectedIds(prev => {
-            if (prev.includes(id)) return prev.filter(q => q !== id);
-            if (prev.length >= war.war_format) return prev; // max reached
-            return [...prev, id];
-        });
+        if (hasLocked) return;
+        setSelectedId(prev => (prev === id ? null : id));
     };
 
     const lockInPicks = async () => {
-        if (selectedIds.length !== war.war_format) return;
+        if (!selectedId || hasLocked) return;
         setLocking(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -97,16 +98,19 @@ export default function WarPrepPage() {
                     'Authorization': `Bearer ${session.access_token}`,
                     'Content-Type': 'application/json' 
                 },
-                body: JSON.stringify({ war_id: warId, question_ids: selectedIds })
+                body: JSON.stringify({ war_id: warId, question_id: selectedId })
             });
             const data = await res.json();
             if (data.error) {
                 setError(data.error);
             } else {
-                setHasLocked(true);
+                setSelectedId(null);
+                const myCount = data.myPickedCount ?? (myPickedCount + 1);
+                setMyPickedCount(myCount);
+                setHasLocked(myCount >= (data.requiredPicks || requiredPicks));
             }
         } catch (err: any) {
-            setError("Failed to lock in picks.");
+            setError("Failed to submit your pick.");
         } finally {
             setLocking(false);
         }
@@ -144,8 +148,9 @@ export default function WarPrepPage() {
                         </div>
                         <h1 className="text-3xl sm:text-4xl font-black mb-2">Draft Your Artillery</h1>
                         <p className="text-slate-600 dark:text-slate-400 max-w-xl">
-                            Select exactly <strong className="text-slate-900 dark:text-white px-1">{war.war_format} questions</strong> from the vault. 
-                            These chosen questions will be presented to the opposing faction to solve. They are doing the same to you.
+                            Every squad member contributes one question pick until your side reaches 
+                            <strong className="text-slate-900 dark:text-white px-1">{requiredPicks}</strong>. 
+                            Those become the opponent's targets. Enemy side is doing the same.
                         </p>
                     </div>
 
@@ -155,24 +160,28 @@ export default function WarPrepPage() {
                             <span className="font-mono font-black text-xl text-red-600 dark:text-red-400">{prepTimeLeft}</span>
                         </div>
                         <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-sm font-bold text-slate-500 dark:text-slate-400">Payload Selected</span>
-                            <span className="font-mono font-black text-xl text-amber-600 dark:text-amber-500">{selectedIds.length} / {war.war_format}</span>
+                            <span className="text-sm font-bold text-slate-500 dark:text-slate-400">Your Side Picks</span>
+                            <span className="font-mono font-black text-xl text-amber-600 dark:text-amber-500">{myPickedCount} / {requiredPicks}</span>
+                        </div>
+                        <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                            <span className="text-sm font-bold text-slate-500 dark:text-slate-400">Enemy Picks</span>
+                            <span className="font-mono font-black text-xl text-slate-700 dark:text-slate-300">{opponentPickedCount} / {requiredPicks}</span>
                         </div>
                         {hasLocked ? (
                             <div className="flex items-center justify-center gap-2 py-2 text-green-600 dark:text-green-400 font-bold bg-green-50 dark:bg-green-500/10 rounded-lg">
-                                <CheckCircle2 className="w-5 h-5" /> Locked & Loaded
+                                <CheckCircle2 className="w-5 h-5" /> Your side is fully drafted
                             </div>
                         ) : (
                             <button 
                                 onClick={lockInPicks}
-                                disabled={selectedIds.length !== war.war_format || locking || !isGeneral}
+                                disabled={!selectedId || locking}
                                 className="w-full bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-900/20 active:scale-95"
                             >
-                                {locking ? "Locking..." : "Assign Questions to Foe"} <ArrowRight className="w-4 h-4" />
+                                {locking ? "Submitting..." : "Submit My Question Pick"} <ArrowRight className="w-4 h-4" />
                             </button>
                         )}
-                        {!isGeneral && !hasLocked && (
-                            <div className="text-center text-xs text-red-500 font-bold mt-2">Only the General can lock in the draft.</div>
+                        {!hasLocked && (
+                            <div className="text-center text-xs text-slate-500 dark:text-slate-400 font-bold mt-2">Each member can submit one pick at a time.</div>
                         )}
                     </div>
                 </div>
@@ -180,7 +189,7 @@ export default function WarPrepPage() {
 
             <main className="max-w-6xl mx-auto px-6 relative z-10 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {questions.map(q => {
-                    const isSelected = selectedIds.includes(q.id);
+                    const isSelected = selectedId === q.id;
                     return (
                         <div 
                             key={q.id}

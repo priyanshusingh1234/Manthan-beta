@@ -69,10 +69,9 @@ export async function GET(req: Request) {
         const { data: squad } = await supabaseAdmin.from("squads").select("general_id").eq("id", member.squad_id).single();
         const isGeneral = squad && squad.general_id === userId;
 
-        // Note: we can restrict access if they aren't the General 
-        // if (!isGeneral) {
-        //      return NextResponse.json({ error: "Only the General can pick questions" }, { status: 403 });
-        // }
+        const mySideQuestions: string[] = isChallenger ? (war.challenger_questions || []) : (war.defender_questions || []);
+        const oppSideQuestions: string[] = isChallenger ? (war.defender_questions || []) : (war.challenger_questions || []);
+        const requiredPicks = Number(war.war_format) || 5;
 
         // Get questions matching the user's class grade OR 'All' grade questions
         const { data: questions, error: qErr } = await supabaseAdmin
@@ -90,7 +89,10 @@ export async function GET(req: Request) {
             isChallenger,
             isDefender,
             isGeneral,
-            hasLockedPicks: isChallenger ? (war.challenger_questions?.length > 0) : (war.defender_questions?.length > 0)
+            hasLockedPicks: mySideQuestions.length >= requiredPicks,
+            myPickedCount: mySideQuestions.length,
+            opponentPickedCount: oppSideQuestions.length,
+            requiredPicks,
         });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
@@ -104,9 +106,9 @@ export async function POST(req: Request) {
         if (!userId) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
         const body = await req.json();
-        const { war_id, question_ids } = body;
+        const { war_id, question_id } = body;
 
-        if (!war_id || !question_ids || !Array.isArray(question_ids)) {
+        if (!war_id || !question_id) {
             return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
         }
 
@@ -120,9 +122,7 @@ export async function POST(req: Request) {
         if (warErr || !war) return NextResponse.json({ error: "War not found" }, { status: 404 });
         if (war.status !== 'preparation') return NextResponse.json({ error: "War is not in preparation phase" }, { status: 400 });
 
-        if (question_ids.length !== war.war_format) {
-            return NextResponse.json({ error: `You must pick exactly ${war.war_format} questions.` }, { status: 400 });
-        }
+        const requiredPicks = Number(war.war_format) || 5;
 
         const { data: member, error: memberErr } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).single();
         if (memberErr || !member || !member.squad_id) {
@@ -133,12 +133,39 @@ export async function POST(req: Request) {
         let isChallenger = false;
         if (member.squad_id === war.challenger_squad_id) isChallenger = true;
 
-        // Save picks
+        const mySideQuestions: string[] = isChallenger ? (war.challenger_questions || []) : (war.defender_questions || []);
+        const opponentSideQuestions: string[] = isChallenger ? (war.defender_questions || []) : (war.challenger_questions || []);
+
+        if (mySideQuestions.length >= requiredPicks) {
+            return NextResponse.json({ error: `Your side already finalized all ${requiredPicks} picks.` }, { status: 400 });
+        }
+
+        if (mySideQuestions.includes(question_id)) {
+            return NextResponse.json({ error: "This question is already selected by your side." }, { status: 400 });
+        }
+
+        if (opponentSideQuestions.includes(question_id)) {
+            return NextResponse.json({ error: "This question is already selected by the opponent." }, { status: 400 });
+        }
+
+        const { data: qExists } = await supabaseAdmin
+            .from("questions")
+            .select("id")
+            .eq("id", question_id)
+            .maybeSingle();
+
+        if (!qExists) {
+            return NextResponse.json({ error: "Question not found." }, { status: 404 });
+        }
+
+        const nextQuestions = [...mySideQuestions, question_id];
+
+        // Save pick
         const updateData: any = {};
         if (isChallenger) {
-             updateData.challenger_questions = question_ids;
+             updateData.challenger_questions = nextQuestions;
         } else {
-             updateData.defender_questions = question_ids;
+             updateData.defender_questions = nextQuestions;
         }
 
         const { error: updateErr } = await supabaseAdmin
@@ -148,7 +175,7 @@ export async function POST(req: Request) {
 
         if (updateErr) throw updateErr;
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, myPickedCount: nextQuestions.length, requiredPicks });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }

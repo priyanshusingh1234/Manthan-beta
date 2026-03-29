@@ -2,6 +2,7 @@ import supabaseAdmin from "@/lib/supabaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
+const ALLOWED_TEAM_SIZES = [5, 10, 15, 20, 25, 30];
 
 // ──────────────────────────────────────────────
 // WEIGHT FORMULA
@@ -33,36 +34,53 @@ async function getOrCreateGhostSchool() {
     return { schoolId: ghostSchool.id, squadId: ghostSquad.id };
 }
 
-async function pickGhostQuestionIds(warFormat: number, excludeIds: string[] = []) {
+function hashString(input: string) {
+    let h = 2166136261;
+    for (let i = 0; i < input.length; i++) {
+        h ^= input.charCodeAt(i);
+        h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+    }
+    return h >>> 0;
+}
+
+function ghostMemberIds(side: 'challenger' | 'defender', teamSize: number) {
+    const count = Math.max(1, teamSize);
+    return Array.from({ length: count }, (_, i) => `ghost-${side}-${i + 1}`);
+}
+
+async function pickGhostQuestionIds(
+    warId: string,
+    side: 'challenger' | 'defender',
+    warFormat: number,
+    excludeIds: string[] = []
+) {
     const needed = Math.max(1, Number(warFormat) || 1);
     const { data: questions } = await supabaseAdmin
         .from('questions')
-        .select('id, difficulty, points')
+        .select('id, difficulty, points, options, correct_option')
+        .not('options', 'is', null)
+        .not('correct_option', 'is', null)
         .order('created_at', { ascending: false })
         .limit(250);
 
-    const pool = (questions || []).filter(q => !excludeIds.includes(q.id));
+    const pool = (questions || []).filter(q => {
+        if (excludeIds.includes(q.id)) return false;
+        if (!Array.isArray(q.options) || q.options.length === 0) return false;
+        if (typeof q.correct_option !== 'number') return false;
+        return true;
+    });
     if (!pool.length) return [] as string[];
 
-    const hard = pool.filter(q => q.difficulty === 'hard');
-    const medium = pool.filter(q => q.difficulty === 'medium' || q.difficulty === 'moderate');
-    const easy = pool.filter(q => q.difficulty === 'easy');
-
+    const members = ghostMemberIds(side, needed);
     const picked: string[] = [];
-    const tiers = [hard, medium, easy, pool];
 
-    for (const tier of tiers) {
+    // One ghost member contributes one question (up to war format).
+    for (const memberId of members) {
         if (picked.length >= needed) break;
-        if (!tier.length) continue;
-        const choice = tier[Math.floor(Math.random() * tier.length)];
-        if (choice && !picked.includes(choice.id)) picked.push(choice.id);
-    }
-
-    while (picked.length < needed) {
-        const choice = pool[Math.floor(Math.random() * pool.length)];
-        if (!choice) break;
-        if (!picked.includes(choice.id)) picked.push(choice.id);
-        if (picked.length >= pool.length) break;
+        const candidates = pool.filter(q => !picked.includes(q.id));
+        if (!candidates.length) break;
+        const idx = hashString(`${warId}:${side}:${memberId}`) % candidates.length;
+        picked.push(candidates[idx].id);
     }
 
     return picked.slice(0, needed);
@@ -98,7 +116,12 @@ export async function GET(req: NextRequest) {
                     const newStatus = 'preparation';
                     const newDeclaredAt = new Date().toISOString();
                     const newEndsAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins total (10 prep + 5 active)
-                    const ghostQuestionIds = await pickGhostQuestionIds(updated.war_format, updated.challenger_questions || []);
+                    const ghostQuestionIds = await pickGhostQuestionIds(
+                        updated.id,
+                        'defender',
+                        updated.war_format,
+                        updated.challenger_questions || []
+                    );
 
                     await supabaseAdmin.from('wars').update({
                         defender_school_id: ghost.schoolId,
@@ -128,7 +151,12 @@ export async function GET(req: NextRequest) {
                     .maybeSingle();
 
                 if (defSchool?.name === 'Ghost School') {
-                    const ghostQuestionIds = await pickGhostQuestionIds(updated.war_format, updated.challenger_questions || []);
+                    const ghostQuestionIds = await pickGhostQuestionIds(
+                        updated.id,
+                        'defender',
+                        updated.war_format,
+                        updated.challenger_questions || []
+                    );
                     if (ghostQuestionIds.length > 0) {
                         await supabaseAdmin
                             .from('wars')
@@ -220,6 +248,10 @@ export async function POST(req: NextRequest) {
         const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
         if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+        const body = await req.json().catch(() => ({}));
+        const requestedTeamSize = Number(body?.team_size || 5);
+        const warTeamSize = ALLOWED_TEAM_SIZES.includes(requestedTeamSize) ? requestedTeamSize : 5;
+
         const userSchoolName = user.user_metadata?.school;
         if (!userSchoolName) return NextResponse.json({ error: 'No school assigned' }, { status: 400 });
 
@@ -229,6 +261,17 @@ export async function POST(req: NextRequest) {
         const { data: mySquad } = await supabaseAdmin.from('squads').select('*').eq('school_id', mySchool.id).single();
         if (!mySquad) return NextResponse.json({ error: 'Your school has no squad. Create one first.' }, { status: 400 });
         if (mySquad.general_id !== user.id) return NextResponse.json({ error: 'Only the General can declare war.' }, { status: 403 });
+
+        const { count: squadCount } = await supabaseAdmin
+            .from('squad_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('squad_id', mySquad.id);
+
+        if ((squadCount || 0) < warTeamSize) {
+            return NextResponse.json({
+                error: `Need at least ${warTeamSize} members in your squad for this war size. Current: ${squadCount || 0}.`
+            }, { status: 400 });
+        }
 
         // Check if already in active/preparation/searching war
         const { data: existingWar } = await supabaseAdmin
@@ -261,6 +304,9 @@ export async function POST(req: NextRequest) {
             // Found other schools searching -> Match with the closest weight!
             searchingWars.sort((a, b) => Math.abs(a.challenger_weight - myWeight) - Math.abs(b.challenger_weight - myWeight));
             const bestMatch = searchingWars[0];
+            const finalWarFormat = ALLOWED_TEAM_SIZES.includes(Number(bestMatch.war_format))
+                ? Math.min(Number(bestMatch.war_format), warTeamSize)
+                : warTeamSize;
             
             const matchedTime = Date.now();
             const { data: updatedWar, error: updateError } = await supabaseAdmin
@@ -269,6 +315,7 @@ export async function POST(req: NextRequest) {
                     defender_school_id: mySchool.id,
                     defender_squad_id: mySquad.id,
                     defender_weight: myWeight,
+                    war_format: finalWarFormat,
                     status: 'preparation',
                     declared_at: new Date(matchedTime).toISOString(),
                     ends_at: new Date(matchedTime + 15 * 60 * 1000).toISOString() // 15 mins format (10 prep + 5 active)
@@ -288,6 +335,7 @@ export async function POST(req: NextRequest) {
                     id: bestMatch.id,
                     opponent: oppSchool?.name || 'Unknown',
                     status: 'preparation',
+                    warFormat: finalWarFormat,
                     myWeight,
                     opponentWeight: bestMatch.challenger_weight,
                     endsAt: updatedWar.ends_at,
@@ -306,7 +354,7 @@ export async function POST(req: NextRequest) {
                 challenger_weight: myWeight,
                 defender_weight: null,
                 status: 'searching',
-                war_format: 1, // allowing 1v1 for now per instructions
+                war_format: warTeamSize,
                 ends_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // timeout time just to visually show for search phase
             })
             .select()

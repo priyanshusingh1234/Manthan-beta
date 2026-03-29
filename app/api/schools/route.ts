@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
         let query = supabaseAdmin
             .from('schools')
             .select('id, name, total_war_points, created_at')
+            .neq('name', 'Ghost School')
             .order('total_war_points', { ascending: false });
 
         if (search) {

@@ -104,7 +104,13 @@ async function getSquadMembers(squadId: string) {
             progress = 0;
         }
 
-        const attemptCount = Math.floor(questionIds.length * progress);
+        const elapsedMs = Math.max(0, now - activeStartMs);
+        // Ghost fires roughly once every 30s during active phase so feed keeps moving.
+        const cadenceAttempts = Math.floor(elapsedMs / 30000);
+        let attemptCount = Math.floor(questionIds.length * progress);
+        if (status === "active") {
+            attemptCount = Math.min(questionIds.length, Math.max(attemptCount, cadenceAttempts));
+        }
         if (attemptCount <= 0) return [];
 
         const orderedIds = [...questionIds].sort((a, b) => hashString(`${warId}:q:${a}`) - hashString(`${warId}:q:${b}`));
@@ -180,6 +186,7 @@ export async function GET(req: Request) {
 
         const ghostChallenger = schoolMap[war.challenger_school_id] === "Ghost School";
         const ghostDefender = schoolMap[war.defender_school_id] === "Ghost School";
+        const ghostTeamSize = Math.max(5, Math.min(30, Number(war.war_format) || 5));
 
         // Fetch members of both squads
         let [challengerMembers, defenderMembers] = await Promise.all([
@@ -188,10 +195,10 @@ export async function GET(req: Request) {
         ]);
 
         if (ghostChallenger && challengerMembers.length === 0) {
-            challengerMembers = generateGhostMembers(warId, "challenger");
+            challengerMembers = generateGhostMembers(warId, "challenger", ghostTeamSize);
         }
         if (ghostDefender && defenderMembers.length === 0) {
-            defenderMembers = generateGhostMembers(warId, "defender");
+            defenderMembers = generateGhostMembers(warId, "defender", ghostTeamSize);
         }
 
         // Which questions does my squad have to solve
@@ -250,6 +257,17 @@ export async function GET(req: Request) {
                 status: war.status,
                 endsAt: war.ends_at,
             });
+
+            if (ghostSubs.length > 0) {
+                const insertRows = ghostSubs.map(({ id, ...rest }) => rest);
+                const { error: ghostInsertError } = await supabaseAdmin
+                    .from("war_submissions")
+                    .insert(insertRows);
+                if (ghostInsertError) {
+                    // Non-fatal: feed can still render from synthetic events even if a duplicate insert races.
+                    console.warn("[war/battle] ghost insert warning:", ghostInsertError.message);
+                }
+            }
 
             mergedSubmissions = [...mergedSubmissions, ...ghostSubs];
         }
