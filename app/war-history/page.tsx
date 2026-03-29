@@ -28,14 +28,29 @@ function WarHistoryContent() {
                         return;
                     }
 
+                    // Try metadata first
                     finalSchoolId = user.user_metadata?.school_id || null;
-                    if (!finalSchoolId && user.user_metadata?.school) {
-                        const { data: schoolRow } = await supabase
-                            .from('schools')
-                            .select('id')
-                            .eq('name', user.user_metadata.school)
+
+                    // Fallback to profiles table (more reliable ground truth)
+                    if (!finalSchoolId) {
+                        const { data: profile } = await supabase
+                            .from('profiles')
+                            .select('school_id, school')
+                            .eq('id', user.id)
                             .maybeSingle();
-                        finalSchoolId = schoolRow?.id || null;
+                        
+                        finalSchoolId = profile?.school_id || null;
+
+                        // Last resort: find school by name if ID still missing but name exists
+                        if (!finalSchoolId && (profile?.school || user.user_metadata?.school)) {
+                            const schoolName = profile?.school || user.user_metadata?.school;
+                            const { data: schoolRow } = await supabase
+                                .from('schools')
+                                .select('id')
+                                .eq('name', schoolName)
+                                .maybeSingle();
+                            finalSchoolId = schoolRow?.id || null;
+                        }
                     }
                 }
 
@@ -113,7 +128,7 @@ function WarHistoryContent() {
                         }
 
                         // Format date nicely natively
-                        const formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(war.created_at));
+                        const formattedDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(war.declared_at));
 
                         return (
                             <Link href={`/war-battle/${war.id}`} key={war.id} className="block group">

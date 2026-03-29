@@ -26,8 +26,16 @@ export default function PublicSchoolPage() {
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
             setSession(currentSession);
-            if (currentSession?.user?.user_metadata?.school_id) {
-                setMySchoolId(currentSession.user.user_metadata.school_id);
+            if (currentSession?.user) {
+                // Try metadata first
+                let sid = currentSession.user.user_metadata?.school_id || null;
+                if (!sid) {
+                    supabase.from('profiles').select('school_id').eq('id', currentSession.user.id).maybeSingle().then(({ data }) => {
+                        if (data?.school_id) setMySchoolId(data.school_id);
+                    });
+                } else {
+                    setMySchoolId(sid);
+                }
             }
         });
 
@@ -278,7 +286,7 @@ export default function PublicSchoolPage() {
                                             resultBadge = <span className="text-amber-500 font-black animate-pulse">●</span>;
                                         }
 
-                                        const dateLabel = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric'}).format(new Date(war.created_at));
+                                        const dateLabel = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(war.declared_at));
 
                                         return (
                                             <div key={war.id} className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-white/5 rounded-2xl p-4">

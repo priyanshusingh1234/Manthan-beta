@@ -75,7 +75,7 @@ export async function GET(req: Request) {
             `)
             .or(`challenger_school_id.eq.${schoolId},defender_school_id.eq.${schoolId}`)
             .not('status', 'eq', 'searching')
-            .order('created_at', { ascending: false })
+            .order('declared_at', { ascending: false })
             .limit(50);
 
         if (error) {
