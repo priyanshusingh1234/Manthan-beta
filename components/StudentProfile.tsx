@@ -503,8 +503,11 @@ const StudentProfile: React.FC = () => {
     if (q.subject) subjectCounts[q.subject] = (subjectCounts[q.subject] || 0) + 1;
     if (q.createdByName) teacherCounts[q.createdByName] = (teacherCounts[q.createdByName] || 0) + 1;
   });
-  const favSubject = Object.entries(subjectCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Exploring';
-  const favTeacher = Object.entries(teacherCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Various';
+  const sortedSubjects = Object.entries(subjectCounts).sort((a, b) => b[1] - a[1]);
+  const favSubject = sortedSubjects.length > 0 ? sortedSubjects[0][0] : 'Exploring';
+
+  const sortedTeachers = Object.entries(teacherCounts).sort((a, b) => b[1] - a[1]);
+  const favTeacher = sortedTeachers.length > 0 ? sortedTeachers[0][0] : 'Various';
 
   return (
     <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 relative pb-20">
