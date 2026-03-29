@@ -27,21 +27,19 @@ export default function BadgedName({
 }: BadgedNameProps) {
   const { getRank } = useTopRanks();
   const liveRank = userId ? getRank(userId) : null;
-  const normalizedPropRank = (propRank !== undefined && propRank !== null && Number(propRank) > 0)
+  const normalizedPropRank = (propRank !== undefined && propRank !== null && !isNaN(Number(propRank)) && Number(propRank) > 0)
     ? Number(propRank)
     : null;
-  const normalizedLiveRank = (liveRank !== undefined && liveRank !== null && Number(liveRank) > 0)
+  const normalizedLiveRank = (liveRank !== undefined && liveRank !== null && !isNaN(Number(liveRank)) && Number(liveRank) > 0)
     ? Number(liveRank)
     : null;
 
-  // Prefer whichever source confirms the user is in top 3.
-  const rank = (normalizedPropRank && normalizedPropRank <= 3)
-    ? normalizedPropRank
-    : (normalizedLiveRank && normalizedLiveRank <= 3)
-      ? normalizedLiveRank
-      : normalizedPropRank ?? normalizedLiveRank;
-  // Ensure we get a boolean, avoiding rendering 'NaN' if totalPoints is NaN
-  const isTopper = typeof totalPoints === 'number' && totalPoints >= 1500;
+  // Trust the provided rank if it's available (don't fall back to stale cache for top 3).
+  // Only hunt for a rank if the prop is strictly missing.
+  const rank = normalizedPropRank !== null ? normalizedPropRank : normalizedLiveRank;
+  
+  // Ensure we get a boolean, avoiding rendering 'NaN' if totalPoints is malformed
+  const isTopper = typeof totalPoints === 'number' && !isNaN(totalPoints) && totalPoints >= 1500;
 
   return (
     <div className={`flex items-center gap-1.5 flex-wrap min-w-0 ${className}`}>

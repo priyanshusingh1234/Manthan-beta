@@ -191,6 +191,11 @@ export async function PATCH(req: Request) {
                 battlesWon,
             },
         });
+        
+        // Sync profiles table so leaderboard stays accurate
+        const { upsertProfile } = await import("@/lib/profiles");
+        await upsertProfile(userId, { ...userMeta, totalPoints: newTotal, battlesAttempted, battlesWon });
+
         leaderboardCache.invalidate(); // reflect new points in TopBrains immediately
 
         // Update submission status to pending_check
@@ -293,6 +298,11 @@ export async function PATCH(req: Request) {
                         battlesWon: updatedBattlesWon,
                     },
                 });
+
+                // Sync profiles table (revert)
+                const { upsertProfile: upsertProfileRevert } = await import("@/lib/profiles");
+                await upsertProfileRevert(userId, { ...userMeta, totalPoints: newStudentTotal, battlesWon: updatedBattlesWon });
+
                 leaderboardCache.invalidate();
 
                 await createNotification({

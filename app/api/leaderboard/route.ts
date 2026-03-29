@@ -12,6 +12,7 @@ export async function GET() {
             .not('username', 'is', null)
             .neq('username', '')
             .order('total_points', { ascending: false })
+            .order('id', { ascending: true })
             .limit(10);
 
         if (error) {

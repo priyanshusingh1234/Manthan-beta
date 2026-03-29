@@ -1,54 +1,25 @@
-import supabaseAdmin from "@/lib/supabaseAdmin";
-import Link from "next/link";
-import { Trophy, Medal, MapPin, Sparkles, Zap, Award } from "lucide-react";
-import TopperBadge from "@/ticks/topper";
-import { GoldBadge, SilverBadge, BronzeBadge } from "@/ticks/RankBadges";
+import { getAllProfiles } from "@/lib/profiles";
 import BadgedName from "@/components/BadgedName";
+import Link from "next/link";
+import { MapPin, Award } from "lucide-react";
 
 export const revalidate = 0; // Always fetch fresh data
 
 export default async function LeaderboardPage() {
-  // Fetch all users and sort them by totalPoints with proper pagination
-  let allUsers: any[] = [];
-  let pageNum = 1;
-  let hasMore = true;
-
-  while (hasMore) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-      perPage: 1000,
-      page: pageNum,
-    });
-
-    if (error || !data?.users) {
-      console.error('Error fetching leaderboard users:', error);
-      break;
-    }
-
-    allUsers = allUsers.concat(data.users);
-    hasMore = data.users.length === 1000;
-    pageNum++;
-  }
-
-  let students: any[] = [];
-
-  if (allUsers.length > 0) {
-    students = allUsers
-      .filter((u: any) => !u.user_metadata?.isTeacher) // strictly students
-      .map((u: any) => {
-        const meta = u.user_metadata || {};
-        return {
-          id: u.id,
-          username: meta.username || null,
-          name: meta.fullName || meta.full_name || meta.name || u.email || "Student",
-          school: meta.school || "Unknown School",
-          totalPoints: Number(meta.totalPoints) || 0,
-          avatar: meta.avatar_url || meta.avatar || null,
-        };
-      })
-      .sort((a, b) => b.totalPoints - a.totalPoints)
-      .filter((u) => u.username) // Only show users with usernames set up
-      .slice(0, 50); // Top 50
-  }
+  const allProfiles = await getAllProfiles();
+  
+  // Exclude teachers and ensure they have a username
+  const students = allProfiles
+    .filter(p => !p.is_teacher && p.username)
+    .map(p => ({
+      id: p.id,
+      username: p.username,
+      name: p.full_name || p.username || "Student",
+      school: p.school || "Unknown School",
+      totalPoints: p.total_points,
+      avatar: p.avatar_url || null,
+    }))
+    .slice(0, 50); // Top 50
 
   return (
     <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 pb-24 relative overflow-hidden flex flex-col items-center">
@@ -172,6 +143,7 @@ export default async function LeaderboardPage() {
                         <BadgedName 
                           name={student.name}
                           userId={student.id}
+                          rank={rank}
                           totalPoints={student.totalPoints}
                           nameClassName="font-bold text-[15px] text-slate-900 dark:text-slate-100"
                           className="flex items-center gap-1.5 min-w-0"

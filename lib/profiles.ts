@@ -87,7 +87,8 @@ export async function getAllProfiles(): Promise<Profile[]> {
     const { data, error } = await supabaseAdmin
         .from('profiles')
         .select('*')
-        .order('total_points', { ascending: false });
+        .order('total_points', { ascending: false })
+        .order('id', { ascending: true });
 
     if (error) {
         console.error('[getAllProfiles] error:', error.message);

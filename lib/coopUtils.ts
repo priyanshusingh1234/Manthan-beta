@@ -29,6 +29,9 @@ export async function processCoopWin(submission: any) {
             user_metadata: { ...userMeta, totalPoints: (Number(userMeta.totalPoints) || 0) + splitPoints }
         });
 
+        const { upsertProfile } = await import("@/lib/profiles");
+        await upsertProfile(otherUserId, { ...userMeta, totalPoints: (Number(userMeta.totalPoints) || 0) + splitPoints });
+
         // Notify the other player
         await createNotification({
             userId: otherUserId,

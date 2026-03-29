@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useTheme } from 'next-themes';
+import { VERSION_NAME } from '@/lib/version';
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -174,7 +175,7 @@ export default function SettingsPage() {
 
                 <div className="text-center pb-8 pt-4">
                     <p className="text-xs font-semibold text-slate-400 tracking-wider">
-                        Dheeyudhha version beta
+                        Dheeyudhha {VERSION_NAME}
                     </p>
                 </div>
             </div>

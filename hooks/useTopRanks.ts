@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 // Simple global cache for ranks during the session
 let globalRankCache: Record<string, number> = {};
 let lastFetch = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 1 * 60 * 1000; // 1 minute for faster badge updates
 
 export function useTopRanks() {
     const [ranks, setRanks] = useState<Record<string, number>>(globalRankCache);
