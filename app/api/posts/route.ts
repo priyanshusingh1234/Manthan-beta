@@ -1,5 +1,6 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { getProfilesMap } from "@/lib/profiles";
+import { createNotification } from "@/lib/createNotification";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
@@ -85,6 +86,47 @@ export async function POST(req: NextRequest) {
             .single();
 
         if (error) throw error;
+
+        const { data: followers } = await supabaseAdmin
+            .from('follows')
+            .select('follower_id')
+            .eq('following_id', user.id);
+
+        const followerIds = Array.from(new Set((followers || []).map((f: any) => String(f.follower_id)).filter(Boolean)));
+        if (followerIds.length > 0) {
+            const { data: authorProfile } = await supabaseAdmin
+                .from('profiles')
+                .select('full_name, username, avatar_url')
+                .eq('id', user.id)
+                .maybeSingle();
+
+            const authorName =
+                authorProfile?.full_name ||
+                user.user_metadata?.fullName ||
+                user.user_metadata?.username ||
+                'Someone';
+            const authorUsername = authorProfile?.username || user.user_metadata?.username || null;
+            const authorAvatar = authorProfile?.avatar_url || user.user_metadata?.avatar_url || null;
+            const cleanSnippet = String(content || '').trim().replace(/\s+/g, ' ').slice(0, 90);
+            const bodyText = cleanSnippet
+                ? `${authorName} posted: "${cleanSnippet}${cleanSnippet.length >= 90 ? '...' : ''}"`
+                : `${authorName} shared a new post.`;
+
+            await Promise.allSettled(
+                followerIds
+                    .filter((id) => id !== user.id)
+                    .map((followerId) => createNotification({
+                        userId: followerId,
+                        type: 'following_post',
+                        title: `${authorName} shared a new post`,
+                        body: bodyText,
+                        href: `/posts/${post.id}`,
+                        actorId: user.id,
+                        actorName: authorName,
+                        actorAvatar: authorAvatar,
+                    }))
+            );
+        }
 
         return NextResponse.json(post);
     } catch (err: any) {

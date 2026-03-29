@@ -13,6 +13,7 @@ if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 
 export type NotificationType =
     | 'new_follower'
+    | 'following_post'
     | 'answer_approved'
     | 'answer_flagged'
     | 'ai_confirmed_correct'
@@ -20,7 +21,10 @@ export type NotificationType =
     | 'points_earned'
     | 'new_question'
     | 'coop_challenge'
-    | 'social_comment';
+    | 'social_comment'
+    | 'war_declared'
+    | 'war_preparation'
+    | 'war_started';
 
 interface CreateNotificationParams {
     userId: string;          // who receives the notification

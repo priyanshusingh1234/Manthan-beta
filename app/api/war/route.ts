@@ -1,4 +1,5 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
+import { createNotification } from "@/lib/createNotification";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
@@ -86,6 +87,44 @@ async function pickGhostQuestionIds(
     return picked.slice(0, needed);
 }
 
+async function getSquadMemberIds(squadId?: string | null) {
+    if (!squadId) return [] as string[];
+    const { data: members } = await supabaseAdmin
+        .from('squad_members')
+        .select('user_id')
+        .eq('squad_id', squadId);
+    return Array.from(new Set((members || []).map((m: any) => String(m.user_id)).filter(Boolean)));
+}
+
+async function notifyUsers(userIds: string[], payload: {
+    type: 'war_declared' | 'war_preparation' | 'war_started';
+    title: string;
+    body: string;
+    href: string;
+}) {
+    if (!userIds.length) return;
+    await Promise.allSettled(
+        userIds.map((uid) => createNotification({
+            userId: uid,
+            type: payload.type,
+            title: payload.title,
+            body: payload.body,
+            href: payload.href,
+        }))
+    );
+}
+
+async function notifySquad(squadId: string | null | undefined, payload: {
+    type: 'war_declared' | 'war_preparation' | 'war_started';
+    title: string;
+    body: string;
+    href: string;
+}) {
+    if (!squadId) return;
+    const ids = await getSquadMemberIds(squadId);
+    await notifyUsers(ids, payload);
+}
+
 // GET /api/war?school_id=<id>  — fetch active wars for a school
 export async function GET(req: NextRequest) {
     try {
@@ -139,6 +178,13 @@ export async function GET(req: NextRequest) {
                     updated.status = newStatus;
                     updated.declared_at = newDeclaredAt;
                     updated.ends_at = newEndsAt;
+
+                    await notifySquad(updated.challenger_squad_id, {
+                        type: 'war_preparation',
+                        title: 'War matched. Preparation started',
+                        body: 'Ghost School has entered the battlefield. Select your questions quickly.',
+                        href: `/war-prep/${updated.id}`,
+                    });
                 }
             }
 
@@ -173,6 +219,15 @@ export async function GET(req: NextRequest) {
                 if (now - prepStartTime > 10 * 60 * 1000) {
                     await supabaseAdmin.from('wars').update({ status: 'active' }).eq('id', updated.id);
                     updated.status = 'active';
+
+                    const sideA = await getSquadMemberIds(updated.challenger_squad_id);
+                    const sideB = await getSquadMemberIds(updated.defender_squad_id);
+                    await notifyUsers([...new Set([...sideA, ...sideB])], {
+                        type: 'war_started',
+                        title: 'War battle has started',
+                        body: 'Preparation is over. Solve fast and secure points for your school.',
+                        href: `/war-battle/${updated.id}`,
+                    });
                 }
             }
 
@@ -328,6 +383,19 @@ export async function POST(req: NextRequest) {
 
             const { data: oppSchool } = await supabaseAdmin.from('schools').select('name').eq('id', bestMatch.challenger_school_id).single();
 
+            await notifySquad(bestMatch.challenger_squad_id, {
+                type: 'war_preparation',
+                title: 'War matched. Preparation started',
+                body: `Your war against ${mySchool.name} has started preparation. Lock your picks now.`,
+                href: `/war-prep/${bestMatch.id}`,
+            });
+            await notifySquad(mySquad.id, {
+                type: 'war_preparation',
+                title: 'Match found. Preparation started',
+                body: `You are now facing ${oppSchool?.name || 'an opponent'}. Coordinate your picks.`,
+                href: `/war-prep/${bestMatch.id}`,
+            });
+
             return NextResponse.json({
                 success: true,
                 message: 'Match found!',
@@ -361,6 +429,13 @@ export async function POST(req: NextRequest) {
             .single();
 
         if (warError) throw warError;
+
+        await notifySquad(mySquad.id, {
+            type: 'war_declared',
+            title: 'War declared by your General',
+            body: `${mySchool.name} has begun searching for an opponent. Stay ready.`,
+            href: '/war',
+        });
 
         return NextResponse.json({
             success: true,

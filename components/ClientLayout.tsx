@@ -12,12 +12,46 @@ import { StatusBar } from '@capacitor/status-bar';
 import { ActivityTracker } from '@/lib/activityTracker';
 import CongratsBadgeModal from '@/components/CongratsBadgeModal';
 
+let nativePushInitialized = false;
+
+function normalizeInAppPath(input?: string | null): string | null {
+  if (!input) return null;
+  try {
+    if (input.startsWith('/')) return input;
+    if (input.startsWith('http://') || input.startsWith('https://')) {
+      const parsed = new URL(input);
+      const path = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      return path.startsWith('/') ? path : `/${path}`;
+    }
+    return input.startsWith('/') ? input : `/${input}`;
+  } catch {
+    return input.startsWith('/') ? input : `/${input}`;
+  }
+}
+
 // Dynamic import for PushNotifications to avoid SSR issues
-const initNativePush = async (userId: string) => {
+const initNativePush = async (userId: string, navigate: (path: string) => void) => {
   if (!Capacitor.isNativePlatform()) return;
+  if (nativePushInitialized) return;
 
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications');
+    nativePushInitialized = true;
+
+    const navigateFromPayload = (payload: any) => {
+      const rawUrl =
+        payload?.url ||
+        payload?.href ||
+        payload?.link ||
+        payload?.notification?.data?.url ||
+        payload?.notification?.data?.href ||
+        payload?.notification?.data?.link ||
+        payload?.notification?.data?.deep_link ||
+        null;
+
+      const path = normalizeInAppPath(rawUrl);
+      if (path) navigate(path);
+    };
 
     // Register listeners
     await PushNotifications.addListener('registration', async (token) => {
@@ -47,6 +81,7 @@ const initNativePush = async (userId: string) => {
 
     await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
       console.log('[NativePush] Action performed:', notification);
+      navigateFromPayload(notification);
     });
 
     // Check permissions and register
@@ -64,6 +99,7 @@ const initNativePush = async (userId: string) => {
     }
 
   } catch (err) {
+    nativePushInitialized = false;
     console.error('[NativePush] Init error:', err);
   }
 };
@@ -138,7 +174,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     supabase.auth.getUser().then(({ data: { user } }) => {
       setIsAuthenticated(!!user);
       if (user && Capacitor.isNativePlatform()) {
-        initNativePush(user.id);
+        initNativePush(user.id, (path) => router.push(path));
       }
       if (user) {
         ActivityTracker.restoreFromCloud();
@@ -158,7 +194,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session?.user);
       if (session?.user && Capacitor.isNativePlatform()) {
-        initNativePush(session.user.id);
+        initNativePush(session.user.id, (path) => router.push(path));
       }
       if (session?.user) {
         ActivityTracker.restoreFromCloud();
@@ -174,7 +210,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   // Global Image Proxy for ISP Block Bypassing
   useEffect(() => {
