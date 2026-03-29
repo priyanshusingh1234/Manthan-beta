@@ -18,7 +18,7 @@ export default function PublicSchoolPage() {
     const [loading, setLoading] = useState(true);
     const [schoolInfo, setSchoolInfo] = useState<any>(null);
     const [warHistory, setWarHistory] = useState<any[]>([]);
-    
+
     const [joinError, setJoinError] = useState("");
     // Join actions
     const [joinStatus, setJoinStatus] = useState<'idle' | 'loading' | 'requested'>('idle');
@@ -51,7 +51,7 @@ export default function PublicSchoolPage() {
                     const data = await schoolRes.json();
                     setSchoolInfo(data);
                 }
-                
+
                 if (historyRes.ok) {
                     const hData = await historyRes.json();
                     setWarHistory(hData.wars || []);
@@ -84,7 +84,7 @@ export default function PublicSchoolPage() {
                 body: JSON.stringify({ action: 'request', schoolId: schoolInfo?.school?.id })
             });
             const data = await res.json();
-            
+
             if (res.ok) {
                 setJoinStatus('requested');
             } else {
@@ -149,9 +149,9 @@ export default function PublicSchoolPage() {
         <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-24 pt-4 sm:pt-10">
             {/* Background Decor */}
             <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-100/50 dark:from-indigo-900/10 to-transparent pointer-events-none" />
-            
+
             <div className="max-w-6xl mx-auto px-6 relative z-10">
-                
+
                 {/* Back Link */}
                 <div className="mb-6">
                     <Link href="/top-schools" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
@@ -162,9 +162,9 @@ export default function PublicSchoolPage() {
                 {/* Hero / Banner Area */}
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-12 shadow-xl shadow-slate-200/40 dark:shadow-none mb-10 overflow-hidden relative">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] rounded-full pointer-events-none" />
-                    
+
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
-                        
+
                         {/* School Identity */}
                         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-7 text-center sm:text-left">
                             <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center flex-shrink-0 shadow-xl shadow-indigo-500/20 text-white border-4 border-white dark:border-slate-800 transform rotate-2 sm:rotate-0">
@@ -188,20 +188,20 @@ export default function PublicSchoolPage() {
                             <div className="bg-indigo-600 text-white font-black px-6 py-2.5 rounded-2xl flex items-center gap-2.5 text-xl shadow-lg shadow-indigo-600/20 w-full sm:w-auto justify-center">
                                 <Award className="w-5 h-5 text-amber-400" /> {school.points.toLocaleString()}
                             </div>
-                            
+
                             {isMySchool ? (
                                 <Link href="/my-school" className="w-full sm:w-auto text-center bg-slate-900 border border-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:border-white font-bold px-6 py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95">
                                     <Shield className="w-4 h-4" /> View Base
                                 </Link>
                             ) : (
-                                <button 
+                                <button
                                     onClick={handleJoinRequest}
                                     disabled={joinStatus !== 'idle'}
                                     className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black px-8 py-3 rounded-xl shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-60 active:scale-95"
                                 >
-                                    {joinStatus === 'loading' ? 'Sending...' : 
-                                     joinStatus === 'requested' ? <><CheckCircle className="w-4 h-4" /> Sent</> : 
-                                     <><Swords className="w-4 h-4" /> Join Faction</>}
+                                    {joinStatus === 'loading' ? 'Sending...' :
+                                        joinStatus === 'requested' ? <><CheckCircle className="w-4 h-4" /> Sent</> :
+                                            <><Swords className="w-4 h-4" /> Join Faction</>}
                                 </button>
                             )}
                             {joinError && <p className="text-red-500 text-[10px] font-bold w-full text-center mt-1 bg-red-500/10 px-2 py-1 rounded">{joinError}</p>}
@@ -216,7 +216,7 @@ export default function PublicSchoolPage() {
 
                 {/* Grid Layout: Roster & War History */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    
+
                     {/* Active Roster */}
                     <div className="space-y-6">
                         <div className="flex items-center justify-between">
@@ -224,7 +224,7 @@ export default function PublicSchoolPage() {
                                 <Users className="w-6 h-6 text-indigo-500 dark:text-indigo-400" /> Active Roster
                             </h2>
                         </div>
-                        
+
                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xl shadow-slate-200/30 dark:shadow-none divide-y divide-slate-100 dark:divide-slate-800/50">
                             {members?.length === 0 ? (
                                 <div className="p-8 text-center text-slate-500 font-medium">No soldiers have enlisted yet.</div>
@@ -259,7 +259,7 @@ export default function PublicSchoolPage() {
                                 <Swords className="w-6 h-6 text-rose-500 dark:text-rose-400" /> War History
                             </h2>
                         </div>
-                        
+
                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl shadow-slate-200/30 dark:shadow-none flex-1 flex flex-col overflow-hidden max-h-[600px] overflow-y-auto">
                             {warHistory.length === 0 ? (
                                 <div className="text-center py-16 my-auto">
@@ -272,7 +272,7 @@ export default function PublicSchoolPage() {
                                         const isChallenger = war.challenger_school_id === school.id;
                                         const opponentName = isChallenger ? war.defender_school?.name : war.challenger_school?.name;
                                         const isLive = war.status === 'active' || war.status === 'preparation' || war.status === 'calculating';
-                                        
+
                                         let resultBadge = null;
                                         if (war.status === 'completed') {
                                             if (war.winner_school_id === school.id) {
@@ -301,7 +301,7 @@ export default function PublicSchoolPage() {
                                                         <div className="text-xs font-semibold text-slate-400 mt-0.5">{dateLabel}</div>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 p-1 rounded-xl w-full sm:w-auto mt-2 sm:mt-0 shadow-inner flex-shrink-0">
                                                     <div className="flex-1 sm:px-3 text-center py-1">
                                                         <div className="text-[8px] text-slate-400 uppercase font-black mb-0.5">Faction</div>
