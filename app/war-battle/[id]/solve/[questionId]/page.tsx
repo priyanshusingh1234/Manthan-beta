@@ -3,8 +3,19 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { Capacitor } from "@capacitor/core";
 import { Clock, Target, Shield, CheckCircle2, XCircle, Loader2, Swords, ArrowLeft, Zap, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
+
+async function nativeHaptic(kind: "light" | "medium" = "light") {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+        const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+        await Haptics.impact({ style: kind === "light" ? ImpactStyle.Light : ImpactStyle.Medium });
+    } catch {
+        // ignore haptics failures
+    }
+}
 
 export default function WarSolvePage() {
     const params = useParams();
@@ -82,6 +93,7 @@ export default function WarSolvePage() {
             const data = await res.json();
             if (!res.ok) { setError(data.error || "Failed to submit."); setIsSubmitting(false); return; }
             setResult(data);
+            nativeHaptic(data?.isCorrect ? "medium" : "light");
         } catch (e: any) {
             setError("Network error: " + e.message);
             setIsSubmitting(false);
@@ -102,11 +114,11 @@ export default function WarSolvePage() {
 
     if (error) {
         return (
-            <div className="max-w-md mx-auto px-4 py-16 text-center">
+            <div className="max-w-md mx-auto px-3 sm:px-4 py-14 sm:py-16 text-center native-page-shell">
                 <AlertCircle className="w-14 h-14 text-red-500 mx-auto mb-4" />
                 <h1 className="text-2xl font-black mb-2 text-red-600 dark:text-red-400">Error</h1>
                 <p className="text-slate-500 dark:text-slate-400 mb-6">{error}</p>
-                <button onClick={() => router.back()} className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 mx-auto">
+                <button onClick={() => router.back()} className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 mx-auto native-card">
                     <ArrowLeft className="w-4 h-4" /> Return to Battlefield
                 </button>
             </div>
@@ -116,7 +128,7 @@ export default function WarSolvePage() {
     // Result screen
     if (result) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center px-4 py-12">
+            <div className="min-h-[60vh] flex items-center justify-center px-3 sm:px-4 py-12 native-page-shell">
                 <motion.div
                     initial={{ scale: 0.85, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -152,8 +164,11 @@ export default function WarSolvePage() {
                     </div>
 
                     <button
-                        onClick={() => router.push(`/war-battle/${warId}`)}
-                        className="w-full bg-red-600 hover:bg-red-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 text-lg transition-all active:scale-95 shadow-lg shadow-red-500/20"
+                        onClick={() => {
+                            nativeHaptic("light");
+                            router.push(`/war-battle/${warId}`);
+                        }}
+                        className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-2xl flex items-center justify-center gap-2 text-base transition-all active:scale-95 shadow-lg shadow-red-500/20 native-card"
                     >
                         <Swords className="w-5 h-5" /> Return to Battlefield
                     </button>
@@ -167,7 +182,7 @@ export default function WarSolvePage() {
         || (question?.image_path ? supabase.storage.from("question-images").getPublicUrl(question.image_path).data.publicUrl : null);
 
     return (
-        <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-6 pb-[calc(82px+env(safe-area-inset-bottom))] native-page-shell native-scroll">
             {/* Back + War context bar */}
             <div className="flex items-center justify-between mb-5">
                 <button onClick={() => router.back()} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
@@ -179,8 +194,8 @@ export default function WarSolvePage() {
             </div>
 
             {/* Timer + Points sticky bar */}
-            <div className={`sticky top-[64px] z-30 flex items-center justify-between mb-6 px-5 py-3 rounded-2xl border backdrop-blur-sm shadow-sm transition-all ${isLowTime ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-500/50' : 'bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800'}`}>
-                <div className={`flex items-center gap-2 font-mono text-xl font-black ${isLowTime ? 'text-red-600 dark:text-red-400 animate-pulse' : 'text-slate-700 dark:text-slate-200'}`}>
+            <div className={`sticky top-[64px] z-30 flex items-center justify-between mb-5 sm:mb-6 px-4 py-2.5 rounded-2xl border backdrop-blur-sm shadow-sm transition-all native-card ${isLowTime ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-500/50' : 'bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800'}`}>
+                <div className={`flex items-center gap-2 font-mono text-lg sm:text-xl font-black ${isLowTime ? 'text-red-600 dark:text-red-400 animate-pulse' : 'text-slate-700 dark:text-slate-200'}`}>
                     <Clock className="w-5 h-5" />
                     {formatTime(timeLeft)}
                 </div>
@@ -195,7 +210,7 @@ export default function WarSolvePage() {
             </div>
 
             {/* Main Question Card */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-10 shadow-sm">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-8 shadow-sm native-card">
                 {/* Tags */}
                 <div className="flex flex-wrap gap-2 mb-5">
                     {question?.subject && (
@@ -213,12 +228,12 @@ export default function WarSolvePage() {
                     </span>
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-relaxed">
+                <h1 className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-4 leading-relaxed">
                     {question?.title}
                 </h1>
 
                 {question?.body && (
-                    <p className="text-slate-600 dark:text-slate-400 text-lg mb-8 leading-relaxed whitespace-pre-wrap">
+                    <p className="text-slate-600 dark:text-slate-400 text-base sm:text-lg mb-6 sm:mb-8 leading-relaxed whitespace-pre-wrap">
                         {question.body}
                     </p>
                 )}
@@ -238,8 +253,11 @@ export default function WarSolvePage() {
                             return (
                                 <button
                                     key={idx}
-                                    onClick={() => setSelectedOption(idx)}
-                                    className={`p-5 text-left rounded-2xl border-2 transition-all duration-150 flex items-center gap-4 group
+                                    onClick={() => {
+                                        setSelectedOption(idx);
+                                        nativeHaptic("light");
+                                    }}
+                                    className={`p-4 text-left rounded-2xl border-2 transition-all duration-150 flex items-center gap-3 group native-card
                                         ${isSelected
                                             ? 'border-red-500 bg-red-50 dark:bg-red-900/20 ring-1 ring-red-500'
                                             : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
@@ -248,7 +266,7 @@ export default function WarSolvePage() {
                                         ${isSelected ? 'bg-red-600 border-red-500 text-white' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'}`}>
                                         {String.fromCharCode(65 + idx)}
                                     </div>
-                                    <span className={`text-base font-medium ${isSelected ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-700 dark:text-slate-300'}`}>{opt}</span>
+                                    <span className={`text-sm sm:text-base font-medium ${isSelected ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-700 dark:text-slate-300'}`}>{opt}</span>
                                 </button>
                             );
                         })}
@@ -260,7 +278,7 @@ export default function WarSolvePage() {
                     <button
                         onClick={() => handleSubmit()}
                         disabled={selectedOption === null || isSubmitting}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed text-white font-black text-lg px-10 py-4 rounded-2xl transition-all active:scale-95 shadow-lg shadow-red-500/10"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 dark:disabled:text-slate-600 disabled:cursor-not-allowed text-white font-bold text-base px-8 py-3 rounded-2xl transition-all active:scale-95 shadow-lg shadow-red-500/10 native-card"
                     >
                         {isSubmitting
                             ? <><Loader2 className="w-5 h-5 animate-spin" /> Firing...</>

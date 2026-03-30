@@ -155,6 +155,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }
   }, []);
 
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const platform = Capacitor.getPlatform();
+    const root = document.documentElement;
+
+    root.classList.add('native-platform');
+    root.classList.add(platform === 'android' ? 'native-android' : 'native-ios');
+
+    return () => {
+      root.classList.remove('native-platform', 'native-android', 'native-ios');
+    };
+  }, []);
+
   // Handle Capacitor Back Button
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -181,6 +194,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const setupUI = async () => {
       try {
         const isDark = document.documentElement.classList.contains('dark');
+        await StatusBar.setOverlaysWebView({ overlay: false });
         await StatusBar.setStyle({ style: isDark ? 'DARK' : 'LIGHT' } as any);
         await StatusBar.setBackgroundColor({ color: isDark ? '#0f172a' : '#ffffff' });
       } catch (e) {

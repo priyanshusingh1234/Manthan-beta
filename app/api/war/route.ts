@@ -1,6 +1,7 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { createNotification } from "@/lib/createNotification";
 import { NextRequest, NextResponse } from "next/server";
+import { getSelectedWarMemberIds, saveSelectedWarMemberIds } from "@/lib/warRoster";
 
 export const dynamic = 'force-dynamic';
 const ALLOWED_TEAM_SIZES = [5, 10, 15, 20, 25, 30];
@@ -132,6 +133,7 @@ function calcSchoolScore(submissions: any[], schoolId: string) {
 }
 
 async function notifyWarResult(params: {
+    warId: string;
     challengerSchoolId: string;
     defenderSchoolId: string;
     challengerSquadId: string;
@@ -141,6 +143,7 @@ async function notifyWarResult(params: {
     defenderScore: number;
 }) {
     const {
+        warId,
         challengerSchoolId,
         defenderSchoolId,
         challengerSquadId,
@@ -163,14 +166,24 @@ async function notifyWarResult(params: {
     const challengerWon = winnerSchoolId === challengerSchoolId;
     const defenderWon = winnerSchoolId === defenderSchoolId;
 
-    await notifySquad(challengerSquadId, {
+    const challengerSelected = await getSelectedWarMemberIds(warId, challengerSchoolId);
+    const defenderSelected = await getSelectedWarMemberIds(warId, defenderSchoolId);
+
+    const challengerRecipients = challengerSelected && challengerSelected.length
+        ? challengerSelected
+        : await getSquadMemberIds(challengerSquadId);
+    const defenderRecipients = defenderSelected && defenderSelected.length
+        ? defenderSelected
+        : await getSquadMemberIds(defenderSquadId);
+
+    await notifyUsers(challengerRecipients, {
         type: 'war_result',
         title: challengerWon ? 'Victory! War won' : defenderWon ? 'War finished: Defeat' : 'War finished: Draw',
         body: scoreLine,
         href: `/war-history?schoolId=${challengerSchoolId}`,
     });
 
-    await notifySquad(defenderSquadId, {
+    await notifyUsers(defenderRecipients, {
         type: 'war_result',
         title: defenderWon ? 'Victory! War won' : challengerWon ? 'War finished: Defeat' : 'War finished: Draw',
         body: scoreLine,
@@ -275,7 +288,12 @@ export async function GET(req: NextRequest) {
 
                     const sideA = await getSquadMemberIds(updated.challenger_squad_id);
                     const sideB = await getSquadMemberIds(updated.defender_squad_id);
-                    await notifyUsers([...new Set([...sideA, ...sideB])], {
+                    const selectedA = await getSelectedWarMemberIds(updated.id, updated.challenger_school_id);
+                    const selectedB = await getSelectedWarMemberIds(updated.id, updated.defender_school_id);
+                    const notifyA = selectedA && selectedA.length ? selectedA : sideA;
+                    const notifyB = selectedB && selectedB.length ? selectedB : sideB;
+
+                    await notifyUsers([...new Set([...notifyA, ...notifyB])], {
                         type: 'war_started',
                         title: 'War battle has started',
                         body: 'Preparation is over. Solve fast and secure points for your school.',
@@ -327,6 +345,7 @@ export async function GET(req: NextRequest) {
 
                     if (completedWar) {
                         await notifyWarResult({
+                            warId: completedWar.id,
                             challengerSchoolId: completedWar.challenger_school_id,
                             defenderSchoolId: completedWar.defender_school_id,
                             challengerSquadId: completedWar.challenger_squad_id,
@@ -396,6 +415,9 @@ export async function POST(req: NextRequest) {
         const body = await req.json().catch(() => ({}));
         const requestedTeamSize = Number(body?.team_size || 5);
         const warTeamSize = ALLOWED_TEAM_SIZES.includes(requestedTeamSize) ? requestedTeamSize : 5;
+        const requestedSelectedMemberIds: string[] = Array.isArray(body?.selected_member_ids)
+            ? body.selected_member_ids.map((id: any) => String(id)).filter(Boolean)
+            : [];
 
         const userSchoolName = user.user_metadata?.school;
         if (!userSchoolName) return NextResponse.json({ error: 'No school assigned' }, { status: 400 });
@@ -407,14 +429,30 @@ export async function POST(req: NextRequest) {
         if (!mySquad) return NextResponse.json({ error: 'Your school has no squad. Create one first.' }, { status: 400 });
         if (mySquad.general_id !== user.id) return NextResponse.json({ error: 'Only the General can declare war.' }, { status: 403 });
 
-        const { count: squadCount } = await supabaseAdmin
+        const { data: squadMembersData, error: squadMembersErr } = await supabaseAdmin
             .from('squad_members')
-            .select('*', { count: 'exact', head: true })
+            .select('user_id')
             .eq('squad_id', mySquad.id);
 
-        if ((squadCount || 0) < warTeamSize) {
+        if (squadMembersErr) throw squadMembersErr;
+
+        const squadMemberIds = Array.from(new Set((squadMembersData || []).map((m: any) => String(m.user_id)).filter(Boolean)));
+        const squadCount = squadMemberIds.length;
+
+        if (squadCount < warTeamSize) {
             return NextResponse.json({
-                error: `Need at least ${warTeamSize} members in your squad for this war size. Current: ${squadCount || 0}.`
+                error: `Need at least ${warTeamSize} members in your squad for this war size. Current: ${squadCount}.`
+            }, { status: 400 });
+        }
+
+        const normalizedSelected = Array.from(new Set(requestedSelectedMemberIds.filter((id) => squadMemberIds.includes(id))));
+        const selectedMemberIds = normalizedSelected.length > 0
+            ? normalizedSelected
+            : squadMemberIds.slice(0, warTeamSize);
+
+        if (selectedMemberIds.length !== warTeamSize) {
+            return NextResponse.json({
+                error: `Select exactly ${warTeamSize} members for this war before declaring.`
             }, { status: 400 });
         }
 
@@ -452,6 +490,7 @@ export async function POST(req: NextRequest) {
             const finalWarFormat = ALLOWED_TEAM_SIZES.includes(Number(bestMatch.war_format))
                 ? Math.min(Number(bestMatch.war_format), warTeamSize)
                 : warTeamSize;
+            const defenderFinalSelection = selectedMemberIds.slice(0, finalWarFormat);
             
             const matchedTime = Date.now();
             const { data: updatedWar, error: updateError } = await supabaseAdmin
@@ -470,6 +509,22 @@ export async function POST(req: NextRequest) {
                 .single();
 
             if (updateError) throw updateError;
+
+            // Persist selected rosters for both sides when roster table exists.
+            const challengerSquadMembers = await getSquadMemberIds(bestMatch.challenger_squad_id);
+            const challengerExistingSelection = await getSelectedWarMemberIds(bestMatch.id, bestMatch.challenger_school_id);
+            const challengerFinalSelection = (challengerExistingSelection || challengerSquadMembers).slice(0, finalWarFormat);
+
+            await saveSelectedWarMemberIds({
+                warId: bestMatch.id,
+                schoolId: bestMatch.challenger_school_id,
+                memberIds: challengerFinalSelection,
+            });
+            await saveSelectedWarMemberIds({
+                warId: bestMatch.id,
+                schoolId: mySchool.id,
+                memberIds: defenderFinalSelection,
+            });
 
             const { data: oppSchool } = await supabaseAdmin.from('schools').select('name').eq('id', bestMatch.challenger_school_id).single();
 
@@ -519,6 +574,12 @@ export async function POST(req: NextRequest) {
             .single();
 
         if (warError) throw warError;
+
+        await saveSelectedWarMemberIds({
+            warId: newWar.id,
+            schoolId: mySchool.id,
+            memberIds: selectedMemberIds,
+        });
 
         await notifySquad(mySquad.id, {
             type: 'war_declared',

@@ -3,11 +3,22 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { Capacitor } from "@capacitor/core";
 import {
     Shield, Target, AlertCircle, Search, Zap, Swords, Crown,
     AlertTriangle, Clock, Star, CheckCircle2, XCircle, User, Flame
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+async function nativeHaptic(kind: "light" | "medium" = "light") {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+        const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+        await Haptics.impact({ style: kind === "light" ? ImpactStyle.Light : ImpactStyle.Medium });
+    } catch {
+        // ignore haptics failures
+    }
+}
 
 /* ── Live countdown ─────────────────────────────── */
 function useWarTimer(endsAt: string | null) {
@@ -94,7 +105,10 @@ function QuestionCard({ q, isMine, sub, warStatus, warId, router }: any) {
                     <div className="flex items-center justify-between">
                         <span className="text-xs text-slate-400 font-medium">{attempts} attempt{attempts !== 1 ? "s" : ""}</span>
                         <button
-                            onClick={() => router.push(`/war-battle/${warId}/solve/${q.id}`)}
+                            onClick={() => {
+                                nativeHaptic("light");
+                                router.push(`/war-battle/${warId}/solve/${q.id}`);
+                            }}
                             className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black px-4 py-2 rounded-xl transition-all active:scale-95 shadow-md shadow-indigo-500/30 flex items-center gap-1.5"
                         >
                             <Target className="w-3.5 h-3.5" /> Attack
@@ -313,7 +327,7 @@ export default function WarBattleDashboard() {
     }
 
     return (
-        <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#0a0e1a] text-slate-900 dark:text-slate-100 pb-24 relative overflow-x-hidden">
+        <div className="min-h-[100svh] bg-slate-50 dark:bg-[#0a0e1a] text-slate-900 dark:text-slate-100 pb-[calc(82px+env(safe-area-inset-bottom))] pt-[env(safe-area-inset-top)] relative overflow-x-hidden native-scroll">
 
             {/* ─── Ambient background ───────────────────── */}
             <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
@@ -323,13 +337,13 @@ export default function WarBattleDashboard() {
             </div>
 
             {/* ─── War Status Bar ───────────────────────── */}
-            <div className={`relative z-10 w-full border-b backdrop-blur-md py-4 px-4 ${isLive
+            <div className={`relative z-10 w-full border-b backdrop-blur-md py-3 sm:py-4 px-3 sm:px-4 ${isLive
                 ? "bg-gradient-to-r from-indigo-900/80 via-slate-900/80 to-red-900/80 dark:from-indigo-950/90 dark:to-red-950/90 border-indigo-700/30"
                 : isCalculating
                     ? "bg-gradient-to-r from-fuchsia-900/80 to-slate-900/80 border-fuchsia-700/30"
                     : "bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800"
                 }`}>
-                <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+                <div className="max-w-5xl mx-auto flex items-center justify-between gap-3 native-page-shell">
                     <div className={`flex items-center gap-2 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-full border ${isLive
                         ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-300"
                         : isCalculating
@@ -341,7 +355,7 @@ export default function WarBattleDashboard() {
                     </div>
 
                     {(isLive || isCalculating) && timeLeft && (
-                        <div className={`flex items-center gap-2 font-mono font-black text-2xl px-4 py-1.5 rounded-full border ${isUrgent
+                        <div className={`flex items-center gap-2 font-mono font-black text-xl px-3 py-1.5 rounded-full border ${isUrgent
                             ? "border-red-500 text-red-400 bg-red-500/10 animate-pulse"
                             : isLive
                                 ? "border-white/20 text-white bg-white/10"
@@ -355,8 +369,8 @@ export default function WarBattleDashboard() {
             </div>
 
             {/* ─── Scoreboard ───────────────────────────── */}
-            <div className="relative z-10 max-w-5xl mx-auto px-4 mt-6">
-                <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 backdrop-blur-sm">
+            <div className="relative z-10 max-w-5xl mx-auto px-3 sm:px-4 mt-5 sm:mt-6 native-page-shell">
+                <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-4 sm:p-6 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 backdrop-blur-sm native-card">
                     <div className="grid grid-cols-3 items-center gap-4">
                         {/* My Team */}
                         <div className="text-center">
@@ -366,14 +380,14 @@ export default function WarBattleDashboard() {
                                 </div>
                                 <div className="font-black text-sm text-slate-700 dark:text-slate-300 truncate max-w-[120px]">{mySchoolName}</div>
                             </div>
-                            <div className="text-6xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums leading-none">{myScore}</div>
+                            <div className="text-5xl sm:text-6xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums leading-none">{myScore}</div>
                             <div className="text-xs text-slate-500 mt-2">{mySecured}/{myQuestions.length} secured</div>
                         </div>
 
                         {/* VS */}
                         <div className="flex flex-col items-center gap-2">
                             <div className="relative">
-                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-xl shadow-red-500/30">
+                                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-xl shadow-red-500/30">
                                     <Swords className="w-8 h-8 text-white" />
                                 </div>
                                 {isLive && <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full animate-ping" />}
@@ -389,7 +403,7 @@ export default function WarBattleDashboard() {
                                 </div>
                                 <div className="font-black text-sm text-slate-700 dark:text-slate-300 truncate max-w-[120px]">{opponentSchoolName}</div>
                             </div>
-                            <div className="text-6xl font-black text-red-600 dark:text-red-400 tabular-nums leading-none">{opponentScore}</div>
+                            <div className="text-5xl sm:text-6xl font-black text-red-600 dark:text-red-400 tabular-nums leading-none">{opponentScore}</div>
                             <div className="text-xs text-slate-500 mt-2">{opponentSecured}/{opponentQuestions.length} secured</div>
                         </div>
                     </div>
@@ -421,7 +435,7 @@ export default function WarBattleDashboard() {
             </div>
 
             {/* ─── Main Battlefield ─────────────────────── */}
-            <div className="relative z-10 max-w-5xl mx-auto px-4 mt-6 grid lg:grid-cols-2 gap-6">
+            <div className="relative z-10 max-w-5xl mx-auto px-3 sm:px-4 mt-5 sm:mt-6 grid lg:grid-cols-2 gap-4 sm:gap-6 native-page-shell">
 
                 {/* LEFT — My Questions (I attack) */}
                 <div>
@@ -429,7 +443,7 @@ export default function WarBattleDashboard() {
                         <div className="w-7 h-7 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center">
                             <Target className="w-4 h-4" />
                         </div>
-                        <h2 className="font-black text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Attack These (Enemy's Questions)</h2>
+                            <h2 className="font-black text-xs sm:text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Attack These (Enemy's Questions)</h2>
                         <span className="ml-auto text-xs font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
                             {mySecured}/{myQuestions.length} destroyed
                         </span>
@@ -477,7 +491,7 @@ export default function WarBattleDashboard() {
                         <div className="w-7 h-7 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center">
                             <Shield className="w-4 h-4" />
                         </div>
-                        <h2 className="font-black text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Your Side's Questions (Enemy Attacks These)</h2>
+                            <h2 className="font-black text-xs sm:text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Your Side's Questions (Enemy Attacks These)</h2>
                         <span className="ml-auto text-xs font-bold text-red-500 bg-red-50 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
                             {opponentSecured}/{opponentQuestions.length} enemy secured
                         </span>
@@ -526,8 +540,8 @@ export default function WarBattleDashboard() {
             </div>
 
             {/* ─── Live Feed ────────────────────────────── */}
-            <div className="relative z-10 max-w-5xl mx-auto px-4 mt-6">
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
+            <div className="relative z-10 max-w-5xl mx-auto px-3 sm:px-4 mt-5 sm:mt-6 native-page-shell">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm native-card">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
                             <Zap className="w-4 h-4 text-amber-500" /> Live Battle Feed
@@ -570,8 +584,8 @@ export default function WarBattleDashboard() {
             </div>
 
             {/* ─── Bonus Info Card ──────────────────────── */}
-            <div className="relative z-10 max-w-5xl mx-auto px-4 mt-4">
-                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-4 flex flex-wrap gap-4 text-sm">
+            <div className="relative z-10 max-w-5xl mx-auto px-3 sm:px-4 mt-4 native-page-shell">
+                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-3.5 sm:p-4 flex flex-wrap gap-3 sm:gap-4 text-sm native-card">
                     <div className="flex items-center gap-2">
                         <Star className="w-4 h-4 text-amber-500 shrink-0" />
                         <span className="font-bold text-amber-800 dark:text-amber-300">Scoring Rules:</span>

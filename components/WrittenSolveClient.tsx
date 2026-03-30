@@ -149,9 +149,7 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
     }, [existingSubmission, uploadedSubmission]);
 
     // ── File handling ─────────────────────────────────────────────
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const processSelectedFile = async (file: File) => {
         if (file.size > 10 * 1024 * 1024) { alert("File must be ≤ 10MB"); return; }
         setSelectedFile(file);
         
@@ -163,6 +161,12 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
         if (isMobile) {
             handleUpload(file);
         }
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        await processSelectedFile(file);
     };
 
     const clearFile = () => {
@@ -344,6 +348,7 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
                     uploading={uploading}
                     solveTimeLeft={solveTimeLeft}
                     onFileChange={handleFileChange}
+                    onFileSelect={processSelectedFile}
                     onClearFile={clearFile}
                     onUpload={handleUpload}
                 />

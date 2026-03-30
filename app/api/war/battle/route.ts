@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { createNotification } from "@/lib/createNotification";
+import { getSelectedWarMemberIds } from "@/lib/warRoster";
 
 async function getVerifiedUser(authHeader?: string | null) {
     if (!authHeader) return null;
@@ -205,6 +206,22 @@ export async function GET(req: Request) {
             war.defender_squad_id ? getSquadMembers(war.defender_squad_id) : Promise.resolve([]),
         ]);
 
+        if (!ghostChallenger) {
+            const selected = await getSelectedWarMemberIds(warId, war.challenger_school_id);
+            if (selected?.length) {
+                const selectedSet = new Set(selected);
+                challengerMembers = challengerMembers.filter((m: any) => selectedSet.has(m.id));
+            }
+        }
+
+        if (!ghostDefender) {
+            const selected = await getSelectedWarMemberIds(warId, war.defender_school_id);
+            if (selected?.length) {
+                const selectedSet = new Set(selected);
+                defenderMembers = defenderMembers.filter((m: any) => selectedSet.has(m.id));
+            }
+        }
+
         if (ghostChallenger && challengerMembers.length === 0) {
             challengerMembers = generateGhostMembers(warId, "challenger", ghostTeamSize);
         }
@@ -302,12 +319,17 @@ export async function GET(req: Request) {
             }
 
             if (winnerSquadId) {
-                const { data: winMembers } = await supabaseAdmin.from("squad_members").select("user_id").eq("squad_id", winnerSquadId);
-                for (const wm of (winMembers || [])) {
-                    const { data: wmUser } = await supabaseAdmin.auth.admin.getUserById(wm.user_id);
+                const winnerSchoolIdForBonus = winnerSchoolId === war.challenger_school_id ? war.challenger_school_id : war.defender_school_id;
+                const selectedWinnerIds = await getSelectedWarMemberIds(warId, winnerSchoolIdForBonus);
+                const winnerMemberIds = selectedWinnerIds && selectedWinnerIds.length
+                    ? selectedWinnerIds
+                    : (await getSquadMemberIds(winnerSquadId));
+
+                for (const winnerMemberId of winnerMemberIds) {
+                    const { data: wmUser } = await supabaseAdmin.auth.admin.getUserById(winnerMemberId);
                     if (wmUser?.user) {
                         const meta = wmUser.user.user_metadata || {};
-                        await supabaseAdmin.auth.admin.updateUserById(wm.user_id, {
+                        await supabaseAdmin.auth.admin.updateUserById(winnerMemberId, {
                             user_metadata: { ...meta, totalPoints: Math.max(0, (Number(meta.totalPoints) || 0) + 5) }
                         });
                     }
@@ -340,13 +362,19 @@ export async function GET(req: Request) {
 
                 const challengerWon = winnerSchoolId === updatedWar.challenger_school_id;
                 const defenderWon = winnerSchoolId === updatedWar.defender_school_id;
+                const challengerSelectedIds = await getSelectedWarMemberIds(warId, updatedWar.challenger_school_id);
+                const defenderSelectedIds = await getSelectedWarMemberIds(warId, updatedWar.defender_school_id);
+
+                const notifySideAIds = challengerSelectedIds && challengerSelectedIds.length ? challengerSelectedIds : sideAIds;
+                const notifySideBIds = defenderSelectedIds && defenderSelectedIds.length ? defenderSelectedIds : sideBIds;
+
                 await notifyGroup(
-                    sideAIds,
+                    notifySideAIds,
                     challengerWon ? "Victory! War won" : defenderWon ? "War finished: Defeat" : "War finished: Draw",
                     `/war-history?schoolId=${updatedWar.challenger_school_id}`
                 );
                 await notifyGroup(
-                    sideBIds,
+                    notifySideBIds,
                     defenderWon ? "Victory! War won" : challengerWon ? "War finished: Defeat" : "War finished: Draw",
                     `/war-history?schoolId=${updatedWar.defender_school_id}`
                 );

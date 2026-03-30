@@ -26,6 +26,8 @@ const PRESETS: Record<CompressionPreset, Parameters<typeof imageCompression>[1]>
     },
 };
 
+const MB = 1024 * 1024;
+
 /**
  * Compress an image file before uploading to Supabase Storage.
  * Falls back to the original file if compression fails.
@@ -34,17 +36,44 @@ export async function compressImage(
     file: File,
     preset: CompressionPreset
 ): Promise<File> {
+    const targetBytes = Math.floor((PRESETS[preset].maxSizeMB || 1) * MB);
+
+    // Skip work when already small enough.
+    if (file.size <= targetBytes) {
+        return file;
+    }
+
     try {
         const options = PRESETS[preset];
         const compressed = await imageCompression(file, options);
 
-        // Only use compressed version if it's actually smaller
-        if (compressed.size < file.size) {
-            return new File([compressed], file.name.replace(/\.\w+$/, ".webp"), {
+        let best = compressed;
+
+        // If first pass is still large, do a stronger second pass.
+        if (compressed.size > targetBytes) {
+            const aggressive = await imageCompression(compressed, {
+                ...options,
+                maxSizeMB: Math.max(0.2, (options.maxSizeMB || 1) * 0.75),
+                maxWidthOrHeight: Math.max(900, Math.floor((options.maxWidthOrHeight || 1600) * 0.85)),
+                initialQuality: 0.72,
+                fileType: "image/webp",
+                useWebWorker: true,
+            });
+
+            if (aggressive.size < best.size) {
+                best = aggressive;
+            }
+        }
+
+        // Keep compressed file whenever it improves size or when original was oversized.
+        if (best.size < file.size || file.size > targetBytes) {
+            const originalName = file.name || "image.jpg";
+            return new File([best], originalName.replace(/\.\w+$/, ".webp"), {
                 type: "image/webp",
                 lastModified: Date.now(),
             });
         }
+
         return file;
     } catch (err) {
         console.warn("[compressImage] Compression failed, using original:", err);

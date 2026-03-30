@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
+import { getSelectedWarMemberIds } from "@/lib/warRoster";
 
 async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
     if (!authHeader) return null;
@@ -72,6 +73,9 @@ export async function GET(req: Request) {
         const mySideQuestions: string[] = isChallenger ? (war.challenger_questions || []) : (war.defender_questions || []);
         const oppSideQuestions: string[] = isChallenger ? (war.defender_questions || []) : (war.challenger_questions || []);
         const requiredPicks = Number(war.war_format) || 5;
+        const mySchoolId = isChallenger ? war.challenger_school_id : war.defender_school_id;
+        const selectedMemberIds = await getSelectedWarMemberIds(warId, mySchoolId);
+        const isSelectedForWar = !selectedMemberIds || selectedMemberIds.includes(userId);
 
         // Get questions matching the user's class grade OR 'All' grade questions
         const { data: questions, error: qErr } = await supabaseAdmin
@@ -89,6 +93,8 @@ export async function GET(req: Request) {
             isChallenger,
             isDefender,
             isGeneral,
+            isSelectedForWar,
+            selectedRosterCount: selectedMemberIds?.length || null,
             hasLockedPicks: mySideQuestions.length >= requiredPicks,
             myPickedCount: mySideQuestions.length,
             opponentPickedCount: oppSideQuestions.length,
@@ -132,6 +138,12 @@ export async function POST(req: Request) {
 
         let isChallenger = false;
         if (member.squad_id === war.challenger_squad_id) isChallenger = true;
+        const mySchoolId = isChallenger ? war.challenger_school_id : war.defender_school_id;
+        const selectedMemberIds = await getSelectedWarMemberIds(war_id, mySchoolId);
+
+        if (selectedMemberIds && !selectedMemberIds.includes(userId)) {
+            return NextResponse.json({ error: "Only selected war members can submit prep picks." }, { status: 403 });
+        }
 
         const mySideQuestions: string[] = isChallenger ? (war.challenger_questions || []) : (war.defender_questions || []);
         const opponentSideQuestions: string[] = isChallenger ? (war.defender_questions || []) : (war.challenger_questions || []);

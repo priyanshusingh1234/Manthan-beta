@@ -3,6 +3,7 @@ import supabaseAdmin from "@/lib/supabaseAdmin";
 import { leaderboardCache } from "@/lib/leaderboardCache";
 import { createNotification } from "@/lib/createNotification";
 import { upsertProfile } from "@/lib/profiles";
+import { getSelectedWarMemberIds } from "@/lib/warRoster";
 
 async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
     if (!authHeader) return null;
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
 
         let currentWar = null;
         let mySchoolId = null;
+        let mySquadId: string | null = null;
 
         if (warId) {
             // Verify war exists and is active, and user is in one of the squads
@@ -89,7 +91,14 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: "You are not a participant in this war" }, { status: 403 });
             }
 
+            mySquadId = String(member.squad_id);
             mySchoolId = isChallenger ? war.challenger_school_id : war.defender_school_id;
+            const selectedMemberIds = await getSelectedWarMemberIds(warId, mySchoolId);
+
+            if (selectedMemberIds && !selectedMemberIds.includes(userId)) {
+                return NextResponse.json({ error: "General did not select you for this war lineup." }, { status: 403 });
+            }
+
             const myQuestionIds: string[] = isChallenger ? (war.defender_questions || []) : (war.challenger_questions || []);
 
             if (!myQuestionIds.includes(questionId)) {
@@ -299,24 +308,29 @@ export async function POST(req: Request) {
 
                     if (allCorrect) {
                         // +5 all-correct bonus to every squad member
-                        const { data: member } = await supabaseAdmin.from("squad_members").select("squad_id").eq("user_id", userId).maybeSingle();
-                        if (member) {
-                            const { data: squadUsers } = await supabaseAdmin
-                                .from("squad_members").select("user_id")
-                                .eq("squad_id", member.squad_id);
+                        if (mySquadId) {
+                            const selectedMemberIds = await getSelectedWarMemberIds(warId, mySchoolId);
+                            let recipientIds = selectedMemberIds || [];
 
-                            for (const su of (squadUsers || [])) {
-                            const { data: suResp } = await supabaseAdmin.auth.admin.getUserById(su.user_id);
-                            if (suResp?.user) {
-                                const meta = suResp.user.user_metadata || {};
-                                await supabaseAdmin.auth.admin.updateUserById(su.user_id, {
-                                    user_metadata: { ...meta, totalPoints: Math.max(0, (Number(meta.totalPoints) || 0) + 5) }
-                                });
+                            if (!recipientIds.length) {
+                                const { data: squadUsers } = await supabaseAdmin
+                                    .from("squad_members").select("user_id")
+                                    .eq("squad_id", mySquadId);
+                                recipientIds = (squadUsers || []).map((su: any) => String(su.user_id)).filter(Boolean);
+                            }
+
+                            for (const recipientId of recipientIds) {
+                                const { data: suResp } = await supabaseAdmin.auth.admin.getUserById(recipientId);
+                                if (suResp?.user) {
+                                    const meta = suResp.user.user_metadata || {};
+                                    await supabaseAdmin.auth.admin.updateUserById(recipientId, {
+                                        user_metadata: { ...meta, totalPoints: Math.max(0, (Number(meta.totalPoints) || 0) + 5) }
+                                    });
+                                }
                             }
                         }
                     }
                 }
-            }
         }
         // ────────────────────────────────────────────────
 

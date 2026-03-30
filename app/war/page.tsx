@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Link2, Search, Zap, ShieldAlert, Target, Play, Shield, User as UserIcon, Swords, AlertCircle } from "lucide-react";
+import { Link2, Search, Zap, ShieldAlert, Target, Play, Shield, User as UserIcon, Swords, AlertCircle, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function WarLobbyDynamic() {
@@ -20,6 +20,7 @@ export default function WarLobbyDynamic() {
   const [warSuccessData, setWarSuccessData] = useState<any>(null);
   const [isGeneral, setIsGeneral] = useState(false);
   const [selectedTeamSize, setSelectedTeamSize] = useState<number>(5);
+  const [selectedWarMemberIds, setSelectedWarMemberIds] = useState<string[]>([]);
   const teamSizeOptions = [5, 10, 15, 20, 25, 30];
   const [nowMs, setNowMs] = useState(Date.now());
 
@@ -51,6 +52,29 @@ export default function WarLobbyDynamic() {
     const id = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    const rosterIds = roster.map((m: any) => String(m.id));
+    if (!rosterIds.length) {
+      setSelectedWarMemberIds([]);
+      return;
+    }
+
+    setSelectedWarMemberIds((prev) => {
+      const kept = prev.filter((id) => rosterIds.includes(id));
+      let next = [...kept];
+
+      if (next.length < selectedTeamSize) {
+        const needed = selectedTeamSize - next.length;
+        const fill = rosterIds.filter((id) => !next.includes(id)).slice(0, needed);
+        next = [...next, ...fill];
+      } else if (next.length > selectedTeamSize) {
+        next = next.slice(0, selectedTeamSize);
+      }
+
+      return next;
+    });
+  }, [roster, selectedTeamSize]);
 
   const formatLiveTimeLeft = (war: any) => {
     if ((war.status === 'searching' || war.status === 'preparation') && war.declared_at) {
@@ -146,7 +170,7 @@ export default function WarLobbyDynamic() {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ team_size: selectedTeamSize }),
+        body: JSON.stringify({ team_size: selectedTeamSize, selected_member_ids: selectedWarMemberIds }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -162,6 +186,20 @@ export default function WarLobbyDynamic() {
     } finally {
       setDeclaringWar(false);
     }
+  };
+
+  const toggleWarMember = (memberId: string) => {
+    if (!isGeneral || declaringWar) return;
+
+    setSelectedWarMemberIds((prev) => {
+      if (prev.includes(memberId)) {
+        return prev.filter((id) => id !== memberId);
+      }
+      if (prev.length >= selectedTeamSize) {
+        return prev;
+      }
+      return [...prev, memberId];
+    });
   };
   const copyInviteLink = () => {
     // Generate a theoretical invite link. We will implement /api/squad/join later
@@ -179,7 +217,7 @@ export default function WarLobbyDynamic() {
 
     if (loading) {
         return (
-            <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex items-center justify-center pb-24">
+            <div className="min-h-[100svh] bg-slate-50 dark:bg-slate-950 flex items-center justify-center pb-[calc(80px+env(safe-area-inset-bottom))]">
                 <div className="w-10 h-10 border-4 border-slate-200 dark:border-slate-800 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin"></div>
             </div>
         );
@@ -187,7 +225,7 @@ export default function WarLobbyDynamic() {
 
     if (!session) {
         return (
-            <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-900 dark:text-slate-100">
+            <div className="min-h-[100svh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-5 text-center text-slate-900 dark:text-slate-100">
                 <ShieldAlert className="w-20 h-20 text-red-500 mb-6" />
                 <h1 className="text-3xl font-black mb-2 text-red-600 dark:text-red-500">RESTRICTED ACCESS</h1>
                 <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm">You must log in to access the War Room.</p>
@@ -244,18 +282,18 @@ export default function WarLobbyDynamic() {
       </div>
     )}
 
-    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-24 pt-4 sm:pt-8 md:pt-10 relative overflow-hidden">
+    <div className="min-h-[100svh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-[calc(84px+env(safe-area-inset-bottom))] pt-[calc(10px+env(safe-area-inset-top))] sm:pt-8 md:pt-10 relative overflow-hidden native-scroll">
       <div className="pointer-events-none absolute -top-32 -left-20 w-[34rem] h-[34rem] rounded-full bg-indigo-400/10 dark:bg-indigo-500/10 blur-3xl mix-blend-overlay" />
       <div className="pointer-events-none absolute top-1/3 -right-24 w-[30rem] h-[30rem] rounded-full bg-red-400/10 dark:bg-red-500/10 blur-3xl mix-blend-overlay" />
       
       {/* Header Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-8 relative z-10">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 mb-6 sm:mb-8 relative z-10 native-page-shell">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-red-600 dark:from-red-500 via-orange-600 dark:via-orange-500 to-amber-500 dark:to-amber-400 bg-clip-text text-transparent">
               WAR ROOM
             </h1>
-            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider font-bold">
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider font-bold">
               <span className="text-slate-900 dark:text-white">{schoolData?.name}</span>
               <span className="w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-700" />
               <span>{schoolData?.points} POWER</span>
@@ -267,7 +305,7 @@ export default function WarLobbyDynamic() {
               value={selectedTeamSize}
               onChange={(e) => setSelectedTeamSize(Number(e.target.value))}
               disabled={!squad || !isGeneral || declaringWar || wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-sm font-bold text-slate-700 dark:text-slate-200"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200"
               title="War team size"
             >
               {teamSizeOptions.map((size) => (
@@ -278,13 +316,14 @@ export default function WarLobbyDynamic() {
             </select>
 
             <button
-              disabled={!squad || !isGeneral || declaringWar || wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0 || roster.length < selectedTeamSize}
+              disabled={!squad || !isGeneral || declaringWar || wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0 || roster.length < selectedTeamSize || selectedWarMemberIds.length !== selectedTeamSize}
               onClick={handleDeclareWar}
-              className="w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group shadow-xl shadow-red-600/20 active:scale-95"
+              className="w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group shadow-xl shadow-red-600/20 active:scale-95"
               title={
                 !squad ? 'No squad found for your school' :
                 !isGeneral ? 'Only the General can declare war' :
                 roster.length < selectedTeamSize ? `Need at least ${selectedTeamSize} squad members` :
+                selectedWarMemberIds.length !== selectedTeamSize ? `Select exactly ${selectedTeamSize} members to deploy` :
                 wars.filter(w => ['active', 'searching', 'preparation', 'calculating'].includes(w.status)).length > 0 ? 'Already in an ongoing war' :
                 'Find and challenge a rival school'
               }
@@ -293,6 +332,11 @@ export default function WarLobbyDynamic() {
               {declaringWar ? 'Searching...' : `Declare ${selectedTeamSize}v${selectedTeamSize}`}
             </button>
           </div>
+          {isGeneral && squad && (
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 sm:mt-0 native-compact-text">
+              Deploying: <span className="text-slate-900 dark:text-white">{selectedWarMemberIds.length}/{selectedTeamSize}</span> selected.
+            </p>
+          )}
         </div>
       </div>
 
@@ -303,16 +347,16 @@ export default function WarLobbyDynamic() {
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto px-6 py-10 grid lg:grid-cols-3 gap-8 relative z-10">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-10 grid lg:grid-cols-3 gap-4 sm:gap-8 relative z-10 native-page-shell">
         {/* Left Column: My Squad */}
         <div className="lg:col-span-2 space-y-8">
           {/* Active Squad Builder */}
-          <div className="bg-gradient-to-br from-white dark:from-slate-900 via-slate-50 dark:via-slate-900 to-slate-100 dark:to-slate-950 border border-slate-200 dark:border-white/10 rounded-3xl p-8 relative overflow-hidden transition-all duration-500 hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/10 shadow-lg">
+          <div className="bg-gradient-to-br from-white dark:from-slate-900 via-slate-50 dark:via-slate-900 to-slate-100 dark:to-slate-950 border border-slate-200 dark:border-white/10 rounded-3xl p-4 sm:p-8 relative overflow-hidden transition-all duration-500 hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/10 shadow-lg native-card">
             <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 dark:bg-indigo-500/15 blur-3xl -translate-y-1/2 translate-x-1/2 rounded-full pointer-events-none" />
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 relative z-10">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 sm:mb-8 relative z-10">
               <div>
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
                   <Shield className="w-6 h-6 text-indigo-500" />
                   Elite Squad
                 </h2>
@@ -338,31 +382,36 @@ export default function WarLobbyDynamic() {
               </div>
             ) : (
               <>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 relative z-10 max-h-[62vh] sm:max-h-[500px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
                   {roster.map((member) => (
                     <motion.div
                       key={member.id}
                       whileHover={{ y: -2 }}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`p-5 rounded-2xl border bg-white dark:bg-slate-800/60 ${member.isMe ? 'border-indigo-500/50 bg-indigo-50 dark:bg-indigo-500/10 shadow-lg shadow-indigo-900/20' : 'border-slate-200 dark:border-white/10'} transition-all hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm`}
+                      onClick={() => toggleWarMember(String(member.id))}
+                      className={`p-4 sm:p-5 rounded-2xl border bg-white dark:bg-slate-800/60 ${selectedWarMemberIds.includes(String(member.id)) ? 'ring-2 ring-red-500/70 border-red-300 dark:border-red-500/40' : ''} ${member.isMe ? 'border-indigo-500/50 bg-indigo-50 dark:bg-indigo-500/10 shadow-lg shadow-indigo-900/20' : 'border-slate-200 dark:border-white/10'} ${isGeneral ? 'cursor-pointer' : ''} transition-all hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm native-card`}
                     >
                       {(() => {
                         const displayName = member?.name?.trim() || "Unknown";
+                        const selectedForWar = selectedWarMemberIds.includes(String(member.id));
                         return (
                           <>
                       <div className="flex justify-between items-start mb-4">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-black text-white shadow-lg text-lg">
                           {displayName.charAt(0).toUpperCase()}
                         </div>
-                        {member.role === "General" ? <Shield className="w-5 h-5 text-amber-500 drop-shadow-md" /> : <UserIcon className="w-5 h-5 text-slate-400 dark:text-slate-500" />}
+                        <div className="flex items-center gap-1.5">
+                          {selectedForWar && <CheckCircle2 className="w-5 h-5 text-red-500" />}
+                          {member.role === "General" ? <Shield className="w-5 h-5 text-amber-500 drop-shadow-md" /> : <UserIcon className="w-5 h-5 text-slate-400 dark:text-slate-500" />}
+                        </div>
                       </div>
                       <div className="font-bold text-slate-900 dark:text-white truncate text-lg tracking-tight">
                         {displayName}
                         {member.isMe && <span className="text-xs ml-2 text-indigo-400 bg-indigo-500/20 px-2 py-0.5 rounded-full inline-block mt-1">You</span>}
                       </div>
                       <div className="flex items-center justify-between mt-3 text-sm">
-                        <span className={`font-black uppercase tracking-wider text-[10px] ${member.role === 'General' ? 'text-amber-500' : 'text-slate-500'}`}>{member.role}</span>
+                        <span className={`font-black uppercase tracking-wider text-xs ${member.role === 'General' ? 'text-amber-500' : 'text-slate-500'}`}>{member.role}</span>
                         <span className="font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-md">{member.points} pts</span>
                       </div>
                           </>
@@ -416,10 +465,10 @@ export default function WarLobbyDynamic() {
                 </div>
               ) : (
                 wars.map(war => (
-                  <div key={war.id} className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-6 transition-colors shadow-lg ${war.status === 'searching' ? 'border-indigo-200 dark:border-indigo-500/50 hover:border-indigo-400 shadow-indigo-500/10' : war.status === 'preparation' ? 'border-amber-200 dark:border-amber-500/50 hover:border-amber-400 shadow-amber-500/10' : war.status === 'calculating' ? 'border-fuchsia-200 dark:border-fuchsia-500/50 hover:border-fuchsia-400 shadow-fuchsia-500/10' : 'border-red-200 dark:border-red-500/40 hover:border-red-400 shadow-red-500/10'}`}>
+                  <div key={war.id} className={`bg-white dark:bg-slate-900 border rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 transition-colors shadow-lg ${war.status === 'searching' ? 'border-indigo-200 dark:border-indigo-500/50 hover:border-indigo-400 shadow-indigo-500/10' : war.status === 'preparation' ? 'border-amber-200 dark:border-amber-500/50 hover:border-amber-400 shadow-amber-500/10' : war.status === 'calculating' ? 'border-fuchsia-200 dark:border-fuchsia-500/50 hover:border-fuchsia-400 shadow-fuchsia-500/10' : 'border-red-200 dark:border-red-500/40 hover:border-red-400 shadow-red-500/10'}`}>
                     <div className="flex items-center gap-4 sm:gap-6 w-full min-w-0">
                       <div className="text-center flex flex-col items-center flex-shrink-0">
-                        <div className={`text-[9px] font-black uppercase tracking-widest mb-1.5 px-2 py-0.5 rounded inline-block ${war.status === 'searching' ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20' : war.status === 'preparation' ? 'text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/20' : war.status === 'calculating' ? 'text-fuchsia-600 dark:text-fuchsia-400 bg-fuchsia-50 dark:bg-fuchsia-500/20' : 'text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/20'}`}>
+                        <div className={`text-[10px] font-black uppercase tracking-widest mb-1.5 px-2 py-0.5 rounded inline-block ${war.status === 'searching' ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/20' : war.status === 'preparation' ? 'text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/20' : war.status === 'calculating' ? 'text-fuchsia-600 dark:text-fuchsia-400 bg-fuchsia-50 dark:bg-fuchsia-500/20' : 'text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/20'}`}>
                           {war.status === 'searching' ? 'QUEUE' : war.isChallenger ? 'INITIATOR' : 'TARGET'}
                         </div>
                         <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center border bg-slate-50 dark:bg-slate-800 ${war.status === 'searching' ? 'border-indigo-200 dark:border-indigo-500/30 text-indigo-500 dark:text-indigo-400 animate-pulse' : war.status === 'calculating' ? 'border-fuchsia-200 dark:border-fuchsia-500/30 text-fuchsia-500 dark:text-fuchsia-400 animate-pulse' : 'border-red-200 dark:border-red-500/30 text-red-500 shadow-inner'}`}>
@@ -429,10 +478,10 @@ export default function WarLobbyDynamic() {
                       <div className="min-w-0 flex-1">
                         <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white truncate">{war.opponent || 'Finding Rival...'}</h4>
                         <div className="flex items-center gap-3 mt-1.5">
-                           <span className={`text-[9px] uppercase tracking-widest font-black px-2 py-0.5 rounded w-fit ${war.status === 'searching' ? 'bg-indigo-500/20 text-indigo-400' : war.status === 'preparation' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : war.status === 'calculating' ? 'bg-fuchsia-500/20 text-fuchsia-400 animate-pulse' : 'bg-red-500/20 text-red-500'}`}>
+                           <span className={`text-[10px] uppercase tracking-widest font-black px-2 py-0.5 rounded w-fit ${war.status === 'searching' ? 'bg-indigo-500/20 text-indigo-400' : war.status === 'preparation' ? 'bg-amber-500/20 text-amber-500 animate-pulse' : war.status === 'calculating' ? 'bg-fuchsia-500/20 text-fuchsia-400 animate-pulse' : 'bg-red-500/20 text-red-500'}`}>
                              {war.status === 'searching' ? 'MATCHMAKING' : war.status === 'preparation' ? 'STRATEGY' : war.status === 'calculating' ? 'CALCULATING' : 'COMBAT'}
                            </span>
-                           <span className="text-[10px] sm:text-xs font-mono font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                           <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                              ⏱ {formatLiveTimeLeft(war)}
                            </span>
                         </div>
@@ -467,7 +516,7 @@ export default function WarLobbyDynamic() {
 
         {/* Right Column: Global Standings Widget */}
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-white dark:from-slate-900 to-slate-50 dark:to-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden h-full">
+          <div className="bg-gradient-to-br from-white dark:from-slate-900 to-slate-50 dark:to-slate-950 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-6 shadow-xl relative overflow-hidden h-full native-card">
             <div className="absolute top-0 right-0 w-64 h-64 bg-fuchsia-100 dark:bg-fuchsia-500/10 blur-3xl rounded-full pointer-events-none -mr-32 -mt-32" />
 
             <h3 className="text-lg font-black text-slate-900 dark:text-white mb-6 border-b border-slate-200 dark:border-white/5 pb-4 flex items-center gap-2">
