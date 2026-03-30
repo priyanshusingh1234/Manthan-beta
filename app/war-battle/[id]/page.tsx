@@ -327,7 +327,7 @@ export default function WarBattleDashboard() {
     }
 
     return (
-        <div className="min-h-[100svh] bg-slate-50 dark:bg-[#0a0e1a] text-slate-900 dark:text-slate-100 pb-[calc(82px+env(safe-area-inset-bottom))] pt-[env(safe-area-inset-top)] relative overflow-x-hidden native-scroll">
+        <div className="min-h-[100svh] bg-slate-50 dark:bg-[#0a0e1a] text-slate-900 dark:text-slate-100 pb-[calc(112px+env(safe-area-inset-bottom))] pt-[env(safe-area-inset-top)] relative overflow-x-hidden native-scroll">
 
             {/* ─── Ambient background ───────────────────── */}
             <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">

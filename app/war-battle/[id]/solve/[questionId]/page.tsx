@@ -182,7 +182,7 @@ export default function WarSolvePage() {
         || (question?.image_path ? supabase.storage.from("question-images").getPublicUrl(question.image_path).data.publicUrl : null);
 
     return (
-        <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-6 pb-[calc(82px+env(safe-area-inset-bottom))] native-page-shell native-scroll">
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-6 pb-[calc(112px+env(safe-area-inset-bottom))] native-page-shell native-scroll">
             {/* Back + War context bar */}
             <div className="flex items-center justify-between mb-5">
                 <button onClick={() => router.back()} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">

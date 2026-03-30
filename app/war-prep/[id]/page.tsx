@@ -154,7 +154,7 @@ export default function WarPrepPage() {
     }
 
     return (
-        <div className="min-h-[100svh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-[calc(82px+env(safe-area-inset-bottom))] pt-[calc(10px+env(safe-area-inset-top))] md:pt-12 relative overflow-hidden native-scroll">
+        <div className="min-h-[100svh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-[calc(112px+env(safe-area-inset-bottom))] pt-[calc(10px+env(safe-area-inset-top))] md:pt-12 relative overflow-x-hidden native-scroll">
             <div className="pointer-events-none absolute -top-32 left-1/4 w-[34rem] h-[34rem] rounded-full bg-amber-400/10 dark:bg-amber-500/10 blur-3xl mix-blend-overlay" />
             
             <div className="max-w-6xl mx-auto px-3 sm:px-6 mb-6 sm:mb-8 relative z-10 native-page-shell">

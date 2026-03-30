@@ -92,9 +92,13 @@ export default function UpdateChecker() {
     }, []);
 
     const handleUpdate = () => {
-        if (updateInfo?.url) {
-            window.open(updateInfo.url, '_blank');
-        }
+        if (!updateInfo?.url || typeof window === 'undefined') return;
+
+        const targetUrl = new URL(updateInfo.url, window.location.origin).toString();
+
+        // In Android WebView, window.open('_blank') is often blocked/no-op.
+        // Use same-window navigation so APK download reliably starts.
+        window.location.assign(targetUrl);
     };
 
     const handleClose = () => {

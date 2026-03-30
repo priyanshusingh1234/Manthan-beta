@@ -282,7 +282,7 @@ export default function WarLobbyDynamic() {
       </div>
     )}
 
-    <div className="min-h-[100svh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-[calc(84px+env(safe-area-inset-bottom))] pt-[calc(10px+env(safe-area-inset-top))] sm:pt-8 md:pt-10 relative overflow-hidden native-scroll">
+    <div className="min-h-[100svh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-[calc(112px+env(safe-area-inset-bottom))] pt-[calc(10px+env(safe-area-inset-top))] sm:pt-8 md:pt-10 relative overflow-x-hidden native-scroll">
       <div className="pointer-events-none absolute -top-32 -left-20 w-[34rem] h-[34rem] rounded-full bg-indigo-400/10 dark:bg-indigo-500/10 blur-3xl mix-blend-overlay" />
       <div className="pointer-events-none absolute top-1/3 -right-24 w-[30rem] h-[30rem] rounded-full bg-red-400/10 dark:bg-red-500/10 blur-3xl mix-blend-overlay" />
       
