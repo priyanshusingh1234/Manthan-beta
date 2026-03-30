@@ -36,6 +36,8 @@ export default function UpdateChecker() {
     const [isVisible, setIsVisible] = useState(false);
     const [isForceUpdate, setIsForceUpdate] = useState(false);
 
+    const [updateError, setUpdateError] = useState(false);
+
     useEffect(() => {
         const checkUpdate = async () => {
             const isNative = Capacitor.isNativePlatform();
@@ -104,55 +106,52 @@ export default function UpdateChecker() {
         const targetUrl = updateInfo.url;
 
         if (Capacitor.isNativePlatform()) {
+            let browserSuccess = false;
             try {
                 const { Browser } = await import('@capacitor/browser');
                 await Browser.open({ url: targetUrl });
-                return;
-            } catch {
-                // Browser plugin may be unavailable on older APK builds.
-                // Fall through to additional native-safe fallbacks.
+                browserSuccess = true;
+            } catch (err) {
+                console.warn("Browser plugin unavailable:", err);
             }
 
-            try {
-                const appPlugin: any = App;
-                if (typeof appPlugin?.openUrl === 'function') {
-                    await appPlugin.openUrl({ url: targetUrl });
-                    return;
-                }
-            } catch {
-                // Ignore and continue to web fallbacks.
-            }
+            if (browserSuccess) return;
 
-            try {
-                const popup = window.open(targetUrl, '_system');
-                if (popup) return;
-            } catch {
-                // Ignore and continue.
-            }
+            // Mark error state so manual link appears if deep linking fails.
+            setTimeout(() => setUpdateError(true), 1500);
 
-            try {
-                const popup = window.open(targetUrl, '_blank');
-                if (popup) return;
-            } catch {
-                // Ignore and continue.
-            }
-
-            // Older Android WebViews can ignore direct APK navigation. Try an intent handoff.
             try {
                 const platform = Capacitor.getPlatform();
                 if (platform === 'android') {
                     const parsed = new URL(targetUrl);
                     const scheme = parsed.protocol.replace(':', '');
-                    const intentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${scheme};action=android.intent.action.VIEW;end`;
+                    const intentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${scheme};action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end;`;
                     window.location.href = intentUrl;
-                    return;
+                    
+                    await new Promise(r => setTimeout(r, 500));
                 }
-            } catch {
-                // Ignore and continue to final fallback.
+            } catch (err) {
+                console.warn("Intent failed:", err);
             }
+
+            try {
+                const a = document.createElement('a');
+                a.href = targetUrl;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                await new Promise(r => setTimeout(r, 500));
+            } catch (err) {
+                console.warn("Anchor fallback failed:", err);
+            }
+        } else {
+            // Web fallback delay for standard redirect
+            setTimeout(() => setUpdateError(true), 1500);
         }
 
-        // Fallback for web and native browser-open failures.
         window.location.href = targetUrl;
     };
 
@@ -242,6 +241,34 @@ export default function UpdateChecker() {
                                     >
                                         Maybe Later
                                     </button>
+                                )}
+
+                                {updateError && updateInfo?.url && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        className="mt-2 p-3 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 text-center"
+                                    >
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                                            If the update didn't start automatically, copy and visit this link in your browser:
+                                        </p>
+                                        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                                            <input 
+                                                readOnly 
+                                                value={updateInfo.url} 
+                                                className="flex-1 bg-transparent text-xs text-slate-700 dark:text-slate-300 outline-none w-full" 
+                                            />
+                                            <button 
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(updateInfo.url);
+                                                    alert("Link copied!");
+                                                }}
+                                                className="text-xs font-bold text-indigo-600 dark:text-indigo-400 px-2 py-1 bg-indigo-50 dark:bg-indigo-900/40 rounded"
+                                            >
+                                                Copy
+                                            </button>
+                                        </div>
+                                    </motion.div>
                                 )}
                             </div>
                         </div>
