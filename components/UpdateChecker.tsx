@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Download, X, AlertTriangle, Sparkles, ChevronRight } from 'lucide-react';
 import { CURRENT_VERSION } from '@/lib/version';
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 interface VersionConfig {
     version: string;
@@ -12,7 +13,22 @@ interface VersionConfig {
     name: string;
     description: string;
     url: string;
+    downloadUrl?: string;
     force_update?: boolean;
+}
+
+function isVersionGreater(latestVersion: string, currentVersion: string): boolean {
+    const latestParts = latestVersion.split('.').map(Number);
+    const currentParts = currentVersion.split('.').map(Number);
+
+    for (let i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
+        const latest = latestParts[i] || 0;
+        const current = currentParts[i] || 0;
+        if (latest > current) return true;
+        if (latest < current) return false;
+    }
+
+    return false;
 }
 
 export default function UpdateChecker() {
@@ -22,59 +38,49 @@ export default function UpdateChecker() {
 
     useEffect(() => {
         const checkUpdate = async () => {
-            // Only check on native platforms or if we want it for web too
-            // User requested for Android app specifically
-            if (!Capacitor.isNativePlatform() && process.env.NODE_ENV !== 'development') return;
+            const isNative = Capacitor.isNativePlatform();
+            const isAndroidBrowser = typeof window !== 'undefined' && /android/i.test(window.navigator.userAgent);
+
+            // Keep checks focused on native app, but allow Android browser and local development.
+            if (!isNative && !isAndroidBrowser && process.env.NODE_ENV !== 'development') return;
 
             try {
+                let currentVersion = CURRENT_VERSION;
+
+                // Prefer installed binary version for native apps to avoid comparing against server JS version.
+                if (isNative) {
+                    try {
+                        const info = await App.getInfo();
+                        if (info?.version) {
+                            currentVersion = info.version;
+                        }
+                    } catch {
+                        // Fall back to CURRENT_VERSION when native app info is unavailable.
+                    }
+                }
+
                 // Fetch the remote version config
                 // Using a cache breaker to ensure we get the latest
                 const response = await fetch(`/app-version.json?t=${Date.now()}`);
                 if (!response.ok) return;
 
                 const data: VersionConfig = await response.json();
+                const downloadUrl = data.url || data.downloadUrl;
+                if (!downloadUrl) return;
 
-                // Simple version comparison (e.g. "0.0.1" < "0.0.2")
-                // For more complex semver, we'd need a helper, but this works for basic tags
-                if (data.version !== CURRENT_VERSION) {
-                    // Check if current version is less than latest version
-                    // Note: This is a very basic comparison. 
-                    const latestParts = data.version.split('.').map(Number);
-                    const currentParts = CURRENT_VERSION.split('.').map(Number);
+                // Compare remote latest version against installed/current version.
+                const hasNewer = isVersionGreater(data.version, currentVersion);
 
-                    let hasNewer = false;
-                    for (let i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
-                        const latest = latestParts[i] || 0;
-                        const current = currentParts[i] || 0;
-                        if (latest > current) {
-                            hasNewer = true;
-                            break;
-                        }
-                        if (latest < current) break;
-                    }
+                if (hasNewer) {
+                    setUpdateInfo({ ...data, url: downloadUrl });
+                    setIsVisible(true);
 
-                    if (hasNewer) {
-                        setUpdateInfo(data);
-                        setIsVisible(true);
-                        
-                        // Check for force update
-                        if (data.force_update) {
-                            setIsForceUpdate(true);
-                        } else if (data.min_version) {
-                            // If current version is below min_version, force update
-                            const minParts = data.min_version.split('.').map(Number);
-                            let belowMin = false;
-                            for (let i = 0; i < Math.max(minParts.length, currentParts.length); i++) {
-                                const min = minParts[i] || 0;
-                                const current = currentParts[i] || 0;
-                                if (min > current) {
-                                    belowMin = true;
-                                    break;
-                                }
-                                if (min < current) break;
-                            }
-                            if (belowMin) setIsForceUpdate(true);
-                        }
+                    // Check for force update
+                    if (data.force_update) {
+                        setIsForceUpdate(true);
+                    } else if (data.min_version && isVersionGreater(data.min_version, currentVersion)) {
+                        // If current version is below min_version, force update.
+                        setIsForceUpdate(true);
                     }
                 }
             } catch (error) {
