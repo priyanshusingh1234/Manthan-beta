@@ -69,8 +69,9 @@ export default function UpdateChecker() {
 
                 // Compare remote latest version against installed/current version.
                 const hasNewer = isVersionGreater(data.version, currentVersion);
+                const shouldShowUpdate = hasNewer || !!data.force_update;
 
-                if (hasNewer) {
+                if (shouldShowUpdate) {
                     setUpdateInfo({ ...data, url: downloadUrl });
                     setIsVisible(true);
 
