@@ -36,8 +36,14 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
 // On the backend (Vercel), use the real URL.
 // On the frontend (Browser/App WebView), use our custom proxy to bypass ISP blocks (like Jio 5G)
 const realSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://127.0.0.1';
-const supabaseRuntimeUrl = typeof window !== 'undefined'
-  ? `${window.location.origin}/api/supabase-proxy`
+const isBrowser = typeof window !== 'undefined';
+const isNative = isBrowser && !!(window as any).Capacitor?.isNativePlatform?.();
+const proxyBaseUrl = isNative 
+  ? (process.env.NEXT_PUBLIC_APP_URL || 'https://manthan-beta-c975.vercel.app')
+  : (isBrowser ? window.location.origin : '');
+
+const supabaseRuntimeUrl = isBrowser
+  ? `${proxyBaseUrl}/api/supabase-proxy`
   : realSupabaseUrl;
 
 export const supabase = createClient(supabaseRuntimeUrl, supabaseAnonKey, {
