@@ -39,10 +39,9 @@ export default function UpdateChecker() {
     useEffect(() => {
         const checkUpdate = async () => {
             const isNative = Capacitor.isNativePlatform();
-            const isAndroidBrowser = typeof window !== 'undefined' && /android/i.test(window.navigator.userAgent);
 
-            // Keep checks focused on native app, but allow Android browser and local development.
-            if (!isNative && !isAndroidBrowser && process.env.NODE_ENV !== 'development') return;
+            // Native update prompt should appear only inside the installed native app.
+            if (!isNative && process.env.NODE_ENV !== 'development') return;
 
             try {
                 let currentVersion = CURRENT_VERSION;
