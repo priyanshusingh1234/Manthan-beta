@@ -11,7 +11,6 @@ import { App } from '@capacitor/app';
 import { StatusBar } from '@capacitor/status-bar';
 import { ActivityTracker } from '@/lib/activityTracker';
 import CongratsBadgeModal from '@/components/CongratsBadgeModal';
-import UpdateChecker from '@/components/UpdateChecker';
 
 let nativePushInitialized = false;
 
@@ -322,7 +321,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </div>
       {isAuthenticated && <PushNotificationPrompt />}
       {isAuthenticated && <CongratsBadgeModal />}
-      <UpdateChecker />
     </>
   );
 }
