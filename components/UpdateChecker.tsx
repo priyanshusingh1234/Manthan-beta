@@ -109,12 +109,51 @@ export default function UpdateChecker() {
                 await Browser.open({ url: targetUrl });
                 return;
             } catch {
-                // Fall through to location navigation fallback.
+                // Browser plugin may be unavailable on older APK builds.
+                // Fall through to additional native-safe fallbacks.
+            }
+
+            try {
+                const appPlugin: any = App;
+                if (typeof appPlugin?.openUrl === 'function') {
+                    await appPlugin.openUrl({ url: targetUrl });
+                    return;
+                }
+            } catch {
+                // Ignore and continue to web fallbacks.
+            }
+
+            try {
+                const popup = window.open(targetUrl, '_system');
+                if (popup) return;
+            } catch {
+                // Ignore and continue.
+            }
+
+            try {
+                const popup = window.open(targetUrl, '_blank');
+                if (popup) return;
+            } catch {
+                // Ignore and continue.
+            }
+
+            // Older Android WebViews can ignore direct APK navigation. Try an intent handoff.
+            try {
+                const platform = Capacitor.getPlatform();
+                if (platform === 'android') {
+                    const parsed = new URL(targetUrl);
+                    const scheme = parsed.protocol.replace(':', '');
+                    const intentUrl = `intent://${parsed.host}${parsed.pathname}${parsed.search}#Intent;scheme=${scheme};action=android.intent.action.VIEW;end`;
+                    window.location.href = intentUrl;
+                    return;
+                }
+            } catch {
+                // Ignore and continue to final fallback.
             }
         }
 
         // Fallback for web and native browser-open failures.
-        window.location.assign(targetUrl);
+        window.location.href = targetUrl;
     };
 
     const handleClose = () => {
