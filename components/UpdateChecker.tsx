@@ -39,6 +39,7 @@ export default function UpdateChecker() {
     useEffect(() => {
         const checkUpdate = async () => {
             const isNative = Capacitor.isNativePlatform();
+            const remoteBaseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://manthan-beta-c975.vercel.app').replace(/\/$/, '');
 
             // Native update prompt should appear only inside the installed native app.
             if (!isNative && process.env.NODE_ENV !== 'development') return;
@@ -60,11 +61,17 @@ export default function UpdateChecker() {
 
                 // Fetch the remote version config
                 // Using a cache breaker to ensure we get the latest
-                const response = await fetch(`/app-version.json?t=${Date.now()}`);
+                const versionConfigUrl = isNative
+                    ? `${remoteBaseUrl}/app-version.json?t=${Date.now()}`
+                    : `/app-version.json?t=${Date.now()}`;
+                const response = await fetch(versionConfigUrl);
                 if (!response.ok) return;
 
                 const data: VersionConfig = await response.json();
-                const downloadUrl = data.url || data.downloadUrl;
+                const rawDownloadUrl = data.url || data.downloadUrl;
+                const downloadUrl = rawDownloadUrl
+                    ? new URL(rawDownloadUrl, remoteBaseUrl).toString()
+                    : null;
                 if (!downloadUrl) return;
 
                 // Compare remote latest version against installed/current version.
@@ -91,13 +98,22 @@ export default function UpdateChecker() {
         checkUpdate();
     }, []);
 
-    const handleUpdate = () => {
+    const handleUpdate = async () => {
         if (!updateInfo?.url || typeof window === 'undefined') return;
 
-        const targetUrl = new URL(updateInfo.url, window.location.origin).toString();
+        const targetUrl = updateInfo.url;
 
-        // In Android WebView, window.open('_blank') is often blocked/no-op.
-        // Use same-window navigation so APK download reliably starts.
+        if (Capacitor.isNativePlatform()) {
+            try {
+                const { Browser } = await import('@capacitor/browser');
+                await Browser.open({ url: targetUrl });
+                return;
+            } catch {
+                // Fall through to location navigation fallback.
+            }
+        }
+
+        // Fallback for web and native browser-open failures.
         window.location.assign(targetUrl);
     };
 
