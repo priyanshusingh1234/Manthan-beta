@@ -7,6 +7,7 @@ import {
   Clock,
   Play,
   Zap,
+  Share2,
   MoreHorizontal,
   Trash2,
   Users,
@@ -117,6 +118,32 @@ export default function QuestionCard({ q }: { q: Question }) {
       month: "short",
     })
     : "";
+
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/questions/${q.id}`;
+    const sharePayload = {
+      title: q.title || "Dheeyudha Question",
+      text: `Try this ${q.subject || ""} question on Dheeyudha`,
+      url: shareUrl,
+    };
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share(sharePayload);
+        return;
+      }
+
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        alert("Question link copied");
+        return;
+      }
+
+      window.prompt("Copy this question link", shareUrl);
+    } catch {
+      // User cancel or unavailable share target; keep UX silent.
+    }
+  };
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this question?")) return;
@@ -309,12 +336,24 @@ export default function QuestionCard({ q }: { q: Question }) {
 
       {/* CARD FOOTER: Action Bar */}
       <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-1 sm:pt-2 flex items-center justify-between gap-3 sm:gap-4">
-        {/* Bounty Badge */}
-        <div className="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 text-amber-900 dark:text-amber-300 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-amber-100/80 dark:border-amber-900/50 shadow-sm shrink-0">
-          <div className="bg-amber-100 dark:bg-amber-900/50 p-1 rounded-full">
-            <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-amber-500 text-amber-500 dark:text-amber-400" />
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Bounty Badge */}
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 text-amber-900 dark:text-amber-300 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-amber-100/80 dark:border-amber-900/50 shadow-sm shrink-0">
+            <div className="bg-amber-100 dark:bg-amber-900/50 p-1 rounded-full">
+              <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-amber-500 text-amber-500 dark:text-amber-400" />
+            </div>
+            <span className="text-[10px] sm:text-xs font-bold">{q.points ?? 0} <span className="opacity-70 font-normal ml-0.5 hidden sm:inline">Points</span></span>
           </div>
-          <span className="text-[10px] sm:text-xs font-bold">{q.points ?? 0} <span className="opacity-70 font-normal ml-0.5 hidden sm:inline">Points</span></span>
+
+          <button
+            type="button"
+            onClick={handleShare}
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-[10px] sm:text-xs font-bold uppercase tracking-wider"
+            aria-label="Share question"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Share</span>
+          </button>
         </div>
 
         {/* Action Button — hidden for teachers */}

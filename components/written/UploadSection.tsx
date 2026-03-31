@@ -33,6 +33,8 @@ export default function UploadSection({
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [isCapturing, setIsCapturing] = useState(false);
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    const fallbackInputRef = useRef<HTMLInputElement | null>(null);
+    const autoCameraAttemptedRef = useRef(false);
 
     useEffect(() => {
         setIsMobile(/iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && /Macintosh/.test(navigator.userAgent)));
@@ -101,6 +103,20 @@ export default function UploadSection({
             setCameraLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (!isMobile || previewUrl || showCamera || cameraLoading) return;
+        if (autoCameraAttemptedRef.current) return;
+
+        autoCameraAttemptedRef.current = true;
+
+        if (useCapacitorAndroidCamera || hasCameraSupport) {
+            void openCamera();
+            return;
+        }
+
+        fallbackInputRef.current?.click();
+    }, [isMobile, previewUrl, showCamera, cameraLoading, useCapacitorAndroidCamera, hasCameraSupport]);
 
     const closeCamera = () => {
         if (stream) {
@@ -215,9 +231,11 @@ export default function UploadSection({
                         <label htmlFor="answer-upload-fallback" className="block text-center text-xs font-semibold text-slate-500 dark:text-slate-400 cursor-pointer hover:text-violet-600 dark:hover:text-violet-400">
                             Use gallery instead
                             <input
+                                ref={fallbackInputRef}
                                 id="answer-upload-fallback"
                                 type="file"
                                 accept="image/*"
+                                capture="environment"
                                 className="sr-only"
                                 onChange={onFileChange}
                             />
