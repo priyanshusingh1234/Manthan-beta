@@ -1,9 +1,69 @@
+import type { Metadata } from 'next';
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import SolveQuestionClient from "./SolveQuestionClient";
 import WrittenSolveClient from "@/components/WrittenSolveClient";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+const APP_URL = 'https://dheeyudhha-pi.vercel.app';
+
+export async function generateMetadata({
+    params
+}: {
+    params: { id: string }
+}): Promise<Metadata> {
+    const { id } = params;
+    const { data: q } = await supabaseAdmin
+        .from("questions")
+        .select("id, title, body, subject, class_grade, points, difficulty, image_url")
+        .eq("id", id)
+        .maybeSingle();
+
+    if (!q) {
+        return {
+            title: 'Question Not Found | Dheeyudha',
+            description: 'This question is not available.',
+        };
+    }
+
+    const title = `${q.title} | Dheeyudha Question`;
+    const description = (q.body || `Class ${q.class_grade || '?'} ${q.subject || 'Question'} · ${q.points || 0} points`)
+        .toString()
+        .slice(0, 160);
+    const image = q.image_url
+        ? (q.image_url.startsWith('http') ? q.image_url : `${APP_URL}${q.image_url}`)
+        : `${APP_URL}/og-social.png`;
+    const canonical = `${APP_URL}/questions/${id}`;
+
+    return {
+        title,
+        description,
+        alternates: {
+            canonical,
+        },
+        openGraph: {
+            title,
+            description,
+            url: canonical,
+            siteName: 'Dheeyudha',
+            type: 'article',
+            images: [
+                {
+                    url: image,
+                    width: 1200,
+                    height: 630,
+                    alt: q.title || 'Dheeyudha Question',
+                },
+            ],
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title,
+            description,
+            images: [image],
+        },
+    };
+}
 
 export default async function SolveQuestionPage({
     params

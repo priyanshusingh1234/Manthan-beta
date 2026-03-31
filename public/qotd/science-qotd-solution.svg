@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <rect width="1200" height="1600" fill="#f8fafc" />
+  <text x="70" y="90" fill="#0f172a" font-size="54" font-family="Arial, sans-serif" font-weight="800">Science QOTD Solution (Class 10)</text>
+  <text x="70" y="160" fill="#334155" font-size="34" font-family="Arial, sans-serif">Given: V = 6 V, R = 12 ohm, t = 10 min = 600 s</text>
+
+  <text x="70" y="270" fill="#0f172a" font-size="40" font-family="Arial, sans-serif" font-weight="700">1) Current</text>
+  <text x="70" y="325" fill="#1e293b" font-size="34" font-family="Arial, sans-serif">I = V/R = 6/12 = 0.5 A</text>
+
+  <text x="70" y="430" fill="#0f172a" font-size="40" font-family="Arial, sans-serif" font-weight="700">2) Charge flown</text>
+  <text x="70" y="485" fill="#1e293b" font-size="34" font-family="Arial, sans-serif">Q = I t = 0.5 x 600 = 300 C</text>
+
+  <text x="70" y="590" fill="#0f172a" font-size="40" font-family="Arial, sans-serif" font-weight="700">3) Electrical energy</text>
+  <text x="70" y="645" fill="#1e293b" font-size="34" font-family="Arial, sans-serif">E = V I t = 6 x 0.5 x 600 = 1800 J</text>
+
+  <rect x="70" y="730" width="1060" height="220" rx="20" fill="#dbeafe" />
+  <text x="100" y="805" fill="#0f172a" font-size="38" font-family="Arial, sans-serif" font-weight="800">Final Answer</text>
+  <text x="100" y="870" fill="#1e3a8a" font-size="34" font-family="Arial, sans-serif">Current = 0.5 A, Charge = 300 C, Energy = 1800 J</text>
+</svg>
