@@ -94,7 +94,14 @@ export async function POST(request: Request) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { followingId } = await request.json();
+    let followingId: string | undefined;
+    try {
+        const body = await request.json();
+        followingId = body?.followingId;
+    } catch {
+        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
     if (!followingId || followingId === user.id) {
         return NextResponse.json({ error: 'Invalid followingId' }, { status: 400 });
     }
@@ -116,16 +123,21 @@ export async function POST(request: Request) {
         const followerUsername = user.user_metadata?.username || null;
         const followerAvatar = user.user_metadata?.avatar_url || null;
 
-        await createNotification({
-            userId: followingId,
-            type: 'new_follower',
-            title: `${followerName} started following you`,
-            body: `@${followerUsername || 'someone'} is now following you on Dheeyudha.`,
-            href: followerUsername ? `/user/${followerUsername}` : null,
-            actorId: user.id,
-            actorName: followerName,
-            actorAvatar: followerAvatar,
-        });
+        try {
+            await createNotification({
+                userId: followingId,
+                type: 'new_follower',
+                title: `${followerName} started following you`,
+                body: `@${followerUsername || 'someone'} is now following you on Dheeyudha.`,
+                href: followerUsername ? `/user/${followerUsername}` : null,
+                actorId: user.id,
+                actorName: followerName,
+                actorAvatar: followerAvatar,
+            });
+        } catch (notifyErr) {
+            // Follow should still succeed even if notification plumbing fails unexpectedly.
+            console.error('[POST /api/follows] Notification error:', notifyErr);
+        }
     }
 
     return NextResponse.json({ success: true });

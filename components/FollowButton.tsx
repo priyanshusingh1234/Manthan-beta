@@ -103,7 +103,16 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to follow user');
+                    let apiError = 'Failed to follow user';
+                    try {
+                        const body = await response.json();
+                        if (body?.error) {
+                            apiError = body.error;
+                        }
+                    } catch {
+                        // ignore parse failures and use default message
+                    }
+                    throw new Error(apiError);
                 }
             }
         } catch (err) {

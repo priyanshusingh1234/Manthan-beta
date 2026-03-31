@@ -53,14 +53,17 @@ export default function SuggestedUsersCard() {
     }, []);
 
     const handleFollow = async (suggestedId: string) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+            alert('Please login to follow users.');
+            return;
+        }
+
         // Optimistic UI update
         setFollowing(prev => new Set(prev).add(suggestedId));
 
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
         try {
-            await fetch('/api/follows', {
+            const response = await fetch('/api/follows', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -68,6 +71,10 @@ export default function SuggestedUsersCard() {
                 },
                 body: JSON.stringify({ followingId: suggestedId })
             });
+
+            if (!response.ok) {
+                throw new Error(`Follow request failed with status ${response.status}`);
+            }
         } catch (err) {
             console.error('Follow failed', err);
             // Revert if API fails
