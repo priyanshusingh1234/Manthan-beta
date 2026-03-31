@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Bell, CheckCheck, Trash2, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles, ArrowLeft, Swords, Users } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles, ArrowLeft, Swords, Users, BarChart3 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -40,6 +40,7 @@ function NotifIcon({ type }: { type: string }) {
     if (type === 'points_earned') return <div className={`${base} bg-amber-100 text-amber-600`}><Zap className="w-5 h-5" /></div>;
     if (type === 'new_question') return <div className={`${base} bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400`}><BookOpen className="w-5 h-5" /></div>;
     if (type === 'coop_challenge') return <div className={`${base} bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400`}><Users className="w-5 h-5" /></div>;
+    if (type === 'weekly_report') return <div className={`${base} bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400`}><BarChart3 className="w-5 h-5" /></div>;
     return <div className={`${base} bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400`}><Sparkles className="w-5 h-5" /></div>;
 }
 

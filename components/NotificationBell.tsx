@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, CheckCheck, Trash2, X, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles, Swords, MessageSquare, Loader2, ArrowRight, Users } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, X, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles, Swords, MessageSquare, Loader2, ArrowRight, Users, BarChart3 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -38,6 +38,7 @@ function NotifIcon({ type }: { type: string }) {
     if (type === 'points_earned') return <div className={`${base} bg-amber-100 text-amber-600`}><Zap className="w-4 h-4" /></div>;
     if (type === 'new_question') return <div className={`${base} bg-indigo-100 text-indigo-600`}><BookOpen className="w-4 h-4" /></div>;
     if (type === 'coop_challenge') return <div className={`${base} bg-indigo-100 text-indigo-600`}><Users className="w-4 h-4" /></div>;
+    if (type === 'weekly_report') return <div className={`${base} bg-cyan-100 text-cyan-600`}><BarChart3 className="w-4 h-4" /></div>;
     if (type === 'social_comment') return <div className={`${base} bg-blue-100 text-blue-600`}><MessageSquare className="w-4 h-4" /></div>;
     return <div className={`${base} bg-slate-100 text-slate-500`}><Bell className="w-4 h-4" /></div>;
 }

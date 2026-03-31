@@ -3,6 +3,10 @@
         {
             "path": "/api/cron/cleanup-wrong",
             "schedule": "0 0 * * *"
+        },
+        {
+            "path": "/api/cron/weekly-report",
+            "schedule": "30 23 * * 0"
         }
     ]
 }

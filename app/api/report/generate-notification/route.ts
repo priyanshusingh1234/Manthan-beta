@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { createClient } from '@supabase/supabase-js';
+import { createNotification } from '@/lib/createNotification';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,23 @@ async function getVerifiedUser(bearer?: string | null) {
     } catch { return null; }
 }
 
+function startOfUtcWeek(date: Date) {
+    const d = new Date(date);
+    const day = d.getUTCDay(); // 0=Sun
+    const diffToMonday = (day + 6) % 7;
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCDate(d.getUTCDate() - diffToMonday);
+    return d;
+}
+
+function getRatingLabel(totalScore: number) {
+    if (totalScore >= 80) return 'Excellent';
+    if (totalScore >= 60) return 'Very Good';
+    if (totalScore >= 40) return 'Good';
+    if (totalScore >= 20) return 'Not Bad';
+    return 'Poor';
+}
+
 export async function POST(req: NextRequest) {
     try {
         const authHeader = req.headers.get('authorization');
@@ -25,45 +43,59 @@ export async function POST(req: NextRequest) {
         if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const userId = currentUser.id;
+        const body = await req.json().catch(() => ({}));
+        const force = !!body?.force;
 
-        // 1. Check if a report notification was already sent in the last 7 days
         const now = new Date();
-        const pastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const currentWeekStart = startOfUtcWeek(now);
+        const previousWeekStart = new Date(currentWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-        const { data: existingNotifs } = await supabaseAdmin
-            .from('notifications')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('type', 'weekly_report')
-            .gte('created_at', pastWeek.toISOString())
-            .limit(1);
-
-        if (existingNotifs && existingNotifs.length > 0) {
-            return NextResponse.json({ message: 'Already sent recently' });
+        // Automatic path: only generate after week end (Sunday UTC)
+        if (!force && now.getUTCDay() !== 0) {
+            return NextResponse.json({ message: 'Skipped: week not ended yet' });
         }
 
-        // 2. We need to generate the report to get the rating
-        // Get question attempts
+        const windowStart = force
+            ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+            : previousWeekStart;
+        const windowEnd = force ? now : currentWeekStart;
+
+        // Ensure one weekly report notification per report window unless force=true
+        if (!force) {
+            const { data: existingNotifs } = await supabaseAdmin
+                .from('notifications')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('type', 'weekly_report')
+                .gte('created_at', windowEnd.toISOString())
+                .limit(1);
+
+            if (existingNotifs && existingNotifs.length > 0) {
+                return NextResponse.json({ message: 'Already sent for this week' });
+            }
+        }
+
+        // Generate the report rating for the chosen window
         const { data: attempts } = await supabaseAdmin
             .from('question_attempts')
             .select('question_id, is_correct, created_at')
             .eq('user_id', userId)
-            .gte('created_at', pastWeek.toISOString());
+            .gte('created_at', windowStart.toISOString())
+            .lt('created_at', windowEnd.toISOString());
 
-        // Get activity
         let activities: any[] = [];
         try {
             const res = await supabaseAdmin
                 .from('activity_logs')
                 .select('created_at')
                 .eq('user_id', userId)
-                .gte('created_at', pastWeek.toISOString());
+                .gte('created_at', windowStart.toISOString())
+                .lt('created_at', windowEnd.toISOString());
             if (!res.error) activities = res.data || [];
         } catch (e) {
-            // Ignore if missing
+            // Table may not exist in all environments; ignore.
         }
 
-        // Calculate
         const allTimestamps = [
             ...(attempts || []).map(a => a.created_at),
             ...activities.map(a => a.created_at)
@@ -86,25 +118,23 @@ export async function POST(req: NextRequest) {
         const volumeScore = Math.min(totalAttempts * 2, 40);
         const consistencyScore = Math.min(activeDays * 4, 20);
         const totalScore = accuracyScore + volumeScore + consistencyScore;
+        const ratingLabel = getRatingLabel(totalScore);
 
-        let ratingLabel = 'Poor';
-        if (totalScore >= 80) ratingLabel = 'Excellent';
-        else if (totalScore >= 60) ratingLabel = 'Very Good';
-        else if (totalScore >= 40) ratingLabel = 'Good';
-        else if (totalScore >= 20) ratingLabel = 'Not Bad';
+        await createNotification({
+            userId,
+            type: 'weekly_report',
+            title: 'Weekly Report Card Ready',
+            body: `You scored ${ratingLabel} this week. Tap to view your full report.`,
+            href: '/report',
+        });
 
-        // 3. Create the Notification
-        await supabaseAdmin
-            .from('notifications')
-            .insert({
-                user_id: userId,
-                title: 'Weekly Report Card 📊',
-                message: `Your weekly report is ready! You scored '${ratingLabel}' this week. Tap to view your stats.`,
-                type: 'weekly_report',
-                link: '/report'
-            });
-
-        return NextResponse.json({ success: true, rating: ratingLabel });
+        return NextResponse.json({
+            success: true,
+            rating: ratingLabel,
+            windowStart: windowStart.toISOString(),
+            windowEnd: windowEnd.toISOString(),
+            forced: force,
+        });
 
     } catch (err: any) {
         console.error('[Weekly Report Gen Error]', err);
