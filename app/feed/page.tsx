@@ -1,11 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import QuestionCard from '@/components/QuestionCard';
 import { Filter, SlidersHorizontal, BookOpen, Layers, Target, ChevronDown, Info, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
+
+function normalizeSubject(subject?: string | null) {
+    if (!subject) return '';
+    const value = subject.trim().toLowerCase();
+    if (value.startsWith('math')) return 'math';
+    if (value === 'social studies' || value === 'sst') return 'sst';
+    return value;
+}
 
 export default function FeedPage() {
     const [questions, setQuestions] = useState<any[]>([]);
@@ -18,6 +25,12 @@ export default function FeedPage() {
     const [selectedDifficulty, setSelectedDifficulty] = useState('');
 
     useEffect(() => {
+        if (selectedSubject === 'English' && selectedClass) {
+            setSelectedClass('');
+        }
+    }, [selectedSubject, selectedClass]);
+
+    useEffect(() => {
         let mounted = true;
         setLoading(true);
 
@@ -25,7 +38,7 @@ export default function FeedPage() {
             const params = new URLSearchParams({ limit: '40' });
             if (selectedSubject) params.set('subject', selectedSubject);
             // Also pass class to API so server pre-filters when possible
-            if (selectedClass) params.set('class', selectedClass);
+            if (selectedClass && selectedSubject !== 'English') params.set('class', selectedClass);
 
             const headers: Record<string, string> = {};
             if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
@@ -74,7 +87,7 @@ export default function FeedPage() {
 
     // Filter logic
     const filteredQuestions = questions.filter((q: any) => {
-        if (selectedSubject && q.subject !== selectedSubject) return false;
+        if (selectedSubject && normalizeSubject(q.subject) !== normalizeSubject(selectedSubject)) return false;
 
         if (selectedClass) {
             // Handle "All" class mapping, or actual number matching.
