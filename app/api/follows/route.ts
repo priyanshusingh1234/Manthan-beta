@@ -142,3 +142,44 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
 }
+
+// DELETE /api/follows — remove a follow relationship
+export async function DELETE(request: Request) {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const token = authHeader.replace('Bearer ', '');
+
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    let followingId: string | undefined;
+    try {
+        const body = await request.json();
+        followingId = body?.followingId;
+    } catch {
+        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
+    if (!followingId || followingId === user.id) {
+        return NextResponse.json({ error: 'Invalid followingId' }, { status: 400 });
+    }
+
+    const { error: deleteErr } = await supabaseAdmin
+        .from('follows')
+        .delete()
+        .eq('follower_id', user.id)
+        .eq('following_id', followingId);
+
+    if (deleteErr) {
+        console.error('[DELETE /api/follows] DB error:', deleteErr);
+        return NextResponse.json({ error: 'Failed to unfollow' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+}

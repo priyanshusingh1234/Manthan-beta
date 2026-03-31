@@ -78,14 +78,32 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
 
         try {
             if (previousIsFollowing) {
-                // Unfollow
-                const { error } = await supabase
-                    .from('follows')
-                    .delete()
-                    .eq('follower_id', currentUser.id)
-                    .eq('following_id', profileUserId);
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) {
+                    throw new Error('No access token available');
+                }
 
-                if (error) throw error;
+                const response = await fetch('/api/follows', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ followingId: profileUserId }),
+                });
+
+                if (!response.ok) {
+                    let apiError = 'Failed to unfollow user';
+                    try {
+                        const body = await response.json();
+                        if (body?.error) {
+                            apiError = body.error;
+                        }
+                    } catch {
+                        // ignore parse failures and use default message
+                    }
+                    throw new Error(apiError);
+                }
             } else {
                 // Follow - use API endpoint to create notification
                 const { data: { session } } = await supabase.auth.getSession();
