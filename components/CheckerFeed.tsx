@@ -266,7 +266,7 @@ export default function CheckerFeedPage() {
                                                     </p>
                                                     {item.submission_url ? (
                                                         // eslint-disable-next-line @next/next/no-img-element
-                                                        <img src={item.submission_.url} alt="Student answer" className="w-full max-h-64 object-contain rounded-xl bg-background border border-border" />
+                                                        <img src={item.submission_url} alt="Student answer" className="w-full max-h-64 object-contain rounded-xl bg-background border border-border" />
                                                     ) : (
                                                         <div className="h-40 bg-background rounded-xl border border-border flex items-center justify-center text-muted-foreground text-sm">No image</div>
                                                     )}
