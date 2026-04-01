@@ -19,20 +19,24 @@ export default function PushNotificationPrompt() {
             if (isNative) {
                 const { PushNotifications } = await import('@capacitor/push-notifications');
                 const status = await PushNotifications.checkPermissions();
-                if (status.receive !== 'prompt' && status.receive !== 'default') return;
+                if (status.receive !== 'prompt' && status.receive !== 'prompt-with-rationale') return;
             } else {
                 if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
                 if (Notification.permission !== 'default') return;
             }
 
-            // Check if we already asked them and they dismissed it
-            const dismissed = localStorage.getItem('push_prompt_dismissed');
-            if (dismissed === 'true') return;
+            // Check if we already asked them recently (5 hour cooldown)
+            const lastShown = localStorage.getItem('push_prompt_last_shown');
+            if (lastShown) {
+                const age = Date.now() - parseInt(lastShown);
+                const fiveHours = 5 * 60 * 60 * 1000;
+                if (age < fiveHours) return;
+            }
 
             // Delay popup slightly so it's not aggressive on first load
             const timer = setTimeout(() => {
                 setIsVisible(true);
-            }, 3000);
+            }, 5000); // 5s delay for better UX
 
             return timer;
         };
@@ -81,7 +85,8 @@ export default function PushNotificationPrompt() {
 
     const dismiss = () => {
         setIsVisible(false);
-        localStorage.setItem('push_prompt_dismissed', 'true');
+        // Store current time to enforce the 5 hour cooldown
+        localStorage.setItem('push_prompt_last_shown', Date.now().toString());
     };
 
     if (!isVisible) return null;

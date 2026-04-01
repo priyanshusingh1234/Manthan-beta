@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import { 
     Bell, CheckCheck, Trash2, UserPlus, CheckCircle2, 
