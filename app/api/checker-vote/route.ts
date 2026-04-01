@@ -167,6 +167,15 @@ export async function POST(req: Request) {
                     await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
                         user_metadata: { ...voterMeta, totalPoints: (Number(voterMeta.totalPoints) || 0) + CHECKER_CORRECT_REWARD_POINTS },
                     });
+
+                    // 🔔 Notify voter they earned points
+                    await createNotification({
+                        userId: cv.checker_id,
+                        type: 'points_earned',
+                        title: `+${CHECKER_CORRECT_REWARD_POINTS} point! Community verified`,
+                        body: `Your "Correct" vote was confirmed by AI and the community.`,
+                        href: `/submission/${submissionId}/ai-review`,
+                    });
                 }
                 leaderboardCache.invalidate();
 
@@ -197,6 +206,15 @@ export async function POST(req: Request) {
                     const penalized = Math.max(0, (Number(voterMeta.totalPoints) || 0) - CHECKER_REWARD_POINTS);
                     await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
                         user_metadata: { ...voterMeta, totalPoints: penalized },
+                    });
+
+                    // 🔔 Notify voter of penalty
+                    await createNotification({
+                        userId: cv.checker_id,
+                        type: 'ai_confirmed_wrong',
+                        title: `-${CHECKER_REWARD_POINTS} points. Incorrect assessment`,
+                        body: `You marked a wrong answer as "Correct". Spamming/collusion results in a penalty.`,
+                        href: `/submission/${submissionId}/ai-review`,
                     });
                 }
 
@@ -312,6 +330,15 @@ export async function POST(req: Request) {
                     await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
                         user_metadata: { ...voterMeta, totalPoints: voterPoints },
                     });
+
+                    // 🔔 Notify voter of penalty
+                    await createNotification({
+                        userId: cv.checker_id,
+                        type: 'ai_confirmed_wrong',
+                        title: `-${SPAMMER_PENALTY} point. False flag detected`,
+                        body: `AI verified the answer is correct despite your "Wrong" flag. Avoid false flagging.`,
+                        href: `/submission/${submissionId}/ai-review`,
+                    });
                 }
                 // Bust leaderboard cache so TopBrains updates immediately
                 leaderboardCache.invalidate();
@@ -369,6 +396,15 @@ export async function POST(req: Request) {
                     const voterPoints = (Number(voterMeta.totalPoints) || 0) + CHECKER_REWARD_POINTS;
                     await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
                         user_metadata: { ...voterMeta, totalPoints: voterPoints },
+                    });
+
+                    // 🔔 Notify voter of reward
+                    await createNotification({
+                        userId: cv.checker_id,
+                        type: 'points_earned',
+                        title: `+${CHECKER_REWARD_POINTS} points earned!`,
+                        body: `AI confirmed you correctly identified a wrong answer. Great job!`,
+                        href: `/submission/${submissionId}/ai-review`,
                     });
                 }
                 // Bust leaderboard cache so TopBrains updates immediately
