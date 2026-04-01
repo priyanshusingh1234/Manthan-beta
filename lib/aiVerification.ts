@@ -59,11 +59,11 @@ Respond ONLY with a valid JSON object matching this schema (no markdown formatti
             return null;
         }
 
-        // @ts-ignore
-        const response = await ai.getGenerativeModel({ model: "gemini-1.5-flash" }).generateContent({
-            // @ts-ignore
+        // Use the new Google GenAI SDK v1 syntax: ai.models.generateContent
+        const response = await ai.models.generateContent({
+            model: "gemini-1.5-flash",
             contents: [{ role: 'user', parts: contents }],
-            generationConfig: {
+            config: {
                 responseMimeType: "application/json",
             }
         });
