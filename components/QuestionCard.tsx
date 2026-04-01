@@ -15,6 +15,8 @@ import {
   CheckCircle,
   Eye
 } from "lucide-react";
+import { Share } from "@capacitor/share";
+import { Capacitor } from "@capacitor/core";
 import TeacherBadge from "@/ticks/teacher";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -121,18 +123,31 @@ export default function QuestionCard({ q }: { q: Question }) {
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/questions/${q.id}`;
+    const shareTitle = q.title || "Dheeyudha Question";
+    const shareText = `Try this ${q.subject || ""} question on Dheeyudha`;
     const sharePayload = {
-      title: q.title || "Dheeyudha Question",
-      text: `Try this ${q.subject || ""} question on Dheeyudha`,
+      title: shareTitle,
+      text: shareText,
       url: shareUrl,
     };
 
     try {
+      // 1. Capacitor Native Sharing (for official Android/iOS apps)
+      if (Capacitor.isNativePlatform()) {
+        await Share.share({
+          ...sharePayload,
+          dialogTitle: "Share this question",
+        });
+        return;
+      }
+
+      // 2. Web Share API (for mobile browsers like Chrome on Android)
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share(sharePayload);
         return;
       }
 
+      // 3. Fallback: Clipboard (for desktop browsers)
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareUrl);
         alert("Question link copied");
