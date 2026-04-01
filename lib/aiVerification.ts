@@ -50,7 +50,8 @@ Respond ONLY with a valid JSON object matching this schema (no markdown formatti
 }`;
 
         const contents = [];
-        contents.push(prompt);
+        // All parts in GenAI v1 must be objects (e.g. { text: "..." })
+        contents.push({ text: prompt });
         if (teacherImagePart) contents.push(teacherImagePart);
         if (studentImagePart) contents.push(studentImagePart);
 
