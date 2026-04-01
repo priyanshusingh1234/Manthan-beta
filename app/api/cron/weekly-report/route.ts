@@ -36,16 +36,16 @@ export async function GET(req: Request) {
     const { data: attempts } = await supabaseAdmin
       .from('question_attempts')
       .select('user_id, is_correct, created_at')
-      .gte('created_at', previousWeekStart.toISOString())
-      .lt('created_at', currentWeekStart.toISOString());
+      .gte('created_at', currentWeekStart.toISOString())
+      .lt('created_at', now.toISOString());
 
     let activities: any[] = [];
     try {
       const res = await supabaseAdmin
         .from('activity_logs')
         .select('user_id, created_at')
-        .gte('created_at', previousWeekStart.toISOString())
-        .lt('created_at', currentWeekStart.toISOString());
+        .gte('created_at', currentWeekStart.toISOString())
+        .lt('created_at', now.toISOString());
       if (!res.error) activities = res.data || [];
     } catch {
       activities = [];
@@ -120,8 +120,8 @@ export async function GET(req: Request) {
       success: true,
       sent,
       evaluatedUsers: idList.length,
-      weekStart: previousWeekStart.toISOString(),
-      weekEnd: currentWeekStart.toISOString(),
+      weekStart: currentWeekStart.toISOString(),
+      weekEnd: now.toISOString(),
     });
   } catch (error: any) {
     console.error('[Cron Weekly Report] Error:', error);

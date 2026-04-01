@@ -50,11 +50,6 @@ export async function POST(req: NextRequest) {
         const currentWeekStart = startOfUtcWeek(now);
         const previousWeekStart = new Date(currentWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-        // Automatic path: only generate after week end (Sunday UTC)
-        if (!force && now.getUTCDay() !== 0) {
-            return NextResponse.json({ message: 'Skipped: week not ended yet' });
-        }
-
         const windowStart = force
             ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
             : previousWeekStart;
