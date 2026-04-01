@@ -1,7 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-const GEMINI_KEY = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || "";
-const ai = GEMINI_KEY ? new GoogleGenAI({ apiKey: GEMINI_KEY }) : null;
+
 
 export type AIVerdict = { isCorrect: boolean; breakdown: string; raw: string };
 
@@ -12,12 +11,24 @@ export async function verifyWithGemini(userImageUrl: string, questionText: strin
             const resp = await fetch(userImageUrl, { signal: AbortSignal.timeout(20000) });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             const arrayBuffer = await resp.arrayBuffer();
-            const base64 = Buffer.from(arrayBuffer).toString('base64');
-            const mimeType = resp.headers.get('content-type') || 'image/jpeg';
+            let buffer = Buffer.from(arrayBuffer);
+            let mimeType = resp.headers.get('content-type') || 'image/jpeg';
+            
+            if (!['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].includes(mimeType)) {
+                try {
+                    const sharp = require('sharp');
+                    buffer = await sharp(buffer).png().toBuffer();
+                    mimeType = 'image/png';
+                } catch (e) {
+                    console.warn(`Could not convert image from ${mimeType}`, e);
+                }
+            }
+            
+            const base64 = buffer.toString('base64');
             studentImagePart = { inlineData: { data: base64, mimeType } };
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to fetch student image for AI", e);
-            return null;
+            throw new Error(`Student image fetch/convert failed: ${e.message}`);
         }
 
         let teacherImagePart: any = undefined;
@@ -26,11 +37,24 @@ export async function verifyWithGemini(userImageUrl: string, questionText: strin
                 const resp = await fetch(modelAnswerUrl, { signal: AbortSignal.timeout(20000) });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const arrayBuffer = await resp.arrayBuffer();
-                const base64 = Buffer.from(arrayBuffer).toString('base64');
-                const mimeType = resp.headers.get('content-type') || 'image/jpeg';
+                let buffer = Buffer.from(arrayBuffer);
+                let mimeType = resp.headers.get('content-type') || 'image/jpeg';
+                
+                if (!['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].includes(mimeType)) {
+                    try {
+                        const sharp = require('sharp');
+                        buffer = await sharp(buffer).png().toBuffer();
+                        mimeType = 'image/png';
+                    } catch (e) {
+                        console.warn(`Could not convert image from ${mimeType}`, e);
+                    }
+                }
+
+                const base64 = buffer.toString('base64');
                 teacherImagePart = { inlineData: { data: base64, mimeType } };
-            } catch (e) {
+            } catch (e: any) {
                 console.error("Failed to fetch teacher image for AI", e);
+                throw new Error(`Teacher image fetch/convert failed: ${e.message}`);
             }
         }
 
@@ -55,13 +79,15 @@ Respond ONLY with a valid JSON object matching this schema (no markdown formatti
         if (teacherImagePart) contents.push(teacherImagePart);
         if (studentImagePart) contents.push(studentImagePart);
 
-        if (!ai) {
+        const GEMINI_KEY = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || "";
+        if (!GEMINI_KEY) {
             console.error("Gemini AI not initialized (missing API key)");
-            return null;
+            throw new Error("Gemini API Key missing! Check your Vercel Environment Variables and trigger a fresh deploy.");
         }
+        const client = new GoogleGenAI({ apiKey: GEMINI_KEY });
 
         // Use the new Google GenAI SDK v1 syntax: ai.models.generateContent
-        const response = await ai.models.generateContent({
+        const response = await client.models.generateContent({
             model: "gemini-2.5-flash",
             contents: [{ role: 'user', parts: contents }],
             config: {
