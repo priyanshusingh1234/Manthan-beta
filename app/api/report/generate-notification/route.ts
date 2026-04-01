@@ -118,8 +118,8 @@ export async function POST(req: NextRequest) {
         await createNotification({
             userId,
             type: 'weekly_report',
-            title: 'Weekly Report Card Ready',
-            body: `You scored ${ratingLabel} this week. Tap to view your full report.`,
+            title: '📊 Weekly Report Card Ready',
+            body: `You scored ${ratingLabel} this week. 🌟 Tap to view your performance breakdown!`,
             href: '/report',
         });
 

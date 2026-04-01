@@ -113,7 +113,11 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
     });
 
     // Check permissions and register
-    const permStatus = await PushNotifications.checkPermissions();
+    let permStatus = await PushNotifications.checkPermissions();
+    if (permStatus.receive === 'prompt') {
+      permStatus = await PushNotifications.requestPermissions();
+    }
+
     if (permStatus.receive === 'granted') {
       await PushNotifications.createChannel({
         id: 'default',

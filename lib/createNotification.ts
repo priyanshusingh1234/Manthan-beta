@@ -83,7 +83,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                         if (sub.p256dh_key === 'native') {
                             if (firebaseAdmin.apps.length > 0) {
                                 try {
-                                    await firebaseAdmin.messaging().send({
+                                     await firebaseAdmin.messaging().send({
                                         token: sub.endpoint,
                                         notification: {
                                             title: params.title,
@@ -92,7 +92,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         data: {
                                             url: params.href || '/',
                                             href: params.href || '/',
-                                            deep_link: params.href || '/',
+                                            type: params.type,
                                             click_action: 'OPEN_APP',
                                         },
                                         android: {
@@ -101,11 +101,9 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                                 channelId: 'default',
                                                 color: '#4f46e5',
                                                 clickAction: 'OPEN_APP',
-                                            }
-                                        },
-                                        webpush: {
-                                            fcmOptions: {
-                                                link: params.href || '/'
+                                                tag: params.type, // Group by type (e.g., replace old weekly_report)
+                                                icon: 'ic_notification', // Use the standard white icon
+                                                sound: 'default'
                                             }
                                         }
                                     });
