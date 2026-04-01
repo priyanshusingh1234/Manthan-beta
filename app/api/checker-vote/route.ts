@@ -116,7 +116,7 @@ export async function POST(req: Request) {
             const questionText = (sub.questions as any)?.body || (sub.questions as any)?.title || "Solve this.";
 
             // Run AI Verification
-            let aiResult: AIVerdict | null = null;
+            let aiErrorMessage = "AI Verification service is currently overloaded. Please try again in a moment.";
             try {
                 aiResult = await Promise.race([
                     verifyWithGemini(sub.submission_url, questionText, teacherSol?.solution_url || null),
@@ -124,15 +124,16 @@ export async function POST(req: Request) {
                         setTimeout(() => reject(new Error("AI Verification Timeout")), 45000)
                     )
                 ]);
-            } catch {
+            } catch (err: any) {
                 aiResult = null;
+                aiErrorMessage = err.message || aiErrorMessage;
             }
 
             // AI failed — rollback, keep pending
             if (aiResult === null) {
                 await supabaseAdmin.from("checker_votes").delete().eq("checker_id", checkerId).eq("submission_id", submissionId);
                 await supabaseAdmin.from("written_submissions").update({ status: "pending_check" }).eq("id", submissionId);
-                return NextResponse.json({ error: "AI Verification service is currently overloaded. Please try again in a moment." }, { status: 503 });
+                return NextResponse.json({ error: `AI Failed: ${aiErrorMessage}` }, { status: 503 });
             }
 
             // Save AI breakdown

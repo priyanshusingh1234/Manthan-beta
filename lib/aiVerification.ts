@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-const GEMINI_KEY = process.env.GOOGLE_GENAI_API_KEY || "";
+const GEMINI_KEY = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || "";
 const ai = GEMINI_KEY ? new GoogleGenAI({ apiKey: GEMINI_KEY }) : null;
 
 export type AIVerdict = { isCorrect: boolean; breakdown: string; raw: string };
@@ -78,8 +78,8 @@ Respond ONLY with a valid JSON object matching this schema (no markdown formatti
             breakdown: json.breakdown || "No detailed breakdown was provided.",
             raw: text
         };
-    } catch (err) {
+    } catch (err: any) {
         console.error("Gemini Verification Error:", err);
-        return null; // Fatal error
+        throw new Error(err.message || "Gemini Verification Error");
     }
 }
