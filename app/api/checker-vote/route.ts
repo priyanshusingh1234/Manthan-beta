@@ -116,6 +116,7 @@ export async function POST(req: Request) {
             const questionText = (sub.questions as any)?.body || (sub.questions as any)?.title || "Solve this.";
 
             // Run AI Verification
+            let aiResult: AIVerdict | null = null;
             let aiErrorMessage = "AI Verification service is currently overloaded. Please try again in a moment.";
             try {
                 aiResult = await Promise.race([
