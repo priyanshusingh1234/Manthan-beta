@@ -26,6 +26,7 @@ export type NotificationType =
     | 'war_preparation'
     | 'war_started'
     | 'war_result'
+    | 'post_mention'
     | 'weekly_report';
 
 interface CreateNotificationParams {

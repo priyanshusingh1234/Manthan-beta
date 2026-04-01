@@ -22,6 +22,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
     "@types/web-push": "^3.6.4",
+    "@vercel/functions": "^3.4.3",
     "browser-image-compression": "^2.0.2",
     "date-fns": "^4.1.0",
     "dotenv": "^17.3.1",

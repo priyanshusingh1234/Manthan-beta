@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { Image as ImageIcon, X, Send, User, ChevronLeft } from 'lucide-react';
+import { ImageIcon, X, Send, User, ChevronLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { compressImage } from '@/utils/compressImage';
 
@@ -157,9 +157,12 @@ export default function CreatePostPage() {
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
                                 placeholder="What's on your mind? Did you learn something new?"
-                                className="w-full bg-slate-50/50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 min-h-[160px] text-slate-900 dark:text-white text-[15px] resize-y outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:opacity-50"
+                                className="w-full bg-slate-50/50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 min-h-[160px] text-slate-900 dark:text-white text-[15px] resize-y outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:opacity-50 mb-2"
                                 disabled={loading}
                             />
+                            <p className="text-[11px] font-bold text-[#8B4513] dark:text-[#D2B48C] px-1 flex items-center gap-1">
+                                <Sparkles className="w-3 h-3" /> Tip: You can tag other users using @username in your post.
+                            </p>
                         </div>
 
                         {imagePreview && (

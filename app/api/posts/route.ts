@@ -87,44 +87,73 @@ export async function POST(req: NextRequest) {
 
         if (error) throw error;
 
+        // --- Tagging / Mentions Logic ---
+        const mentionRegex = /@(\w+)/g;
+        const matches = [...content.matchAll(mentionRegex)];
+        const mentionedUsernames = Array.from(new Set(matches.map(m => m[1].toLowerCase())));
+
+        let taggedUserIds: string[] = [];
+        if (mentionedUsernames.length > 0) {
+            const { data: taggedProfiles } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .in('username', mentionedUsernames);
+            
+            taggedUserIds = (taggedProfiles || []).map(p => p.id).filter(id => id !== user.id);
+        }
+
+        // --- Notification Logic ---
+        const { data: authorProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('full_name, username, avatar_url')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        const authorName = authorProfile?.full_name || user.user_metadata?.fullName || user.user_metadata?.username || 'Someone';
+        const authorAvatar = authorProfile?.avatar_url || user.user_metadata?.avatar_url || null;
+        const cleanSnippet = String(content || '').trim().replace(/\s+/g, ' ').slice(0, 90);
+        const excerpt = `${cleanSnippet}${cleanSnippet.length >= 90 ? '...' : ''}`;
+
+        // 1. Send Mention Notifications
+        if (taggedUserIds.length > 0) {
+            await Promise.allSettled(
+                taggedUserIds.map(taggedId => createNotification({
+                    userId: taggedId,
+                    type: 'post_mention',
+                    title: `${authorName} mentioned you in a post`,
+                    body: excerpt ? `"${excerpt}"` : `${authorName} mentioned you.`,
+                    href: `/posts/${post.id}`,
+                    actorId: user.id,
+                    actorName: authorName,
+                    actorAvatar: authorAvatar,
+                }))
+            );
+        }
+
+        // 2. Send Follower Notifications (excluding those already tagged)
         const { data: followers } = await supabaseAdmin
             .from('follows')
             .select('follower_id')
             .eq('following_id', user.id);
 
-        const followerIds = Array.from(new Set((followers || []).map((f: any) => String(f.follower_id)).filter(Boolean)));
+        const followerIds = Array.from(new Set((followers || []).map((f: any) => String(f.follower_id)).filter(id => id && id !== user.id && !taggedUserIds.includes(id))));
+        
         if (followerIds.length > 0) {
-            const { data: authorProfile } = await supabaseAdmin
-                .from('profiles')
-                .select('full_name, username, avatar_url')
-                .eq('id', user.id)
-                .maybeSingle();
-
-            const authorName =
-                authorProfile?.full_name ||
-                user.user_metadata?.fullName ||
-                user.user_metadata?.username ||
-                'Someone';
-            const authorUsername = authorProfile?.username || user.user_metadata?.username || null;
-            const authorAvatar = authorProfile?.avatar_url || user.user_metadata?.avatar_url || null;
-            const cleanSnippet = String(content || '').trim().replace(/\s+/g, ' ').slice(0, 90);
-            const bodyText = cleanSnippet
-                ? `${authorName} posted: "${cleanSnippet}${cleanSnippet.length >= 90 ? '...' : ''}"`
+            const bodyText = excerpt
+                ? `${authorName} posted: "${excerpt}"`
                 : `${authorName} shared a new post.`;
 
             await Promise.allSettled(
-                followerIds
-                    .filter((id) => id !== user.id)
-                    .map((followerId) => createNotification({
-                        userId: followerId,
-                        type: 'following_post',
-                        title: `${authorName} shared a new post`,
-                        body: bodyText,
-                        href: `/posts/${post.id}`,
-                        actorId: user.id,
-                        actorName: authorName,
-                        actorAvatar: authorAvatar,
-                    }))
+                followerIds.map((followerId) => createNotification({
+                    userId: followerId,
+                    type: 'following_post',
+                    title: `${authorName} shared a new post`,
+                    body: bodyText,
+                    href: `/posts/${post.id}`,
+                    actorId: user.id,
+                    actorName: authorName,
+                    actorAvatar: authorAvatar,
+                }))
             );
         }
 

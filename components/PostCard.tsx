@@ -148,7 +148,7 @@ export default function PostCard({
     };
 
     return (
-        <div className="bg-white dark:bg-slate-900 border-b sm:border border-slate-100 dark:border-slate-800 rounded-none sm:rounded-[2.5rem] overflow-hidden shadow-none sm:shadow-sm hover:shadow-md transition-all duration-300">
+        <div className="bg-indigo-50/20 dark:bg-indigo-950/20 border-b sm:border border-indigo-100/50 dark:border-indigo-900/50 rounded-none sm:rounded-[2.5rem] overflow-hidden shadow-sm sm:shadow-indigo-500/5 hover:shadow-indigo-500/10 transition-all duration-300">
             {/* Header */}
             <div className="p-4 sm:p-6 flex items-start justify-between">
                 <div className="flex items-center gap-3 min-w-0">
@@ -157,7 +157,7 @@ export default function PostCard({
                         const isTeacher = isTeacherUser(post.author);
                         
                         const AuthorAvatar = (
-                             <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-[1.5px] border-slate-100 dark:border-slate-800 shrink-0">
+                             <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-indigo-100/50 dark:bg-indigo-900/30 border-[2px] border-white dark:border-indigo-800 shrink-0 shadow-sm shadow-indigo-200/50 dark:shadow-none">
                                 {post.author?.avatar_url ? (
                                     <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
                                 ) : (
@@ -239,7 +239,7 @@ export default function PostCard({
             {/* Media */}
             {post.image_url && (
                 <Link href={`/posts/${post.id}`}>
-                    <div className="w-full relative bg-slate-50 dark:bg-slate-950/20 border-y border-slate-50 dark:border-slate-800 cursor-pointer overflow-hidden">
+                    <div className="w-full relative bg-indigo-100/30 dark:bg-indigo-950/40 border-y border-indigo-100/30 dark:border-indigo-900/40 cursor-pointer overflow-hidden">
                         <img
                             src={post.image_url}
                             alt="Post media"
@@ -343,7 +343,7 @@ export default function PostCard({
                                                     {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                                                 </span>
                                             </div>
-                                            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-2xl px-4 py-2 text-sm text-slate-700 dark:text-slate-200 shadow-sm">
+                                            <div className="bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100/50 dark:border-indigo-800/30 rounded-2xl px-4 py-2 text-sm text-slate-700 dark:text-slate-200 shadow-sm shadow-indigo-100/10">
                                                 {comment.content}
                                             </div>
                                             <button

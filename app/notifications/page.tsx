@@ -1,11 +1,13 @@
-'use client';
-
 import { useState, useEffect, useCallback } from 'react';
-import { Bell, CheckCheck, Trash2, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles, ArrowLeft, Swords, Users, BarChart3 } from 'lucide-react';
+import { 
+    Bell, CheckCheck, Trash2, UserPlus, CheckCircle2, 
+    XCircle, Zap, BookOpen, Sparkles, ArrowLeft, 
+    Users, BarChart3, Loader2, ChevronRight, AtSign 
+} from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User } from '@supabase/supabase-js';
+import { motion, AnimatePresence } from 'framer-motion';
 import CoopNotifCard from '@/components/CoopNotifCard';
 
 type Notification = {
@@ -20,6 +22,7 @@ type Notification = {
     created_at: string;
 };
 
+// ... timeAgo helper remains same ...
 function timeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
     const m = Math.floor(diff / 60000);
@@ -32,28 +35,23 @@ function timeAgo(dateStr: string): string {
     return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
-function NotifIcon({ type }: { type: string }) {
-    const base = 'w-11 h-11 rounded-2xl flex items-center justify-center shrink-0';
-    if (type === 'new_follower') return <div className={`${base} bg-pink-100 text-pink-600`}><UserPlus className="w-5 h-5" /></div>;
-    if (type === 'ai_confirmed_correct' || type === 'answer_approved') return <div className={`${base} bg-emerald-100 text-emerald-600`}><CheckCircle2 className="w-5 h-5" /></div>;
-    if (type === 'ai_confirmed_wrong' || type === 'answer_flagged') return <div className={`${base} bg-red-100 text-red-600`}><XCircle className="w-5 h-5" /></div>;
-    if (type === 'points_earned') return <div className={`${base} bg-amber-100 text-amber-600`}><Zap className="w-5 h-5" /></div>;
-    if (type === 'new_question') return <div className={`${base} bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400`}><BookOpen className="w-5 h-5" /></div>;
-    if (type === 'coop_challenge') return <div className={`${base} bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400`}><Users className="w-5 h-5" /></div>;
-    if (type === 'weekly_report') return <div className={`${base} bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400`}><BarChart3 className="w-5 h-5" /></div>;
-    return <div className={`${base} bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400`}><Sparkles className="w-5 h-5" /></div>;
+function NotifIconBadge({ type, size = 'md' }: { type: string; size?: 'sm' | 'md' }) {
+    const dim = size === 'sm' ? 'w-5 h-5' : 'w-11 h-11';
+    const iconDim = size === 'sm' ? 'w-3 h-3' : 'w-5 h-5';
+    const rounded = size === 'sm' ? 'rounded-lg' : 'rounded-2xl';
+
+    if (type === 'new_follower') return <div className={`${dim} ${rounded} bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 shadow-sm`}><UserPlus className={iconDim} /></div>;
+    if (type === 'ai_confirmed_correct' || type === 'answer_approved') return <div className={`${dim} ${rounded} bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-sm`}><CheckCircle2 className={iconDim} /></div>;
+    if (type === 'ai_confirmed_wrong' || type === 'answer_flagged') return <div className={`${dim} ${rounded} bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-sm`}><XCircle className={iconDim} /></div>;
+    if (type === 'points_earned') return <div className={`${dim} ${rounded} bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-sm`}><Zap className={iconDim} /></div>;
+    if (type === 'new_question') return <div className={`${dim} ${rounded} bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-sm`}><BookOpen className={iconDim} /></div>;
+    if (type === 'coop_challenge') return <div className={`${dim} ${rounded} bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-sm`}><Users className={iconDim} /></div>;
+    if (type === 'weekly_report') return <div className={`${dim} ${rounded} bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 shadow-sm`}><BarChart3 className={iconDim} /></div>;
+    if (type === 'post_mention') return <div className={`${dim} ${rounded} bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-sm`}><AtSign className={iconDim} /></div>;
+    return <div className={`${dim} ${rounded} bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0 shadow-sm`}><Sparkles className={iconDim} /></div>;
 }
 
-const FILTERS = ['All', 'Unread', 'Help Requests', 'Followers', 'Answers', 'Points'];
-
-function filterNotifications(notifications: Notification[], filter: string): Notification[] {
-    if (filter === 'Unread') return notifications.filter(n => !n.read);
-    if (filter === 'Help Requests') return notifications.filter(n => n.type === 'coop_challenge');
-    if (filter === 'Followers') return notifications.filter(n => n.type === 'new_follower');
-    if (filter === 'Answers') return notifications.filter(n => ['answer_approved', 'answer_flagged', 'ai_confirmed_correct', 'ai_confirmed_wrong'].includes(n.type));
-    if (filter === 'Points') return notifications.filter(n => n.type === 'points_earned');
-    return notifications;
-}
+const FILTERS = ['All', 'Unread', 'Help', 'Answers', 'Points'];
 
 export default function NotificationsPage() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -91,231 +89,176 @@ export default function NotificationsPage() {
     useEffect(() => {
         if (!token || !user) return;
         fetchNotifications();
-
-        // Subscribe to real-time notification changes
         const channel = supabase
             .channel(`notif-page-${user.id}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'notifications',
-                    filter: `user_id=eq.${user.id}`
-                },
-                () => {
-                    fetchNotifications();
-                }
-            )
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, 
+            () => fetchNotifications())
             .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        return () => { supabase.removeChannel(channel); };
     }, [token, user, fetchNotifications]);
 
     const markAllRead = async () => {
         if (!token) return;
-        const previousNotifications = notifications;
-        const previousUnreadCount = unreadCount;
         setNotifications(n => n.map(x => ({ ...x, read: true })));
         setUnreadCount(0);
-        try {
-            const res = await fetch('/api/notifications', {
-                method: 'PATCH',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-            });
-            if (!res.ok) {
-                setNotifications(previousNotifications);
-                setUnreadCount(previousUnreadCount);
-            }
-        } catch (error) {
-            setNotifications(previousNotifications);
-            setUnreadCount(previousUnreadCount);
-        }
+        await fetch('/api/notifications', {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
     };
 
     const clearAll = async () => {
         if (!token || !window.confirm('Clear all notifications?')) return;
-        const previousNotifications = notifications;
         setNotifications([]);
         setUnreadCount(0);
-        try {
-            const res = await fetch('/api/notifications', {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (!res.ok) {
-                alert('Failed to delete notifications. Please try again.');
-                setNotifications(previousNotifications);
-            }
-        } catch (error) {
-            alert('Failed to delete notifications. Please try again.');
-            setNotifications(previousNotifications);
-        }
+        await fetch('/api/notifications', {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+        });
     };
 
     const handleNotifClick = async (notif: Notification) => {
         if (!notif.read && token) {
-            const previousNotifications = notifications;
-            const previousUnreadCount = unreadCount;
             setNotifications(n => n.map(x => x.id === notif.id ? { ...x, read: true } : x));
             setUnreadCount(c => Math.max(0, c - 1));
-            try {
-                const res = await fetch('/api/notifications', {
-                    method: 'PATCH',
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ notificationId: notif.id })
-                });
-                if (!res.ok) {
-                    setNotifications(previousNotifications);
-                    setUnreadCount(previousUnreadCount);
-                }
-            }
-            catch (error) {
-                setNotifications(previousNotifications);
-                setUnreadCount(previousUnreadCount);
-            }
+            fetch('/api/notifications', {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notificationId: notif.id })
+            });
         }
         if (notif.href) router.push(notif.href);
     };
 
-    const filtered = filterNotifications(notifications, activeFilter);
+    const filtered = notifications.filter(n => {
+        if (activeFilter === 'Unread') return !n.read;
+        if (activeFilter === 'Help') return n.type === 'coop_challenge';
+        if (activeFilter === 'Answers') return ['answer_approved', 'answer_flagged', 'ai_confirmed_correct', 'ai_confirmed_wrong'].includes(n.type);
+        if (activeFilter === 'Points') return n.type === 'points_earned';
+        return true;
+    });
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 transition-colors">
-            <div className="max-w-2xl mx-auto px-4 py-8">
-
-                {/* Header */}
-                <div className="flex items-center gap-4 mb-8">
-                    <button
-                        onClick={() => router.back()}
-                        className="w-10 h-10 rounded-2xl bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors shadow-sm"
-                    >
-                        <ArrowLeft className="w-4 h-4 text-slate-600" />
+        <div className="min-h-screen bg-white dark:bg-slate-950 pb-20">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-900 px-4 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <button onClick={() => router.back()} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white">
+                        <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <div className="flex-1">
-                        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                            <Bell className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                            Notifications
-                            {unreadCount > 0 && (
-                                <span className="bg-indigo-600 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">{unreadCount} new</span>
-                            )}
-                        </h1>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Stay up to date with your activity</p>
-                    </div>
-                    <div className="flex gap-2">
-                        {unreadCount > 0 && (
-                            <button
-                                onClick={markAllRead}
-                                title="Mark all as read"
-                                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-xl transition-colors border border-indigo-100 dark:border-indigo-800"
-                            >
-                                <CheckCheck className="w-3.5 h-3.5" /> Mark all read
-                            </button>
-                        )}
-                        {notifications.length > 0 && (
-                            <button
-                                onClick={clearAll}
-                                title="Clear all"
-                                className="flex items-center gap-1.5 px-3 py-2 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl transition-colors border border-red-100 dark:border-red-800"
-                            >
-                                <Trash2 className="w-3.5 h-3.5" /> Clear all
-                            </button>
-                        )}
-                    </div>
+                    <h1 className="text-xl font-black text-slate-900 dark:text-white">Notifications</h1>
                 </div>
+                <div className="flex gap-1">
+                    {unreadCount > 0 && (
+                        <button onClick={markAllRead} className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-colors">
+                            <CheckCheck className="w-5 h-5" />
+                        </button>
+                    )}
+                    <button onClick={clearAll} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-full transition-colors">
+                        <Trash2 className="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
 
-                {/* Filter tabs */}
-                <div className="flex gap-2 mb-6 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="max-w-2xl mx-auto px-4 py-4">
+                {/* Horizontal Filter */}
+                <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide no-scrollbar">
                     {FILTERS.map(f => (
                         <button
                             key={f}
                             onClick={() => setActiveFilter(f)}
-                            className={`px-4 py-2 rounded-2xl text-sm font-bold whitespace-nowrap transition-all ${activeFilter === f
-                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900/20'
-                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-800 hover:text-indigo-600 dark:hover:text-indigo-300'
-                                }`}
+                            className={`px-4 py-2 rounded-full text-xs font-black transition-all ${activeFilter === f
+                                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-lg'
+                                : 'bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
+                            }`}
                         >
-                            {f}
+                            {f.toUpperCase()}
                             {f === 'Unread' && unreadCount > 0 && (
-                                <span className="ml-1.5 bg-white/30 text-white text-[10px] px-1.5 py-0.5 rounded-full">{unreadCount}</span>
+                                <span className="ml-1.5 px-1.5 py-0.5 bg-indigo-500 text-white text-[9px] rounded-full">{unreadCount}</span>
                             )}
                         </button>
                     ))}
                 </div>
 
-                {/* Content */}
-                {loading ? (
-                    <div className="space-y-3">
-                        {[1, 2, 3, 4, 5].map(i => (
-                            <div key={i} className="bg-white rounded-3xl border border-slate-100 p-5 flex gap-4 animate-pulse">
-                                <div className="w-11 h-11 rounded-2xl bg-slate-100" />
-                                <div className="flex-1 space-y-2">
-                                    <div className="h-4 bg-slate-100 rounded-lg w-3/4" />
-                                    <div className="h-3 bg-slate-100 rounded-lg w-full" />
-                                    <div className="h-3 bg-slate-100 rounded-lg w-1/3" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : filtered.length === 0 ? (
-                    <div className="text-center py-20">
-                        <div className="w-20 h-20 bg-slate-100 dark:bg-slate-900 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-slate-800">
-                            <Bell className="w-10 h-10 text-slate-300 dark:text-slate-700" />
+                <AnimatePresence mode="popLayout">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-40 gap-4">
+                            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Finding updates...</p>
                         </div>
-                        <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            {activeFilter === 'Unread' ? 'All caught up!' : 'No notifications here'}
-                        </h3>
-                        <p className="text-slate-500 text-sm">
-                            {activeFilter === 'Unread'
-                                ? "You have no unread notifications."
-                                : "Activity will appear here as you use Dheeyudha."}
-                        </p>
-                        {activeFilter !== 'All' && (
-                            <button onClick={() => setActiveFilter('All')} className="mt-4 text-indigo-600 text-sm font-bold hover:underline">
-                                View all notifications
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <div className="space-y-2">
-                        {filtered.map(notif =>
-                            notif.type === 'coop_challenge' ? (
-                                <CoopNotifCard
+                    ) : filtered.length === 0 ? (
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="text-center py-32"
+                        >
+                            <div className="w-24 h-24 bg-slate-50 dark:bg-slate-900 rounded-[2rem] flex items-center justify-center mx-auto mb-6 border border-slate-100 dark:border-slate-800">
+                                <Bell className="w-10 h-10 text-slate-200 dark:text-slate-700" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">No {activeFilter === 'All' ? '' : activeFilter.toLowerCase()} notifications</h3>
+                            <p className="text-slate-400 text-sm max-w-[240px] mx-auto leading-relaxed">Activities like challenges, follows, and reports appear here.</p>
+                        </motion.div>
+                    ) : (
+                        <div className="space-y-px">
+                            {filtered.map(notif => (
+                                <motion.div
                                     key={notif.id}
-                                    notif={notif}
-                                    compact={false}
-                                    onNavigate={() => handleNotifClick(notif)}
-                                />
-                            ) : (
-                                <button
-                                    key={notif.id}
-                                    onClick={() => handleNotifClick(notif)}
-                                    className={`w-full text-left bg-white dark:bg-slate-900 rounded-3xl border transition-all hover:shadow-md hover:border-indigo-100 dark:hover:border-indigo-900/50 hover:-translate-y-0.5 ${!notif.read ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50/30 dark:bg-indigo-900/10' : 'border-slate-100 dark:border-slate-800'} p-5 flex gap-4 items-start`}
+                                    layout
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="group"
                                 >
-                                    <NotifIcon type={notif.type} />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-start justify-between gap-2">
-                                            <p className={`text-sm leading-snug ${notif.read ? 'font-semibold text-slate-700' : 'font-black text-slate-900'}`}>
-                                                {notif.title}
-                                            </p>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <span className="text-[11px] text-slate-400 font-medium">{timeAgo(notif.created_at)}</span>
-                                                {!notif.read && <span className="w-2 h-2 rounded-full bg-indigo-500" />}
-                                            </div>
+                                    {notif.type === 'coop_challenge' ? (
+                                        <div className="py-2">
+                                            <CoopNotifCard notif={notif} compact={false} onNavigate={() => handleNotifClick(notif)} />
                                         </div>
-                                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">{notif.body}</p>
-                                        {notif.href && (
-                                            <span className="text-xs text-indigo-500 font-bold mt-2 inline-block">View details →</span>
-                                        )}
-                                    </div>
-                                </button>
-                            )
-                        )}
-                    </div>
-                )}
+                                    ) : (
+                                        <button
+                                            onClick={() => handleNotifClick(notif)}
+                                            className={`w-full text-left p-4 flex gap-4 items-start relative transition-colors ${!notif.read ? 'bg-indigo-50/30 dark:bg-indigo-950/10' : 'bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900/50'}`}
+                                        >
+                                            <div className="relative shrink-0">
+                                                {notif.actor_avatar? (
+                                                    <div className="relative">
+                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                        <img src={notif.actor_avatar} alt="" className="w-12 h-12 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-sm" />
+                                                        <div className="absolute -bottom-1 -right-1 ring-2 ring-white dark:ring-slate-950 rounded-[6px] overflow-hidden">
+                                                            <NotifIconBadge type={notif.type} size="sm" />
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <NotifIconBadge type={notif.type} />
+                                                )}
+                                            </div>
+
+                                            <div className="flex-1 min-w-0 pt-0.5">
+                                                <div className="flex items-center justify-between gap-2 mb-1">
+                                                    <p className={`text-[13px] leading-tight flex-1 ${!notif.read ? 'font-black text-slate-900 dark:text-white' : 'font-bold text-slate-600 dark:text-slate-400'}`}>
+                                                        {notif.title}
+                                                    </p>
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight shrink-0">{timeAgo(notif.created_at)}</span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal line-clamp-2">
+                                                    {notif.body}
+                                                </p>
+                                            </div>
+
+                                            <div className="shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <ChevronRight className="w-4 h-4 text-slate-300" />
+                                            </div>
+
+                                            {!notif.read && (
+                                                <div className="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-500 rounded-full" />
+                                            )}
+                                        </button>
+                                    )}
+                                </motion.div>
+                            ))}
+                        </div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, CheckCheck, Trash2, X, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles, Swords, MessageSquare, Loader2, ArrowRight, Users, BarChart3 } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, X, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles, Swords, MessageSquare, Loader2, ArrowRight, Users, BarChart3, AtSign } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -30,17 +30,19 @@ function timeAgo(dateStr: string): string {
     return `${d}d ago`;
 }
 
-function NotifIcon({ type }: { type: string }) {
-    const base = 'w-9 h-9 rounded-2xl flex items-center justify-center shrink-0';
-    if (type === 'new_follower') return <div className={`${base} bg-pink-100 text-pink-600`}><UserPlus className="w-4 h-4" /></div>;
-    if (type === 'ai_confirmed_correct' || type === 'answer_approved') return <div className={`${base} bg-emerald-100 text-emerald-600`}><CheckCircle2 className="w-4 h-4" /></div>;
-    if (type === 'ai_confirmed_wrong' || type === 'answer_flagged') return <div className={`${base} bg-red-100 text-red-600`}><XCircle className="w-4 h-4" /></div>;
-    if (type === 'points_earned') return <div className={`${base} bg-amber-100 text-amber-600`}><Zap className="w-4 h-4" /></div>;
-    if (type === 'new_question') return <div className={`${base} bg-indigo-100 text-indigo-600`}><BookOpen className="w-4 h-4" /></div>;
-    if (type === 'coop_challenge') return <div className={`${base} bg-indigo-100 text-indigo-600`}><Users className="w-4 h-4" /></div>;
-    if (type === 'weekly_report') return <div className={`${base} bg-cyan-100 text-cyan-600`}><BarChart3 className="w-4 h-4" /></div>;
-    if (type === 'social_comment') return <div className={`${base} bg-blue-100 text-blue-600`}><MessageSquare className="w-4 h-4" /></div>;
-    return <div className={`${base} bg-slate-100 text-slate-500`}><Bell className="w-4 h-4" /></div>;
+function NotifIconSmall({ type }: { type: string }) {
+    const base = 'w-5 h-5 rounded-lg flex items-center justify-center shrink-0 border border-white dark:border-slate-800 shadow-sm';
+    if (type === 'new_follower') return <div className={`${base} bg-pink-100 text-pink-600`}><UserPlus className="w-2.5 h-2.5" /></div>;
+    if (type === 'ai_confirmed_correct' || type === 'answer_approved') return <div className={`${base} bg-emerald-100 text-emerald-600`}><CheckCircle2 className="w-2.5 h-2.5" /></div>;
+    if (type === 'ai_confirmed_wrong' || type === 'answer_flagged') return <div className={`${base} bg-red-100 text-red-600`}><XCircle className="w-2.5 h-2.5" /></div>;
+    if (type === 'points_earned') return <div className={`${base} bg-amber-100 text-amber-600`}><Zap className="w-2.5 h-2.5" /></div>;
+    if (type === 'new_question') return <div className={`${base} bg-indigo-100 text-indigo-600`}><BookOpen className="w-2.5 h-2.5" /></div>;
+    if (type === 'coop_challenge') return <div className={`${base} bg-indigo-100 text-indigo-600`}><Users className="w-2.5 h-2.5" /></div>;
+    if (type === 'weekly_report') return <div className={`${base} bg-cyan-100 text-cyan-600`}><BarChart3 className="w-2.5 h-2.5" /></div>;
+    if (type === 'social_comment') return <div className={`${base} bg-blue-100 text-blue-600`}><MessageSquare className="w-2.5 h-2.5" /></div>;
+    if (type === 'post_mention') return <div className={`${base} bg-blue-100 text-blue-600`}><AtSign className="w-2.5 h-2.5" /></div>;
+    if (type.startsWith('war_')) return <div className={`${base} bg-orange-100 text-orange-600`}><Swords className="w-2.5 h-2.5" /></div>;
+    return <div className={`${base} bg-slate-100 text-slate-500`}><Bell className="w-2.5 h-2.5" /></div>;
 }
 
 export default function NotificationBell({ isMobile = false }: { isMobile?: boolean }) {
@@ -125,7 +127,7 @@ export default function NotificationBell({ isMobile = false }: { isMobile?: bool
         if (!notif.read && token) {
             setNotifications(n => n.map(x => x.id === notif.id ? { ...x, read: true } : x));
             setUnreadCount(c => Math.max(0, c - 1));
-            await fetch('/api/notifications', {
+            fetch('/api/notifications', {
                 method: 'PATCH',
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ notificationId: notif.id })
@@ -161,7 +163,7 @@ export default function NotificationBell({ isMobile = false }: { isMobile?: bool
             >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 border-2 border-slate-50 dark:border-slate-950 md:border-white md:dark:border-white shadow-md animate-bounce">
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 border-2 border-slate-50 dark:border-slate-950 md:border-white md:dark:border-white shadow-sm">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
@@ -223,7 +225,7 @@ export default function NotificationBell({ isMobile = false }: { isMobile?: bool
                     ) : (
                         filtered.map(n => (
                             n.type === 'coop_challenge' ? (
-                                <div key={n.id} className="border-b border-slate-50 dark:border-slate-900">
+                                <div key={n.id} className="border-b border-slate-50 dark:border-slate-100 dark:border-slate-900">
                                     <CoopNotifCard 
                                         notif={n} 
                                         compact 
@@ -241,17 +243,24 @@ export default function NotificationBell({ isMobile = false }: { isMobile?: bool
                                     {!n.read && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600" />}
                                     <div className="flex gap-4">
                                         <div className="relative shrink-0">
-                                            {n.actor_avatar ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={n.actor_avatar} alt="" className="w-10 h-10 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-sm" />
+                                            {n.actor_avatar? (
+                                                <div className="relative">
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img src={n.actor_avatar} alt="" className="w-10 h-10 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-sm" />
+                                                    <div className="absolute -bottom-1 -right-1 overflow-hidden shrink-0">
+                                                        <NotifIconSmall type={n.type} />
+                                                    </div>
+                                                </div>
                                             ) : (
-                                                <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-black text-sm border-2 border-white dark:border-slate-800">
-                                                    {n.actor_name?.[0]?.toUpperCase() || 'M'}
+                                                <div className="relative">
+                                                    <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-black text-sm border-2 border-white dark:border-slate-800">
+                                                        {n.actor_name?.[0]?.toUpperCase() || 'M'}
+                                                    </div>
+                                                    <div className="absolute -bottom-1 -right-1 overflow-hidden shrink-0">
+                                                        <NotifIconSmall type={n.type} />
+                                                    </div>
                                                 </div>
                                             )}
-                                            <div className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm shrink-0">
-                                                <NotifIcon type={n.type} />
-                                            </div>
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className={`text-xs mb-0.5 line-clamp-1 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors ${!n.read ? 'font-black text-slate-900 dark:text-slate-100' : 'font-bold text-slate-600 dark:text-slate-400'}`}>
