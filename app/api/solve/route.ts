@@ -250,9 +250,10 @@ export async function POST(req: Request) {
         let lastStreakAt = profile?.last_streak_at || null;
         let dailySolved = Number(profile?.daily_solved) || 0;
 
+        console.log(`[StreakTrace] Before: day=${todayStr} streak=${streakCount} solved=${dailySolved} goal=${streakCount+1}`);
+
         // Reset daily counter if it's a new day
         if (lastStreakAt && lastStreakAt !== todayStr) {
-            // Check if they missed a day (Cold Streak)
             const yesterday = new Date(now);
             yesterday.setDate(yesterday.getDate() - 1);
             const yesterdayStr = new Intl.DateTimeFormat('en-IN', {
@@ -263,23 +264,23 @@ export async function POST(req: Request) {
             }).format(yesterday).split('/').reverse().join('-');
 
             if (lastStreakAt !== yesterdayStr) {
-                // If the last time they updated their streak was NOT yesterday and NOT today
-                // then they missed a full day (or more).
                 streakCount = 0; 
             }
-            dailySolved = 0; // New day, new quota
+            dailySolved = 0; 
         }
 
         if (isCorrect) {
             dailySolved += 1;
             const dailyGoal = streakCount + 1;
 
-            // If goal reached today and not already updated streak today
             if (dailySolved >= dailyGoal && lastStreakAt !== todayStr) {
                 streakCount += 1;
                 lastStreakAt = todayStr;
+                console.log(`[StreakTrace] Level UP! New Streak: ${streakCount}`);
             }
         }
+
+        console.log(`[StreakTrace] After: solved=${dailySolved} isCorrect=${isCorrect}`);
 
         const newTotal = Math.max(0, currentPoints + userPointsChange);
 
@@ -287,6 +288,7 @@ export async function POST(req: Request) {
         const battlesAttempted = (Number(userMeta.battlesAttempted) || 0) + 1;
         const battlesWon = (Number(userMeta.battlesWon) || 0) + (isCorrect ? 1 : 0);
 
+        // SYNC BOTH: Auth & Profiles
         await supabaseAdmin.auth.admin.updateUserById(userId, {
             user_metadata: {
                 ...userMeta,
@@ -298,9 +300,7 @@ export async function POST(req: Request) {
                 dailySolved
             }
         });
-        leaderboardCache.invalidate();
 
-        // Sync profiles table so leaderboard stays accurate
         await upsertProfile(userId, { 
             ...userMeta, 
             totalPoints: newTotal, 
@@ -310,6 +310,7 @@ export async function POST(req: Request) {
             lastStreakAt,
             dailySolved
         });
+        leaderboardCache.invalidate();
 
         // 5. Save attempt or update existing if they already solved it previously
         if (existingAttempt) {
@@ -396,7 +397,13 @@ export async function POST(req: Request) {
             isCorrect,
             correctOption: correctOpt,
             pointsChange: pointsChangeDisplay,
-            newTotal
+            newTotal,
+            streakStats: {
+                streakCount,
+                dailySolved,
+                lastStreakAt,
+                todayStr
+            }
         });
     } catch (err: any) {
         console.error(err);
