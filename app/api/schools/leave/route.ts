@@ -41,6 +41,12 @@ export async function POST(req: NextRequest) {
             });
         }
 
+        // --- THE FIX: Also clear the profiles table to prevent ghosting ---
+        await supabaseAdmin.from('profiles').update({
+            school: null,
+            school_id: null
+        }).eq('id', user.id);
+
         return NextResponse.json({ success: true, message: 'You have left the faction.' });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });

@@ -51,6 +51,12 @@ export async function POST(req: NextRequest) {
             });
         }
 
+        // --- THE FIX: Clear profiles for ALL members of this school ---
+        await supabaseAdmin.from('profiles').update({
+            school: null,
+            school_id: null
+        }).eq('school_id', squadData.school_id);
+
         return NextResponse.json({ success: true, message: 'Faction permanently disbanded.' });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
