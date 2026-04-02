@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.dheeyudha.app",
+      "sha256_cert_fingerprints": [
+        "BA:E9:9D:61:95:C9:8D:1E:E2:E2:4C:E2:B2:D2:C2:59:74:10:9D:BA:E9:9D:61:95:C9:8D:1E:E2:E2:4C:E2"
+      ]
+    }
+  }
+]
