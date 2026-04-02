@@ -16,6 +16,9 @@ export interface Profile {
     school_id: string | null;
     is_teacher: boolean;
     is_ghost: boolean;
+    streak_count: number;
+    last_streak_at: string | null;
+    daily_solved: number;
     total_points: number;
     username: string | null;
     updated_at: string;
@@ -34,6 +37,9 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
         school_id: meta.school_id ? String(meta.school_id) : null,
         is_teacher: meta.isTeacher === true,
         is_ghost: meta.is_ghost === true || meta.isGhost === true,
+        streak_count: Number(meta.streakCount) || 0,
+        last_streak_at: meta.lastStreakAt || null,
+        daily_solved: Number(meta.dailySolved) || 0,
         total_points: Number(meta.totalPoints) || 0,
         username: meta.username || null,
         updated_at: new Date().toISOString(),

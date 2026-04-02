@@ -235,9 +235,41 @@ export async function POST(req: Request) {
             pointsChangeDisplay = 0;
         }
 
+        // --- STREAK LOGIC ---
+        const { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        let streakCount = Number(profile?.streak_count) || 0;
+        let lastStreakAt = profile?.last_streak_at || null;
+        let dailySolved = Number(profile?.daily_solved) || 0;
+
+        // Reset daily counter if it's a new day
+        if (lastStreakAt && lastStreakAt !== todayStr) {
+            // Check if they missed a day (Cold Streak)
+            const lastDate = new Date(lastStreakAt);
+            const diffDays = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays > 1) {
+                streakCount = 0; // Reset to 0 if they missed the whole previous day
+            }
+            dailySolved = 0; // New day, new quota
+        }
+
+        if (isCorrect) {
+            dailySolved += 1;
+            const dailyGoal = streakCount + 1;
+
+            // If goal reached today and not already updated streak today
+            if (dailySolved >= dailyGoal && lastStreakAt !== todayStr) {
+                streakCount += 1;
+                lastStreakAt = todayStr;
+            }
+        }
+
         const newTotal = Math.max(0, currentPoints + userPointsChange);
 
-        // Update totalPoints and increment attempts counter maybe
+        // Update totalPoints and increment attempts counter
         const battlesAttempted = (Number(userMeta.battlesAttempted) || 0) + 1;
         const battlesWon = (Number(userMeta.battlesWon) || 0) + (isCorrect ? 1 : 0);
 
@@ -247,12 +279,23 @@ export async function POST(req: Request) {
                 totalPoints: newTotal,
                 battlesAttempted,
                 battlesWon,
+                streakCount,
+                lastStreakAt,
+                dailySolved
             }
         });
         leaderboardCache.invalidate();
 
         // Sync profiles table so leaderboard stays accurate
-        await upsertProfile(userId, { ...userMeta, totalPoints: newTotal, battlesAttempted, battlesWon });
+        await upsertProfile(userId, { 
+            ...userMeta, 
+            totalPoints: newTotal, 
+            battlesAttempted, 
+            battlesWon,
+            streakCount,
+            lastStreakAt,
+            dailySolved
+        });
 
         // 5. Save attempt or update existing if they already solved it previously
         if (existingAttempt) {
