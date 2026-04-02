@@ -14,7 +14,14 @@ export async function GET(req: NextRequest) {
 
         if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const userSchoolName = user.user_metadata?.school;
+        // --- THE FIX: Fetch live school name from profiles table instead of stale metadata ---
+        const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('school')
+            .eq('id', user.id)
+            .single();
+
+        const userSchoolName = profile?.school;
 
         if (!userSchoolName) {
             return NextResponse.json({ error: 'No school assigned' }, { status: 400 });
@@ -137,7 +144,14 @@ export async function POST(req: NextRequest) {
 
         if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const userSchoolName = user.user_metadata?.school;
+        // --- THE FIX: Fetch live school name from profiles table ---
+        const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('school')
+            .eq('id', user.id)
+            .single();
+
+        const userSchoolName = profile?.school;
 
         if (!userSchoolName) {
             return NextResponse.json({ error: 'No school assigned' }, { status: 400 });
