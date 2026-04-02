@@ -18,15 +18,17 @@ export default function PostCard({
     post,
     currentUserId,
     onUpdate,
+    isSinglePost = false,
 }: {
     post: any;
     currentUserId: string | null;
     onUpdate?: () => void;
+    isSinglePost?: boolean;
 }) {
     const [isLiked, setIsLiked] = useState(post.is_liked_by_me || false);
     const [likesCount, setLikesCount] = useState(post.likes_count || 0);
     const [commentsCount, setCommentsCount] = useState(post.comments_count || 0);
-    const [showComments, setShowComments] = useState(false);
+    const [showComments, setShowComments] = useState(isSinglePost); // Auto-show comments if on single post page
     const [comments, setComments] = useState<any[]>(post.recent_comments || []);
     const [loadingComments, setLoadingComments] = useState(false);
     const [newComment, setNewComment] = useState('');
@@ -54,31 +56,36 @@ export default function PostCard({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    useEffect(() => {
+        if (isSinglePost && comments.length === 0) {
+            fetchComments();
+        }
+    }, [isSinglePost]);
+
     function getUsername(user: any): string | null {
         return user?.username || user?.user_metadata?.username || user?.profile?.username || null;
     }
 
-    function isTeacherUser(user: any): boolean {
-        return Boolean(user?.isTeacher || user?.is_teacher || user?.user_metadata?.isTeacher);
-    }
-
-    function getProfileUrl(user: any) {
-        if (!user) return null;
+    function getProfileUrl(user: any): string | null {
         const username = getUsername(user);
-        if (!username) return isOwner ? '/profile' : null;
-        return isTeacherUser(user) ? `/teacher/${username}` : `/user/${username}`;
+        if (!username) return null;
+        return user?.isTeacher ? `/teacher/${username}` : `/user/${username}`;
     }
 
-    const formatMentions = (text: string) => {
+    function isTeacherUser(user: any): boolean {
+        return user?.isTeacher || user?.is_teacher || user?.user_metadata?.isTeacher || false;
+    }
+
+    function formatMentions(text: string) {
         if (!text) return null;
         const parts = text.split(/(@[\w.-]+)/g);
         return parts.map((part, i) => {
             if (part.startsWith('@')) {
                 const username = part.substring(1);
                 return (
-                    <Link 
-                        key={i} 
-                        href={`/user/${username}`} 
+                    <Link
+                        key={i}
+                        href={`/user/${username}`}
                         className="text-blue-600 dark:text-blue-400 font-bold hover:underline"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -86,67 +93,64 @@ export default function PostCard({
                     </Link>
                 );
             }
-            return part;
+            return <span key={i}>{part}</span>;
         });
-    };
+    }
 
     const handleCommentChange = async (val: string) => {
         setNewComment(val);
-        
-        // Detect @ mention
-        // Use a more robust selector for the active textarea
+
         const activeEl = document.activeElement as HTMLTextAreaElement;
         const cursorPosition = activeEl?.selectionStart || val.length;
         const textBeforeCursor = val.slice(0, cursorPosition);
         const lastAtSign = textBeforeCursor.lastIndexOf('@');
-        
+
         if (lastAtSign !== -1) {
             const potentialMention = textBeforeCursor.slice(lastAtSign + 1);
-            
-            // Trigger if it's at the start OR preceded by a non-word character (space, paren, etc.)
-            // and the mention itself doesn't have spaces yet.
             const charBeforeAt = lastAtSign > 0 ? textBeforeCursor[lastAtSign - 1] : ' ';
             const isAtStartOrValidBoundary = lastAtSign === 0 || /[^a-zA-Z0-9_]/.test(charBeforeAt);
-            
+
             if (isAtStartOrValidBoundary && !/\s/.test(potentialMention)) {
                 setMentionSearch(potentialMention);
                 setMentionIndex(lastAtSign);
-                
-                // Fetch users
+
                 if (potentialMention.length > 0) {
-                   try {
-                       const res = await fetch(`/api/search?q=${potentialMention}`);
-                       if (res.ok) {
-                           const data = await res.json();
-                           // We only care about users for the tagging auto-suggest
-                           setSuggestions(data.users || []);
-                       }
-                   } catch (err) {
-                       console.error('Mention fetch failed:', err);
-                   }
+                    try {
+                        const res = await fetch(`/api/search?q=${potentialMention}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            setSuggestions(data.users || []);
+                        }
+                    } catch (err) {
+                        console.error('Mention fetch failed:', err);
+                    }
                 } else {
                     setSuggestions([]);
                 }
                 return;
             }
         }
-        
+
         setMentionSearch(null);
         setSuggestions([]);
     };
 
-    const applySuggestion = (user: any) => {
-        if (mentionIndex === null) return;
-        const handle = user.username;
-        const before = newComment.slice(0, mentionIndex);
-        const after = newComment.slice(mentionIndex + (mentionSearch?.length || 0) + 1);
-        setNewComment(`${before}@${handle} ${after}`);
+    const insertMention = (suggestion: any) => {
+        const username = suggestion.username || suggestion.user_metadata?.username;
+        if (!username || mentionIndex === null) return;
+
+        const textBefore = newComment.substring(0, mentionIndex);
+        const textAfter = newComment.substring(mentionIndex + (mentionSearch?.length || 0) + 1);
+        const updatedContent = `${textBefore}@${username} ${textAfter}`;
+
+        setNewComment(updatedContent);
         setSuggestions([]);
         setMentionSearch(null);
+        setMentionIndex(null);
     };
 
     const handleLike = async () => {
-        if (!currentUserId) return alert('Log in to like posts!');
+        if (!currentUserId) return;
 
         const prevLiked = isLiked;
         const prevCount = likesCount;
@@ -169,20 +173,23 @@ export default function PostCard({
         }
     };
 
+    const fetchComments = async () => {
+        setLoadingComments(true);
+        try {
+            const res = await fetch(`/api/posts/${post.id}/comments`);
+            if (res.ok) {
+                const data = await res.json();
+                setComments(data);
+            }
+        } finally {
+            setLoadingComments(false);
+        }
+    };
+
     const toggleComments = async () => {
         if (!showComments && comments.length === 0) {
-            setLoadingComments(true);
-            try {
-                const res = await fetch(`/api/posts/${post.id}/comments`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setComments(data);
-                }
-            } finally {
-                setLoadingComments(false);
-            }
+            await fetchComments();
         }
-
         setShowComments((v) => !v);
     };
 
@@ -200,16 +207,17 @@ export default function PostCard({
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${session?.access_token}` },
             });
-            if (res.ok && onUpdate) onUpdate();
+            if (res.ok) {
+                if (onUpdate) onUpdate();
+            }
         } finally {
             setDeletingPost(false);
-            setShowMenu(false);
         }
     };
 
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newComment.trim() || isSubmitting) return;
+        if (!newComment.trim() || isSubmitting || !currentUserId) return;
 
         setIsSubmitting(true);
         try {
@@ -223,14 +231,15 @@ export default function PostCard({
                     Authorization: `Bearer ${session?.access_token}`,
                 },
                 body: JSON.stringify({
-                    content: newComment.trim(),
-                    replying_to_user_id: replyingTo?.userId || null,
+                    content: newComment,
+                    replying_to_user_id: replyingTo?.userId,
                 }),
             });
+
             if (res.ok) {
-                const inserted = await res.json();
-                setComments((c) => [inserted, ...c]);
-                setCommentsCount((prev: number) => prev + 1);
+                const comment = await res.json();
+                setComments([comment, ...comments]);
+                setCommentsCount((c: number) => c + 1);
                 setNewComment('');
                 setReplyingTo(null);
             }
@@ -240,57 +249,44 @@ export default function PostCard({
     };
 
     return (
-        <div className="bg-indigo-50/20 dark:bg-indigo-950/20 border-b sm:border border-indigo-100/50 dark:border-indigo-900/50 rounded-none sm:rounded-[2.5rem] overflow-hidden shadow-sm sm:shadow-indigo-500/5 hover:shadow-indigo-500/10 transition-all duration-300">
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
             {/* Header */}
-            <div className="p-4 sm:p-6 flex items-start justify-between">
+            <div className="px-5 sm:px-8 py-5 flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
-                    {(() => {
-                        const profileUrl = getProfileUrl(post.author);
-                        const isTeacher = isTeacherUser(post.author);
-                        
-                        const AuthorAvatar = (
-                             <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-indigo-100/50 dark:bg-indigo-900/30 border-[2px] border-white dark:border-indigo-800 shrink-0 shadow-sm shadow-indigo-200/50 dark:shadow-none">
-                                {post.author?.avatar_url ? (
-                                    <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
-                                ) : (
-                                    <User className="w-5 h-5 sm:w-6 sm:h-6 absolute inset-0 m-auto text-slate-400" />
-                                )}
-                            </div>
-                        );
-
-                        const AuthorText = (
-                            <div className="flex flex-col min-w-0">
-                                <BadgedName 
-                                    name={post.author?.name || 'Unknown Scholar'}
-                                    userId={post.author?.id}
-                                    isTeacher={isTeacher}
-                                    totalPoints={Number(post.author?.totalPoints)}
-                                    nameClassName="font-black text-[14px] sm:text-[16px] text-slate-900 dark:text-slate-100"
-                                    className="flex items-center gap-1.5 min-w-0"
-                                />
-                                <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 uppercase tracking-tight">
+                    <Link href={getProfileUrl(post.author) || '#'}>
+                        <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-indigo-100/50 dark:bg-indigo-900/30 border-[2px] border-white dark:border-indigo-800 shrink-0 shadow-sm shadow-indigo-200/50 dark:shadow-none">
+                            {post.author?.avatar_url ? (
+                                <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
+                            ) : (
+                                <User className="w-5 h-5 sm:w-6 sm:h-6 absolute inset-0 m-auto text-slate-400" />
+                            )}
+                        </div>
+                    </Link>
+                    <div className="flex flex-col min-w-0">
+                        <Link href={getProfileUrl(post.author) || '#'}>
+                            <BadgedName
+                                name={post.author?.name || 'Unknown Scholar'}
+                                userId={post.author?.id}
+                                isTeacher={isTeacherUser(post.author)}
+                                totalPoints={Number(post.author?.totalPoints)}
+                                nameClassName="font-black text-[14px] sm:text-[16px] text-slate-900 dark:text-slate-100"
+                                className="flex items-center gap-1.5 min-w-0"
+                            />
+                        </Link>
+                        {!isSinglePost ? (
+                            <Link href={`/posts/${post.id}`}>
+                                <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight flex items-center gap-1 mt-0.5 hover:text-indigo-500 transition-colors">
                                     <Clock className="w-2.5 h-2.5" /> {timeAgo}
                                     {post.author?.school && <span className="truncate max-w-[100px] sm:max-w-none"> • {post.author.school}</span>}
                                 </p>
-                            </div>
-                        );
-
-                        if (profileUrl) {
-                            return (
-                                <Link href={profileUrl} className="flex items-center gap-3 group/author min-w-0">
-                                    {AuthorAvatar}
-                                    {AuthorText}
-                                </Link>
-                            );
-                        }
-                        
-                        return (
-                            <div className="flex items-center gap-3 min-w-0">
-                                {AuthorAvatar}
-                                {AuthorText}
-                            </div>
-                        );
-                    })()}
+                            </Link>
+                        ) : (
+                            <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight flex items-center gap-1 mt-0.5">
+                                <Clock className="w-2.5 h-2.5" /> {timeAgo}
+                                {post.author?.school && <span className="truncate max-w-[100px] sm:max-w-none"> • {post.author.school}</span>}
+                            </p>
+                        )}
+                    </div>
                 </div>
 
                 {isOwner && (
@@ -308,7 +304,7 @@ export default function PostCard({
                                     type="button"
                                     onClick={handleDeletePost}
                                     disabled={deletingPost}
-                                    className="w-full px-4 py-3 text-left text-sm font-bold text-rose-600 dark:玫瑰-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2 disabled:opacity-60 transition-colors"
+                                    className="w-full px-4 py-3 text-left text-sm font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2 disabled:opacity-60 transition-colors"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                     {deletingPost ? 'Removing...' : 'Delete Post'}
@@ -320,64 +316,84 @@ export default function PostCard({
             </div>
 
             {/* Content */}
-            <div className="px-4 sm:px-6 pb-4">
-                <Link href={`/posts/${post.id}`}>
-                    <div className="text-slate-800 dark:text-slate-200 text-[14px] sm:text-[16px] leading-[1.6] sm:leading-relaxed whitespace-pre-wrap cursor-pointer hover:opacity-80 transition-opacity font-medium">
+            {!isSinglePost ? (
+                <div className="px-6 pb-2">
+                    <Link href={`/posts/${post.id}`}>
+                        <div className="text-slate-800 dark:text-slate-200 text-[14px] sm:text-[16px] leading-[1.6] sm:leading-relaxed whitespace-pre-wrap cursor-pointer hover:opacity-80 transition-opacity font-medium mb-4">
+                            {formatMentions(post.content)}
+                        </div>
+                    </Link>
+                    {post.image_url && (
+                        <Link href={`/posts/${post.id}`} className="block relative w-full bg-indigo-100/30 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100/30 dark:border-indigo-900/40 cursor-pointer overflow-hidden mb-4">
+                            <img
+                                src={post.image_url}
+                                alt="Post media"
+                                loading="lazy"
+                                className="w-full h-auto max-h-[600px] object-contain sm:hover:scale-[1.01] transition-transform duration-700 ease-out"
+                            />
+                        </Link>
+                    )}
+                </div>
+            ) : (
+                <div className="px-6 pb-2">
+                    <div className="text-slate-800 dark:text-slate-200 text-[14px] sm:text-[16px] leading-[1.6] sm:leading-relaxed whitespace-pre-wrap font-medium mb-4">
                         {formatMentions(post.content)}
                     </div>
-                </Link>
-            </div>
-
-            {/* Media */}
-            {post.image_url && (
-                <Link href={`/posts/${post.id}`}>
-                    <div className="w-full relative bg-indigo-100/30 dark:bg-indigo-950/40 border-y border-indigo-100/30 dark:border-indigo-900/40 cursor-pointer overflow-hidden">
-                        <img
-                            src={post.image_url}
-                            alt="Post media"
-                            loading="lazy"
-                            className="w-full h-auto max-h-[600px] object-contain sm:hover:scale-[1.01] transition-transform duration-700 ease-out"
-                        />
-                    </div>
-                </Link>
+                    {post.image_url && (
+                        <div className="w-full relative bg-indigo-100/30 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100/30 dark:border-indigo-900/40 overflow-hidden mb-4">
+                            <img
+                                src={post.image_url}
+                                alt="Post media"
+                                loading="lazy"
+                                className="w-full h-auto max-h-[600px] object-contain"
+                            />
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Actions */}
             <div className="flex items-center gap-5 sm:gap-7 px-4 sm:px-6 py-4">
                 <button
                     onClick={handleLike}
-                    className={`flex items-center gap-1.5 font-black text-xs sm:text-sm transition-all active:scale-95 ${
-                        isLiked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-500'
-                    }`}
+                    className={`flex items-center gap-1.5 font-black text-xs sm:text-sm transition-all active:scale-95 ${isLiked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-500'
+                        }`}
                 >
-                    <Heart className={`w-[22px] h-[22px] sm:w-[26px] sm:h-[26px] ${isLiked ? 'fill-current' : ''}`} /> 
+                    <Heart className={`w-[22px] h-[22px] sm:w-[26px] sm:h-[26px] ${isLiked ? 'fill-current' : ''}`} />
                     <span>{likesCount}</span>
                 </button>
-                <button
-                    onClick={toggleComments}
-                    className="flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 transition-colors font-black text-xs sm:text-sm active:scale-95"
-                >
-                    <MessageCircle className="w-[22px] h-[22px] sm:w-[26px] sm:h-[26px]" /> 
-                    <span>{commentsCount}</span>
-                </button>
+                {isSinglePost ? (
+                    <button
+                        onClick={toggleComments}
+                        className={`flex items-center gap-1.5 font-black text-xs sm:text-sm active:scale-95 transition-colors ${showComments ? 'text-indigo-600' : 'text-slate-500 hover:text-indigo-600'}`}
+                    >
+                        <MessageCircle className={`w-[22px] h-[22px] sm:w-[26px] sm:h-[26px] ${showComments ? 'fill-indigo-500/10' : ''}`} />
+                        <span>{commentsCount}</span>
+                    </button>
+                ) : (
+                    <Link href={`/posts/${post.id}`} className="flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 transition-colors font-black text-xs sm:text-sm active:scale-95">
+                        <MessageCircle className="w-[22px] h-[22px] sm:w-[26px] sm:h-[26px]" />
+                        <span>{commentsCount}</span>
+                    </Link>
+                )}
                 <div className="ml-auto" />
                 <button
                     className="flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 transition-colors font-black text-xs sm:text-sm active:scale-95"
                     onClick={async () => {
                         const url = typeof window !== 'undefined' ? `${window.location.origin}/posts/${post.id}` : '';
                         const title = post?.title || (post?.content ? post.content.slice(0, 60) : 'Check out this post!');
-                        
+
                         try {
                             if (Capacitor.isNativePlatform()) {
                                 await Share.share({ title, text: title, url, dialogTitle: 'Share this post' });
                                 return;
-                            } 
-                            
+                            }
+
                             if (navigator.share) {
                                 await navigator.share({ title, text: title, url });
                                 return;
-                            } 
-                            
+                            }
+
                             if (navigator.clipboard) {
                                 await navigator.clipboard.writeText(url);
                                 alert('Link copied!');
@@ -404,7 +420,7 @@ export default function PostCard({
                                 return (
                                     <div key={comment.id} className="flex gap-3 items-start group/comment">
                                         <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 shrink-0">
-                                            {comment.author.avatar_url ? (
+                                            {comment.author?.avatar_url ? (
                                                 <Image src={comment.author.avatar_url} alt="avatar" width={36} height={36} className="object-cover w-9 h-9" />
                                             ) : (
                                                 <User className="w-5 h-5 m-auto text-slate-400" />
@@ -414,19 +430,19 @@ export default function PostCard({
                                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                 {commentProfileUrl ? (
                                                     <Link href={commentProfileUrl}>
-                                                        <BadgedName 
+                                                        <BadgedName
                                                             name={comment.author.name}
                                                             userId={comment.author.id}
-                                                            isTeacher={comment.author.isTeacher}
+                                                            isTeacher={isTeacherUser(comment.author)}
                                                             totalPoints={Number(comment.author.totalPoints)}
                                                             nameClassName="font-bold text-[13px] sm:text-sm text-slate-900 dark:text-slate-100 hover:text-indigo-600 transition-colors"
                                                         />
                                                     </Link>
                                                 ) : (
-                                                    <BadgedName 
+                                                    <BadgedName
                                                         name={comment.author.name}
                                                         userId={comment.author.id}
-                                                        isTeacher={comment.author.isTeacher}
+                                                        isTeacher={isTeacherUser(comment.author)}
                                                         totalPoints={Number(comment.author.totalPoints)}
                                                         nameClassName="font-bold text-[13px] sm:text-sm text-slate-900 dark:text-slate-100"
                                                     />
@@ -451,33 +467,40 @@ export default function PostCard({
                                     </div>
                                 );
                             })}
-                        </div>
-                    )}
 
-                    <form onSubmit={handleCommentSubmit} className="mt-8 flex gap-3 items-start">
-                        <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex-shrink-0 flex items-center justify-center font-black text-indigo-600 text-sm border border-indigo-100 dark:border-indigo-900/30">
-                            ME
-                        </div>
-                        <div className="flex-1 relative">
-                            {replyingTo && (
-                                <div className="mb-2 text-xs font-bold text-indigo-600 flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 rounded-lg w-fit">
-                                    Replying to @{replyingTo.username}
-                                    <button
-                                        type="button"
-                                        className="text-rose-500 hover:scale-110 transition-transform"
-                                        onClick={() => {
-                                            setReplyingTo(null);
-                                            setNewComment('');
-                                        }}
-                                    >
-                                        <X size={14} />
-                                    </button>
+                            {currentUserId && (
+                                <div className="relative mt-4">
+                                    {replyingTo && (
+                                        <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 border-x border-t border-indigo-100 dark:border-indigo-800 rounded-t-2xl">
+                                            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                                                <MessageCircle className="w-3 h-3" /> Replying to @{replyingTo.username}
+                                            </span>
+                                            <button onClick={() => setReplyingTo(null)} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-colors">
+                                                <X className="w-3.5 h-3.5 text-slate-400" />
+                                            </button>
+                                        </div>
+                                    )}
+                                    <form onSubmit={handleCommentSubmit} className="flex gap-2">
+                                        <textarea
+                                            value={newComment}
+                                            onChange={(e) => handleCommentChange(e.target.value)}
+                                            placeholder={replyingTo ? "Write your reply..." : "Write a comment..."}
+                                            className={`flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 sm:p-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all min-h-[50px] max-h-[150px] resize-none ${replyingTo ? 'rounded-b-2xl' : 'rounded-2xl'}`}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={!newComment.trim() || isSubmitting}
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 sm:px-6 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 h-[50px] self-end"
+                                        >
+                                            {isSubmitting ? '...' : 'Post'}
+                                        </button>
+                                    </form>
                                 </div>
                             )}
-                            
+
                             {/* User Suggestions Dropdown */}
                             {suggestions.length > 0 && (
-                                <div 
+                                <div
                                     ref={suggestionsRef}
                                     className="absolute bottom-full left-0 mb-2 w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-[70] animate-in slide-in-from-bottom-2"
                                 >
@@ -485,47 +508,31 @@ export default function PostCard({
                                         <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Suggested Scholars</p>
                                     </div>
                                     <div className="max-h-48 overflow-y-auto">
-                                        {suggestions.map((u) => (
+                                        {suggestions.map((user) => (
                                             <button
-                                                key={u.id}
+                                                key={user.id}
                                                 type="button"
-                                                onClick={() => applySuggestion(u)}
-                                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b last:border-0 border-slate-100 dark:border-slate-800 text-left group"
+                                                onClick={() => insertMention(user)}
+                                                className="w-full p-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-50 dark:border-slate-800 last:border-0"
                                             >
-                                                <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-100/50 border border-indigo-200/50 px-0.5 pt-0.5">
-                                                    {u.avatar_url ? (
-                                                        <img src={u.avatar_url} className="w-full h-full object-cover rounded-full" alt="avatar" />
+                                                <div className="w-8 h-8 rounded-full overflow-hidden bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-800">
+                                                    {user.avatar_url ? (
+                                                        <Image src={user.avatar_url} alt="avatar" width={32} height={32} className="object-cover" />
                                                     ) : (
-                                                        <User className="w-4 h-4 m-auto text-slate-400" />
+                                                        <User className="w-4 h-4 m-auto text-slate-300" />
                                                     )}
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 transition-colors">@{u.username}</p>
-                                                    <p className="text-[10px] text-slate-500 truncate">{u.full_name}</p>
+                                                <div className="text-left min-w-0">
+                                                    <p className="text-xs font-black text-slate-900 dark:text-white truncate">{user.full_name || user.user_metadata?.fullName}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 truncate">@{user.username || user.user_metadata?.username}</p>
                                                 </div>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
                             )}
-
-                            <textarea
-                                placeholder="Add to the conversation..."
-                                value={newComment}
-                                onChange={(e) => handleCommentChange(e.target.value)}
-                                className="w-full bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-3xl p-4 text-sm min-h-[90px] focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
-                            />
-                            <div className="flex justify-end mt-2">
-                                <button
-                                    type="submit"
-                                    disabled={!newComment.trim() || isSubmitting}
-                                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-2.5 rounded-2xl text-sm disabled:opacity-50 active:scale-95 transition-all shadow-lg shadow-indigo-500/20"
-                                >
-                                    {isSubmitting ? 'Posting...' : 'Post Comment'}
-                                </button>
-                            </div>
                         </div>
-                    </form>
+                    )}
                 </div>
             )}
         </div>

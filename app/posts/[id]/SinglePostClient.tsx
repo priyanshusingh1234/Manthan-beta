@@ -118,7 +118,7 @@ export default function SinglePostClient({ postId }: { postId: string }) {
                     </div>
                 </div>
 
-                <PostCard post={post} currentUserId={currentUserId} onUpdate={refreshPost} />
+                <PostCard post={post} currentUserId={currentUserId} onUpdate={refreshPost} isSinglePost={true} />
             </main>
         </div>
     );

@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Trophy, Award, Star, Medal, Sword, Brain, Shield, Target, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trophy, Award, Star, Medal, Sword, Brain, Shield, Target, Zap, LayoutGrid, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import TopperBadge from '@/ticks/topper';
 import { useTopRanks } from '@/hooks/useTopRanks';
+import PostCard from './PostCard';
+import { supabase } from '@/lib/supabaseClient';
 
 const iconsMapping: Record<string, any> = {
     trophy: Trophy,
@@ -37,7 +39,42 @@ export default function PublicProfileTabs({
   isTeacher
 }: PublicProfileTabsProps) {
   const { getRank } = useTopRanks();
-  const [activeTab, setActiveTab] = useState<'stats' | 'badges' | 'solved'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'badges' | 'solved' | 'posts'>('stats');
+  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+        setCurrentUserId(user?.id || null);
+    });
+  }, []);
+
+  const fetchUserPosts = async () => {
+    if (userPosts.length > 0 || loadingPosts) return;
+    setLoadingPosts(true);
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(`/api/posts/user/${userId}`, {
+            headers: session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}
+        });
+        if (res.ok) {
+            const data = await res.json();
+            setUserPosts(data || []);
+        }
+    } catch (err) {
+        console.error("Failed to fetch user posts:", err);
+    } finally {
+        setLoadingPosts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'posts') {
+        fetchUserPosts();
+    }
+  }, [activeTab]);
+
   const liveRank = userId ? getRank(userId) : null;
   const normalizedLiveRank = (liveRank !== undefined && liveRank !== null && Number(liveRank) > 0)
     ? Number(liveRank)
@@ -68,6 +105,12 @@ export default function PublicProfileTabs({
             className={`relative z-10 px-6 py-2.5 text-sm font-black rounded-xl transition-all duration-300 flex items-center gap-2 ${activeTab === 'stats' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
           >
             Stats
+          </button>
+          <button
+            onClick={() => setActiveTab('posts')}
+            className={`relative z-10 px-6 py-2.5 text-sm font-black rounded-xl transition-all duration-300 flex items-center gap-2 ${activeTab === 'posts' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+          >
+            Posts
           </button>
           <button
             onClick={() => setActiveTab('badges')}
@@ -140,6 +183,38 @@ export default function PublicProfileTabs({
                   ))}
                 </div>
               </div>
+            )}
+        </div>
+      )}
+
+      {activeTab === 'posts' && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {loadingPosts ? (
+                <div className="py-20 text-center flex flex-col items-center gap-4">
+                    <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+                    <p className="text-slate-500 font-bold italic">Gathering records...</p>
+                </div>
+            ) : userPosts.length === 0 ? (
+                <div className="py-20 text-center flex flex-col items-center gap-4 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+                   <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300">
+                      <LayoutGrid className="w-10 h-10" />
+                   </div>
+                   <p className="text-slate-400 font-bold italic tracking-tight">This scholar hasn&apos;t posted anything yet.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 gap-6 max-w-2xl mx-auto">
+                    {userPosts.map((post) => (
+                        <PostCard 
+                            key={post.id} 
+                            post={post} 
+                            currentUserId={currentUserId}
+                            onUpdate={() => {
+                                // Simple update: just refresh the whole list if needed
+                                // (Deletion normally triggers this)
+                            }}
+                        />
+                    ))}
+                </div>
             )}
         </div>
       )}

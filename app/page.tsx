@@ -8,6 +8,7 @@ import BottomBanner from '@/components/BottomBanner'
 import HomeSignPrompt from '@/components/HomeSignPrompt'
 import QuestionsFeed from '@/components/QuestionsFeed'
 import QuestionOfDayBanner from '@/components/QuestionOfDayBanner';
+import RiddleChallengeCard from '@/components/RiddleChallengeCard';
 import LandingPage from '@/components/LandingPage';
 import { Loader2 } from 'lucide-react';
 
@@ -44,6 +45,10 @@ export default function Home() {
     <div className="min-h-screen bg-white dark:bg-slate-950 text-gray-900 dark:text-gray-100">
       <QuestionOfDayBanner />
       <HomeSignPrompt />
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <RiddleChallengeCard />
+      </div>
 
       {/* Main content grid */}
       <main className="mx-auto mt-6 grid max-w-6xl grid-cols-1 gap-6 px-4 pb-28 sm:px-6 lg:grid-cols-3 lg:px-8">

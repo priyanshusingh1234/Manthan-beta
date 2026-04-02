@@ -31,27 +31,30 @@ export async function GET(req: NextRequest) {
         const authorIds = [...new Set((posts || []).map((p: any) => p.author_id))];
         const profilesMap = await getProfilesMap(authorIds);
 
-        const enriched = (posts || []).map(p => {
-            const profile = profilesMap.get(p.author_id);
-            return {
-                id: p.id,
-                content: p.content,
-                image_url: p.image_url,
-                likes_count: p.likes_count || 0,
-                comments_count: p.comments_count || 0,
-                created_at: p.created_at,
-                is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
-                author: {
-                    id: p.author_id,
-                    name: profile?.full_name || 'Unknown',
-                    username: profile?.username || null,
-                    avatar_url: profile?.avatar_url || null,
-                    school: profile?.school || null,
-                    isTeacher: profile?.is_teacher || false,
-                    totalPoints: Number(profile?.total_points) || 0,
-                }
-            };
-        });
+        const enriched = (posts || [])
+            .map(p => {
+                const profile = profilesMap.get(p.author_id);
+                return {
+                    id: p.id,
+                    content: p.content,
+                    image_url: p.image_url,
+                    likes_count: p.likes_count || 0,
+                    comments_count: p.comments_count || 0,
+                    created_at: p.created_at,
+                    is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
+                    author: {
+                        id: p.author_id,
+                        name: profile?.full_name || 'Unknown',
+                        username: profile?.username || null,
+                        avatar_url: profile?.avatar_url || null,
+                        school: profile?.school || null,
+                        isTeacher: profile?.is_teacher || false,
+                        totalPoints: Number(profile?.total_points) || 0,
+                        isGhost: profile?.is_ghost || false,
+                    }
+                };
+            })
+            .filter(p => !p.author.isGhost);
 
         return NextResponse.json(enriched);
     } catch (err: any) {
@@ -98,7 +101,7 @@ export async function POST(req: NextRequest) {
                 .from('profiles')
                 .select('id')
                 .in('username', mentionedUsernames);
-            
+
             taggedUserIds = (taggedProfiles || []).map(p => p.id).filter(id => id !== user.id);
         }
 
@@ -137,7 +140,7 @@ export async function POST(req: NextRequest) {
             .eq('following_id', user.id);
 
         const followerIds = Array.from(new Set((followers || []).map((f: any) => String(f.follower_id)).filter(id => id && id !== user.id && !taggedUserIds.includes(id))));
-        
+
         if (followerIds.length > 0) {
             const bodyText = excerpt
                 ? `${authorName} posted: "${excerpt}"`
