@@ -21,6 +21,12 @@ export interface Profile {
     daily_solved: number;
     total_points: number;
     username: string | null;
+    onboarding: {
+        seen_tour?: boolean;
+        visited_streaks?: boolean;
+        first_solve_checked?: boolean;
+        claimed_bonus?: boolean;
+    } | null;
     updated_at: string;
 }
 

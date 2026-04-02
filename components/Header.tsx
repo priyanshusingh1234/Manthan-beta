@@ -10,7 +10,6 @@ import { useTheme } from 'next-themes';
 
 import { supabase } from '@/lib/supabaseClient';
 import NotificationBell from './NotificationBell';
-import StreakBadges from './StreakBadges';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface HeaderProps {
@@ -183,7 +182,6 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                 <>
                  <div className="flex items-center gap-2">
                    <NotificationBell isMobile={true} />
-                   <StreakBadges userId={user.id} />
                  </div>
                  {user?.user_metadata?.isTeacher && (
                    <Link
@@ -350,8 +348,6 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                   {/* Notification bell */}
                   <NotificationBell isMobile={false} />
                   
-                  <StreakBadges userId={user.id} />
-
                   <div className="relative" ref={dropdownRef}>
                     <button
                       ref={avatarButtonRef}
