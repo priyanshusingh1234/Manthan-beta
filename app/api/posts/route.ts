@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
         if (error) throw error;
 
         // --- Tagging / Mentions Logic ---
-        const mentionRegex = /@(\w+)/g;
+        const mentionRegex = /@([\w.-]+)/g;
         const matches = [...content.matchAll(mentionRegex)];
         const mentionedUsernames = Array.from(new Set(matches.map(m => m[1].toLowerCase())));
 

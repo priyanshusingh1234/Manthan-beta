@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -40,8 +40,19 @@ export default function PostCard({
     const [mentionSearch, setMentionSearch] = useState<string | null>(null);
     const [mentionIndex, setMentionIndex] = useState<number | null>(null);
 
+    const suggestionsRef = useRef<HTMLDivElement>(null);
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true });
     const isOwner = Boolean(currentUserId && post.author?.id === currentUserId);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+                setSuggestions([]);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     function getUsername(user: any): string | null {
         return user?.username || user?.user_metadata?.username || user?.profile?.username || null;
@@ -466,7 +477,10 @@ export default function PostCard({
                             
                             {/* User Suggestions Dropdown */}
                             {suggestions.length > 0 && (
-                                <div className="absolute bottom-full left-0 mb-2 w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-[70] animate-in slide-in-from-bottom-2">
+                                <div 
+                                    ref={suggestionsRef}
+                                    className="absolute bottom-full left-0 mb-2 w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-[70] animate-in slide-in-from-bottom-2"
+                                >
                                     <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
                                         <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Suggested Scholars</p>
                                     </div>

@@ -85,10 +85,42 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         // Keep profiles table in sync
         await upsertProfile(user.id, meta);
 
+        // --- Tagging / Mentions Logic ---
+        const mentionRegex = /@([\w.-]+)/g;
+        const matches = [...content.matchAll(mentionRegex)];
+        const mentionedUsernames = Array.from(new Set(matches.map(m => m[1].toLowerCase())));
+
+        let taggedUserIds: string[] = [];
+        if (mentionedUsernames.length > 0) {
+            const { data: taggedProfiles } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .in('username', mentionedUsernames);
+            
+            taggedUserIds = (taggedProfiles || []).map(p => p.id).filter(id => id !== user.id);
+        }
+
         // Send Notification to Replied User OR Post Author
         const notifyUserId = replying_to_user_id || post?.author_id;
 
-        if (notifyUserId && notifyUserId !== user.id) {
+        // 1. Send specific mention notifications
+        if (taggedUserIds.length > 0) {
+            await Promise.allSettled(
+                taggedUserIds.map(taggedId => createNotification({
+                    userId: taggedId,
+                    type: 'post_mention',
+                    title: `${authorName} mentioned you in a comment`,
+                    body: content.length > 60 ? `"${content.substring(0, 60)}..."` : `"${content}"`,
+                    href: `/posts/${params.id}`,
+                    actorId: user.id,
+                    actorName: authorName,
+                    actorAvatar: meta.avatar_url,
+                }))
+            );
+        }
+
+        // 2. Send Standard Comment notification (if not already notified as tagged)
+        if (notifyUserId && notifyUserId !== user.id && !taggedUserIds.includes(notifyUserId)) {
             await createNotification({
                 userId: notifyUserId,
                 type: 'social_comment',

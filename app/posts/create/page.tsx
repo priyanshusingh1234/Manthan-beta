@@ -16,7 +16,24 @@ export default function CreatePostPage() {
     const [session, setSession] = useState<any>(null);
     const [error, setError] = useState('');
 
+    // MENTION LOGIC
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [mentionSearch, setMentionSearch] = useState<string | null>(null);
+    const [mentionIndex, setMentionIndex] = useState<number | null>(null);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const suggestionsRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+                setSuggestions([]);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
@@ -28,10 +45,59 @@ export default function CreatePostPage() {
         });
     }, [router]);
 
+    const handleContentChange = async (val: string) => {
+        setContent(val);
+        
+        // Detect @ mention
+        const activeEl = textareaRef.current;
+        const cursorPosition = activeEl?.selectionStart || val.length;
+        const textBeforeCursor = val.slice(0, cursorPosition);
+        const lastAtSign = textBeforeCursor.lastIndexOf('@');
+        
+        if (lastAtSign !== -1) {
+            const potentialMention = textBeforeCursor.slice(lastAtSign + 1);
+            const charBeforeAt = lastAtSign > 0 ? textBeforeCursor[lastAtSign - 1] : ' ';
+            const isAtStartOrValidBoundary = lastAtSign === 0 || /[^a-zA-Z0-9_]/.test(charBeforeAt);
+            
+            if (isAtStartOrValidBoundary && !/\s/.test(potentialMention)) {
+                setMentionSearch(potentialMention);
+                setMentionIndex(lastAtSign);
+                
+                if (potentialMention.length > 0) {
+                   try {
+                       const res = await fetch(`/api/search?q=${potentialMention}`);
+                       if (res.ok) {
+                           const data = await res.json();
+                           setSuggestions(data.users || []);
+                       }
+                   } catch (err) {
+                       console.error('Mention fetch failed:', err);
+                   }
+                } else {
+                    setSuggestions([]);
+                }
+                return;
+            }
+        }
+        
+        setMentionSearch(null);
+        setSuggestions([]);
+    };
+
+    const applySuggestion = (user: any) => {
+        if (mentionIndex === null) return;
+        const handle = user.username;
+        const before = content.slice(0, mentionIndex);
+        const after = content.slice(mentionIndex + (mentionSearch?.length || 0) + 1);
+        setContent(`${before}@${handle} ${after}`);
+        setSuggestions([]);
+        setMentionSearch(null);
+        textareaRef.current?.focus();
+    };
+
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Increase limit to 20MB for modern phone cameras
             if (file.size > 20 * 1024 * 1024) {
                 setError('Image exceeds 20MB limit. Please choose a smaller file.');
                 return;
@@ -39,12 +105,8 @@ export default function CreatePostPage() {
             setError('');
             setLoading(true);
             try {
-                // Use the standard utility that converts blobl to proper File and appends .webp extension
-                const finalFile = await compressImage(file, 'banner'); // 'banner' preset fits well for posts
-                
+                const finalFile = await compressImage(file, 'banner'); 
                 setImageFile(finalFile);
-                
-                // Show local preview immediately fast
                 const objectUrl = URL.createObjectURL(finalFile);
                 setImagePreview(objectUrl);
             } catch (err) {
@@ -153,9 +215,44 @@ export default function CreatePostPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="relative">
+                            {/* Suggestions Dropdown */}
+                            {suggestions.length > 0 && (
+                                <div 
+                                    ref={suggestionsRef}
+                                    className="absolute top-full left-0 mt-2 w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-[70] animate-in slide-in-from-top-2"
+                                >
+                                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Suggested Scholars</p>
+                                    </div>
+                                    <div className="max-h-48 overflow-y-auto">
+                                        {suggestions.map((u) => (
+                                            <button
+                                                key={u.id}
+                                                type="button"
+                                                onClick={() => applySuggestion(u)}
+                                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b last:border-0 border-slate-100 dark:border-slate-800 text-left group"
+                                            >
+                                                <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-100/50 border border-indigo-200/50 px-0.5 pt-0.5">
+                                                    {u.avatar_url ? (
+                                                        <img src={u.avatar_url} className="w-full h-full object-cover rounded-full" alt="avatar" />
+                                                    ) : (
+                                                        <User className="w-4 h-4 m-auto text-slate-400" />
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 transition-colors">@{u.username}</p>
+                                                    <p className="text-[10px] text-slate-500 truncate">{u.full_name}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <textarea
+                                ref={textareaRef}
                                 value={content}
-                                onChange={(e) => setContent(e.target.value)}
+                                onChange={(e) => handleContentChange(e.target.value)}
                                 placeholder="What's on your mind? Did you learn something new?"
                                 className="w-full bg-slate-50/50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 min-h-[160px] text-slate-900 dark:text-white text-[15px] resize-y outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:opacity-50 mb-2"
                                 disabled={loading}
