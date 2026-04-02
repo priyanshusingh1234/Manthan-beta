@@ -34,9 +34,14 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
+  const [isFirstSearch, setIsFirstSearch] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      const visited = localStorage.getItem('dheeyudha_search_visited');
+      if (!visited) setIsFirstSearch(true);
+    }
     let mounted = true;
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (mounted) setUser(user);
@@ -207,6 +212,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
           <div className="mt-3 overflow-x-auto scrollbar-hide flex items-center gap-1.5 pb-1 snap-x">
             {[
               { label: 'Feed', href: '/feed', icon: Compass },
+              { label: 'Search', href: '/search', icon: Search },
               { label: 'Community', href: '/posts', icon: MessageSquare },
               { label: 'Ranks', href: '/leaderboard', icon: Trophy },
               { label: 'Top Schools', href: '/top-schools', icon: GraduationCap },
@@ -220,14 +226,19 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                 <Link
                   key={nav.label}
                   href={nav.href}
-                  className={`flex-shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${
+                  className={`flex-shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all relative ${
                     active 
                       ? 'bg-blue-600 border-blue-600 text-white shadow-md' 
-                      : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                      : nav.label === 'Search' && isFirstSearch 
+                        ? 'bg-blue-500/20 border-blue-400 text-blue-600 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.3)]'
+                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
                   }`}
                 >
-                  <nav.icon className="w-3.5 h-3.5" />
+                  <nav.icon className={`w-3.5 h-3.5 ${nav.label === 'Search' && isFirstSearch && !active ? 'text-blue-600' : ''}`} />
                   <span>{nav.label}</span>
+                  {nav.label === 'Search' && isFirstSearch && !active && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 border border-white dark:border-slate-900 rounded-full" />
+                  )}
                 </Link>
               )
             })}
@@ -283,13 +294,25 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
           <div className="flex items-center gap-3 shrink-0">
 
             {isMounted && (
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all active:scale-95"
-                title="Toggle Theme"
-              >
-                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/search"
+                  className={`hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all active:scale-95 relative ${isFirstSearch ? 'animate-pulse bg-white/30 border-white/50 shadow-[0_0_15px_rgba(255,255,255,0.4)]' : ''}`}
+                  title="Search Dheeyudha"
+                >
+                  <Search className="w-5 h-5" />
+                  {isFirstSearch && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-400 rounded-full border border-white shadow-sm" />
+                  )}
+                </Link>
+                <button
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all active:scale-95"
+                  title="Toggle Theme"
+                >
+                  {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
+              </div>
             )}
 
             {user ? (

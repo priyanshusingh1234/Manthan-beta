@@ -44,6 +44,14 @@ export default function DesktopSidebar() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [token, setToken] = useState<string | null>(null);
+  const [isFirstSearch, setIsFirstSearch] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const visited = localStorage.getItem('dheeyudha_search_visited');
+      if (!visited) setIsFirstSearch(true);
+    }
+  }, []);
 
   const HELP_LINKS = [
     { label: 'See Docs', href: '/docs' },
@@ -197,10 +205,15 @@ export default function DesktopSidebar() {
                 aria-current={isActive ? 'page' : undefined}
               >
                 <Icon
-                  className={`w-5 h-5 transition-colors duration-200 ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`}
+                  className={`w-5 h-5 transition-colors duration-200 ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'} ${item.label === 'Search' && isFirstSearch && !isActive ? 'animate-pulse text-blue-500' : ''}`}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span className="flex-1 text-left">{item.label}</span>
+                <span className="flex-1 text-left">
+                  {item.label}
+                  {item.label === 'Search' && isFirstSearch && !isActive && (
+                    <span className="ml-2 px-1.5 py-0.5 bg-blue-500 text-white text-[9px] font-black rounded-md uppercase tracking-tighter shadow-sm animate-bounce inline-block">New</span>
+                  )}
+                </span>
 
                 {/* Notification Badge */}
                 {item.label === 'Notifications' && unreadCount > 0 && (

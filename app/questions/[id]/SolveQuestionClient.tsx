@@ -133,7 +133,13 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             
             // 🔥 Track activity locally for algorithmic feed improvements
             if (question.subject) {
-                 await ActivityTracker.trackSolve(question.subject, data.isCorrect);
+                 const timeTaken = Math.max(0, question.time_limit * 60 - timeLeft);
+                 await ActivityTracker.trackSolve(
+                    question.subject, 
+                    data.isCorrect, 
+                    [question.difficulty, `Class ${question.class_grade}`].filter(Boolean) as string[],
+                    timeTaken
+                 );
                  // Every solve syncs to cloud for persistence
                  ActivityTracker.syncToCloud();
             }

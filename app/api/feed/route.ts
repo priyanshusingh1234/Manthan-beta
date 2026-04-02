@@ -253,26 +253,25 @@ export async function GET(req: NextRequest) {
             if (!addedInRound) runningL1 = false;
         }
 
-        // LAYER 2 (max 2): Spaced Repetition (SRS) - Review forgotten or failed questions
+        // LAYER 2 (max 1-2): Spaced Repetition (SRS) - Review forgotten or failed questions
         if (userAttempted.size > 0) {
-            const layer2Count = 2; 
+            const MAX_REVIEW = 2;
             const failedArr = shuffle(Array.from(userFailed)).slice(0, 10);
             const attemptedArr = shuffle(Array.from(userAttempted).filter(id => !userFailed.has(id))).slice(0, 10);
             
-            // Mix fails and older successes
-            const pickArr = [...failedArr.slice(0, 5), ...attemptedArr.slice(0, 5)];
+            // Prioritize fails, then older successes
+            const pickArr = [...failedArr, ...attemptedArr];
             
             if (pickArr.length > 0) {
                 let query = supabaseAdmin.from('questions').select('*').in('id', pickArr);
                 query = applySubjectFilter(query, subject);
                 
-                const { data } = await query.limit(layer2Count * 2);
-                const reviewQuestions = shuffle(data || []).slice(0, layer2Count);
+                const { data } = await query;
+                const reviewQuestions = shuffle(data || []).slice(0, MAX_REVIEW);
                 
                 reviewQuestions.forEach((r: any) => {
                     const isFailed = userFailed.has(String(r.id));
                     const label = isFailed ? '🔄 Review: You missed this' : '🧠 SRS Review: Do you remember?';
-                    // Give failed questions a much higher priority score
                     pool.push({ ...r, _layer: 2, _label: label, _score: isFailed ? 95 : 70 });
                 });
             }
@@ -428,11 +427,14 @@ export async function GET(req: NextRequest) {
 
         // ── Fallback ─────
         if (pool.length < 10) {
+            // Fetch more, but strictly exclude what the user has already done
             const { data } = await baseQ()
                 .order('created_at', { ascending: false })
-                .limit(limit - pool.length);
+                .limit(limit); // fetch enough to filter
+            
             (data || []).forEach((r: any) => {
-                if (!pool.find(p => String(p.id) === String(r.id))) {
+                const id = String(r.id);
+                if (!userAttempted.has(id) && !pool.find(p => String(p.id) === id)) {
                     pool.push({ ...r, _layer: 0, _label: '📚 From the Library', _score: 50 });
                 }
             });

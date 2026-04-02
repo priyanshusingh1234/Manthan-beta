@@ -40,18 +40,33 @@ export default function QuestionsFeed() {
       try {
         const stats = await ActivityTracker.getStats();
         const weights = stats.subjectWeights;
+        const tagWeights = stats.tagWeights || {};
 
         feedItems = feedItems.map((item: any, index: number) => {
           let score = 100 - index; // Base score from server order
           const sub = item.subject?.toLowerCase().trim();
           
+          // 1. Subject Weights (Broad)
           if (sub && weights[sub]) {
             score *= weights[sub];
-            // If weight is high (>1.5), mark as recommended
             if (weights[sub] > 1.5) {
               item._feedLabel = `✨ Recommended: ${item.subject}`;
             }
           }
+
+          // 2. Tag Weights (Specific Struggle Topics)
+          // We assume "difficulty" can be a tag, or we check common tags
+          const tags = [item.difficulty, `Class ${item.classGrade}`].filter(Boolean) as string[];
+          tags.forEach(t => {
+            const tag = t.toLowerCase().trim();
+            if (tagWeights[tag]) {
+              score *= (tagWeights[tag] * 0.5 + 0.5); // Add 50% relative boost per tag
+              if (tagWeights[tag] > 2.0) {
+                 item._feedLabel = `🎯 Focus: ${t}`;
+              }
+            }
+          });
+
           return { ...item, _localScore: score };
         });
 

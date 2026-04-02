@@ -206,7 +206,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     };
 
     setupUI();
-    
+
     // Listen for theme changes using MutationObserver on html tag
     const observer = new MutationObserver(setupUI);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
@@ -312,16 +312,18 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isAuthPage = pathname === '/login' || pathname === '/signup';
   const isLandingPage = pathname === '/';
   const isTrailerPage = pathname === '/trailer';
+  const isSearchPage = pathname === '/search';
 
-  const hideSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage;
+  const hideMainSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isSearchPage;
+  const hideBottomNav = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage;
 
   return (
     <>
-      {!hideSidebar && <DesktopSidebar />}
-      <div className={`${hideSidebar ? 'lg:pl-0' : 'lg:pl-64'} ${showBottomNav && !hideSidebar ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : ''}`}>
-        {!hideSidebar && <Header isMobile={isMobile} />}
+      {!hideMainSidebar && <DesktopSidebar />}
+      <div className={`${hideMainSidebar ? 'lg:pl-0' : 'lg:pl-64'} ${showBottomNav && !hideBottomNav ? 'pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''}`}>
+        {!hideMainSidebar && <Header isMobile={isMobile} />}
         {children}
-        {showBottomNav && !hideSidebar && <BottomNav />}
+        {showBottomNav && !hideBottomNav && <BottomNav />}
       </div>
       {isAuthenticated && <PushNotificationPrompt />}
       {isAuthenticated && <CongratsBadgeModal />}

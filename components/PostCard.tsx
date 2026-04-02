@@ -35,6 +35,11 @@ export default function PostCard({
     const [showMenu, setShowMenu] = useState(false);
     const [deletingPost, setDeletingPost] = useState(false);
 
+    // MENTION LOGIC
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [mentionSearch, setMentionSearch] = useState<string | null>(null);
+    const [mentionIndex, setMentionIndex] = useState<number | null>(null);
+
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true });
     const isOwner = Boolean(currentUserId && post.author?.id === currentUserId);
 
@@ -52,6 +57,72 @@ export default function PostCard({
         if (!username) return isOwner ? '/profile' : null;
         return isTeacherUser(user) ? `/teacher/${username}` : `/user/${username}`;
     }
+
+    const formatMentions = (text: string) => {
+        if (!text) return null;
+        const parts = text.split(/(@[\w.-]+)/g);
+        return parts.map((part, i) => {
+            if (part.startsWith('@')) {
+                const username = part.substring(1);
+                return (
+                    <Link 
+                        key={i} 
+                        href={`/user/${username}`} 
+                        className="text-blue-600 dark:text-blue-400 font-bold hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {part}
+                    </Link>
+                );
+            }
+            return part;
+        });
+    };
+
+    const handleCommentChange = async (val: string) => {
+        setNewComment(val);
+        
+        // Detect @ mention
+        const cursorPosition = (document.activeElement as HTMLTextAreaElement)?.selectionStart || val.length;
+        const textBeforeCursor = val.slice(0, cursorPosition);
+        const lastAtSign = textBeforeCursor.lastIndexOf('@');
+        
+        if (lastAtSign !== -1) {
+            const potentialMention = textBeforeCursor.slice(lastAtSign + 1);
+            // Must be at start of line or preceded by space
+            const charBeforeAt = lastAtSign > 0 ? textBeforeCursor[lastAtSign - 1] : ' ';
+            
+            if (/\s/.test(charBeforeAt) && !/\s/.test(potentialMention)) {
+                setMentionSearch(potentialMention);
+                setMentionIndex(lastAtSign);
+                
+                // Fetch users
+                if (potentialMention.length > 0) {
+                   const res = await fetch(`/api/search?type=users&q=${potentialMention}`);
+                   if (res.ok) {
+                       const data = await res.json();
+                       setSuggestions(data.users || []);
+                   }
+                } else {
+                    setSuggestions([]);
+                }
+                return;
+            }
+        }
+        
+        setMentionSearch(null);
+        setSuggestions([]);
+    };
+
+    const applySuggestion = (user: any) => {
+        if (mentionIndex === null) return;
+        const handle = user.username;
+        const before = newComment.slice(0, mentionIndex);
+        const after = newComment.slice(mentionIndex + (mentionSearch?.length || 0) + 1);
+        setNewComment(`${before}@${handle} ${after}`);
+        setSuggestions([]);
+        setMentionSearch(null);
+    };
 
     const handleLike = async () => {
         if (!currentUserId) return alert('Log in to like posts!');
@@ -230,9 +301,9 @@ export default function PostCard({
             {/* Content */}
             <div className="px-4 sm:px-6 pb-4">
                 <Link href={`/posts/${post.id}`}>
-                    <p className="text-slate-800 dark:text-slate-200 text-[14px] sm:text-[16px] leading-[1.6] sm:leading-relaxed whitespace-pre-wrap cursor-pointer hover:opacity-80 transition-opacity font-medium">
-                        {post.content}
-                    </p>
+                    <div className="text-slate-800 dark:text-slate-200 text-[14px] sm:text-[16px] leading-[1.6] sm:leading-relaxed whitespace-pre-wrap cursor-pointer hover:opacity-80 transition-opacity font-medium">
+                        {formatMentions(post.content)}
+                    </div>
                 </Link>
             </div>
 
@@ -343,8 +414,8 @@ export default function PostCard({
                                                     {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                                                 </span>
                                             </div>
-                                            <div className="bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100/50 dark:border-indigo-800/30 rounded-2xl px-4 py-2 text-sm text-slate-700 dark:text-slate-200 shadow-sm shadow-indigo-100/10">
-                                                {comment.content}
+                                            <div className="bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100/50 dark:border-indigo-800/30 rounded-2xl px-4 py-2 text-sm text-slate-700 dark:text-slate-200 shadow-sm shadow-indigo-100/10 whitespace-pre-wrap">
+                                                {formatMentions(comment.content)}
                                             </div>
                                             <button
                                                 className="mt-1.5 text-[11px] text-indigo-500 font-black hover:text-indigo-600 uppercase tracking-wider px-1"
@@ -382,10 +453,42 @@ export default function PostCard({
                                     </button>
                                 </div>
                             )}
+                            
+                            {/* User Suggestions Dropdown */}
+                            {suggestions.length > 0 && (
+                                <div className="absolute bottom-full left-0 mb-2 w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-[70] animate-in slide-in-from-bottom-2">
+                                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Suggested Scholars</p>
+                                    </div>
+                                    <div className="max-h-48 overflow-y-auto">
+                                        {suggestions.map((u) => (
+                                            <button
+                                                key={u.id}
+                                                type="button"
+                                                onClick={() => applySuggestion(u)}
+                                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b last:border-0 border-slate-100 dark:border-slate-800 text-left group"
+                                            >
+                                                <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-100/50 border border-indigo-200/50 px-0.5 pt-0.5">
+                                                    {u.avatar_url ? (
+                                                        <img src={u.avatar_url} className="w-full h-full object-cover rounded-full" alt="avatar" />
+                                                    ) : (
+                                                        <User className="w-4 h-4 m-auto text-slate-400" />
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 transition-colors">@{u.username}</p>
+                                                    <p className="text-[10px] text-slate-500 truncate">{u.full_name}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <textarea
                                 placeholder="Add to the conversation..."
                                 value={newComment}
-                                onChange={(e) => setNewComment(e.target.value)}
+                                onChange={(e) => handleCommentChange(e.target.value)}
                                 className="w-full bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-3xl p-4 text-sm min-h-[90px] focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                             />
                             <div className="flex justify-end mt-2">
