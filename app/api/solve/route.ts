@@ -238,7 +238,13 @@ export async function POST(req: Request) {
         // --- STREAK LOGIC ---
         const { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        // --- THE FIX: Use India Standard Time (IST) to define "Today" ---
+        const todayStr = new Intl.DateTimeFormat('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(now).split('/').reverse().join('-'); // Format: YYYY-MM-DD
         
         let streakCount = Number(profile?.streak_count) || 0;
         let lastStreakAt = profile?.last_streak_at || null;
@@ -247,11 +253,19 @@ export async function POST(req: Request) {
         // Reset daily counter if it's a new day
         if (lastStreakAt && lastStreakAt !== todayStr) {
             // Check if they missed a day (Cold Streak)
-            const lastDate = new Date(lastStreakAt);
-            const diffDays = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-            
-            if (diffDays > 1) {
-                streakCount = 0; // Reset to 0 if they missed the whole previous day
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = new Intl.DateTimeFormat('en-IN', {
+                timeZone: 'Asia/Kolkata',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).format(yesterday).split('/').reverse().join('-');
+
+            if (lastStreakAt !== yesterdayStr) {
+                // If the last time they updated their streak was NOT yesterday and NOT today
+                // then they missed a full day (or more).
+                streakCount = 0; 
             }
             dailySolved = 0; // New day, new quota
         }
