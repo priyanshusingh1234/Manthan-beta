@@ -37,7 +37,7 @@ function SearchPageContent() {
     }, []);
 
     const performSearch = useCallback(async (q: string) => {
-        if (!q || q.length < 2) {
+        if (!q || q.length < 1) {
             setResults(null);
             return;
         }
@@ -117,7 +117,7 @@ function SearchPageContent() {
                                 value={query}
                                 onChange={(e) => {
                                     setQuery(e.target.value);
-                                    if (e.target.value.length > 1) {
+                                    if (e.target.value.length > 0) {
                                         performSearch(e.target.value); // Rapid search as they type
                                     }
                                 }}
