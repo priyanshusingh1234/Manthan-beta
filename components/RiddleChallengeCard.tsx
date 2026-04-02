@@ -30,14 +30,14 @@ export default function RiddleChallengeCard() {
           </div>
           <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl">
              <Trophy className="w-4 h-4 text-amber-500" />
-             <span className="text-xs font-black text-white uppercase tracking-widest whitespace-nowrap">50,000,000 Points</span>
+             <span className="text-xs font-black text-white uppercase tracking-widest whitespace-nowrap">500 Points Bounty</span>
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="max-w-2xl">
             <p className="text-slate-300 text-lg leading-relaxed font-medium">
-              A <span className="text-white font-black underline decoration-indigo-500 decoration-2 underline-offset-4">Mysterious User</span> has entered the Scholar arena. He has hidden a cryptic riddle within his secret history. 
+              A <span className="text-white font-black underline decoration-indigo-500 decoration-2 underline-offset-4">Mysterious User</span> has entered the arena. He has hidden a cryptic riddle within his secret history. 
             </p>
           </div>
 
@@ -47,9 +47,9 @@ export default function RiddleChallengeCard() {
                 <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 group-hover/item:text-indigo-400 transition-colors">
                   <Search className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-black text-white uppercase tracking-widest">Discovery Mission</span>
+                <span className="text-xs font-black text-white uppercase tracking-widest">Discovery</span>
               </div>
-              <p className="text-[12px] text-slate-400 leading-normal font-semibold">Track down the mysterious user using the search bar. He is hiding in the shadows.</p>
+              <p className="text-[12px] text-slate-400 leading-normal font-semibold">Track down the mysterious user using search. He is hiding in the shadows.</p>
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-3xl p-5 transition-all hover:bg-white/10 group/item hover:border-amber-500/30">
@@ -57,16 +57,16 @@ export default function RiddleChallengeCard() {
                 <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 group-hover/item:text-amber-400 transition-colors">
                   <Sword className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-black text-white uppercase tracking-widest">Shadow Kill</span>
+                <span className="text-xs font-black text-white uppercase tracking-widest">The Bounty</span>
               </div>
-              <p className="text-[12px] text-slate-400 leading-normal font-semibold">Solve his hidden riddle and comment the answer on his post to claim your bounty.</p>
+              <p className="text-[12px] text-slate-400 leading-normal font-semibold">Solve his hidden riddle and comment the answer on his wall for 500 pts.</p>
             </div>
           </div>
 
           {/* Mobile Points Display */}
           <div className="flex sm:hidden items-center justify-center gap-2 px-4 py-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
              <Trophy className="w-4 h-4 text-amber-500" />
-             <span className="text-sm font-black text-white uppercase tracking-widest">Prize: 50M Points</span>
+             <span className="text-sm font-black text-white uppercase tracking-widest">Reward: 500 Points</span>
           </div>
 
           <div className="pt-4">
