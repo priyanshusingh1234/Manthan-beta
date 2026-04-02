@@ -83,25 +83,35 @@ export default function PostCard({
         setNewComment(val);
         
         // Detect @ mention
-        const cursorPosition = (document.activeElement as HTMLTextAreaElement)?.selectionStart || val.length;
+        // Use a more robust selector for the active textarea
+        const activeEl = document.activeElement as HTMLTextAreaElement;
+        const cursorPosition = activeEl?.selectionStart || val.length;
         const textBeforeCursor = val.slice(0, cursorPosition);
         const lastAtSign = textBeforeCursor.lastIndexOf('@');
         
         if (lastAtSign !== -1) {
             const potentialMention = textBeforeCursor.slice(lastAtSign + 1);
-            // Must be at start of line or preceded by space
-            const charBeforeAt = lastAtSign > 0 ? textBeforeCursor[lastAtSign - 1] : ' ';
             
-            if (/\s/.test(charBeforeAt) && !/\s/.test(potentialMention)) {
+            // Trigger if it's at the start OR preceded by a non-word character (space, paren, etc.)
+            // and the mention itself doesn't have spaces yet.
+            const charBeforeAt = lastAtSign > 0 ? textBeforeCursor[lastAtSign - 1] : ' ';
+            const isAtStartOrValidBoundary = lastAtSign === 0 || /[^a-zA-Z0-9_]/.test(charBeforeAt);
+            
+            if (isAtStartOrValidBoundary && !/\s/.test(potentialMention)) {
                 setMentionSearch(potentialMention);
                 setMentionIndex(lastAtSign);
                 
                 // Fetch users
                 if (potentialMention.length > 0) {
-                   const res = await fetch(`/api/search?type=users&q=${potentialMention}`);
-                   if (res.ok) {
-                       const data = await res.json();
-                       setSuggestions(data.users || []);
+                   try {
+                       const res = await fetch(`/api/search?q=${potentialMention}`);
+                       if (res.ok) {
+                           const data = await res.json();
+                           // We only care about users for the tagging auto-suggest
+                           setSuggestions(data.users || []);
+                       }
+                   } catch (err) {
+                       console.error('Mention fetch failed:', err);
                    }
                 } else {
                     setSuggestions([]);
@@ -437,7 +447,7 @@ export default function PostCard({
                         <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex-shrink-0 flex items-center justify-center font-black text-indigo-600 text-sm border border-indigo-100 dark:border-indigo-900/30">
                             ME
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 relative">
                             {replyingTo && (
                                 <div className="mb-2 text-xs font-bold text-indigo-600 flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 rounded-lg w-fit">
                                     Replying to @{replyingTo.username}
