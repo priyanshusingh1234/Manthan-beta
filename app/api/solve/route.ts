@@ -277,6 +277,15 @@ export async function POST(req: Request) {
                 streakCount += 1;
                 lastStreakAt = todayStr;
                 console.log(`[StreakTrace] Level UP! New Streak: ${streakCount}`);
+
+                // --- NEW: Send Level Up Notification ---
+                await createNotification({
+                    userId: userId,
+                    type: 'points_earned', // Congrats type
+                    title: `Streak Level Up! 🔥`,
+                    body: `Legendary! Your Scholar Streak has reached Day ${streakCount}. The Sage fire burns brighter!`,
+                    href: '/streaks'
+                });
             }
         }
 
