@@ -22,7 +22,8 @@ import {
   BarChart2,
   Swords,
   ShieldAlert,
-  Share2
+  Share2,
+  Flame
 } from 'lucide-react';
 import { Share } from '@capacitor/share';
 import TeacherBadge from '@/ticks/teacher';
@@ -146,6 +147,7 @@ export default function DesktopSidebar() {
     { label: 'Top Schools', href: '/top-schools', icon: Swords },
     { label: 'Search', href: '/search', icon: Search },
     { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
+    { label: 'Scholar Streak', href: '/streaks', icon: Flame },
     { label: 'Checker Feed', href: '/checker-feed', icon: Shield },
     { label: 'Solved', href: '/solved', icon: CheckSquare },
     { label: 'Notifications', href: '/notifications', icon: Bell, badge: unreadCount },
