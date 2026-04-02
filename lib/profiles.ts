@@ -15,6 +15,7 @@ export interface Profile {
     school: string | null;
     school_id: string | null;
     is_teacher: boolean;
+    is_ghost: boolean;
     total_points: number;
     username: string | null;
     updated_at: string;
@@ -32,6 +33,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
         school: meta.school || null,
         school_id: meta.school_id ? String(meta.school_id) : null,
         is_teacher: meta.isTeacher === true,
+        is_ghost: meta.is_ghost === true || meta.isGhost === true,
         total_points: Number(meta.totalPoints) || 0,
         username: meta.username || null,
         updated_at: new Date().toISOString(),

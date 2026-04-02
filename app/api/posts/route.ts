@@ -34,6 +34,8 @@ export async function GET(req: NextRequest) {
         const enriched = (posts || [])
             .map(p => {
                 const profile = profilesMap.get(p.author_id);
+                const isGhost = profile?.is_ghost === true;
+
                 return {
                     id: p.id,
                     content: p.content,
@@ -50,7 +52,7 @@ export async function GET(req: NextRequest) {
                         school: profile?.school || null,
                         isTeacher: profile?.is_teacher || false,
                         totalPoints: Number(profile?.total_points) || 0,
-                        isGhost: profile?.is_ghost || false,
+                        isGhost: isGhost,
                     }
                 };
             })
