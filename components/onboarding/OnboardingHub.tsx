@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Profile } from '@/lib/profiles';
 import Link from 'next/link';
+import { clearRankCache } from '@/hooks/useTopRanks';
 
 export default function OnboardingHub({ isMobile = false }: { isMobile?: boolean }) {
     const pathname = usePathname();
@@ -89,6 +90,8 @@ export default function OnboardingHub({ isMobile = false }: { isMobile?: boolean
             if (data.success) {
                 fetchProfile();
                 setMinimized(true);
+                clearRankCache();
+                router.refresh();
                 router.push('/leaderboard?aura=celebration');
             } else {
                 alert(data.error);

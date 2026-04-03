@@ -87,7 +87,7 @@ export default function MissionsPage() {
                                             </h3>
                                         </div>
                                         <p className="text-slate-600 dark:text-slate-400 font-bold mb-4">{q.desc}</p>
-                                        
+
                                         <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 mb-6">
                                             <p className="text-[11px] font-black uppercase italic text-indigo-500 mb-1">Mission Script:</p>
                                             <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed">{q.instr}</p>
@@ -112,36 +112,36 @@ export default function MissionsPage() {
 
                     <div className="space-y-6">
                         <div className="p-8 rounded-[2.5rem] bg-slate-900 dark:bg-slate-900 shadow-2xl border border-white/10 relative overflow-hidden group">
-                           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl group-hover:bg-indigo-500/20 transition-all rounded-full -mr-16 -mt-16" />
-                           <Gift className="w-10 h-10 text-indigo-400 mb-6 animate-bounce" />
-                           <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2 leading-none">Induction Bounty</h3>
-                           <p className="text-slate-400 font-bold mb-6">Complete all tasks to activate your 10 point blessing.</p>
-                           
-                           <div className="w-full bg-slate-800 rounded-full h-3 mb-4 overflow-hidden border border-white/5 shadow-inner">
-                                <div 
-                                    className="bg-indigo-500 h-full transition-all duration-1000 shadow-glow" 
-                                    style={{ width: `${(completed/quests.length)*100}%` }} 
-                                />
-                           </div>
-                           <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-8">Gauntlet Status: {completed}/{quests.length}</p>
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl group-hover:bg-indigo-500/20 transition-all rounded-full -mr-16 -mt-16" />
+                            <Gift className="w-10 h-10 text-indigo-400 mb-6 animate-bounce" />
+                            <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2 leading-none">Induction Bounty</h3>
+                            <p className="text-slate-400 font-bold mb-6">Complete all tasks to activate your 10 point blessing.</p>
 
-                           {isMaster ? (
-                               <Link href="/" className="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white text-center font-black flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/40">
-                                   <Sparkles className="w-4 h-4" />
-                                   Claim 10 Pts
-                               </Link>
-                           ) : (
-                               <div className="w-full py-4 rounded-2xl bg-slate-800 text-slate-500 text-center font-black flex items-center justify-center gap-2 border border-white/5 opacity-50">
-                                   <Shield className="w-4 h-4" />
-                                   Locked
-                               </div>
-                           )}
+                            <div className="w-full bg-slate-800 rounded-full h-3 mb-4 overflow-hidden border border-white/5 shadow-inner">
+                                <div
+                                    className="bg-indigo-500 h-full transition-all duration-1000 shadow-glow"
+                                    style={{ width: `${(completed / quests.length) * 100}%` }}
+                                />
+                            </div>
+                            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-8">Gauntlet Status: {completed}/{quests.length}</p>
+
+                            {isMaster ? (
+                                <Link href="/" className="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white text-center font-black flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-500/40">
+                                    <Sparkles className="w-4 h-4" />
+                                    Claim 10 Pts
+                                </Link>
+                            ) : (
+                                <div className="w-full py-4 rounded-2xl bg-slate-800 text-slate-500 text-center font-black flex items-center justify-center gap-2 border border-white/5 opacity-50">
+                                    <Shield className="w-4 h-4" />
+                                    Locked
+                                </div>
+                            )}
                         </div>
 
                         <div className="p-8 rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xl group">
                             <Trophy className="w-8 h-8 text-amber-500 mb-4 group-hover:rotate-12 transition-transform" />
                             <h4 className="text-lg font-black text-slate-900 dark:text-white italic uppercase mb-2 leading-none">Top Ranks</h4>
-                            <p className="text-xs font-bold text-slate-500 mb-6 leading-relaxed">See where you stand against the world's greatest sages.</p>
+                            <p className="text-xs font-bold text-slate-500 mb-6 leading-relaxed">See where you stand against the world's greatest students.</p>
                             <Link href="/leaderboard" className="block w-full py-3 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-center text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
                                 Global Leaderboard
                             </Link>

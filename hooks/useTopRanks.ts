@@ -7,6 +7,11 @@ let globalRankCache: Record<string, number> = {};
 let lastFetch = 0;
 const CACHE_DURATION = 1 * 60 * 1000; // 1 minute for faster badge updates
 
+export function clearRankCache() {
+    globalRankCache = {};
+    lastFetch = 0;
+}
+
 export function useTopRanks() {
     const [ranks, setRanks] = useState<Record<string, number>>(globalRankCache);
 
@@ -17,7 +22,7 @@ export function useTopRanks() {
             }
 
             try {
-                const res = await fetch('/api/leaderboard');
+                const res = await fetch('/api/leaderboard', { cache: 'no-store' });
                 if (res.ok) {
                     const data = await res.json();
                     const newRanks: Record<string, number> = {};
