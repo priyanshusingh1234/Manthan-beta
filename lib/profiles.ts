@@ -7,6 +7,7 @@
  */
 
 import supabaseAdmin from './supabaseAdmin';
+import { leaderboardCache } from './leaderboardCache';
 
 export interface Profile {
     id: string;
@@ -54,6 +55,12 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
 
     if (error) {
         console.error('[upsertProfile] failed:', error.message);
+    } else {
+        // Bust the leaderboard cache so the next /api/leaderboard request
+        // returns fresh data. This is a safety net: the leaderboard route no
+        // longer caches, but this ensures any remaining callers that might
+        // still hold a reference also see the invalidation.
+        leaderboardCache.invalidate();
     }
 }
 
