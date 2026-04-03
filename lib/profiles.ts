@@ -42,7 +42,6 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
         school: meta.school || null,
         school_id: meta.school_id ? String(meta.school_id) : null,
         is_teacher: meta.isTeacher === true,
-        is_ghost: meta.is_ghost === true || meta.isGhost === true,
         streak_count: Number(meta.streakCount) || 0,
         last_streak_at: meta.lastStreakAt || null,
         daily_solved: Number(meta.dailySolved) || 0,
