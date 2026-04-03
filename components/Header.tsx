@@ -10,6 +10,7 @@ import { useTheme } from 'next-themes';
 
 import { supabase } from '@/lib/supabaseClient';
 import NotificationBell from './NotificationBell';
+import OnboardingHub from './onboarding/OnboardingHub';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface HeaderProps {
@@ -432,6 +433,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
       {/* Header spacer */}
       <div className="md:hidden h-[calc(env(safe-area-inset-top)+100px)]" />
       <div className="hidden md:block h-20 sm:h-24 md:h-28" />
+      <OnboardingHub />
     </header>
     </>
   );

@@ -48,6 +48,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
         daily_solved: Number(meta.dailySolved) || 0,
         total_points: Number(meta.totalPoints) || 0,
         username: meta.username || null,
+        onboarding: meta.onboarding || {},
         updated_at: new Date().toISOString(),
     }, { onConflict: 'id' });
 
