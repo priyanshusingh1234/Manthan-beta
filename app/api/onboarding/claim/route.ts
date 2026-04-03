@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { upsertProfile } from '@/lib/profiles';
 import { createNotification } from '@/lib/createNotification';
+import { leaderboardCache } from '@/lib/leaderboardCache';
 
 /**
  * POST /api/onboarding/claim
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
             totalPoints: newTotal,
             onboarding: ob
         });
+        leaderboardCache.invalidate();
 
         // 4. Send Celebration Notification
         await createNotification({

@@ -2,10 +2,10 @@ import { getAllProfiles } from "@/lib/profiles";
 import BadgedName from "@/components/BadgedName";
 import Link from "next/link";
 import { MapPin, Award } from "lucide-react";
-
-export const revalidate = 0; // Always fetch fresh data
+import { unstable_noStore as noStore } from 'next/cache';
 
 export default async function LeaderboardPage() {
+  noStore();
   const allProfiles = await getAllProfiles();
   
   // Exclude teachers and ensure they have a username

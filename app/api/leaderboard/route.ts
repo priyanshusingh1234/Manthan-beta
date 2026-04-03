@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
+import { leaderboardCache, LeaderboardUser } from "@/lib/leaderboardCache";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
+        if (leaderboardCache.isValid()) {
+            return NextResponse.json(leaderboardCache.data, {
+                status: 200,
+                headers: { "Cache-Control": "no-store" }
+            });
+        }
+
         const { data, error } = await supabaseAdmin
             .from('profiles')
             .select('id, full_name, username, school, avatar_url, total_points, is_teacher')
@@ -15,11 +23,9 @@ export async function GET() {
             .order('id', { ascending: true })
             .limit(10);
 
-        if (error) {
-            throw new Error(error.message);
-        }
+        if (error) throw new Error(error.message);
 
-        const students = (data || []).map((p: any, i: number) => ({
+        const students: LeaderboardUser[] = (data || []).map((p: any, i: number) => ({
             id: p.id,
             rank: i + 1,
             name: p.full_name || p.username || 'Student',
@@ -31,7 +37,10 @@ export async function GET() {
             schoolColor: 'bg-blue-500',
         }));
 
-        return NextResponse.json({ topBrains: students }, {
+        const response = { topBrains: students };
+        leaderboardCache.set(response);
+
+        return NextResponse.json(response, {
             status: 200,
             headers: {
                 "Cache-Control": "no-store, no-cache, must-revalidate",
