@@ -30,7 +30,7 @@ export default function OnboardingHub() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [pathname]);
 
     async function fetchProfile() {
         const { data: { user } } = await supabase.auth.getUser();
@@ -45,22 +45,31 @@ export default function OnboardingHub() {
         if (data) {
             setProfile(data as Profile);
             const ob = data.onboarding || {};
-            // Auto-trigger tour if not seen
-            if (!ob.seen_tour && pathname === '/feed') {
+            if (!ob.seen_tour && (pathname === '/feed' || pathname === '/')) {
+                setShowTour(true);
+            }
+        } else {
+            // FALLBACK for brand new users without a profile row yet
+            const ob = user.user_metadata?.onboarding || {};
+            // Mock a profile object for UI rendering
+            setProfile({
+                id: user.id,
+                username: user.user_metadata?.username || 'Initiate',
+                daily_solved: 0,
+                total_points: user.user_metadata?.totalPoints || 0,
+                onboarding: ob as any,
+                updated_at: new Date().toISOString(),
+                bio: null,
+                avatar_url: user.user_metadata?.avatar_url || null,
+                is_teacher: !!user.user_metadata?.isTeacher,
+                is_ghost: !!user.user_metadata?.isGhost
+            } as any);
+
+            if (!ob.seen_tour && (pathname === '/feed' || pathname === '/')) {
                 setShowTour(true);
             }
         }
     }
-
-    // Auto-tick "Visited Streaks"
-    useEffect(() => {
-        if (pathname === '/streaks' && profile) {
-            const ob = profile.onboarding || {};
-            if (!ob.visited_streaks) {
-                updateFlag('visited_streaks');
-            }
-        }
-    }, [pathname, profile]);
 
     async function updateFlag(flag: string) {
         await fetch('/api/onboarding/update', {
@@ -77,7 +86,6 @@ export default function OnboardingHub() {
             const res = await fetch('/api/onboarding/claim', { method: 'POST' });
             const data = await res.json();
             if (data.success) {
-                // confetti or something?
                 fetchProfile();
                 setMinimized(true);
             } else {
@@ -100,7 +108,6 @@ export default function OnboardingHub() {
 
     const items = [
         { id: 'seen_tour', label: 'Finish Feature Tour', done: !!ob.seen_tour, icon: BookOpen },
-        { id: 'visited_streaks', label: 'Explore Streak Hub', done: !!ob.visited_streaks, icon: Flame },
         { id: 'first_solve', label: 'Solve 1st Question', done: profile.daily_solved > 0 || !!ob.first_solve_checked, icon: Shield },
     ];
 
@@ -108,13 +115,6 @@ export default function OnboardingHub() {
     const isGrandMaster = completedCount === items.length;
 
     const slides = [
-        {
-            title: "The Scholar Streak",
-            desc: "Ignite your mind daily. Complete your daily quota to level up your fire and earn Sage Rewards.",
-            icon: Flame,
-            color: "text-orange-500",
-            bg: "bg-orange-500/10"
-        },
         {
             title: "Faction War Room",
             desc: "Join a school, build your squad, and dominate the global rankings in intense educational battles.",
@@ -133,7 +133,6 @@ export default function OnboardingHub() {
 
     return (
         <>
-            {/* 🚀 WELCOME CAROUSEL MODAL */}
             {showTour && createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
                     <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden animate-popIn border border-white/20">
@@ -144,7 +143,7 @@ export default function OnboardingHub() {
                         <div className="p-8 sm:p-12">
                             <div className="flex flex-col items-center text-center">
                                 <div className={`w-20 h-20 rounded-3xl ${slides[currentSlide].bg} flex items-center justify-center mb-8 animate-float`}>
-                                    <slides[currentSlide].icon className={`w-10 h-10 ${slides[currentSlide].color}`} />
+                                    {React.createElement(slides[currentSlide].icon, { className: `w-10 h-10 ${slides[currentSlide].color}` })}
                                 </div>
                                 <h2 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white mb-4 italic uppercase">
                                     {slides[currentSlide].title}
@@ -155,7 +154,6 @@ export default function OnboardingHub() {
                             </div>
                         </div>
 
-                        {/* Navigation Footer */}
                         <div className="px-8 pb-10 flex items-center justify-between">
                             <div className="flex gap-2">
                                 {slides.map((_, i) => (
@@ -164,10 +162,7 @@ export default function OnboardingHub() {
                             </div>
                             <div className="flex gap-3">
                                 {currentSlide > 0 && (
-                                    <button 
-                                        onClick={() => setCurrentSlide(s => s - 1)}
-                                        className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 active:scale-95 transition-all"
-                                    >
+                                    <button onClick={() => setCurrentSlide(s => s - 1)} className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 active:scale-95 transition-all">
                                         <ChevronLeft className="w-5 h-5" />
                                     </button>
                                 )}
@@ -185,28 +180,18 @@ export default function OnboardingHub() {
                 document.body
             )}
 
-            {/* 📜 FLOATING INITIATE HANDBOOK */}
             <div className="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 z-50">
                 {minimized ? (
                     <button 
                         onClick={() => setMinimized(false)}
                         className="relative w-14 h-14 rounded-2xl bg-indigo-600 dark:bg-indigo-500 text-white flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all group"
                     >
-                        {isGrandMaster ? (
-                            <Gift className="w-6 h-6 animate-bounce" />
-                        ) : (
-                             <BookOpen className="w-6 h-6" />
-                        )}
+                        {isGrandMaster ? <Gift className="w-6 h-6 animate-bounce" /> : <BookOpen className="w-6 h-6" />}
                         {completedCount > 0 && !isGrandMaster && (
                             <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 border-2 border-white dark:border-slate-900 text-[10px] font-black flex items-center justify-center">
                                 {completedCount}
                             </span>
                         )}
-                        <div className="absolute right-full mr-4 px-3 py-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                {isGrandMaster ? "Claim your 10 Point Bounty! 💎" : "Path of the Initiate"}
-                            </span>
-                        </div>
                     </button>
                 ) : (
                     <div className="w-72 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-popIn">
@@ -224,7 +209,7 @@ export default function OnboardingHub() {
                             {items.map((item) => (
                                 <div key={item.id} className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${item.done ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-slate-50 dark:bg-slate-800/50 border-transparent'}`}>
                                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${item.done ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'}`}>
-                                        {item.done ? <CheckCircle2 className="w-4 h-4" /> : <item.icon className="w-4 h-4" />}
+                                        {item.done ? <CheckCircle2 className="w-4 h-4" /> : React.createElement(item.icon, { className: "w-4 h-4" })}
                                     </div>
                                     <span className={`text-[13px] font-bold ${item.done ? 'text-emerald-600 dark:text-emerald-400 line-through opacity-60' : 'text-slate-700 dark:text-slate-300'}`}>
                                         {item.label}
@@ -237,17 +222,12 @@ export default function OnboardingHub() {
                             <button 
                                 disabled={!isGrandMaster || isClaiming}
                                 onClick={handleClaim}
-                                className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm uppercase tracking-widest transition-all ${
-                                    isGrandMaster 
-                                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 active:scale-95' 
-                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                                }`}
+                                className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm uppercase tracking-widest transition-all ${isGrandMaster ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
                             >
                                 {isClaiming ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : (
                                     <>
                                         <Gift className="w-4 h-4" />
                                         <span>{isGrandMaster ? "Claim 10 Pts Bounty" : "Unlock Bounty"}</span>
-                                        {isGrandMaster && <Sparkles className="w-4 h-4 animate-pulse" />}
                                     </>
                                 )}
                             </button>
