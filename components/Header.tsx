@@ -183,6 +183,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                 <>
                  <div className="flex items-center gap-2">
                    <NotificationBell isMobile={true} />
+                   <OnboardingHub isMobile={true} />
                  </div>
                  {user?.user_metadata?.isTeacher && (
                    <Link
@@ -347,8 +348,11 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                     </Link>
                   )}
 
-                  {/* Notification bell */}
-                  <NotificationBell isMobile={false} />
+                  {/* Notification bell and Quests hub */}
+                  <div className="flex items-center gap-2">
+                    <NotificationBell isMobile={false} />
+                    <OnboardingHub isMobile={false} />
+                  </div>
                   
                   <div className="relative" ref={dropdownRef}>
                     <button
@@ -434,7 +438,6 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
       {/* Header spacer */}
       <div className="md:hidden h-[calc(env(safe-area-inset-top)+100px)]" />
       <div className="hidden md:block h-20 sm:h-24 md:h-28" />
-      <OnboardingHub />
     </header>
     </>
   );

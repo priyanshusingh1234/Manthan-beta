@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Bonus already claimed." }, { status: 400 });
         }
 
-        const isComplete = ob.seen_tour && ob.visited_streaks && (profile.daily_solved > 0 || ob.first_solve_checked);
+        const isComplete = ob.seen_tour && (profile.daily_solved > 0 || ob.first_solve_checked);
         
         if (!isComplete) {
             return NextResponse.json({ error: "Complete all quests to claim your bonus!" }, { status: 400 });

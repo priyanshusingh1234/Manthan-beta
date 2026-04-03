@@ -329,12 +329,16 @@ export async function POST(req: Request) {
                             for (const recipientId of recipientIds) {
                                 const { data: suResp } = await supabaseAdmin.auth.admin.getUserById(recipientId);
                                 if (suResp?.user) {
-                                    const meta = suResp.user.user_metadata || {};
+                                    const recipientMeta = suResp.user.user_metadata || {};
+                                    const newRecipientTotal = Math.max(0, (Number(recipientMeta.totalPoints) || 0) + 5);
                                     await supabaseAdmin.auth.admin.updateUserById(recipientId, {
-                                        user_metadata: { ...meta, totalPoints: Math.max(0, (Number(meta.totalPoints) || 0) + 5) }
+                                        user_metadata: { ...recipientMeta, totalPoints: newRecipientTotal }
                                     });
+                                    // Sync profiles table so public profile & leaderboard stay accurate
+                                    await upsertProfile(recipientId, { ...recipientMeta, totalPoints: newRecipientTotal });
                                 }
                             }
+                            leaderboardCache.invalidate();
                         }
                     }
                 }

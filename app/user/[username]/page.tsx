@@ -93,7 +93,7 @@ export default async function StudentProfilePage({ params }: Props) {
         // Fast, case-insensitive ID lookup from profiles table
         const { data: profile } = await supabaseAdmin
             .from('profiles')
-            .select('id, total_points, is_teacher') 
+            .select('id, total_points, is_teacher, avatar_url') 
             .ilike('username', username)
             .single();
 
@@ -134,7 +134,6 @@ export default async function StudentProfilePage({ params }: Props) {
 
         const meta = (fetchedUser as any).user_metadata || {};
         const name = fetchedUser.full_name || meta.fullName || meta.full_name || meta.name || (fetchedUser.username ? `@${fetchedUser.username}` : (meta.username ? `@${meta.username}` : 'Student'));
-        const avatar = fetchedUser.avatar_url || meta.avatar_url || meta.avatar || null;
         const banner = (fetchedUser as any).banner_url || meta.banner_url || null;
         const bio = (fetchedUser as any).bio || meta.bio || null;
         const school = fetchedUser.school || meta.school || null;
@@ -159,10 +158,15 @@ export default async function StudentProfilePage({ params }: Props) {
             console.log("Follows table might not exist yet.");
         }
 
-        const profilePoints = Number(profile?.total_points) || 0;
-        const totalPoints = profilePoints || Number(fetchedUser.total_points || meta.totalPoints || 0);
-        const battlesAttempted = Number(fetchedUser.battles_attempted || meta.battlesAttempted || 0);
-        const battlesWon = Number(fetchedUser.battles_won || meta.battlesWon || 0);
+        // Always use profiles.total_points as the single authoritative source.
+        // Auth metadata can lag behind when points are awarded server-side without a
+        // follow-up sync (e.g. WAR bonuses).  The profiles table is always kept in
+        // sync by every point-awarding API route via upsertProfile().
+        const totalPoints = Number(profile?.total_points) || Number(meta.totalPoints) || 0;
+        // Use profiles.avatar_url first (written by /api/profile/sync), then fallback to auth meta.
+        const avatar = (profile?.avatar_url as string | null) || fetchedUser.avatar_url || meta.avatar_url || meta.avatar || null;
+        const battlesAttempted = Number(meta.battlesAttempted) || 0;
+        const battlesWon = Number(meta.battlesWon) || 0;
         const winRate = battlesAttempted > 0 ? Math.round((battlesWon / battlesAttempted) * 100) : 0;
 
         // Fetch Global Rank
@@ -259,7 +263,7 @@ export default async function StudentProfilePage({ params }: Props) {
                             <BadgedName 
                                 name={name}
                                 userId={fetchedUser.id}
-                                rank={myRank}
+                                rank={myRank ?? undefined}
                                 isTeacher={isTeacher}
                                 totalPoints={totalPoints}
                                 nameClassName="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white"

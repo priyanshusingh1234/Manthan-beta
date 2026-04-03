@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Profile } from '@/lib/profiles';
 import Link from 'next/link';
 
-export default function OnboardingHub() {
+export default function OnboardingHub({ isMobile = false }: { isMobile?: boolean }) {
     const pathname = usePathname();
     const router = useRouter();
     const [profile, setProfile] = useState<Profile | null>(null);
@@ -204,44 +204,44 @@ export default function OnboardingHub() {
                 document.body
             )}
 
-            {/* 📜 FLOATING INITIATE HANDBOOK (Minimized) */}
-            <div className="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 z-50">
-                {minimized ? (
-                    <button 
-                        onClick={() => setMinimized(false)}
-                        className="relative w-16 h-16 rounded-3xl bg-indigo-600 text-white flex items-center justify-center shadow-[0_15px_35px_rgba(79,70,229,0.3)] hover:scale-110 active:scale-95 transition-all group"
-                    >
-                        {isGrandMaster ? <Gift className="w-7 h-7 animate-bounce" /> : <Sparkles className="w-7 h-7" />}
-                        {completedCount < items.length && (
-                             <span className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-red-500 border-4 border-white dark:border-slate-900 text-[11px] font-black flex items-center justify-center shadow-lg animate-pulse">
-                                {items.length - completedCount}
-                            </span>
-                        )}
-                    </button>
-                ) : (
-                    <div className="w-80 bg-white/95 dark:bg-slate-950/95 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 dark:border-slate-800/80 overflow-hidden animate-popIn">
-                        <div className="p-7 bg-gradient-to-br from-indigo-50 dark:from-indigo-900/20 to-transparent border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            {/* 📜 INLINE QUEST HUB TOGGLE */}
+            <div className="relative">
+                <button 
+                    onClick={() => setMinimized(!minimized)}
+                    className="relative w-10 h-10 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 md:bg-white/15 md:hover:bg-white/25 border border-indigo-500/20 md:border-white/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 md:text-white transition-all shadow-sm md:shadow-md active:scale-95 group"
+                >
+                    {isGrandMaster ? <Gift className="w-5 h-5 animate-bounce" /> : <Sparkles className="w-5 h-5" />}
+                    {completedCount < items.length && (
+                         <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 border-2 border-white dark:border-slate-900 md:border-white md:dark:border-white shadow-sm animate-pulse">
+                            {items.length - completedCount}
+                        </span>
+                    )}
+                </button>
+
+                {!minimized && (
+                    <div className="absolute top-14 right-0 w-[320px] sm:w-80 bg-white dark:bg-slate-950 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border-2 border-indigo-100 dark:border-slate-800 overflow-hidden z-50 animate-in zoom-in-95 origin-top-right">
+                        <div className="p-6 bg-gradient-to-br from-indigo-50 dark:from-indigo-900/40 to-white dark:to-slate-950 flex items-center justify-between border-b border-indigo-100/50 dark:border-slate-800/80">
                             <div>
-                                <h3 className="text-[13px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest italic mb-0.5">Induction Log</h3>
-                                <p className="text-xs font-bold text-slate-500">Mastery: {completedCount}/{items.length}</p>
+                                <h3 className="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest italic mb-0.5">Induction Log</h3>
+                                <p className="text-[11px] font-bold text-slate-500">Mastery: <span className="text-indigo-500">{completedCount}/{items.length}</span></p>
                             </div>
-                            <button onClick={() => setMinimized(true)} className="p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+                            <button onClick={() => setMinimized(true)} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 transition-colors">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
 
-                        <div className="p-5 space-y-4">
+                        <div className="p-4 space-y-3 bg-slate-50/50 dark:bg-slate-900/30">
                             {items.map((item) => (
-                                <div key={item.id} className={`p-4 rounded-2xl border-2 transition-all ${item.done ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-slate-50 dark:bg-slate-800/40 border-transparent'}`}>
-                                    <div className="flex items-start gap-4">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.done ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                                            {item.done ? <CheckCircle2 className="w-5 h-5" /> : React.createElement(item.icon, { className: "w-5 h-5" })}
+                                <div key={item.id} className={`p-3 rounded-2xl border-2 transition-all ${item.done ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500/20' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'}`}>
+                                    <div className="flex items-start gap-3">
+                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${item.done ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' : 'bg-indigo-50 dark:bg-slate-800 text-indigo-500 dark:text-slate-400'}`}>
+                                            {item.done ? <CheckCircle2 className="w-5 h-5" /> : React.createElement(item.icon, { className: "w-4 h-4" })}
                                         </div>
-                                        <div className="flex-1">
-                                            <p className={`text-[14px] font-black ${item.done ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-[13px] font-black leading-tight ${item.done ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>
                                                 {item.label}
                                             </p>
-                                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-tight mt-1">
+                                            <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-tight mt-0.5 line-clamp-2">
                                                 {item.done ? "Quest Accomplished! 🏁" : item.desc}
                                             </p>
                                         </div>
@@ -250,15 +250,15 @@ export default function OnboardingHub() {
                             ))}
                         </div>
 
-                        <div className="px-5 pb-6 space-y-3">
+                        <div className="p-4 space-y-2 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800">
                             <button 
                                 disabled={!isGrandMaster || isClaiming}
                                 onClick={handleClaim}
-                                className={`w-full py-5 rounded-2xl flex items-center justify-center gap-2 font-black text-[13px] uppercase tracking-widest italic transition-all ${isGrandMaster ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-500/40 active:scale-95' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'}`}
+                                className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest italic transition-all ${isGrandMaster ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 active:scale-95' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'}`}
                             >
-                                {isClaiming ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : (
+                                {isClaiming ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : (
                                     <>
-                                        <Gift className="w-5 h-5" />
+                                        <Gift className="w-4 h-4" />
                                         <span>{isGrandMaster ? "Claim 10 Pt Bounty" : "Gauntlet in Progress"}</span>
                                     </>
                                 )}
@@ -267,13 +267,15 @@ export default function OnboardingHub() {
                             <div className="flex gap-2">
                                 <Link 
                                     href="/missions" 
-                                    className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest text-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all border border-slate-200/50 dark:border-slate-700/50"
+                                    onClick={() => setMinimized(true)}
+                                    className="flex-1 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest text-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                 >
-                                    Mission Page
+                                    Details
                                 </Link>
                                 <Link 
                                     href="/leaderboard" 
-                                    className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest text-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all border border-slate-200/50 dark:border-slate-700/50"
+                                    onClick={() => setMinimized(true)}
+                                    className="flex-1 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest text-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                 >
                                     Ranks
                                 </Link>
