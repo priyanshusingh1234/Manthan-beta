@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import QuestionCard from '@/components/QuestionCard';
+import PostCard from '@/components/PostCard';
 import { Filter, SlidersHorizontal, BookOpen, Layers, Target, ChevronDown, Info, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
@@ -256,7 +257,11 @@ export default function FeedPage() {
                                             {q._feedLabel}
                                         </div>
                                     )}
-                                    <QuestionCard q={q} />
+                                    {q.type === 'post' ? (
+                                        <PostCard post={q} showTags={true} />
+                                    ) : (
+                                        <QuestionCard q={q} />
+                                    )}
                                 </div>
                             ))}
                         </div>
