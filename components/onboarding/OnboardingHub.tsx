@@ -18,6 +18,7 @@ export default function OnboardingHub({ isMobile = false }: { isMobile?: boolean
     const [minimized, setMinimized] = useState(true);
     const [mounted, setMounted] = useState(false);
     const [isClaiming, setIsClaiming] = useState(false);
+    const [hasClosedTourSession, setHasClosedTourSession] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -61,8 +62,8 @@ export default function OnboardingHub({ isMobile = false }: { isMobile?: boolean
         }
 
         // AUTO-TRIGGER LOGIC
-        // only show tour if flag is strictly false/missing
-        if (!ob.seen_tour && (pathname === '/feed' || pathname === '/')) {
+        // only show tour if flag is strictly false/missing AND we haven't closed it this session
+        if (!ob.seen_tour && !hasClosedTourSession && (pathname === '/feed' || pathname === '/')) {
             setShowTour(true);
         }
     }
@@ -102,6 +103,7 @@ export default function OnboardingHub({ isMobile = false }: { isMobile?: boolean
     }
 
     const closeTour = () => {
+        setHasClosedTourSession(true);
         setShowTour(false);
         updateFlag('seen_tour');
     };
@@ -120,11 +122,11 @@ export default function OnboardingHub({ isMobile = false }: { isMobile?: boolean
             icon: BookOpen 
         },
         { 
-            id: 'first_solve', 
-            label: 'Combat Trial', 
-            desc: 'Solve your first question correctly in the Feed.',
-            done: ((profile as any).battles_won || 0) > 0 || Number(profile.total_points || 0) > 0 || !!ob.first_solve_checked, 
-            icon: Shield 
+            id: 'first_post', 
+            label: 'Community Decree', 
+            desc: 'Share your first post or thought in the Feed to connect with others.',
+            done: !!ob.first_post_checked || (profile as any).posts_count > 0, 
+            icon: Sparkles 
         },
     ];
 

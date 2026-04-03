@@ -10,7 +10,6 @@ import { useTheme } from 'next-themes';
 
 import { supabase } from '@/lib/supabaseClient';
 import NotificationBell from './NotificationBell';
-import OnboardingHub from './onboarding/OnboardingHub';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface HeaderProps {
@@ -183,7 +182,6 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                 <>
                  <div className="flex items-center gap-2">
                    <NotificationBell isMobile={true} />
-                   <OnboardingHub isMobile={true} />
                  </div>
                  {user?.user_metadata?.isTeacher && (
                    <Link
@@ -348,10 +346,8 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                     </Link>
                   )}
 
-                  {/* Notification bell and Quests hub */}
                   <div className="flex items-center gap-2">
                     <NotificationBell isMobile={false} />
-                    <OnboardingHub isMobile={false} />
                   </div>
                   
                   <div className="relative" ref={dropdownRef}>

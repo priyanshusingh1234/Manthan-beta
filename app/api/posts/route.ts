@@ -1,5 +1,5 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
-import { getProfilesMap } from "@/lib/profiles";
+import { getProfilesMap, upsertProfile } from "@/lib/profiles";
 import { createNotification } from "@/lib/createNotification";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -91,6 +91,19 @@ export async function POST(req: NextRequest) {
             .single();
 
         if (error) throw error;
+        
+        // 1.5 Progress Onboarding: User has shared their first post
+        try {
+            const { data: profileData } = await supabaseAdmin.from('profiles').select('onboarding').eq('id', user.id).maybeSingle();
+            const ob = profileData?.onboarding || {};
+            if (!ob.first_post_checked) {
+                ob.first_post_checked = true;
+                await supabaseAdmin.auth.admin.updateUserById(user.id, { user_metadata: { ...user.user_metadata, onboarding: ob } });
+                await upsertProfile(user.id, { ...user.user_metadata, onboarding: ob });
+            }
+        } catch (obErr: any) {
+            console.error('[Onboarding Update Error on Social Post]', obErr);
+        }
 
         // --- Tagging / Mentions Logic ---
         const mentionRegex = /@([\w.-]+)/g;
