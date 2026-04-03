@@ -51,9 +51,14 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
         }
 
         const response = await fetch(targetUrl, fetchOptions);
-
+        
         // Copy headers back from Supabase response
         const outHeaders = new Headers(response.headers);
+        
+        // Ensure CORS headers are present for the proxy client (Browser/Capacitor)
+        outHeaders.set('Access-Control-Allow-Origin', '*');
+        outHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+        outHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-client-info, apikey, x-supabase-auth');
 
         // Let Vercel/Next.js handle encoding — don't forward compressed responses
         outHeaders.delete('content-encoding');
@@ -64,14 +69,16 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
 
         return new Response(responseBody, {
             status: response.status,
-            statusText: response.statusText,
             headers: outHeaders
         });
     } catch (error: any) {
         console.error('[Supabase Proxy] Network Error:', error.message);
-        return new Response(JSON.stringify({ error: error.message }), {
+        return new Response(JSON.stringify({ error: `Proxy connection failed: ${error.message}` }), {
             status: 502,
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
         });
     }
 }

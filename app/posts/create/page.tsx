@@ -177,7 +177,11 @@ export default function CreatePostPage() {
 
             router.push('/posts');
         } catch (err: any) {
-            setError(err.message);
+            console.error("Submission failed:", err);
+            setError(err.message === 'Failed to fetch' 
+                ? "Network Error: Failed to reach server. Please check your internet connection or try a smaller image." 
+                : err.message
+            );
         } finally {
             setLoading(false);
         }
