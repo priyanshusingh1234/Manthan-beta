@@ -237,60 +237,6 @@ export async function POST(req: Request) {
 
         // --- STREAK LOGIC ---
         const { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
-        const now = new Date();
-        // --- THE FIX: Use India Standard Time (IST) to define "Today" ---
-        const todayStr = new Intl.DateTimeFormat('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        }).format(now).split('/').reverse().join('-'); // Format: YYYY-MM-DD
-        
-        let streakCount = Number(profile?.streak_count) || 0;
-        let lastStreakAt = profile?.last_streak_at || null;
-        let dailySolved = Number(profile?.daily_solved) || 0;
-
-        console.log(`[StreakTrace] Before: day=${todayStr} streak=${streakCount} solved=${dailySolved} goal=${streakCount+1}`);
-
-        // Reset daily counter if it's a new day
-        if (lastStreakAt && lastStreakAt !== todayStr) {
-            const yesterday = new Date(now);
-            yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = new Intl.DateTimeFormat('en-IN', {
-                timeZone: 'Asia/Kolkata',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            }).format(yesterday).split('/').reverse().join('-');
-
-            if (lastStreakAt !== yesterdayStr) {
-                streakCount = 0; 
-            }
-            dailySolved = 0; 
-        }
-
-        if (isCorrect) {
-            dailySolved += 1;
-            const dailyGoal = streakCount + 1;
-
-            if (dailySolved >= dailyGoal && lastStreakAt !== todayStr) {
-                streakCount += 1;
-                lastStreakAt = todayStr;
-                console.log(`[StreakTrace] Level UP! New Streak: ${streakCount}`);
-
-                // --- NEW: Send Level Up Notification ---
-                await createNotification({
-                    userId: userId,
-                    type: 'points_earned', // Congrats type
-                    title: `Streak Level Up! 🔥`,
-                    body: `Legendary! Your Scholar Streak has reached Day ${streakCount}. The Sage fire burns brighter!`,
-                    href: '/streaks'
-                });
-            }
-        }
-
-        console.log(`[StreakTrace] After: solved=${dailySolved} isCorrect=${isCorrect}`);
-
         const newTotal = Math.max(0, currentPoints + userPointsChange);
 
         // Update totalPoints and increment attempts counter
@@ -303,10 +249,7 @@ export async function POST(req: Request) {
                 ...userMeta,
                 totalPoints: newTotal,
                 battlesAttempted,
-                battlesWon,
-                streakCount,
-                lastStreakAt,
-                dailySolved
+                battlesWon
             }
         });
 
@@ -314,10 +257,7 @@ export async function POST(req: Request) {
             ...userMeta, 
             totalPoints: newTotal, 
             battlesAttempted, 
-            battlesWon,
-            streakCount,
-            lastStreakAt,
-            dailySolved
+            battlesWon
         });
         leaderboardCache.invalidate();
 
@@ -406,13 +346,7 @@ export async function POST(req: Request) {
             isCorrect,
             correctOption: correctOpt,
             pointsChange: pointsChangeDisplay,
-            newTotal,
-            streakStats: {
-                streakCount,
-                dailySolved,
-                lastStreakAt,
-                todayStr
-            }
+            newTotal
         });
     } catch (err: any) {
         console.error(err);

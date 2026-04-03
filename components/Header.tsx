@@ -215,6 +215,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
           <div className="mt-3 overflow-x-auto scrollbar-hide flex items-center gap-1.5 pb-1 snap-x">
             {[
               { label: 'Feed', href: '/feed', icon: Compass },
+              { label: 'Quests', href: '/missions', icon: Sparkles },
               { label: 'Search', href: '/search', icon: Search },
               { label: 'Community', href: '/posts', icon: MessageSquare },
               { label: 'Ranks', href: '/leaderboard', icon: Trophy },

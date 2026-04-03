@@ -7,10 +7,6 @@
         {
             "path": "/api/cron/weekly-report",
             "schedule": "30 23 * * 0"
-        },
-        {
-            "path": "/api/cron/streak-reminder",
-            "schedule": "30 13 * * *"
         }
     ]
 }
