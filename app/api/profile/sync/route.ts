@@ -13,8 +13,12 @@ export async function POST(req: NextRequest) {
         
         if (!user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
 
-        // Force a sync of the current user's metadata to the profiles table
-        await upsertProfile(user.id, user.user_metadata || {});
+        // Fetch fresh from the DB to avoid stale JWT metadata
+        const { data: freshUser } = await supabaseAdmin.auth.admin.getUserById(user.id);
+        const meta = freshUser?.user?.user_metadata || user.user_metadata || {};
+
+        // Force a sync of the current user's freshest metadata to the profiles table
+        await upsertProfile(user.id, meta);
 
         // Bust the leaderboard cache so the next request reflects the latest
         // avatar_url, name, etc. without waiting for the TTL to expire.

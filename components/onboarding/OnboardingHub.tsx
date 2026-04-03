@@ -123,7 +123,7 @@ export default function OnboardingHub({ isMobile = false }: { isMobile?: boolean
             id: 'first_solve', 
             label: 'Combat Trial', 
             desc: 'Solve your first question correctly in the Feed.',
-            done: profile.daily_solved > 0 || !!ob.first_solve_checked, 
+            done: ((profile as any).battles_won || 0) > 0 || Number(profile.total_points || 0) > 0 || !!ob.first_solve_checked, 
             icon: Shield 
         },
     ];
@@ -155,25 +155,25 @@ export default function OnboardingHub({ isMobile = false }: { isMobile?: boolean
             {/* 🚀 WELCOME CAROUSEL MODAL */}
             {showTour && createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-                    <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-[0_0_50px_rgba(79,70,229,0.2)] overflow-hidden animate-popIn border border-white/20">
-                        <button onClick={closeTour} className="absolute top-8 right-8 p-3 rounded-full bg-slate-100 dark:bg-slate-800 hover:scale-110 active:scale-95 transition-all z-10">
-                            <X className="w-5 h-5" />
+                    <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-[2rem] sm:rounded-[3rem] shadow-[0_0_50px_rgba(79,70,229,0.2)] overflow-hidden animate-popIn border border-slate-100 dark:border-white/10 flex flex-col max-h-[90vh]">
+                        <button onClick={closeTour} className="absolute top-4 right-4 sm:top-8 sm:right-8 p-2.5 sm:p-3 rounded-full bg-slate-100 dark:bg-slate-800 hover:scale-110 active:scale-95 transition-all z-10">
+                            <X className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
 
-                        <div className="p-10 sm:p-14">
+                        <div className="p-6 pt-12 sm:p-14 overflow-y-auto overflow-x-hidden no-scrollbar">
                             <div className="flex flex-col items-center text-center">
-                                <div className={`w-24 h-24 rounded-[2rem] ${slides[currentSlide].bg} flex items-center justify-center mb-10 animate-float shadow-inner`}>
-                                    {React.createElement(slides[currentSlide].icon, { className: `w-12 h-12 ${slides[currentSlide].color}` })}
+                                <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-[1.5rem] sm:rounded-[2rem] ${slides[currentSlide].bg} flex items-center justify-center mb-6 sm:mb-10 animate-float shadow-inner`}>
+                                    {React.createElement(slides[currentSlide].icon, { className: `w-10 h-10 sm:w-12 sm:h-12 ${slides[currentSlide].color}` })}
                                 </div>
-                                <h2 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white mb-6 italic uppercase leading-none">
+                                <h2 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900 dark:text-white mb-4 sm:mb-6 italic uppercase leading-tight sm:leading-none">
                                     {slides[currentSlide].title}
                                 </h2>
-                                <p className="text-slate-600 dark:text-slate-300 text-lg font-bold leading-relaxed max-w-sm mb-6">
+                                <p className="text-sm sm:text-lg text-slate-600 dark:text-slate-300 font-bold leading-relaxed max-w-sm mb-6 px-2 sm:px-0">
                                     {slides[currentSlide].desc}
                                 </p>
-                                <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 max-w-md">
-                                    <p className="text-[14px] font-black italic uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2">Instructions:</p>
-                                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                                <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 w-full max-w-md">
+                                    <p className="text-[12px] sm:text-[14px] font-black italic uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1.5 sm:mb-2">Instructions:</p>
+                                    <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
                                         {slides[currentSlide].detail}
                                     </p>
                                 </div>
@@ -181,24 +181,24 @@ export default function OnboardingHub({ isMobile = false }: { isMobile?: boolean
                         </div>
 
                         {/* Navigation Footer */}
-                        <div className="px-10 pb-12 flex items-center justify-between">
-                            <div className="flex gap-3">
+                        <div className="px-6 pb-6 sm:px-10 sm:pb-12 flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-0 mt-2 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-0 border-slate-100 dark:border-slate-800">
+                            <div className="flex gap-2.5 sm:gap-3 order-2 sm:order-1">
                                 {slides.map((_, i) => (
-                                    <div key={i} className={`h-2 rounded-full transition-all duration-500 ${i === currentSlide ? 'w-12 bg-indigo-500 shadow-glow' : 'w-3 bg-slate-200 dark:bg-slate-700'}`} />
+                                    <div key={i} className={`h-1.5 sm:h-2 rounded-full transition-all duration-500 ${i === currentSlide ? 'w-8 sm:w-12 bg-indigo-500 shadow-glow' : 'w-2.5 sm:w-3 bg-slate-200 dark:bg-slate-700'}`} />
                                 ))}
                             </div>
-                            <div className="flex gap-4">
+                            <div className="flex gap-3 sm:gap-4 w-full sm:w-auto order-1 sm:order-2">
                                 {currentSlide > 0 && (
-                                    <button onClick={() => setCurrentSlide(s => s - 1)} className="p-5 rounded-3xl bg-slate-100 dark:bg-slate-800 active:scale-95 transition-all">
-                                        <ChevronLeft className="w-6 h-6" />
+                                    <button onClick={() => setCurrentSlide(s => s - 1)} className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-slate-100 dark:bg-slate-800 active:scale-95 transition-all text-slate-600 dark:text-slate-300">
+                                        <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
                                     </button>
                                 )}
                                 <button 
                                     onClick={() => currentSlide < slides.length - 1 ? setCurrentSlide(s => s + 1) : closeTour()}
-                                    className="px-8 py-5 rounded-3xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-widest flex items-center gap-3 active:scale-95 transition-all shadow-2xl shadow-indigo-500/40"
+                                    className="flex-1 sm:flex-none px-6 py-4 sm:px-8 sm:py-5 rounded-2xl sm:rounded-3xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs sm:text-sm uppercase tracking-widest flex items-center justify-center gap-2 sm:gap-3 active:scale-95 transition-all shadow-xl sm:shadow-2xl shadow-indigo-500/30 sm:shadow-indigo-500/40"
                                 >
                                     <span>{currentSlide < slides.length - 1 ? "Next Chapter" : "Begin My Ascent"}</span>
-                                    <ChevronRight className="w-5 h-5" />
+                                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                                 </button>
                             </div>
                         </div>

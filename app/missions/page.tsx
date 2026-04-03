@@ -51,7 +51,7 @@ export default function MissionsPage() {
             desc: "Prove your intellect by conquering your first question in the feed.",
             instr: "Go to the question feed and provide a correct answer to any active question.",
             icon: Swords,
-            done: (profile?.daily_solved || 0) > 0 || !!ob.first_solve_checked,
+            done: ((profile as any)?.battles_won || 0) > 0 || Number(profile?.total_points || 0) > 0 || !!ob.first_solve_checked,
             href: "/feed"
         }
     ];
