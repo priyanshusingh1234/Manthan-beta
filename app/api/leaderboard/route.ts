@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
-import { leaderboardCache, LeaderboardUser } from "@/lib/leaderboardCache";
+import { LeaderboardUser } from "@/lib/leaderboardCache";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        if (leaderboardCache.isValid()) {
-            return NextResponse.json(leaderboardCache.data, {
-                status: 200,
-                headers: { "Cache-Control": "no-store" }
-            });
-        }
-
+        // No in-memory cache: every request queries Supabase directly so that
+        // avatar changes, point awards, and profile updates are reflected
+        // immediately across all serverless instances without waiting for a TTL
+        // or relying on a single instance's invalidate() call.
         const { data, error } = await supabaseAdmin
             .from('profiles')
             .select('id, full_name, username, school, avatar_url, total_points, is_teacher')
@@ -38,7 +35,6 @@ export async function GET() {
         }));
 
         const response = { topBrains: students };
-        leaderboardCache.set(response);
 
         return NextResponse.json(response, {
             status: 200,

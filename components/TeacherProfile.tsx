@@ -193,10 +193,12 @@ const TeacherProfile: React.FC = () => {
 
       await supabase.auth.updateUser({ data: updateData });
 
-      // Sync the profile manually so other tables/feeds get the latest metadata instantly
+      // Await the sync so the profiles table is guaranteed to have the latest
+      // avatar_url before we return — prevents stale data on /user/[username]
+      // and on the leaderboard for the rest of this request lifecycle.
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
-          fetch('/api/profile/sync', {
+          await fetch('/api/profile/sync', {
               method: 'POST',
               headers: { Authorization: `Bearer ${session.access_token}` }
           }).catch(console.error);
