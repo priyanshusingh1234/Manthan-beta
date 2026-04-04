@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import QuestionCard from '@/components/QuestionCard';
 import PostCard from '@/components/PostCard';
-import { Filter, SlidersHorizontal, BookOpen, Layers, Target, ChevronDown, Info, Sparkles, Trophy } from 'lucide-react';
+import { Filter, SlidersHorizontal, BookOpen, Layers, Target, ChevronDown, Info, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
 
@@ -24,61 +24,6 @@ export default function FeedPage() {
     const [selectedSubject, setSelectedSubject] = useState('');
     const [selectedClass, setSelectedClass] = useState('');
     const [selectedDifficulty, setSelectedDifficulty] = useState('');
-
-    const [showLegacySync, setShowLegacySync] = useState(false);
-    const [isSyncing, setIsSyncing] = useState(false);
-
-    // Legacy sync check
-    useEffect(() => {
-        const hasCompletedLocal = localStorage.getItem('dheeyudha_class9_hard_test_completed') === 'true';
-        if (hasCompletedLocal) {
-            supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session) {
-                    fetch('/api/test/check?testId=class-9-hard', {
-                        headers: { 'Authorization': `Bearer ${session.access_token}` }
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (!data.hasSubmission) {
-                            setShowLegacySync(true);
-                        }
-                    }).catch(() => {});
-                }
-            });
-        }
-    }, []);
-
-    const handleLegacySync = async () => {
-        setIsSyncing(true);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-            
-            // Sync with a placeholder "Legacy Success" score (e.g. 100/120) since we don't have the original
-            // or just mark as cleared with a special flag.
-            await fetch('/api/test/submit', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    testId: 'class-9-hard',
-                    score: 100, // Legacy credit
-                    maxScore: 120,
-                    timeTaken: 1800, // 30 min default for legacy
-                    accuracy: 85,
-                    isLegacy: true
-                })
-            });
-            setShowLegacySync(false);
-            alert("Achievement synced! Your global rank has been updated. 🎖️");
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsSyncing(false);
-        }
-    };
 
     useEffect(() => {
         if (selectedSubject === 'English' && selectedClass) {
@@ -176,38 +121,6 @@ export default function FeedPage() {
             <main className="max-w-[1240px] px-4 sm:px-6 mx-auto relative z-10 w-full lg:flex lg:gap-8 justify-center">
 
                 <div className="w-full lg:max-w-3xl flex-shrink overflow-x-hidden">
-                    {/* Legacy Sync Banner */}
-                    {showLegacySync && (
-                        <div className="mb-6 animate-in slide-in-from-top-4 fade-in duration-500">
-                             <div className="relative p-6 rounded-[2rem] bg-indigo-600 dark:bg-indigo-600 text-white shadow-xl shadow-indigo-500/30 overflow-hidden group">
-                                 {/* Decorative Glow */}
-                                 <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 blur-[60px] rounded-full group-hover:scale-110 transition-transform duration-700" />
-                                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 blur-[60px] rounded-full group-hover:scale-95 transition-transform duration-700" />
-                                 
-                                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                     <div className="flex items-start gap-4">
-                                         <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 shadow-inner">
-                                             <Trophy className="w-6 h-6 text-yellow-300 drop-shadow-md" />
-                                         </div>
-                                         <div>
-                                             <h3 className="font-black italic uppercase tracking-tighter text-lg leading-tight">Legacy Achievement Detected</h3>
-                                             <p className="text-indigo-100 text-[13px] font-medium max-w-sm mt-1">
-                                                 You braved the Class 9 Hard Gauntlet recently! Sync your achievement to your global profile now to appear on the official leaderboard.
-                                             </p>
-                                         </div>
-                                     </div>
-                                     <button
-                                         onClick={handleLegacySync}
-                                         className={`shrink-0 px-6 py-3 rounded-xl bg-white text-indigo-600 font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg ${isSyncing ? 'animate-pulse opacity-50' : ''}`}
-                                         disabled={isSyncing}
-                                     >
-                                         {isSyncing ? 'Syncing...' : 'Sync Achievement 🎖️'}
-                                     </button>
-                                 </div>
-                             </div>
-                        </div>
-                    )}
-
                     {/* Header */}
                     <div className="mb-6 md:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
                         <div className="px-1">
