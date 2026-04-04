@@ -1,6 +1,8 @@
 "use client";
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { Share as CapShare } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 import { Target, Clock, ArrowRight, ShieldAlert, Share2 } from 'lucide-react';
 
 export default function TestYourselfBanner() {
@@ -13,7 +15,13 @@ export default function TestYourselfBanner() {
     const shareText = `I challenge you to the Ultimate Class 9 Hard Gauntlet at Dheeyudha! 40 brutal MCQs, 60 Minutes. Do you have what it takes? 🧠🔥\nhttps://dheeyudhha-pi.vercel.app/test/class-9-hard`;
     
     try {
-      if (navigator.share) {
+      if (Capacitor.isNativePlatform()) {
+        await CapShare.share({
+            title: 'Dheeyudha Test Challenge',
+            text: shareText,
+            dialogTitle: 'Challenge your friends'
+        });
+      } else if (navigator.share) {
         await navigator.share({
             title: 'Dheeyudha Test Challenge',
             text: shareText

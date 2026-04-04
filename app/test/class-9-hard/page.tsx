@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Share as CapShare } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 import { Clock, ShieldAlert, CheckCircle2, XCircle, ArrowRight, ArrowLeft, Trophy, BarChart2, Share2, Target, RotateCcw } from 'lucide-react';
 
 type Question = {
@@ -100,7 +102,13 @@ export default function TestYourselfPage() {
     const shareText = `I just scored ${score} / ${questions.length * 3} on the Ultimate Class 9 Hard Gauntlet at Dheeyudha! Can you beat my score? 🧠🔥\nhttps://dheeyudhha-pi.vercel.app/test/class-9-hard`;
     
     try {
-      if (navigator.share) {
+      if (Capacitor.isNativePlatform()) {
+        await CapShare.share({
+            title: 'Dheeyudha Test Challenge',
+            text: shareText,
+            dialogTitle: 'Share your Gauntlet Results'
+        });
+      } else if (navigator.share) {
         await navigator.share({
             title: 'Dheeyudha Test Challenge',
             text: shareText
