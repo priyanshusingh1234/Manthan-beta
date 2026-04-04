@@ -17,6 +17,7 @@ type Question = {
 export default function TestYourselfPage() {
   const router = useRouter();
   const audioRef = React.useRef<HTMLAudioElement>(null);
+  const playCount = React.useRef(0);
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +34,10 @@ export default function TestYourselfPage() {
   useEffect(() => {
     async function fetchTest() {
       try {
+        if (typeof window !== 'undefined' && localStorage.getItem('dheeyudha_class9_hard_test_completed')) {
+            throw new Error("You have already faced the Gauntlet. It can only be taken once.");
+        }
+
         const res = await fetch('/api/test/generate?classGrade=9&limit=40');
         const data = await res.json();
         if (data.error) throw new Error(data.error);
@@ -67,7 +72,7 @@ export default function TestYourselfPage() {
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = 0.2; // low volume
-      if (!loading && !error && !isSubmitted) {
+      if (!loading && !error && !isSubmitted && playCount.current < 3) {
         // Attempt to autoplay
         audioRef.current.play().catch(e => console.log("Audio autoplay blocked by browser:", e));
       } else {
@@ -75,6 +80,16 @@ export default function TestYourselfPage() {
       }
     }
   }, [loading, error, isSubmitted]);
+
+  const handleAudioEnded = () => {
+    playCount.current += 1;
+    if (playCount.current < 3) {
+      if (audioRef.current && !loading && !error && !isSubmitted) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(e => console.log("Audio replay blocked:", e));
+      }
+    }
+  };
 
   const handleSelectOption = (optIndex: number) => {
     setAnswers(prev => ({ ...prev, [currentIndex]: optIndex }));
@@ -91,6 +106,9 @@ export default function TestYourselfPage() {
   const handleSubmit = () => {
     setTimeTaken(3600 - timeLeft);
     setIsSubmitted(true);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dheeyudha_class9_hard_test_completed', 'true');
+    }
   };
 
   const handleShare = async () => {
@@ -300,7 +318,7 @@ export default function TestYourselfPage() {
 
   return (
     <div className="h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col font-sans overflow-hidden">
-      <audio ref={audioRef} src="/OPPENHEIMER _ Can You Hear The Music [4K].mp3" loop />
+      <audio ref={audioRef} src="/OPPENHEIMER _ Can You Hear The Music [4K].mp3" onEnded={handleAudioEnded} />
       
       {/* Top Header */}
       <header className="shrink-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 p-3 md:p-4 z-50">

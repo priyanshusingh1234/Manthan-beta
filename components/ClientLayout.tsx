@@ -335,15 +335,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isLandingPage = pathname === '/';
   const isTrailerPage = pathname === '/trailer';
   const isSearchPage = pathname === '/search';
+  const isTestPage = pathname?.startsWith('/test') || false;
 
-  const hideMainSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isSearchPage;
-  const hideBottomNav = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage;
+  const hideMainSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isSearchPage || isTestPage;
+  const hideBottomNav = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isTestPage;
 
   return (
     <>
       {!hideMainSidebar && <DesktopSidebar />}
       <div className={`${hideMainSidebar ? 'lg:pl-0' : 'lg:pl-64'} ${showBottomNav && !hideBottomNav ? 'pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''}`}>
-        {!hideMainSidebar && <Header isMobile={isMobile} />}
+        {!hideMainSidebar && !isTestPage && <Header isMobile={isMobile} />}
         {children}
         {showBottomNav && !hideBottomNav && <BottomNav />}
       </div>
