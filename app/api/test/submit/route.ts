@@ -20,24 +20,9 @@ export async function POST(req: NextRequest) {
 
         const { testId, answers, score, maxScore, timeTaken, accuracy } = await req.json();
 
-        // 1. Log each question attempt for global leaderboard points
-        // We assume 'answers' is an array of { questionId, isCorrect, selectedOption }
-        if (Array.isArray(answers)) {
-            const attempts = answers.map((a: any) => ({
-                user_id: user.id,
-                question_id: a.questionId,
-                is_correct: a.isCorrect,
-                points_awarded: 0, // Points are not yet configured for this exhibition Arena
-            })).filter(a => a.question_id);
-
-            if (attempts.length > 0) {
-                // Batch insert into question_attempts to update points
-                await supabaseAdmin.from('question_attempts').insert(attempts);
-            }
-        }
-
-        // 2. Store aggregated test result in 'test_results'
-        // If the table exists, it'll save. If not, it gracefully continues.
+        // 1. Store aggregated test result in 'test_results' (Private Arena Records)
+        // We no longer insert into 'question_attempts' for Arena challenges.
+        // This ensures gauntlet solves don't 'mess' with your normal daily feed/solved counters.
         // We save the 'answers' array as a snapshot so we can reconstruct the breakdown page.
         const { error: logErr } = await supabaseAdmin.from('test_results' as any).insert({
             user_id: user.id,

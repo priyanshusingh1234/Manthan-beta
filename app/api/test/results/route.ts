@@ -29,35 +29,6 @@ export async function GET(req: NextRequest) {
             });
         }
 
-        // 2. SMART FALLBACK: If table is missing or doesn't have a record, check question_attempts
-        // This prevents the "infinite retry" bug even without the new table!
-        const { data: recentAttempts } = await supabaseAdmin
-            .from('question_attempts')
-            .select('is_correct, created_at')
-            .eq('user_id', user.id)
-            .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString()) // last 1 hour
-            .limit(50);
-            
-        if (recentAttempts && recentAttempts.length >= 10) {
-            // Reconstruct a basic "Session Done" state
-            const correctCount = recentAttempts.filter(a => a.is_correct).length;
-            return NextResponse.json({ 
-                hasSubmission: true,
-                summary: {
-                    user_id: user.id,
-                    test_id: testId,
-                    score: correctCount * 3,
-                    max_score: recentAttempts.length * 3,
-                    time_taken: 1800, // estimated
-                    accuracy: Math.round((correctCount / recentAttempts.length) * 100),
-                    metadata: { 
-                        answers_snapshot: [], // no snapshot without table
-                        isFallback: true 
-                    }
-                }
-            });
-        }
-
         return NextResponse.json({ hasSubmission: false });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
