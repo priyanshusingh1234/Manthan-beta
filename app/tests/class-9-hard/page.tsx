@@ -35,10 +35,51 @@ export default function TestYourselfPage() {
   useEffect(() => {
     async function fetchTest() {
       try {
-        if (typeof window !== 'undefined' && localStorage.getItem('dheeyudha_class9_hard_test_completed')) {
-            throw new Error("You have already faced the Gauntlet. It can only be taken once.");
+        const { data: { session } } = await (await import('@/lib/supabaseClient')).supabase.auth.getSession();
+        
+        // 1. Check for legacy/server-side completion first
+        if (session) {
+            const resResults = await fetch('/api/test/results?testId=class-9-hard', {
+                headers: { 'Authorization': `Bearer ${session.access_token}` }
+            });
+            const resultData = await resResults.json();
+            
+            if (resultData.hasSubmission) {
+                // If it was already completed, we bypass the test and show the results!
+                // NOTE: We'll need the snapshot to render the breakdown. 
+                // For now, we'll set basic stats if snapshot is missing.
+                const snap = resultData.summary.metadata?.answers_snapshot || [];
+                
+                // Reconstruct a minimalist question pool if we don't have the full snapshot yet
+                // For existing ones, we'll just show the summary stats if breakdown details are unavailable.
+                setIsSubmitted(true);
+                setTimeTaken(resultData.summary.time_taken);
+                
+                // If we have a snapshot from my new API, we can actually reconstruct the whole breakdown!
+                // We'll populate some 'mock' questions for the analysis screen to consume
+                if (snap.length > 0) {
+                   setQuestions(snap.map((s: any) => ({
+                       id: s.questionId,
+                       title: s.title || "Elite Gauntlet Question",
+                       options: s.options || ["Correct Answer"], // placeholder
+                       correct_option: 0, // mock so it calculates correctness correctly
+                       subject: 'Excellence'
+                   })));
+                   // Set answers so breakdown works
+                   const ansMap: Record<number, number> = {};
+                   snap.forEach((s: any, i: number) => { 
+                       if (s.isCorrect) ansMap[i] = 0; 
+                       else ansMap[i] = 1;
+                   });
+                   setAnswers(ansMap);
+                }
+                
+                setLoading(false);
+                return;
+            }
         }
 
+        // 2. Otherwise, fetch a NEW test challenge
         const res = await fetch('/api/test/generate?classGrade=9&limit=40');
         const data = await res.json();
         if (data.error) throw new Error(data.error);
@@ -120,6 +161,8 @@ export default function TestYourselfPage() {
             if (isCorrect) correctCount++;
             return {
                 questionId: q.id,
+                title: q.title,
+                options: q.options,
                 isCorrect: isCorrect,
                 selectedOption: answers[idx]
             };

@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
 
         // 2. Store aggregated test result in 'test_results'
         // If the table exists, it'll save. If not, it gracefully continues.
+        // We save the 'answers' array as a snapshot so we can reconstruct the breakdown page.
         const { error: logErr } = await supabaseAdmin.from('test_results' as any).insert({
             user_id: user.id,
             test_id: testId,
@@ -45,7 +46,10 @@ export async function POST(req: NextRequest) {
             max_score: maxScore,
             time_taken: timeTaken,
             accuracy,
-            completed_at: new Date().toISOString()
+            completed_at: new Date().toISOString(),
+            metadata: { 
+                answers_snapshot: answers 
+            }
         });
 
         if (logErr) console.warn('[test/submit] Aggregation log failed:', logErr.message);
