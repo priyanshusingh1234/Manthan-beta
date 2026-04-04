@@ -7,7 +7,7 @@ import TopStudents from '@/components/TopStudents'
 import BottomBanner from '@/components/BottomBanner'
 import HomeSignPrompt from '@/components/HomeSignPrompt'
 import QuestionsFeed from '@/components/QuestionsFeed'
-import QuestionOfDayBanner from '@/components/QuestionOfDayBanner';
+import TestYourselfBanner from '@/components/TestYourselfBanner';
 import LandingPage from '@/components/LandingPage';
 import { Loader2 } from 'lucide-react';
 
@@ -42,7 +42,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-gray-900 dark:text-gray-100">
-      <QuestionOfDayBanner />
+      <TestYourselfBanner />
       <HomeSignPrompt />
 
 
