@@ -150,16 +150,23 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
 
     // ── File handling ─────────────────────────────────────────────
     const processSelectedFile = async (file: File) => {
-        if (file.size > 10 * 1024 * 1024) { alert("File must be ≤ 10MB"); return; }
+        if ((file as any)?.size > 10 * 1024 * 1024) { alert("File must be ≤ 10MB"); return; }
         setSelectedFile(file);
         
         const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && /Macintosh/.test(navigator.userAgent));
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
 
-        // Auto-upload for mobile to prevent cheating/switching
+        // Create blob URL FIRST — this works even for Capacitor native file objects
+        let blobUrl: string | null = null;
+        try {
+            blobUrl = URL.createObjectURL(file);
+            setPreviewUrl(blobUrl);
+        } catch (e) {
+            console.warn("[processSelectedFile] createObjectURL failed", e);
+        }
+
+        // Auto-upload for mobile, passing blobUrl as immediate fallback
         if (isMobile) {
-            handleUpload(file);
+            handleUpload(file, blobUrl);
         }
     };
 
@@ -176,36 +183,35 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
     };
 
     // ── Upload Answer ─────────────────────────────────────────────
-    const handleUpload = async (fileOverride?: File) => {
+    const handleUpload = async (fileOverride?: File, blobUrlOverride?: string | null) => {
         const fileToUpload = fileOverride || selectedFile;
         if (!fileToUpload || !token) return;
         setUploading(true);
         try {
-            const compressed = await compressImage(fileToUpload, "answer");
-
-            // Guarantee we have a real Blob before putting it into FormData.
-            // If compressed is not a Blob instance (can happen in some old WebViews),
-            // read it via FileReader → ArrayBuffer → Blob as a safe fallback.
-            const isBlob = compressed instanceof Blob ||
-                (compressed && typeof (compressed as any).size === 'number' && typeof (compressed as any).slice === 'function');
+            const isRealBlob = (fileToUpload instanceof Blob) ||
+                (fileToUpload && typeof (fileToUpload as any).size === 'number' && typeof (fileToUpload as any).slice === 'function');
 
             let uploadBlob: Blob;
-            const uploadName: string = (compressed as any).name || "image.jpg";
+            const mimeType = (fileToUpload as any)?.type || 'image/jpeg';
+            const fileName = (fileToUpload as any)?.name || 'image.jpg';
 
-            if (isBlob) {
-                uploadBlob = compressed as unknown as Blob;
+            if (isRealBlob) {
+                // Normal path: compress and use
+                const compressed = await compressImage(fileToUpload, "answer");
+                const compressedIsBlob = (compressed instanceof Blob) ||
+                    (compressed && typeof (compressed as any).size === 'number' && typeof (compressed as any).slice === 'function');
+                uploadBlob = compressedIsBlob ? (compressed as unknown as Blob) : (fileToUpload as unknown as Blob);
             } else {
-                // Last-resort: read raw bytes through FileReader
-                uploadBlob = await new Promise<Blob>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(new Blob([reader.result as ArrayBuffer], { type: fileToUpload.type || 'image/jpeg' }));
-                    reader.onerror = reject;
-                    reader.readAsArrayBuffer(fileToUpload);
-                });
+                // Fallback: re-fetch the blob: URL (passed directly or from React state)
+                const fallbackUrl = blobUrlOverride || previewUrl;
+                if (!fallbackUrl) throw new Error("No valid image data to upload. Please try taking the photo again.");
+                console.warn("[handleUpload] fileToUpload is not a Blob, falling back to URL fetch:", fallbackUrl);
+                const res = await fetch(fallbackUrl);
+                uploadBlob = await res.blob();
             }
 
             const form = new FormData();
-            form.append("file", uploadBlob, uploadName);
+            form.append("file", uploadBlob, (uploadBlob as any).name || fileName);
             form.append("questionId", question.id);
             if (challengeId) form.append("challengeId", challengeId);
 
