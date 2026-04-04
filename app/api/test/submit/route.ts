@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/test/submit
- * Receives gauntlet results and syncs to central DB.
+ * Centralized logging for ALL exhibition tests and gauntlets.
+ * Stores detailed records: who, score, time, accuracy, and which questions were answered.
  */
 export async function POST(req: NextRequest) {
     try {
@@ -19,68 +20,60 @@ export async function POST(req: NextRequest) {
 
         const { testId, answers, score, maxScore, timeTaken, accuracy } = await req.json();
 
-        // 1. Sync individual question attempts to the central DB
-        // This ensures the leaderboard points are updated automatically
-        if (answers && typeof answers === 'object') {
-            const attempts = Object.entries(answers).map(([qIdx, optIdx]: [string, any]) => {
-                // Since we don't have the full question object here, we assume the scores are pre-calculated
-                // But for real tracking, we'd need question IDs. 
-                // Let's assume the frontend sends { questionId: string, isCorrect: boolean }
-                return {
-                    user_id: user.id,
-                    question_id: optIdx.questionId,
-                    is_correct: optIdx.isCorrect,
-                    points_awarded: optIdx.isCorrect ? 3 : 0,
-                };
-            }).filter(a => a.question_id); // Ensure we have IDs
+        // 1. Log each question attempt for global leaderboard points
+        // We assume 'answers' is an array of { questionId, isCorrect, selectedOption }
+        if (Array.isArray(answers)) {
+            const attempts = answers.map((a: any) => ({
+                user_id: user.id,
+                question_id: a.questionId,
+                is_correct: a.isCorrect,
+                points_awarded: a.isCorrect ? 3 : 0,
+            })).filter(a => a.question_id);
 
             if (attempts.length > 0) {
+                // Batch insert into question_attempts to update points
                 await supabaseAdmin.from('question_attempts').insert(attempts);
             }
         }
 
-        // 2. Log the High-Stakes Gauntlet Completion in test_results (try it, ignore if table missing)
-        // This is for aggregate reporting
-        try {
-            await supabaseAdmin.from('test_results' as any).insert({
-                user_id: user.id,
-                test_id: testId || 'class-9-hard',
-                score,
-                max_score: maxScore,
-                time_taken: timeTaken,
-                accuracy,
-                completed_at: new Date().toISOString()
+        // 2. Store aggregated test result in 'test_results'
+        // If the table exists, it'll save. If not, it gracefully continues.
+        const { error: logErr } = await supabaseAdmin.from('test_results' as any).insert({
+            user_id: user.id,
+            test_id: testId,
+            score,
+            max_score: maxScore,
+            time_taken: timeTaken,
+            accuracy,
+            completed_at: new Date().toISOString()
+        });
+
+        if (logErr) console.warn('[test/submit] Aggregation log failed:', logErr.message);
+
+        // 3. Notify Admin of this completion (High-fidelity notification)
+        const adminEmail = process.env.ADMIN_EMAIL || 'priyanshusingh1234@gmail.com';
+        const { data: adminUser } = await supabaseAdmin.auth.admin.listUsers();
+        const mainAdmin = (adminUser?.users || []).find(u => u.email === adminEmail);
+
+        if (mainAdmin) {
+            await createNotification({
+                userId: mainAdmin.id,
+                type: 'points_earned',
+                title: '🔥 New Achievement Unlocked!',
+                body: `${user.user_metadata?.fullName || user.email} just cleared the ${testId} with ${score}/${maxScore} points!`,
+                href: `/tests`,
+                actorId: user.id,
+                actorName: user.user_metadata?.fullName || 'Scholar'
             });
-        } catch (e) {
-            console.log("test_results table might be missing, skipped detail log.");
         }
 
-        // 3. Notify Admins about this achievement
-        const adminEmailsString = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
-        const adminEmails = adminEmailsString.split(',').map(e => e.trim()).filter(Boolean);
-        
-        if (adminEmails.length > 0) {
-           const { data: adminUsers } = await supabaseAdmin.auth.admin.listUsers();
-           const adminIds = (adminUsers?.users || [])
-             .filter(u => adminEmails.includes(u.email || ''))
-             .map(u => u.id);
-
-           for (const adminId of adminIds) {
-               await createNotification({
-                   userId: adminId,
-                   type: 'points_earned', // Reusing an existing type for compatibility
-                   title: '🔥 New Gauntlet Cleared!',
-                   body: `${user.user_metadata?.fullName || user.email} just cleared the Gauntlet with ${score}/${maxScore} points!`,
-                   href: `/admin/analytics?user=${user.id}`,
-                   actorId: user.id,
-                   actorName: user.user_metadata?.fullName || 'Scholar'
-               });
-           }
-        }
-
-        return NextResponse.json({ success: true, message: 'Gauntlet results synced to the Scroll of Honor.' });
+        return NextResponse.json({ 
+            success: true, 
+            message: 'Results synchronized to the Arena Records.',
+            finalScore: score
+        });
     } catch (err: any) {
-        console.error('[test/submit] error:', err);
+        console.error('[test/submit] CRITICAL error:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

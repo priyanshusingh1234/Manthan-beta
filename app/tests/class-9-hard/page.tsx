@@ -104,11 +104,53 @@ export default function TestYourselfPage() {
     if (currentIndex > 0) setCurrentIndex(c => c - 1);
   };
 
-  const handleSubmit = () => {
-    setTimeTaken(3600 - timeLeft);
+  const handleSubmit = async () => {
+    const elapsed = 3600 - timeLeft;
+    setTimeTaken(elapsed);
     setIsSubmitted(true);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('dheeyudha_class9_hard_test_completed', 'true');
+    
+    // --- RECORDING IN ARENA ARCHIVES ---
+    try {
+        const { data: { session } } = await (await import('@/lib/supabaseClient')).supabase.auth.getSession();
+        if (!session) return;
+
+        let correctCount = 0;
+        const attempts = questions.map((q, idx) => {
+            const isCorrect = answers[idx] === q.correct_option;
+            if (isCorrect) correctCount++;
+            return {
+                questionId: q.id,
+                isCorrect: isCorrect,
+                selectedOption: answers[idx]
+            };
+        });
+
+        const totalScore = correctCount * 3;
+        const maxScore = questions.length * 3;
+        const accuracy = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
+
+        await fetch('/api/test/submit', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                testId: 'class-9-hard',
+                answers: attempts,
+                score: totalScore,
+                maxScore,
+                timeTaken: elapsed,
+                accuracy
+            })
+        });
+        
+        // Prevent retakes by setting localStorage AFTER successful submission
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('dheeyudha_class9_hard_test_completed', 'true');
+        }
+    } catch (e) {
+        console.error('[ARENA] System Sync Failure:', e);
     }
   };
 
