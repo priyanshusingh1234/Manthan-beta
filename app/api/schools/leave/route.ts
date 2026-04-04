@@ -35,17 +35,18 @@ export async function POST(req: NextRequest) {
             const newMeta = { ...reqUserData.user.user_metadata };
             delete newMeta.school;
             delete newMeta.school_id;
+            delete newMeta.schoolName; // Clearing potential legacy keys
             
             await supabaseAdmin.auth.admin.updateUserById(user.id, {
                 user_metadata: newMeta
             });
-        }
 
-        // --- THE FIX: Also clear the profiles table to prevent ghosting ---
-        await supabaseAdmin.from('profiles').update({
-            school: null,
-            school_id: null
-        }).eq('id', user.id);
+            // Update profiles table immediately for global visibility
+            await supabaseAdmin.from('profiles').update({
+                school: null,
+                school_id: null
+            }).eq('id', user.id);
+        }
 
         return NextResponse.json({ success: true, message: 'You have left the faction.' });
     } catch (err: any) {

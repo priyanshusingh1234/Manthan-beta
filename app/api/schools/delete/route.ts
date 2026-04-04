@@ -23,41 +23,53 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Only the General can disband the faction.' }, { status: 403 });
         }
 
-        // Delete dependencies first (cascade should normally handle this if foreign keys are setup, but we do it manually to be safe)
+        // Fetch all member IDs before deleting them
+        const { data: members } = await supabaseAdmin
+            .from('school_members')
+            .select('user_id')
+            .eq('school_id', squadData.school_id);
+
+        const memberIds = (members || []).map(m => m.user_id);
+
+        // Delete dependencies first
         await Promise.all([
-            // deletes requests
             supabaseAdmin.from('school_join_requests').delete().eq('school_id', squadData.school_id),
-            // deletes squad members
             supabaseAdmin.from('squad_members').delete().eq('squad_id', squadData.id),
-            // deletes school members
             supabaseAdmin.from('school_members').delete().eq('school_id', squadData.school_id)
         ]);
 
-        // Delete Squad
+        // Delete Squad & School
         await supabaseAdmin.from('squads').delete().eq('id', squadData.id);
-        
-        // Delete School
         await supabaseAdmin.from('schools').delete().eq('id', squadData.school_id);
 
-        // Update general's metadata
-        const { data: reqUserData } = await supabaseAdmin.auth.admin.getUserById(user.id);
-        if (reqUserData?.user?.user_metadata) {
-            const newMeta = { ...reqUserData.user.user_metadata };
-            delete newMeta.school;
-            delete newMeta.school_id;
-            
-            await supabaseAdmin.auth.admin.updateUserById(user.id, {
-                user_metadata: newMeta
-            });
+        // Update metadata for ALL members to release them from the faction
+        if (memberIds.length > 0) {
+            await Promise.all(memberIds.map(async (mId) => {
+                try {
+                    const { data: mUser } = await supabaseAdmin.auth.admin.getUserById(mId);
+                    if (mUser?.user?.user_metadata) {
+                        const newMeta = { ...mUser.user.user_metadata };
+                        delete newMeta.school;
+                        delete newMeta.school_id;
+                        delete newMeta.schoolName; // Clearing potential legacy keys
+                        
+                        await supabaseAdmin.auth.admin.updateUserById(mId, {
+                            user_metadata: newMeta
+                        });
+                    }
+                } catch (e) {
+                    console.error(`Failed to clear metadata for user ${mId}:`, e);
+                }
+            }));
         }
 
-        // --- THE FIX: Clear profiles for ALL members of this school ---
+        // Final sync: clear profiles table for all members
         await supabaseAdmin.from('profiles').update({
             school: null,
             school_id: null
-        }).eq('school_id', squadData.school_id);
+        }).in('id', memberIds);
 
-        return NextResponse.json({ success: true, message: 'Faction permanently disbanded.' });
+        return NextResponse.json({ success: true, message: 'Faction permanently disbanded. All members released.' });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
