@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
                 user_id: user.id,
                 question_id: a.questionId,
                 is_correct: a.isCorrect,
-                points_awarded: a.isCorrect ? 3 : 0,
+                points_awarded: 0, // Points are not yet configured for this exhibition Arena
             })).filter(a => a.question_id);
 
             if (attempts.length > 0) {

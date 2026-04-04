@@ -12,7 +12,7 @@ const CHALLENGES = [
         questions: 40,
         time: '60 Mins',
         difficulty: 'Hard',
-        reward: '🏆 Exclusive Badge & Points',
+        reward: 'Sharpen your skills',
         color: 'from-indigo-600 to-indigo-800',
         glow: 'shadow-indigo-500/20',
         href: '/test/class-9-hard'
@@ -44,13 +44,13 @@ export default function TestsHubPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {CHALLENGES.map((challenge) => (
-                        <div 
+                        <div
                             key={challenge.id}
                             className="group relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-8 hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 overflow-hidden"
                         >
                             {/* Card Background Glow */}
                             <div className={`absolute top-0 right-0 w-1/2 h-1/2 bg-gradient-to-bl ${challenge.color} opacity-[0.03] dark:opacity-[0.07] group-hover:opacity-[0.08] transition-opacity`} />
-                            
+
                             <div className="relative z-10 flex flex-col h-full">
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ export default function TestsHubPage() {
                                         <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{challenge.reward}</span>
                                     </div>
 
-                                    <button 
+                                    <button
                                         onClick={() => router.push(challenge.href)}
                                         className={`w-full py-4 mt-2 bg-gradient-to-r ${challenge.color} text-white font-black italic uppercase tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 group-hover:scale-[1.02] active:scale-95 transition-all shadow-xl ${challenge.glow}`}
                                     >
