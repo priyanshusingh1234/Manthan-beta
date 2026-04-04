@@ -22,28 +22,43 @@ export async function GET(req: NextRequest) {
             .eq('test_id', testId)
             .maybeSingle();
 
-        if (!result) return NextResponse.json({ hasSubmission: false });
+        if (result) {
+            return NextResponse.json({ 
+                hasSubmission: true,
+                summary: result
+            });
+        }
 
-        // 2. Get the individual question attempts to reconstruct the 'Detailed Breakdown'
-        // We'll need the original questions too to show titles/options.
-        // For simplicity, we'll just return the correct/incorrect counts and basic stats for now,
-        // unless we want to rebuild the whole UI index.
-        
-        // Actually, let's fetch the attempts so the user can see their specific answers.
-        const { data: attempts } = await supabaseAdmin
+        // 2. SMART FALLBACK: If table is missing or doesn't have a record, check question_attempts
+        // This prevents the "infinite retry" bug even without the new table!
+        const { data: recentAttempts } = await supabaseAdmin
             .from('question_attempts')
-            .select('question_id, is_correct, points_awarded')
+            .select('is_correct, created_at')
             .eq('user_id', user.id)
-            .order('created_at', { ascending: true });
+            .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString()) // last 1 hour
+            .limit(50);
             
-        // We filter for attempts that match questions in this test. 
-        // This is a bit complex without a 'test_snapshot' but for Class 9 Hard, we can fetch the hard pool.
+        if (recentAttempts && recentAttempts.length >= 10) {
+            // Reconstruct a basic "Session Done" state
+            const correctCount = recentAttempts.filter(a => a.is_correct).length;
+            return NextResponse.json({ 
+                hasSubmission: true,
+                summary: {
+                    user_id: user.id,
+                    test_id: testId,
+                    score: correctCount * 3,
+                    max_score: recentAttempts.length * 3,
+                    time_taken: 1800, // estimated
+                    accuracy: Math.round((correctCount / recentAttempts.length) * 100),
+                    metadata: { 
+                        answers_snapshot: [], // no snapshot without table
+                        isFallback: true 
+                    }
+                }
+            });
+        }
 
-        return NextResponse.json({ 
-            hasSubmission: true,
-            summary: result,
-            attempts: attempts // We'll map these on the frontend
-        });
+        return NextResponse.json({ hasSubmission: false });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
