@@ -40,6 +40,7 @@ export default function FeedPage() {
             if (selectedSubject) params.set('subject', selectedSubject);
             // Also pass class to API so server pre-filters when possible
             if (selectedClass && selectedSubject !== 'English') params.set('class', selectedClass);
+            if (selectedDifficulty) params.set('difficulty', selectedDifficulty);
 
             const headers: Record<string, string> = {};
             if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
@@ -99,7 +100,15 @@ export default function FeedPage() {
             }
         }
 
-        if (selectedDifficulty && q.difficulty && q.difficulty.toLowerCase() !== selectedDifficulty.toLowerCase()) return false;
+        if (selectedDifficulty) {
+            const qDiff = (q.difficulty || '').toLowerCase();
+            const sDiff = selectedDifficulty.toLowerCase();
+            
+            // Treat moderate and medium as synonyms
+            const isModerateMatch = (sDiff === 'moderate' || sDiff === 'medium') && (qDiff === 'moderate' || qDiff === 'medium');
+            
+            if (!isModerateMatch && qDiff !== sDiff) return false;
+        }
         return true;
     });
 

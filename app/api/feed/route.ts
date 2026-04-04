@@ -86,13 +86,24 @@ function normalizePost(p: any, profilesMap: Map<string, any>, currentUserId: str
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: apply subject filter uniformly across all query types
 // ─────────────────────────────────────────────────────────────────────────────
-function applySubjectFilter(query: any, subject: string) {
-    if (!subject) return query;
-    // Support "Maths" or "Mathematics" interchangeably with fuzzy matching
-    if (subject.toLowerCase().startsWith('math')) {
-        return query.ilike('subject', '%math%');
+function applyCommonFilters(query: any, subject: string, difficulty: string) {
+    let q = query;
+    if (subject) {
+        if (subject.toLowerCase().startsWith('math')) {
+            q = q.ilike('subject', '%math%');
+        } else {
+            q = q.eq('subject', subject);
+        }
     }
-    return query.eq('subject', subject);
+    if (difficulty) {
+        const d = difficulty.toLowerCase();
+        if (d === 'moderate' || d === 'medium') {
+            q = q.in('difficulty', ['moderate', 'medium', 'Moderate', 'Medium']);
+        } else {
+            q = q.eq('difficulty', difficulty);
+        }
+    }
+    return q;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -104,6 +115,7 @@ export async function GET(req: NextRequest) {
         const currentUser = await getVerifiedUser(authHeader);
         const userId = currentUser?.id ?? null;
         const subject = req.nextUrl.searchParams.get('subject') || '';
+        const difficulty = req.nextUrl.searchParams.get('difficulty') || '';
         const targetClass = req.nextUrl.searchParams.get('class') || null;
         const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || '30'), 60);
 
@@ -160,7 +172,7 @@ export async function GET(req: NextRequest) {
         // Build a base query helper
         const baseQ = () => {
             let q = supabaseAdmin.from('questions').select('*');
-            return applySubjectFilter(q, subject);
+            return applyCommonFilters(q, subject, difficulty);
         };
 
         const CORE_SUBJECTS = ['Maths', 'Science', 'English', 'SST', 'English Literature', 'G.K'];
@@ -172,11 +184,7 @@ export async function GET(req: NextRequest) {
         async function fetchSubjectTimeBuckets(subjectToFetch: string, gradeToFetch: string | null) {
             const applyFilter = (q: any) => {
                 let query = q;
-                if (subjectToFetch.toLowerCase().startsWith('math')) {
-                    query = query.ilike('subject', '%math%');
-                } else {
-                    query = query.eq('subject', subjectToFetch);
-                }
+                query = applyCommonFilters(query, subjectToFetch, difficulty);
                 if (gradeToFetch) {
                     query = query.in('class_grade', [String(gradeToFetch), 'All', 'Any']);
                 }
@@ -264,7 +272,7 @@ export async function GET(req: NextRequest) {
             
             if (pickArr.length > 0) {
                 let query = supabaseAdmin.from('questions').select('*').in('id', pickArr);
-                query = applySubjectFilter(query, subject);
+                query = applyCommonFilters(query, subject, difficulty);
                 
                 const { data } = await query;
                 const reviewQuestions = shuffle(data || []).slice(0, MAX_REVIEW);
@@ -300,7 +308,7 @@ export async function GET(req: NextRequest) {
 
                 if (peerQIds.length > 0) {
                     let query = supabaseAdmin.from('questions').select('*').in('id', peerQIds);
-                    query = applySubjectFilter(query, subject);
+                    query = applyCommonFilters(query, subject, difficulty);
                     const { data } = await query;
                     (data || []).forEach((r: any) => pool.push({ ...r, _layer: 3, _label: '🏫 Trending at Your School', _score: 90 }));
                 }
@@ -331,7 +339,7 @@ export async function GET(req: NextRequest) {
 
             if (trendingHard.length > 0) {
                 let query = supabaseAdmin.from('questions').select('*').in('id', trendingHard).eq('class_grade', userGrade);
-                query = applySubjectFilter(query, subject);
+                query = applyCommonFilters(query, subject, difficulty);
                 const { data } = await query.limit(layer4Count);
                 (data || []).forEach((r: any) => pool.push({ ...r, _layer: 4, _label: '🔥 Everyone\'s Struggling With This', _score: 85 }));
             }
@@ -379,7 +387,7 @@ export async function GET(req: NextRequest) {
 
             if (followedQIds.length > 0) {
                 let query = supabaseAdmin.from('questions').select('*').in('id', followedQIds);
-                query = applySubjectFilter(query, subject);
+                query = applyCommonFilters(query, subject, difficulty);
                 const { data } = await query.limit(layer6Count);
 
                 (data || []).forEach((r: any) => {
