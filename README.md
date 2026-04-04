@@ -1,16 +1,24 @@
-# React + Vite
+# Manthan Beta
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A Next.js application for academic knowledge battles and quizzes.
 
-Currently, two official plugins are available:
+## Environment Variables
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Create a `.env.local` file in the project root (or set the variables in your deployment platform) with the following:
 
-## React Compiler
+```env
+# Public base URL used for metadata, canonical links, and social sharing.
+# Defaults to https://manthan-beta-c975.vercel.app if not set.
+NEXT_PUBLIC_APP_URL=https://your-deployment-url.vercel.app
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+> **Note:** `NEXT_PUBLIC_APP_URL` is used by `lib/appUrl.ts` to build canonical URLs, Open Graph images, and share links. Always set it to the canonical origin of your deployment so that social previews resolve to the correct domain.
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the result.

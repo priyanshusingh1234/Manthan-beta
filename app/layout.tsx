@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 import ClientLayout from '@/components/ClientLayout'
+import { APP_URL } from '@/lib/appUrl'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -25,13 +26,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Dheeyudha | Join the Knowledge Battle',
     description: 'Compete, learn, and conquer challenges with students from across schools.',
-    url: 'https://dheeyudhha-pi.vercel.app',
+    url: APP_URL,
     siteName: 'Dheeyudha',
     type: 'website',
     locale: 'en_IN',
     images: [
       {
-        url: 'https://dheeyudhha-pi.vercel.app/og-social.png',
+        url: `${APP_URL}/og-social.png`,
         width: 1200,
         height: 630,
         alt: 'Dheeyudha - Brain Battle',
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Dheeyudha | Join the Knowledge Battle',
     description: 'Compete, learn, and conquer challenges with students from across schools.',
-    images: ['https://dheeyudhha-pi.vercel.app/og-social.png'],
+    images: [`${APP_URL}/og-social.png`],
     creator: '@dheeyudha',
   },
   robots: {

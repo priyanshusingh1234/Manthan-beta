@@ -5,7 +5,7 @@ import WrittenSolveClient from "@/components/WrittenSolveClient";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-const APP_URL = 'https://dheeyudhha-pi.vercel.app';
+import { APP_URL } from '@/lib/appUrl';
 
 export async function generateMetadata({
     params

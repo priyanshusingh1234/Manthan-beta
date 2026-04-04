@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
+import { getClientAppUrl } from '@/lib/appUrl';
 
 export default function CongratsBadgeModal() {
     const [userRank, setUserRank] = useState<number | null>(null);
@@ -73,7 +74,7 @@ export default function CongratsBadgeModal() {
         const shareTitle = `I just earned a ${userRank === 1 ? 'GOLD' : userRank === 2 ? 'SILVER' : 'BRONZE'} badge! 🏆`;
         const shareText = `I'm currently Rank #${userRank} on Dheeyudha! 🧠 Join the ultimate battle of brains and see if you can beat my score. @dheeyudha #Education #GamifiedLearning`;
         
-        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://dheeyudhha-pi.vercel.app';
+        const origin = getClientAppUrl();
         const shareUrl = username ? `${origin}/user/${username}` : `${origin}/leaderboard`; 
 
         try {

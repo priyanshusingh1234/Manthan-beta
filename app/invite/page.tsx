@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import InviteClient from "@/components/InviteClient";
+import { APP_URL } from "@/lib/appUrl";
 
 interface Props {
     searchParams: { squad?: string };
@@ -46,7 +47,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 
     const title = `${generalName} has recruited you to ${schoolName}'s War Squadron`;
     const description = `Join ${schoolName}'s elite academic war squad on Dheeyudha. Your intelligence will boost the school's global ranking. Accept the draft — the war has already begun.`;
-    const ogImage = `https://dheeyudha.vercel.app/og-invite.png`; // static OG image
+    const ogImage = `${APP_URL}/og-invite.png`; // static OG image
 
     return {
         title,
@@ -56,7 +57,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
             title,
             description,
             type: "website",
-            url: `https://dheeyudha.vercel.app/invite?squad=${squadId}`,
+            url: `${APP_URL}/invite?squad=${squadId}`,
             images: [
                 {
                     url: ogImage,
@@ -75,7 +76,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
             creator: "@dheeyudha",
         },
         alternates: {
-            canonical: `https://dheeyudha.vercel.app/invite?squad=${squadId}`,
+            canonical: `${APP_URL}/invite?squad=${squadId}`,
         },
         robots: {
             index: true,
