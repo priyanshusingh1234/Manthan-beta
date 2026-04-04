@@ -346,7 +346,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     <>
       {!hideMainSidebar && <DesktopSidebar />}
       <div className={`${hideMainSidebar ? 'lg:pl-0' : 'lg:pl-64'} ${showBottomNav && !hideBottomNav ? 'pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''}`}>
-        {!hideMainSidebar && !isTestPage && <Header isMobile={isMobile} />}
+        {!hideMainSidebar && !isIndividualTest && <Header isMobile={isMobile} />}
         {children}
         {showBottomNav && !hideBottomNav && <BottomNav />}
       </div>
