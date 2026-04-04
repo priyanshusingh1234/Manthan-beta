@@ -203,7 +203,7 @@ export default function TestYourselfPage() {
       if (answers[idx] === q.correct_option) score += 3;
     });
 
-    const shareText = `I just scored ${score} / ${questions.length * 3} on the Ultimate Class 9 Hard Gauntlet at Dheeyudha! Can you beat my score? 🧠🔥\n${getClientAppUrl()}/test/class-9-hard`;
+    const shareText = `I just scored ${score} / ${questions.length * 3} on the Ultimate Class 9 Hard Gauntlet at Dheeyudha! Can you beat my score? 🧠🔥\n${getClientAppUrl()}/tests/class-9-hard`;
     
     try {
       if (Capacitor.isNativePlatform()) {

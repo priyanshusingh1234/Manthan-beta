@@ -15,7 +15,7 @@ const CHALLENGES = [
         reward: 'Sharpen your skills',
         color: 'from-indigo-600 to-indigo-800',
         glow: 'shadow-indigo-500/20',
-        href: '/test/class-9-hard'
+        href: '/tests/class-9-hard'
     }
     // and room for future ones like 'science-sprint', 'math-marathon', etc.
 ];
