@@ -30,8 +30,12 @@ export default function QuestionsFeed() {
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
-      // Add a cache-busting timestamp so the server reshuffles the feed
-      const res = await fetch(`/api/feed?t=${Date.now()}`, { headers, cache: 'no-store' });
+      // Pass local explicit target class from localStorage if not strictly enforced by session to suggest stable content
+      const localClass = typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_recent_class') || '' : '';
+      const qsParams = new URLSearchParams({ t: Date.now().toString() });
+      if (localClass) qsParams.set('class', localClass);
+
+      const res = await fetch(`/api/feed?${qsParams.toString()}`, { headers, cache: 'no-store' });
       if (!res.ok) throw new Error(await res.text());
       const rawData = await res.json();
       let feedItems = Array.isArray(rawData) ? rawData : (rawData?.questions || []);

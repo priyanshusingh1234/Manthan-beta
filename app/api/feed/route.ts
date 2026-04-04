@@ -178,7 +178,7 @@ export async function GET(req: NextRequest) {
                     query = query.eq('subject', subjectToFetch);
                 }
                 if (gradeToFetch) {
-                    query = query.eq('class_grade', gradeToFetch);
+                    query = query.in('class_grade', [String(gradeToFetch), 'All', 'Any']);
                 }
                 return query;
             };
