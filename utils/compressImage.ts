@@ -36,8 +36,9 @@ export async function compressImage(
     file: File,
     preset: CompressionPreset
 ): Promise<File> {
-    if (!file || !(file instanceof Blob)) {
-        console.warn("[compressImage] Invalid file type provided:", typeof file);
+    const isBlob = file && (file instanceof Blob || (typeof (file as any).size === 'number' && typeof (file as any).type === 'string' && typeof (file as any).slice === 'function'));
+    if (!isBlob) {
+        console.warn("[compressImage] Provided file is not a Blob/File. Type:", typeof file, "isBlob:", isBlob);
         return file;
     }
 

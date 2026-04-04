@@ -182,10 +182,14 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
         setUploading(true);
         try {
             const compressed = await compressImage(fileToUpload, "answer");
-            console.log("[Written-Submit] Type of compressed:", typeof compressed, "Is Blob:", compressed instanceof Blob);
+            const isBlob = compressed && (compressed instanceof Blob || (typeof (compressed as any).size === 'number' && typeof (compressed as any).slice === 'function'));
             
             const form = new FormData();
-            form.append("file", compressed, (compressed as any).name || "image.jpg");
+            if (isBlob) {
+                form.append("file", (compressed as any), (compressed as any).name || "image.jpg");
+            } else {
+                form.append("file", (compressed as any));
+            }
             form.append("questionId", question.id);
             if (challengeId) form.append("challengeId", challengeId);
 
