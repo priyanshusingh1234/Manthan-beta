@@ -11,7 +11,7 @@ import { App } from '@capacitor/app';
 import { StatusBar } from '@capacitor/status-bar';
 import { ActivityTracker } from '@/lib/activityTracker';
 import CongratsBadgeModal from '@/components/CongratsBadgeModal';
-import OnboardingHub from '@/components/onboarding/OnboardingHub';
+
 
 let nativePushInitialized = false;
 
@@ -349,7 +349,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </div>
       {isAuthenticated && <PushNotificationPrompt />}
       {isAuthenticated && <CongratsBadgeModal />}
-      {isAuthenticated && <OnboardingHub isMobile={isMobile} />}
+
     </>
   );
 }
