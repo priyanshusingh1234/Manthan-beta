@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import SinglePostClient from './SinglePostClient';
+import { APP_URL } from '@/lib/appUrl';
 
 type Props = { params: { id: string } };
 
@@ -27,9 +28,9 @@ export async function generateMetadata({ params }: Props): Promise<any> {
     const description = post.content ? post.content.slice(0, 160) : 'Check out this discussion on Dheeyudha.';
     
     // Ensure image URL is absolute
-    let finalImageUrl = 'https://dheeyudhha-pi.vercel.app/og-social.png';
+    let finalImageUrl = `${APP_URL}/og-social.png`;
     if (post.image_url) {
-        finalImageUrl = post.image_url.startsWith('http') ? post.image_url : `https://dheeyudhha-pi.vercel.app${post.image_url}`;
+        finalImageUrl = post.image_url.startsWith('http') ? post.image_url : `${APP_URL}${post.image_url}`;
     }
 
     return {

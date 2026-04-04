@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Share as CapShare } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { Target, Clock, ArrowRight, ShieldAlert, Share2 } from 'lucide-react';
+import { getClientAppUrl } from '@/lib/appUrl';
 
 export default function TestYourselfBanner() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function TestYourselfBanner() {
     e.preventDefault();
     e.stopPropagation();
 
-    const shareText = `I challenge you to the Ultimate Class 9 Hard Gauntlet at Dheeyudha! 40 brutal MCQs, 60 Minutes. Do you have what it takes? 🧠🔥\nhttps://dheeyudhha-pi.vercel.app/test/class-9-hard`;
+    const shareText = `I challenge you to the Ultimate Class 9 Hard Gauntlet at Dheeyudha! 40 brutal MCQs, 60 Minutes. Do you have what it takes? 🧠🔥\n${getClientAppUrl()}/test/class-9-hard`;
     
     try {
       if (Capacitor.isNativePlatform()) {
