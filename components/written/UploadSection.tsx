@@ -76,11 +76,19 @@ export default function UploadSection({
                 const response = await fetch(photoUrl);
                 const blob = await response.blob();
                 const extension = photo.format || "jpeg";
-                const file = new File([blob], `answer-${Date.now()}.${extension}`, {
-                    type: blob.type || `image/${extension}`,
-                });
+                
+                let file: File | Blob;
+                try {
+                    file = new File([blob], `answer-${Date.now()}.${extension}`, {
+                        type: blob.type || `image/${extension}`,
+                    });
+                } catch (e) {
+                    console.warn("[UploadSection] File constructor failed, using Blob instead", e);
+                    file = blob;
+                    (file as any).name = `answer-${Date.now()}.${extension}`;
+                }
 
-                await onFileSelect(file);
+                await onFileSelect(file as File);
                 setShowCamera(false);
                 return;
             }
@@ -156,8 +164,15 @@ export default function UploadSection({
                 return;
             }
 
-            const file = new File([blob], `answer-${Date.now()}.jpg`, { type: blob.type || "image/jpeg" });
-            await onFileSelect(file);
+            let file: File | Blob;
+            const fileName = `answer-${Date.now()}.jpg`;
+            try {
+                file = new File([blob], fileName, { type: blob.type || "image/jpeg" });
+            } catch (e) {
+                file = blob;
+                (file as any).name = fileName;
+            }
+            await onFileSelect(file as File);
             closeCamera();
         } catch {
             setCameraError("Could not capture photo. Try again or use gallery upload.");

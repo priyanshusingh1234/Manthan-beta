@@ -1,4 +1,5 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
+import { upsertProfile } from "@/lib/profiles";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
@@ -106,13 +107,18 @@ export async function POST(req: NextRequest) {
 
                 if (schData) {
                     const { data: reqUserData } = await supabaseAdmin.auth.admin.getUserById(joinRequest.user_id);
+                    const updatedMeta = {
+                        ...reqUserData?.user?.user_metadata,
+                        school: schData.name,
+                        school_id: schData.id,
+                    };
+
                     await supabaseAdmin.auth.admin.updateUserById(joinRequest.user_id, {
-                        user_metadata: {
-                            ...reqUserData?.user?.user_metadata,
-                            school: schData.name,
-                            school_id: schData.id,
-                        }
+                        user_metadata: updatedMeta,
                     });
+
+                    // CRITICAL FIX: Keep profiles table in sync
+                    await upsertProfile(joinRequest.user_id, updatedMeta);
                 }
                 return NextResponse.json({ success: true, message: 'Student approved and added to school!' });
             }

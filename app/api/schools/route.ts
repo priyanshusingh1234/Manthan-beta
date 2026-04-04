@@ -1,5 +1,5 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
-import { getProfile } from "@/lib/profiles";
+import { getProfile, upsertProfile } from "@/lib/profiles";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
@@ -164,14 +164,19 @@ export async function POST(req: NextRequest) {
         }
 
         // Update user metadata with school info
+        const updatedMeta = {
+            ...user.user_metadata,
+            school: school.name,
+            school_id: school.id,
+            is_general: true,
+        };
+
         await supabaseAdmin.auth.admin.updateUserById(user.id, {
-            user_metadata: {
-                ...user.user_metadata,
-                school: school.name,
-                school_id: school.id,
-                is_general: true,
-            }
+            user_metadata: updatedMeta
         });
+
+        // CRITICAL FIX: Keep profiles table in sync for live lookups
+        await upsertProfile(user.id, updatedMeta);
 
         return NextResponse.json({ success: true, school, squad });
     } catch (err: any) {

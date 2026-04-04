@@ -31,11 +31,31 @@ export async function POST(req: Request) {
     const filename = `${Date.now()}_${String(file.name).replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     const path = `questions/${userId}/${filename}`;
 
-    // read file bytes
-    const buffer = Buffer.from(await file.arrayBuffer());
+    // read file bytes safely
+    if (typeof file === "string") {
+        return NextResponse.json({ error: "Invalid upload format: received string instead of file" }, { status: 400 });
+    }
+
+    let arrayBuffer: ArrayBuffer;
+    try {
+        if (typeof (file as any).arrayBuffer === "function") {
+            arrayBuffer = await (file as any).arrayBuffer();
+        } else {
+            // Fallback for environments where File.arrayBuffer is missing
+            arrayBuffer = await new Response(file).arrayBuffer();
+        }
+    } catch (e: any) {
+        console.error("Failed to read question file:", e.message);
+        return NextResponse.json({ error: "Failed to read uploaded file bitstream" }, { status: 400 });
+    }
+
+    const buffer = Buffer.from(arrayBuffer);
 
     // attempt upload using service role client
-    const { data, error } = await supabaseAdmin.storage.from(bucket).upload(path, buffer, { upsert: true });
+    const { data, error } = await supabaseAdmin.storage.from(bucket).upload(path, buffer, { 
+        upsert: true,
+        contentType: (file as any).type || 'image/jpeg'
+    });
     if (error) {
       // helpful error message
       console.error('Storage upload error:', error);

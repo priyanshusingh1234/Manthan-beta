@@ -46,6 +46,18 @@ const supabaseRuntimeUrl = isBrowser
   ? `${proxyBaseUrl}/api/supabase-proxy`
   : realSupabaseUrl;
 
+// Polyfill for Blob.arrayBuffer() for older mobile browsers
+if (typeof Blob !== "undefined" && !Blob.prototype.arrayBuffer) {
+  Blob.prototype.arrayBuffer = function () {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(this as Blob);
+    });
+  };
+}
+
 export const supabase = createClient(supabaseRuntimeUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,

@@ -35,10 +35,26 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Unauthorized to upload to this path' }, { status: 403 });
         }
 
-        const buffer = Buffer.from(await file.arrayBuffer());
+        if (typeof file === "string") {
+            return NextResponse.json({ error: "Invalid upload format: received string" }, { status: 400 });
+        }
+
+        let arrayBuffer: ArrayBuffer;
+        try {
+            if (typeof (file as any).arrayBuffer === "function") {
+                arrayBuffer = await (file as any).arrayBuffer();
+            } else {
+                arrayBuffer = await new Response(file).arrayBuffer();
+            }
+        } catch (e: any) {
+             console.error("Failed to read profile file:", e.message);
+             return NextResponse.json({ error: "Failed to read file contents" }, { status: 400 });
+        }
+
+        const buffer = Buffer.from(arrayBuffer);
         const { data, error } = await supabaseAdmin.storage.from(bucket).upload(path, buffer, {
             upsert: true,
-            contentType: file.type || 'image/webp'
+            contentType: (file as any).type || 'image/webp'
         });
 
         if (error) {

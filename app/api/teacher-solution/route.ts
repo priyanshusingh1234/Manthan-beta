@@ -51,16 +51,34 @@ export async function POST(req: Request) {
         }
 
         // Upload to storage
+        if (typeof file === "string") {
+            console.error("Expected file for teacher solution but got string:", file);
+            return NextResponse.json({ error: "Invalid upload format: received string instead of file" }, { status: 400 });
+        }
+
         const fileName = (file as any).name || "solution.jpg";
         const fileExt = fileName.split(".").pop() || "jpg";
         const path = `teacher-solutions/${questionId}/${teacherId}-${Date.now()}.${fileExt}`;
-        const arrayBuffer = await file.arrayBuffer();
+
+        // ROBUST reading of file buffer
+        let arrayBuffer: ArrayBuffer;
+        try {
+            if (typeof (file as any).arrayBuffer === "function") {
+                arrayBuffer = await (file as any).arrayBuffer();
+            } else {
+                arrayBuffer = await new Response(file).arrayBuffer();
+            }
+        } catch (e: any) {
+             console.error("Failed to read solution file:", e.message);
+             return NextResponse.json({ error: "Failed to read solution file" }, { status: 400 });
+        }
+        
         const buffer = Buffer.from(arrayBuffer);
 
         const { error: uploadErr } = await supabaseAdmin.storage
             .from("written-answers")
             .upload(path, buffer, {
-                contentType: file.type || "image/jpeg",
+                contentType: (file as any).type || "image/jpeg",
                 upsert: true,
             });
 

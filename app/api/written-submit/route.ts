@@ -88,16 +88,34 @@ export async function POST(req: Request) {
         }
 
         // Upload file to Supabase storage
+        if (typeof file === "string") {
+            console.error("Expected file but got string:", file);
+            return NextResponse.json({ error: "Invalid upload format: received string instead of file" }, { status: 400 });
+        }
+
         const fileName = (file as any).name || "image.jpg";
         const fileExt = fileName.split(".").pop() || "jpg";
         const path = `written-answers/${questionId}/${userId}-${Date.now()}.${fileExt}`;
-        const arrayBuffer = await file.arrayBuffer();
+
+        // ROBUST: use new Response(file).arrayBuffer() which handles Blobs/Files in any environment that has fetch
+        let arrayBuffer: ArrayBuffer;
+        try {
+            if (typeof (file as any).arrayBuffer === "function") {
+                arrayBuffer = await (file as any).arrayBuffer();
+            } else {
+                arrayBuffer = await new Response(file).arrayBuffer();
+            }
+        } catch (e: any) {
+            console.error("Failed to read file as arrayBuffer:", e.message);
+            return NextResponse.json({ error: "Failed to read uploaded file" }, { status: 400 });
+        }
+        
         const buffer = Buffer.from(arrayBuffer);
 
         const { error: uploadErr } = await supabaseAdmin.storage
             .from("written-answers")
             .upload(path, buffer, {
-                contentType: file.type || "image/jpeg",
+                contentType: (file as any).type || "image/jpeg",
                 upsert: false,
             });
 

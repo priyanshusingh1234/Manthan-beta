@@ -36,6 +36,11 @@ export async function compressImage(
     file: File,
     preset: CompressionPreset
 ): Promise<File> {
+    if (!file || !(file instanceof Blob)) {
+        console.warn("[compressImage] Invalid file type provided:", typeof file);
+        return file;
+    }
+
     const targetBytes = Math.floor((PRESETS[preset].maxSizeMB || 1) * MB);
 
     // Skip work when already small enough.
@@ -68,10 +73,20 @@ export async function compressImage(
         // Keep compressed file whenever it improves size or when original was oversized.
         if (best.size < file.size || file.size > targetBytes) {
             const originalName = file.name || "image.jpg";
-            return new File([best], originalName.replace(/\.\w+$/, ".webp"), {
-                type: "image/webp",
-                lastModified: Date.now(),
-            });
+            const newName = originalName.replace(/\.\w+$/, ".webp");
+            
+            try {
+                return new File([best], newName, {
+                    type: "image/webp",
+                    lastModified: Date.now(),
+                });
+            } catch (e) {
+                // Fallback to Blob with a custom property if File constructor fails
+                console.warn("[compressImage] File constructor failed in finish, using Blob fallback");
+                const b = best as any;
+                b.name = newName;
+                return b as File;
+            }
         }
 
         return file;
