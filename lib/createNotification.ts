@@ -93,6 +93,8 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         data: {
                                             url: params.href || '/',
                                             href: params.href || '/',
+                                            link: params.href || '/',
+                                            deep_link: params.href || '/',
                                             type: params.type,
                                             click_action: 'OPEN_APP',
                                         },
@@ -101,9 +103,10 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             notification: {
                                                 channelId: 'default',
                                                 color: '#4f46e5',
+                                                // clickAction must match the intent-filter action in AndroidManifest.xml
                                                 clickAction: 'OPEN_APP',
-                                                tag: params.type, // Group by type (e.g., replace old weekly_report)
-                                                icon: 'ic_notification', // Use the standard white icon
+                                                tag: params.type,
+                                                icon: 'ic_notification',
                                                 sound: 'default'
                                             }
                                         }

@@ -79,13 +79,26 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
         null;
 
       const path = normalizeInAppPath(rawUrl);
-      if (path) safeNavigate(path, navigate);
+      if (path) {
+        // Persist across cold-start: if navigate fails (too early), session storage will pick it up
+        try { sessionStorage.setItem('pendingNotifNav', path); } catch {}
+        safeNavigate(path, navigate);
+      }
     };
 
-    // Register listeners
+    // ── Check for a pending navigation from a previous cold-start tap ──
+    try {
+      const pending = sessionStorage.getItem('pendingNotifNav');
+      if (pending) {
+        sessionStorage.removeItem('pendingNotifNav');
+        // Slight delay so router is ready
+        setTimeout(() => safeNavigate(pending, navigate), 500);
+      }
+    } catch {}
+
+    // ── Register listeners BEFORE calling register() so no events are missed ──
     await PushNotifications.addListener('registration', async (token) => {
       console.log('[NativePush] Token:', token.value);
-      // Save this token to the database
       await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,7 +106,6 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
           userId,
           subscription: {
             endpoint: token.value,
-            // Mark as native for server-side distinction
             keys: { auth: 'native', p256dh: 'native' }
           }
         })
@@ -105,15 +117,24 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
     });
 
     await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('[NativePush] Received:', notification);
+      console.log('[NativePush] Foreground notification received:', notification);
     });
 
-    await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-      console.log('[NativePush] Action performed:', notification);
-      navigateFromPayload(notification);
+    // This fires when user TAPS a notification (app in foreground or background)
+    await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      console.log('[NativePush] Notification tapped:', JSON.stringify(action));
+      navigateFromPayload(action);
     });
 
-    // Check permissions and register
+    // ── Handle deep links from FCM data messages (cold-start tap) ──
+    // FCM can launch the app with a URL via the data payload
+    App.addListener('appUrlOpen', ({ url }) => {
+      console.log('[NativePush] appUrlOpen:', url);
+      const path = normalizeInAppPath(url);
+      if (path) safeNavigate(path, navigate);
+    });
+
+    // ── Check permissions and register ──
     let permStatus = await PushNotifications.checkPermissions();
     if (permStatus.receive === 'prompt') {
       permStatus = await PushNotifications.requestPermissions();

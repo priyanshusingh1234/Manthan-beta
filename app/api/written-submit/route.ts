@@ -91,10 +91,10 @@ export async function POST(req: Request) {
         if (typeof file === "string") {
             const snippet = file.substring(0, 100);
             console.error(`[Written-Submit] Expected file but got string. Length: ${file.length}, Start: ${snippet}`);
-            return NextResponse.json({ 
+            return NextResponse.json({
                 error: "Invalid upload format: received string instead of file",
                 receivedSnippet: snippet,
-                receivedLength: file.length 
+                receivedLength: file.length
             }, { status: 400 });
         }
 
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
             console.error("Failed to read file as arrayBuffer:", e.message);
             return NextResponse.json({ error: "Failed to read uploaded file" }, { status: 400 });
         }
-        
+
         const buffer = Buffer.from(arrayBuffer);
 
         const { error: uploadErr } = await supabaseAdmin.storage
@@ -214,7 +214,7 @@ export async function PATCH(req: Request) {
                 battlesWon,
             },
         });
-        
+
         // Sync profiles table so leaderboard stays accurate
         const { upsertProfile } = await import("@/lib/profiles");
         await upsertProfile(userId, { ...userMeta, totalPoints: newTotal, battlesAttempted, battlesWon });
