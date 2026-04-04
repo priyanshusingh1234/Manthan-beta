@@ -141,24 +141,35 @@ export default function CreatePostPage() {
             let imageUrl = null;
 
             if (imageFile && session) {
-                const fileExt = imageFile.name.split('.').pop();
-                const fileName = `post-${Date.now()}.${fileExt}`;
-                const filePath = `posts/${session.user.id}/${fileName}`;
+                // Ensure we have a real Blob before uploading.
+                // On mobile, imageFile from compressImage may not be a standard Blob.
+                // Fetch from the imagePreview blob: URL to get a guaranteed real Blob.
+                let uploadBlob: Blob;
+                const isRealBlob = (imageFile instanceof Blob) ||
+                    (imageFile && typeof (imageFile as any).size === 'number' && typeof (imageFile as any).slice === 'function');
 
-                const { error: uploadError, data } = await supabase.storage
-                    .from('public-images')
-                    .upload(filePath, imageFile, {
-                        contentType: imageFile.type || 'image/webp',
-                        upsert: false
-                    });
+                if (isRealBlob) {
+                    uploadBlob = imageFile as unknown as Blob;
+                } else if (imagePreview) {
+                    const res = await fetch(imagePreview);
+                    uploadBlob = await res.blob();
+                } else {
+                    throw new Error("No valid image data available. Please re-select the image.");
+                }
 
-                if (uploadError) throw new Error(uploadError.message || "Image upload failed");
+                const ext = (imageFile as any)?.name?.split('.').pop() || 'jpg';
+                const form = new FormData();
+                form.append('file', uploadBlob, `post-${Date.now()}.${ext}`);
 
-                const { data: publicUrlData } = supabase.storage
-                    .from('public-images')
-                    .getPublicUrl(filePath);
+                const uploadRes = await fetch('/api/posts/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${session.access_token}` },
+                    body: form,
+                });
 
-                imageUrl = publicUrlData.publicUrl;
+                const uploadData = await uploadRes.json();
+                if (!uploadRes.ok) throw new Error(uploadData.error || "Image upload failed");
+                imageUrl = uploadData.url;
             }
 
             const res = await fetch('/api/posts', {
