@@ -182,14 +182,30 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
         setUploading(true);
         try {
             const compressed = await compressImage(fileToUpload, "answer");
-            const isBlob = compressed && (compressed instanceof Blob || (typeof (compressed as any).size === 'number' && typeof (compressed as any).slice === 'function'));
-            
-            const form = new FormData();
+
+            // Guarantee we have a real Blob before putting it into FormData.
+            // If compressed is not a Blob instance (can happen in some old WebViews),
+            // read it via FileReader → ArrayBuffer → Blob as a safe fallback.
+            const isBlob = compressed instanceof Blob ||
+                (compressed && typeof (compressed as any).size === 'number' && typeof (compressed as any).slice === 'function');
+
+            let uploadBlob: Blob;
+            const uploadName: string = (compressed as any).name || "image.jpg";
+
             if (isBlob) {
-                form.append("file", (compressed as any), (compressed as any).name || "image.jpg");
+                uploadBlob = compressed as unknown as Blob;
             } else {
-                form.append("file", (compressed as any));
+                // Last-resort: read raw bytes through FileReader
+                uploadBlob = await new Promise<Blob>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(new Blob([reader.result as ArrayBuffer], { type: fileToUpload.type || 'image/jpeg' }));
+                    reader.onerror = reject;
+                    reader.readAsArrayBuffer(fileToUpload);
+                });
             }
+
+            const form = new FormData();
+            form.append("file", uploadBlob, uploadName);
             form.append("questionId", question.id);
             if (challengeId) form.append("challengeId", challengeId);
 
