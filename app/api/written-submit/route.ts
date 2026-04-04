@@ -89,8 +89,13 @@ export async function POST(req: Request) {
 
         // Upload file to Supabase storage
         if (typeof file === "string") {
-            console.error("Expected file but got string:", file);
-            return NextResponse.json({ error: "Invalid upload format: received string instead of file" }, { status: 400 });
+            const snippet = file.substring(0, 100);
+            console.error(`[Written-Submit] Expected file but got string. Length: ${file.length}, Start: ${snippet}`);
+            return NextResponse.json({ 
+                error: "Invalid upload format: received string instead of file",
+                receivedSnippet: snippet,
+                receivedLength: file.length 
+            }, { status: 400 });
         }
 
         const fileName = (file as any).name || "image.jpg";
