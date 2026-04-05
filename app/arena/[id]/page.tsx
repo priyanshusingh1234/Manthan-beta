@@ -142,6 +142,7 @@ function ArenaPage({ params }: { params: { id: string } }) {
     const [timeTaken, setTimeTaken] = useState(0);
     const [correctCount, setCorrectCount] = useState(0);
     const [snapshot, setSnapshot] = useState<AttemptSnapshot[]>([]);
+    const [bonusMessage, setBonusMessage] = useState<string | null>(null);
     // For view-only: fetch from DB
     const [dbResult, setDbResult] = useState<any>(null);
 
@@ -269,6 +270,7 @@ function ArenaPage({ params }: { params: { id: string } }) {
                 alert(`⚠️ Score sync failed: ${submitData?.error || 'Unknown error'}\n\nPlease screenshot your score.`);
                 return;
             }
+            if (submitData.bonusMessage) setBonusMessage(submitData.bonusMessage);
             setIsSubmitted(true);
         } catch (e: any) {
             alert(`⚠️ Network error: ${e.message}`);
@@ -387,6 +389,19 @@ function ArenaPage({ params }: { params: { id: string } }) {
                             </div>
                         </div>
                     </div>
+
+                    {/* ── Bonus Points Banner ── */}
+                    {bonusMessage && (
+                        <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-500/10 border-2 border-emerald-400 dark:border-emerald-500/50 rounded-2xl">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/30">
+                                <CheckCircle2 className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <p className="font-black text-sm text-emerald-700 dark:text-emerald-400">{bonusMessage}</p>
+                                <p className="text-[10px] text-emerald-600/70 dark:text-emerald-500/60 font-bold mt-0.5">Bonus points added to your profile instantly</p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* ── Question Breakdown ── */}
                     {resultSnap.length > 0 ? (

@@ -53,6 +53,8 @@ function GauntletForge({ onCreated }: { onCreated: () => void }) {
         time_minutes: '60',
         color: 'from-indigo-600 to-indigo-800',
         reward: 'Sharpen your skills',
+        reward_points: '0',
+        reward_threshold_percent: '0',
     });
 
     const set = (key: string, val: string) => setForm(p => ({ ...p, [key]: val }));
@@ -72,7 +74,7 @@ function GauntletForge({ onCreated }: { onCreated: () => void }) {
             const data = await res.json();
             if (!res.ok) { setErr(data.error || 'Failed to create.'); return; }
             setOpen(false);
-            setForm({ title: '', description: '', subject: '', class_grade: '', difficulty: 'hard', question_count: '40', time_minutes: '60', color: 'from-indigo-600 to-indigo-800', reward: 'Sharpen your skills' });
+            setForm({ title: '', description: '', subject: '', class_grade: '', difficulty: 'hard', question_count: '40', time_minutes: '60', color: 'from-indigo-600 to-indigo-800', reward: 'Sharpen your skills', reward_points: '0', reward_threshold_percent: '0' });
             onCreated();
         } catch (e: any) {
             setErr(e.message);
@@ -143,6 +145,15 @@ function GauntletForge({ onCreated }: { onCreated: () => void }) {
                             <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Reward Text</label>
                             <input value={form.reward} onChange={e => set('reward', e.target.value)} placeholder="e.g. Master the subject" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:outline-none focus:border-indigo-500" />
                         </div>
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Bonus Points (on pass)</label>
+                            <input type="number" value={form.reward_points} onChange={e => set('reward_points', e.target.value)} min="0" max="500" placeholder="e.g. 20" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:outline-none focus:border-indigo-500" />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Pass Threshold (%)</label>
+                            <input type="number" value={form.reward_threshold_percent} onChange={e => set('reward_threshold_percent', e.target.value)} min="0" max="100" placeholder="e.g. 50" className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:outline-none focus:border-indigo-500" />
+                            <p className="text-[9px] text-slate-400 mt-1">Score ≥ this % → earn bonus points</p>
+                        </div>
                     </div>
                     <div>
                         <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Description</label>
@@ -163,6 +174,12 @@ function GauntletForge({ onCreated }: { onCreated: () => void }) {
                             <span>{form.subject || 'Subject'}</span>
                             {form.class_grade && <span>Class {form.class_grade}</span>}
                         </div>
+                        {parseInt(form.reward_points) > 0 && (
+                            <div className="mt-3 inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-black">
+                                <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                                +{form.reward_points} pts for scoring ≥{form.reward_threshold_percent}%
+                            </div>
+                        )}
                     </div>
 
                     <button
@@ -185,6 +202,11 @@ export default function TestsHubPage() {
     const [loadingList, setLoadingList] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const forgeRef = React.useRef<HTMLDivElement>(null);
+
+    const scrollToForge = () => {
+        forgeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
     const fetchGauntlets = async () => {
         try {
@@ -267,7 +289,20 @@ export default function TestsHubPage() {
 
                 {/* Admin Forge Panel */}
                 {isAdmin && (
-                    <GauntletForge onCreated={fetchGauntlets} />
+                    <div ref={forgeRef}>
+                        <GauntletForge onCreated={fetchGauntlets} />
+                    </div>
+                )}
+
+                {/* Admin FAB — floating Create button */}
+                {isAdmin && (
+                    <button
+                        onClick={scrollToForge}
+                        className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-2xl shadow-indigo-500/40 active:scale-95 transition-all hover:bg-indigo-700"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Create Gauntlet
+                    </button>
                 )}
 
                 {/* Gauntlet Cards */}

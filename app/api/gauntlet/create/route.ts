@@ -8,7 +8,6 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
 
 export async function POST(req: NextRequest) {
     try {
-        // Auth check
         const authHeader = req.headers.get('Authorization');
         if (!authHeader) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -22,14 +21,16 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { title, description, subject, class_grade, difficulty, question_count, time_minutes, color, reward } = body;
+        const {
+            title, description, subject, class_grade, difficulty,
+            question_count, time_minutes, color, reward,
+            reward_points, reward_threshold_percent
+        } = body;
 
-        // Validate required fields
         if (!title || !subject || !difficulty || !question_count || !time_minutes) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // Generate a unique slug for the gauntlet
         const slug = `${subject.toLowerCase().replace(/\s+/g, '-')}-${class_grade || 'all'}-${difficulty.toLowerCase()}-${Date.now()}`;
 
         const { data, error } = await supabaseAdmin
@@ -45,6 +46,8 @@ export async function POST(req: NextRequest) {
                 time_minutes: parseInt(time_minutes),
                 color: color || 'from-indigo-600 to-indigo-800',
                 reward: reward || 'Sharpen your skills',
+                reward_points: parseInt(reward_points) || 0,
+                reward_threshold_percent: parseInt(reward_threshold_percent) || 0,
                 is_active: true,
                 created_by: user.id,
             })
