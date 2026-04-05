@@ -46,25 +46,24 @@ function TestYourselfPage() {
         }
 
         const { data: { session } } = await (await import('@/lib/supabaseClient')).supabase.auth.getSession();
+        const userId = session?.user?.id;
 
-        // 2. Fast-path: check localStorage first (prevent accidental retakes)
-        if (typeof window !== 'undefined' && localStorage.getItem('dheeyudha_class9_hard_test_completed') === 'true') {
+        // 2. Fast-path: check localStorage first (scoper by user to allow multiple accounts on one device)
+        if (userId && typeof window !== 'undefined' && localStorage.getItem(`dheeyudha_class9_hard_${userId}_completed`) === 'true') {
             setIsSubmitted(true);
-            router.replace('/tests/class-9-hard?view=records'); // explicitly redirect to records view
             setLoading(false);
             return;
         }
 
         // 3. Server-side check (catches users on a new device)
-        if (session) {
+        if (session && userId) {
             const resResults = await fetch('/api/test/results?testId=class-9-hard', {
                 headers: { 'Authorization': `Bearer ${session.access_token}` }
             });
             const resData = await resResults.json();
             if (resData.hasSubmission) {
                 setIsSubmitted(true);
-                if (typeof window !== 'undefined') localStorage.setItem('dheeyudha_class9_hard_test_completed', 'true');
-                router.replace('/tests/class-9-hard?view=records'); // explicitly redirect to records view
+                if (typeof window !== 'undefined') localStorage.setItem(`dheeyudha_class9_hard_${userId}_completed`, 'true');
                 setLoading(false);
                 return;
             }
@@ -156,7 +155,9 @@ function TestYourselfPage() {
                 accuracy: questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0
             })
         });
-        if (typeof window !== 'undefined') localStorage.setItem('dheeyudha_class9_hard_test_completed', 'true');
+        if (typeof window !== 'undefined' && session.user?.id) {
+            localStorage.setItem(`dheeyudha_class9_hard_${session.user.id}_completed`, 'true');
+        }
     } catch (e) {
         console.error('[ARENA] System Sync Failure:', e);
     }
@@ -201,14 +202,15 @@ function TestYourselfPage() {
   }
 
   if (isSubmitted) {
-    if (viewOnly) {
+    // If questions aren't loaded (meaning we detected a past submission), always show the clean scoreboard view.
+    if (viewOnly || questions.length === 0) {
        return (
           <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-4 sm:p-8 flex items-center justify-center">
              <div className="max-w-xl w-full text-center space-y-8">
                 <div className="space-y-2">
                    <h1 className="text-4xl font-black italic uppercase tracking-tighter">Hall of Fame</h1>
                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-500/10 px-4 py-1.5 rounded-full inline-block border border-indigo-200/50">
-                      Your attempt is recorded
+                      {questions.length === 0 ? 'Your attempt is recorded' : 'Analysis Complete'}
                    </p>
                 </div>
                 
@@ -218,16 +220,16 @@ function TestYourselfPage() {
 
                 <div className="flex gap-4">
                    <button 
-                      onClick={() => router.push('/tests/class-9-hard')} 
+                      onClick={() => router.push('/tests')} 
                       className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
                    >
-                     Enter the Gauntlet
+                     Exit Records
                    </button>
                    <button 
-                      onClick={() => router.push('/tests')} 
+                      onClick={() => router.push('/')} 
                       className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all"
                    >
-                     Exit
+                     Return Home
                    </button>
                 </div>
              </div>
