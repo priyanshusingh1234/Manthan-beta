@@ -155,7 +155,7 @@ export default function TestLeaderboard({ testId }: { testId: string }) {
                         )}
 
                         <Link 
-                            href="/stats" 
+                            href={`/stats?testId=${testId}`} 
                             className="w-full py-4 bg-white dark:bg-slate-900 border-2 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-3xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-indigo-50 dark:hover:bg-indigo-500/5 transition-all shadow-sm"
                         >
                             <BarChart3 className="w-4 h-4" />

@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Trophy, Target, CheckCircle2, XCircle, Clock, BarChart3, ArrowLeft, AlertTriangle } from 'lucide-react';
 
 function StatsContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const testId = searchParams.get('testId') || 'class-9-hard';
+
     const [result, setResult] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -16,7 +19,7 @@ function StatsContent() {
                 const { data: { session } } = await (await import('@/lib/supabaseClient')).supabase.auth.getSession();
                 if (!session) { router.push('/login'); return; }
 
-                const res = await fetch('/api/test/results?testId=class-9-hard', {
+                const res = await fetch(`/api/test/results?testId=${testId}`, {
                     headers: { 'Authorization': `Bearer ${session.access_token}` }
                 });
                 const data = await res.json();
@@ -29,7 +32,7 @@ function StatsContent() {
             }
         }
         loadStats();
-    }, [router]);
+    }, [router, testId]);
 
     if (loading) {
         return (
@@ -58,8 +61,8 @@ function StatsContent() {
                 <div className="max-w-sm w-full bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center shadow-sm">
                     <BarChart3 className="w-10 h-10 text-slate-300 mx-auto mb-4" />
                     <h2 className="font-black text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-widest text-sm">No Attempts Yet</h2>
-                    <p className="text-xs text-slate-400 mb-6">Complete the Ultimate Class 9 Gauntlet to see your full breakdown here.</p>
-                    <button onClick={() => router.push('/tests/class-9-hard')} className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-500/20">
+                    <p className="text-xs text-slate-400 mb-6">Complete the Gauntlet to see your full breakdown here.</p>
+                    <button onClick={() => router.push(`/tests/${testId}`)} className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-500/20">
                         Enter the Gauntlet
                     </button>
                 </div>
@@ -84,7 +87,7 @@ function StatsContent() {
                     </button>
                     <div>
                         <h1 className="text-base font-black uppercase tracking-tight">Arena Analytics</h1>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Class 9 Ultimate Gauntlet</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gauntlet Challenge</p>
                     </div>
                 </div>
             </div>
@@ -198,7 +201,7 @@ function StatsContent() {
                 )}
 
                 <button
-                    onClick={() => router.push('/tests/class-9-hard?view=records')}
+                    onClick={() => router.push(`/tests/${testId}?view=records`)}
                     className="w-full py-4 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-3xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:border-indigo-500/30 transition-all"
                 >
                     <Trophy className="w-4 h-4 text-yellow-500" />
