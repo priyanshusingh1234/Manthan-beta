@@ -2,7 +2,10 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Trophy, Target, Clock, Zap, Crown, Shield, Play, ChevronRight, Sparkles } from 'lucide-react';
+import { Trophy, Target, Clock, Zap, Crown, Shield, Play, ChevronRight, Sparkles, Share2 } from 'lucide-react';
+import { Share as CapShare } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
+import { getClientAppUrl } from '@/lib/appUrl';
 
 const CHALLENGES = [
     {
@@ -29,14 +32,44 @@ const CHALLENGES = [
         glow: 'shadow-emerald-500/20',
         href: '/tests/english-grammar'
     },
+    {
+        id: 'english-custom-grammar',
+        title: 'Nightmare Grammar Gauntlet',
+        description: '40 handpicked devastating grammar questions. Voice, Tense, Narration. No mercy.',
+        questions: 40,
+        time: '60 Mins',
+        difficulty: 'Nightmare',
+        reward: 'Attain Grammar Godhood',
+        color: 'from-violet-600 to-fuchsia-800',
+        glow: 'shadow-violet-500/20',
+        href: '/tests/english-custom-grammar'
+    },
 ];
-
 
 export default function TestsHubPage() {
     const router = useRouter();
 
+    const handleShare = async (challenge: any) => {
+        const text = `Think you have what it takes? Try the ${challenge.title} at Dheeyudha Academy! 🧠🔥\n${getClientAppUrl()}${challenge.href}`;
+        try {
+            if (Capacitor.isNativePlatform()) {
+                await CapShare.share({ title: challenge.title, text, dialogTitle: 'Share this Gauntlet' });
+            } else if (navigator.share) {
+                await navigator.share({ title: challenge.title, text });
+            } else {
+                await navigator.clipboard.writeText(text);
+                alert('Copied link to clipboard!');
+            }
+        } catch (e) {
+            console.log('Share error', e);
+        }
+    };
+
     return (
         <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white pb-24 relative overflow-hidden">
+            <title>The Arena - Dheeyudha Gauntlets</title>
+            <meta name="description" content="Push your intellect to the limit. These curated gauntlets are designed to identify the top 1% of scholars." />
+            
             {/* Global Mesh Gradients */}
             <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-indigo-500/10 via-transparent to-transparent pointer-events-none" />
             <div className="absolute top-[-100px] right-[-100px] w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
@@ -71,9 +104,14 @@ export default function TestsHubPage() {
                                         </div>
                                         <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">{challenge.difficulty} TEST</span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
-                                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                        <span className="text-[10px] font-bold">{challenge.time}</span>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => handleShare(challenge)} className="p-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-slate-500 hover:text-indigo-600 transition-colors rounded-full" title="Share Challenge">
+                                            <Share2 className="w-4 h-4" />
+                                        </button>
+                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+                                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                            <span className="text-[10px] font-bold">{challenge.time}</span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -132,4 +170,5 @@ export default function TestsHubPage() {
             </main>
         </div>
     );
+
 }
