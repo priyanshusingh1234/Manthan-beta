@@ -201,7 +201,7 @@ function StatsContent() {
                 )}
 
                 <button
-                    onClick={() => router.push(`/tests/${testId}?view=records`)}
+                    onClick={() => router.push(`/arena/${testId}?view=records`)}
                     className="w-full py-4 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-3xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:border-indigo-500/30 transition-all"
                 >
                     <Trophy className="w-4 h-4 text-yellow-500" />
