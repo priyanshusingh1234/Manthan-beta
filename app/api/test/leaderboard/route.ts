@@ -16,52 +16,60 @@ export async function GET(req: NextRequest) {
             if (user) currentUserId = user.id;
         }
 
-        // 1. Get Top attempts (use left join to be inclusive of users with missing profiles)
+        // 1. Fetch top results from test_results (no join — avoids schema cache issues)
         const { data: topData, error: topError } = await supabaseAdmin
             .from('test_results')
-            .select(`
-                user_id, score, max_score, time_taken, accuracy, completed_at,
-                profiles ( id, full_name, username, avatar_url, school )
-            `)
+            .select('user_id, score, max_score, time_taken, accuracy, completed_at')
             .eq('test_id', testId)
             .order('score', { ascending: false })
             .order('time_taken', { ascending: true })
-            .limit(30);
+            .limit(50);
 
         if (topError) throw topError;
 
-        const seenUsers = new Set();
-        const leaderboard = (topData || [])
-            .map((entry: any) => {
-                const profile = entry.profiles || {};
-                const uid = profile.id || (entry as any).user_id; // fallback to user_id if join is null
-                
-                return {
-                    userId: uid,
-                    name: profile.full_name || profile.username || 'Scholar',
-                    username: profile.username || 'scholar',
-                    avatar: profile.avatar_url || null,
-                    school: profile.school || 'Private Scholar',
-                    score: entry.score,
-                    maxScore: entry.max_score,
-                    timeTaken: entry.time_taken,
-                    accuracy: entry.accuracy,
-                    completedAt: entry.completed_at
-                };
-            })
-            .filter((entry: any) => {
-                if (seenUsers.has(entry.userId)) return false;
-                seenUsers.add(entry.userId);
-                return true;
-            })
-            .map((entry, i) => ({ ...entry, rank: i + 1 }))
-            .slice(0, 10);
+        // 2. Dedupe — keep only the best attempt per user
+        const seenUsers = new Set<string>();
+        const bestAttempts = (topData || []).filter((entry: any) => {
+            if (seenUsers.has(entry.user_id)) return false;
+            seenUsers.add(entry.user_id);
+            return true;
+        }).slice(0, 10);
 
-        // 2. Get Current User's best attempt (if not in top 10)
+        // 3. Fetch profile data for these users in a single query
+        const userIds = bestAttempts.map((e: any) => e.user_id);
+        const { data: profilesData } = await supabaseAdmin
+            .from('profiles')
+            .select('id, full_name, username, avatar_url, school')
+            .in('id', userIds);
+
+        const profileMap: Record<string, any> = {};
+        (profilesData || []).forEach((p: any) => { profileMap[p.id] = p; });
+
+        // 4. Assemble leaderboard
+        const leaderboard = bestAttempts.map((entry: any, i: number) => {
+            const profile = profileMap[entry.user_id] || {};
+            return {
+                rank: i + 1,
+                userId: entry.user_id,
+                name: profile.full_name || profile.username || 'Scholar',
+                username: profile.username || 'scholar',
+                avatar: profile.avatar_url || null,
+                school: profile.school || 'Private Scholar',
+                score: entry.score,
+                maxScore: entry.max_score,
+                timeTaken: entry.time_taken,
+                accuracy: entry.accuracy,
+                completedAt: entry.completed_at
+            };
+        });
+
+        // 5. Get current user's best attempt (if they exist but aren't in top 10)
         let userStats = null;
         if (currentUserId) {
-            const isTop10 = leaderboard.some(e => e.userId === currentUserId);
-            if (!isTop10) {
+            const inTop10 = leaderboard.find(e => e.userId === currentUserId);
+            if (inTop10) {
+                userStats = inTop10;
+            } else {
                 const { data: personalBest } = await supabaseAdmin
                     .from('test_results')
                     .select('*')
@@ -74,6 +82,7 @@ export async function GET(req: NextRequest) {
 
                 if (personalBest) {
                     userStats = {
+                        userId: currentUserId,
                         score: personalBest.score,
                         maxScore: personalBest.max_score,
                         timeTaken: personalBest.time_taken,
@@ -81,8 +90,6 @@ export async function GET(req: NextRequest) {
                         completedAt: personalBest.completed_at
                     };
                 }
-            } else {
-               userStats = leaderboard.find(e => e.userId === currentUserId);
             }
         }
 
