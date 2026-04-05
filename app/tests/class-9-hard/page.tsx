@@ -38,7 +38,7 @@ function TestYourselfPage() {
   useEffect(() => {
     async function fetchTest() {
       try {
-        // 1. If the user just wants to view records (clicked the trophy icon in the Hub)
+        // 1. If the user explicitly wants to view records (clicked the trophy icon in the Hub)
         if (viewOnly) {
            setIsSubmitted(true);
            setLoading(false);
@@ -47,7 +47,28 @@ function TestYourselfPage() {
 
         const { data: { session } } = await (await import('@/lib/supabaseClient')).supabase.auth.getSession();
 
-        // 2. Fetch a NEW test challenge (Direct entry, no more retake blocks)
+        // 2. Fast-path: check localStorage first (prevent accidental retakes)
+        if (typeof window !== 'undefined' && localStorage.getItem('dheeyudha_class9_hard_test_completed') === 'true') {
+            setIsSubmitted(true);
+            setLoading(false);
+            return;
+        }
+
+        // 3. Server-side check (catches users on a new device)
+        if (session) {
+            const resResults = await fetch('/api/test/results?testId=class-9-hard', {
+                headers: { 'Authorization': `Bearer ${session.access_token}` }
+            });
+            const resData = await resResults.json();
+            if (resData.hasSubmission) {
+                setIsSubmitted(true);
+                if (typeof window !== 'undefined') localStorage.setItem('dheeyudha_class9_hard_test_completed', 'true');
+                setLoading(false);
+                return;
+            }
+        }
+
+        // 4. Fetch a NEW test challenge if no prior attempt found
         const res = await fetch('/api/test/generate?classGrade=9&limit=40');
         const data = await res.json();
         if (data.error) throw new Error(data.error);
@@ -243,8 +264,13 @@ function TestYourselfPage() {
             </div>
 
             <div className="mt-8 flex gap-3">
-              <button onClick={handleShare} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">Share Analysis</button>
-              <button onClick={() => router.push('/tests/class-9-hard')} className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-[10px] uppercase tracking-widest">Try Again</button>
+              <button onClick={handleShare} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">Share Analysis</button>
+              <button 
+                 onClick={() => router.push('/tests')} 
+                 className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+              >
+                Return to Hub
+              </button>
             </div>
           </div>
 
