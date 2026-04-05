@@ -89,14 +89,22 @@ export default function TestsHubPage() {
                                         <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{challenge.reward}</span>
                                     </div>
 
-                                    <button
-                                        onClick={() => router.push(challenge.href)}
-                                        className={`w-full py-4 mt-2 bg-gradient-to-r ${challenge.color} text-white font-black italic uppercase tracking-widest text-xs rounded-2xl flex items-center justify-center gap-2 group-hover:scale-[1.02] active:scale-95 transition-all shadow-xl ${challenge.glow}`}
-                                    >
-                                        <Play className="w-4 h-4 fill-current" />
-                                        Enter the Gauntlet
-                                        <ChevronRight className="w-4 h-4 ml-1" />
-                                    </button>
+                                    <div className="flex gap-3 mt-4">
+                                        <button 
+                                            onClick={() => router.push(challenge.href)}
+                                            className={`flex-[3] py-4 bg-gradient-to-r ${challenge.color} text-white font-black italic uppercase tracking-widest text-[10px] sm:text-xs rounded-2xl flex items-center justify-center gap-2 group-hover:scale-[1.02] active:scale-95 transition-all shadow-xl ${challenge.glow}`}
+                                        >
+                                            <Play className="w-4 h-4 fill-current" />
+                                            Enter the Gauntlet
+                                        </button>
+                                        <button 
+                                            onClick={() => router.push(`${challenge.href}?view=records`)}
+                                            className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors rounded-2xl flex items-center justify-center"
+                                            title="View Hall of Fame"
+                                        >
+                                            <Trophy className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

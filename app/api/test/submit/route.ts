@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
-import { createNotification } from '@/lib/createNotification';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -39,22 +39,7 @@ export async function POST(req: NextRequest) {
 
         if (logErr) console.warn('[test/submit] Aggregation log failed:', logErr.message);
 
-        // 3. Notify Admin of this completion (High-fidelity notification)
-        const adminEmail = process.env.ADMIN_EMAIL || 'priyanshusingh1234@gmail.com';
-        const { data: adminUser } = await supabaseAdmin.auth.admin.listUsers();
-        const mainAdmin = (adminUser?.users || []).find(u => u.email === adminEmail);
 
-        if (mainAdmin) {
-            await createNotification({
-                userId: mainAdmin.id,
-                type: 'points_earned',
-                title: '🔥 New Achievement Unlocked!',
-                body: `${user.user_metadata?.fullName || user.email} just cleared the ${testId} with ${score}/${maxScore} points!`,
-                href: `/tests`,
-                actorId: user.id,
-                actorName: user.user_metadata?.fullName || 'Scholar'
-            });
-        }
 
         return NextResponse.json({ 
             success: true, 
