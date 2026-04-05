@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Star, Clock, Target, User, BarChart3, ArrowRight } from 'lucide-react';
+import { Trophy, Medal, Star, Clock, Target, User, BarChart3 } from 'lucide-react';
+
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -73,15 +74,16 @@ export default function TestLeaderboard({ testId }: { testId: string }) {
                     <Link 
                         key={entry.userId}
                         href={`/user/${entry.username || entry.userId}`}
-                        className={`group flex items-center justify-between p-4 rounded-3xl border transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                        className={`group flex items-center justify-between p-3 rounded-2xl border transition-all active:scale-[0.97] ${
                             idx === 0 
-                                ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-200 dark:border-amber-500/30 shadow-lg shadow-amber-500/5' 
-                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/50'
-                        } ${entry.userId === userStats?.userId ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-950' : ''}`}
+                                ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-200 dark:border-amber-500/30 shadow-md'
+                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                        } ${entry.userId === userStats?.userId ? 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-950' : ''}`}
                     >
-                        <div className="flex items-center gap-4">
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${
-                                idx === 0 ? 'bg-amber-500 text-white shadow-md' :
+                        {/* LEFT: rank + avatar + name */}
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center font-black text-[11px] ${
+                                idx === 0 ? 'bg-amber-500 text-white' :
                                 idx === 1 ? 'bg-slate-300 text-slate-700' :
                                 idx === 2 ? 'bg-amber-700 text-white' :
                                 'bg-slate-100 dark:bg-slate-800 text-slate-500'
@@ -89,45 +91,42 @@ export default function TestLeaderboard({ testId }: { testId: string }) {
                                 {entry.rank}
                             </div>
                             
-                            <div className="relative w-11 h-11 shrink-0">
-                                <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
+                            {/* Avatar */}
+                            <div className="relative w-9 h-9 shrink-0">
                                 {entry.avatar ? (
                                     <Image 
                                         src={entry.avatar} 
                                         alt={entry.name} 
                                         fill 
-                                        className="rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm"
+                                        className="rounded-full object-cover border-2 border-white dark:border-slate-800"
                                     />
                                 ) : (
                                     <div className="w-full h-full rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-800 flex items-center justify-center">
-                                        <User className="w-5 h-5 text-slate-400" />
+                                        <User className="w-4 h-4 text-slate-400" />
                                     </div>
                                 )}
                             </div>
 
+                            {/* Name + School */}
                             <div className="flex flex-col min-w-0">
-                                <span className="text-sm font-black tracking-tight flex items-center gap-1.5 text-slate-900 dark:text-white truncate">
-                                    {entry.name}
-                                    {entry.userId === userStats?.userId && <span className="shrink-0 text-[7px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest leading-none">You</span>}
+                                <span className="text-xs font-black tracking-tight flex items-center gap-1 text-slate-900 dark:text-white">
+                                    <span className="truncate max-w-[90px] sm:max-w-[140px]">{entry.name}</span>
+                                    {entry.userId === userStats?.userId && <span className="shrink-0 text-[7px] bg-indigo-600 text-white px-1 py-0.5 rounded-full uppercase leading-none">You</span>}
                                 </span>
-                                <span className="text-[10px] font-bold text-slate-500 truncate">
-                                    {entry.school || 'Private Scholar'}
+                                <span className="text-[9px] font-bold text-slate-400 truncate max-w-[110px]">
+                                    {entry.school || 'Scholar'}
                                 </span>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <div className="text-right pr-2">
-                                <div className="text-sm font-black italic tracking-tighter text-indigo-600 dark:text-indigo-400">
-                                    {entry.score} <span className="text-[10px] text-slate-400 font-bold">/ {entry.maxScore}</span>
-                                </div>
-                                <div className="text-[9px] font-black text-emerald-500 uppercase tracking-tighter flex items-center justify-end gap-1">
-                                    <span>{entry.accuracy}%</span>
-                                    <span className="opacity-40">•</span>
-                                    <span>{Math.floor(entry.timeTaken / 60)}m</span>
-                                </div>
+                        {/* RIGHT: score */}
+                        <div className="shrink-0 text-right pl-2">
+                            <div className="text-sm font-black italic text-indigo-600 dark:text-indigo-400">
+                                {entry.score}<span className="text-[9px] text-slate-400 font-bold">/{entry.maxScore}</span>
                             </div>
-                            <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                            <div className="text-[8px] font-black text-emerald-500 uppercase">
+                                {entry.accuracy}% · {Math.floor(entry.timeTaken / 60)}m
+                            </div>
                         </div>
                     </Link>
                 ))}
