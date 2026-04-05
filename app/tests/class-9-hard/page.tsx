@@ -38,38 +38,30 @@ function TestYourselfPage() {
   useEffect(() => {
     async function fetchTest() {
       try {
-        // 1. If the user explicitly wants to view records (clicked the trophy icon in the Hub)
+        // 1. If the user explicitly wants to view records
         if (viewOnly) {
            setIsSubmitted(true);
            setLoading(false);
            return;
         }
 
-        const { data: { session } } = await (await import('@/lib/supabaseClient')).supabase.auth.getSession();
-        const userId = session?.user?.id;
+        const { supabase } = await import('@/lib/supabaseClient');
+        const { data: { session } } = await supabase.auth.getSession();
 
-        // 2. Fast-path: check localStorage first (scoper by user to allow multiple accounts on one device)
-        if (userId && typeof window !== 'undefined' && localStorage.getItem(`dheeyudha_class9_hard_${userId}_completed`) === 'true') {
-            setIsSubmitted(true);
-            setLoading(false);
-            return;
-        }
-
-        // 3. Server-side check (catches users on a new device)
-        if (session && userId) {
+        // 2. Server-side ONLY check — no localStorage (DB is single source of truth)
+        if (session) {
             const resResults = await fetch('/api/test/results?testId=class-9-hard', {
                 headers: { 'Authorization': `Bearer ${session.access_token}` }
             });
             const resData = await resResults.json();
             if (resData.hasSubmission) {
                 setIsSubmitted(true);
-                if (typeof window !== 'undefined') localStorage.setItem(`dheeyudha_class9_hard_${userId}_completed`, 'true');
                 setLoading(false);
                 return;
             }
         }
 
-        // 4. Fetch a NEW test challenge if no prior attempt found
+        // 3. Fetch a NEW test challenge
         const res = await fetch('/api/test/generate?classGrade=9&limit=40');
         const data = await res.json();
         if (data.error) throw new Error(data.error);
@@ -83,6 +75,7 @@ function TestYourselfPage() {
     }
     fetchTest();
   }, [viewOnly]);
+
 
   useEffect(() => {
     if (loading || isSubmitted) return;
@@ -125,10 +118,14 @@ function TestYourselfPage() {
   const handleSubmit = async () => {
     const elapsed = 3600 - timeLeft;
     setTimeTaken(elapsed);
-    setIsSubmitted(true);
+    // NOTE: do NOT setIsSubmitted(true) here yet — wait for DB confirmation
     try {
-        const { data: { session } } = await (await import('@/lib/supabaseClient')).supabase.auth.getSession();
-        if (!session) return;
+        const { supabase } = await import('@/lib/supabaseClient');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            alert('Session expired. Please log in again.');
+            return;
+        }
 
         let correctCount = 0;
         const attempts = questions.map((q, idx) => {
@@ -138,8 +135,8 @@ function TestYourselfPage() {
                 questionId: q.id,
                 title: q.title,
                 options: q.options,
-                isCorrect: isCorrect,
-                selectedOption: answers[idx]
+                isCorrect,
+                selectedOption: answers[idx] ?? null
             };
         });
 
@@ -157,18 +154,22 @@ function TestYourselfPage() {
         });
         const submitData = await submitRes.json();
         console.log('[ARENA] Submit response:', submitData);
+
         if (!submitRes.ok) {
-            console.error('[ARENA] Submit FAILED:', submitData);
-            // Don't set localStorage so user can retry
-            return;
+            // DB save failed — alert user, do NOT lock them out
+            const errMsg = submitData?.error || 'Unknown error';
+            alert(`⚠️ Score sync failed: ${errMsg}\n\nPlease screenshot your score. This will be corrected.`);
+            return; // stay on test screen, do not setIsSubmitted so they can retry
         }
-        if (typeof window !== 'undefined' && session.user?.id) {
-            localStorage.setItem(`dheeyudha_class9_hard_${session.user.id}_completed`, 'true');
-        }
-    } catch (e) {
+
+        // Only mark as done AFTER confirmed DB save
+        setIsSubmitted(true);
+    } catch (e: any) {
         console.error('[ARENA] System Sync Failure:', e);
+        alert(`⚠️ Network error saving score: ${e.message}\n\nPlease check your connection and try submitting again.`);
     }
   };
+
 
   const handleShare = async () => {
     let score = 0;

@@ -49,14 +49,9 @@ function EnglishGrammarPage() {
 
         const userId = session?.user?.id;
 
-        // Fast-path: localStorage check (scoped per user)
-        if (userId && typeof window !== 'undefined' && localStorage.getItem(STORAGE_KEY(userId)) === 'true') {
-          setIsSubmitted(true);
-          setLoading(false);
-          return;
-        }
+        // Fast-path removed — DB is single source of truth
 
-        // Server-side check
+        // Server-side check only
         if (session && userId) {
           const res = await fetch(`/api/test/results?testId=${TEST_ID}`, {
             headers: { 'Authorization': `Bearer ${session.access_token}` }
@@ -64,7 +59,6 @@ function EnglishGrammarPage() {
           const data = await res.json();
           if (data.hasSubmission) {
             setIsSubmitted(true);
-            localStorage.setItem(STORAGE_KEY(userId), 'true');
             setLoading(false);
             return;
           }
@@ -98,23 +92,25 @@ function EnglishGrammarPage() {
   const handleSubmit = async () => {
     const elapsed = 3600 - timeLeft;
     setTimeTaken(elapsed);
-
-    let correct = 0;
-    let incorrect = 0;
-    const attempts = questions.map((q, idx) => {
-      const isCorrect = answers[idx] === q.correct_option;
-      if (isCorrect) correct++; else if (answers[idx] !== undefined) incorrect++;
-      return { questionId: q.id, title: q.title, options: q.options, isCorrect, selectedOption: answers[idx] };
-    });
-
-    setCorrectCount(correct);
-    setIncorrectCount(incorrect);
-    setIsSubmitted(true);
-
+    // Do NOT setIsSubmitted yet — wait for DB confirmation
     try {
       const { supabase } = await import('@/lib/supabaseClient');
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        alert('Session expired. Please log in again.');
+        return;
+      }
+
+      let correct = 0;
+      let incorrect = 0;
+      const attempts = questions.map((q, idx) => {
+        const isCorrect = answers[idx] === q.correct_option;
+        if (isCorrect) correct++; else if (answers[idx] !== undefined) incorrect++;
+        return { questionId: q.id, title: q.title, options: q.options, isCorrect, selectedOption: answers[idx] ?? null };
+      });
+
+      setCorrectCount(correct);
+      setIncorrectCount(incorrect);
 
       const submitRes = await fetch('/api/test/submit', {
         method: 'POST',
@@ -130,13 +126,21 @@ function EnglishGrammarPage() {
       });
       const submitData = await submitRes.json();
       console.log('[GRAMMAR] Submit:', submitData);
-      if (submitRes.ok && session.user?.id) {
-        localStorage.setItem(STORAGE_KEY(session.user.id), 'true');
+
+      if (!submitRes.ok) {
+        const errMsg = submitData?.error || 'Unknown error';
+        alert(`⚠️ Score sync failed: ${errMsg}\nPlease screenshot your score.`);
+        return;
       }
-    } catch (e) {
+
+      // Only mark as done AFTER DB confirms the save
+      setIsSubmitted(true);
+    } catch (e: any) {
       console.error('[GRAMMAR] Submit error:', e);
+      alert(`⚠️ Network error: ${e.message}\nPlease try submitting again.`);
     }
   };
+
 
   const handleShare = async () => {
     const score = correctCount * 3;
