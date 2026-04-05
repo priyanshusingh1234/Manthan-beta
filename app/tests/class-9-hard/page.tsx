@@ -143,7 +143,7 @@ function TestYourselfPage() {
             };
         });
 
-        await fetch('/api/test/submit', {
+        const submitRes = await fetch('/api/test/submit', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -155,6 +155,13 @@ function TestYourselfPage() {
                 accuracy: questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0
             })
         });
+        const submitData = await submitRes.json();
+        console.log('[ARENA] Submit response:', submitData);
+        if (!submitRes.ok) {
+            console.error('[ARENA] Submit FAILED:', submitData);
+            // Don't set localStorage so user can retry
+            return;
+        }
         if (typeof window !== 'undefined' && session.user?.id) {
             localStorage.setItem(`dheeyudha_class9_hard_${session.user.id}_completed`, 'true');
         }

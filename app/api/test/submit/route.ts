@@ -37,7 +37,10 @@ export async function POST(req: NextRequest) {
             }
         });
 
-        if (logErr) console.warn('[test/submit] Aggregation log failed:', logErr.message);
+        if (logErr) {
+            console.error('[test/submit] DB insert failed:', logErr);
+            return NextResponse.json({ error: logErr.message, details: logErr }, { status: 500 });
+        }
 
 
 
