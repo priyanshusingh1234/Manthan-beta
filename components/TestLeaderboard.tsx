@@ -72,7 +72,7 @@ export default function TestLeaderboard({ testId }: { testId: string }) {
                 {leaderboard.map((entry, idx) => (
                     <Link 
                         key={entry.userId}
-                        href={`/scholar/${entry.username || entry.userId}`}
+                        href={`/user/${entry.username || entry.userId}`}
                         className={`group flex items-center justify-between p-4 rounded-3xl border transition-all hover:scale-[1.02] active:scale-[0.98] ${
                             idx === 0 
                                 ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-200 dark:border-amber-500/30 shadow-lg shadow-amber-500/5' 

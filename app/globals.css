@@ -324,3 +324,83 @@ img { max-width: 100%; display: block; height: auto; }
   }
 }
 
+/* =========================================
+   NATIVE ANDROID / MOBILE FEEL
+   ========================================= */
+
+/* Kill tap highlight globally – looks web-like if visible */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* Allow text selection only where it makes sense */
+p, span, h1, h2, h3, h4, h5, h6, label {
+  user-select: none;
+  -webkit-user-select: none;
+}
+input, textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Hide ALL scrollbars – feels native */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth momentum scrolling for iOS/Android WebView */
+.overflow-y-auto, .overflow-y-scroll, .overflow-auto, .overflow-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Prevent overscroll bounce on the root */
+html, body {
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+}
+
+/* Safe area padding utilities */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left);
+}
+.pb-nav {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
+}
+
+/* Native-feel button press */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+/* Very short transitions feel snappier on mobile */
+@media (max-width: 640px) {
+  * {
+    transition-duration: max(var(--tw-transition-duration, 0ms), 0ms);
+  }
+  button, a[role="button"], [role="button"] {
+    transition: opacity 100ms ease, transform 80ms ease !important;
+  }
+  button:active, a:active {
+    opacity: 0.65 !important;
+    transform: scale(0.96) !important;
+    transition-duration: 60ms !important;
+  }
+}
+
+/* Fix 300ms tap delay on Android */
+html {
+  touch-action: manipulation;
+}
