@@ -50,6 +50,7 @@ function TestYourselfPage() {
         // 2. Fast-path: check localStorage first (prevent accidental retakes)
         if (typeof window !== 'undefined' && localStorage.getItem('dheeyudha_class9_hard_test_completed') === 'true') {
             setIsSubmitted(true);
+            router.replace('/tests/class-9-hard?view=records'); // explicitly redirect to records view
             setLoading(false);
             return;
         }
@@ -63,6 +64,7 @@ function TestYourselfPage() {
             if (resData.hasSubmission) {
                 setIsSubmitted(true);
                 if (typeof window !== 'undefined') localStorage.setItem('dheeyudha_class9_hard_test_completed', 'true');
+                router.replace('/tests/class-9-hard?view=records'); // explicitly redirect to records view
                 setLoading(false);
                 return;
             }
@@ -205,7 +207,9 @@ function TestYourselfPage() {
              <div className="max-w-xl w-full text-center space-y-8">
                 <div className="space-y-2">
                    <h1 className="text-4xl font-black italic uppercase tracking-tighter">Hall of Fame</h1>
-                   <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest bg-indigo-500/10 px-3 py-1 rounded-full inline-block">Arena Records</p>
+                   <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-500/10 px-4 py-1.5 rounded-full inline-block border border-indigo-200/50">
+                      Your attempt is recorded
+                   </p>
                 </div>
                 
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-[2.5rem] shadow-xl">
