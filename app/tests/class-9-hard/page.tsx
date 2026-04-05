@@ -38,111 +38,16 @@ function TestYourselfPage() {
   useEffect(() => {
     async function fetchTest() {
       try {
-        // If the user just wants to view records (clicked the trophy icon in the Hub)
+        // 1. If the user just wants to view records (clicked the trophy icon in the Hub)
         if (viewOnly) {
            setIsSubmitted(true);
            setLoading(false);
-           // Try to load any existing summary for the breakdown if available
-           const { data: { session } } = await (await import('@/lib/supabaseClient')).supabase.auth.getSession();
-           if (session) {
-                const resResults = await fetch('/api/test/results?testId=class-9-hard', {
-                    headers: { 'Authorization': `Bearer ${session.access_token}` }
-                });
-                const resultData = await resResults.json();
-                if (resultData.hasSubmission) {
-                    const snap = resultData.summary.metadata?.answers_snapshot || [];
-                    setTimeTaken(resultData.summary.time_taken);
-                    if (snap.length > 0) {
-                        setQuestions(snap.map((s: any) => ({
-                            id: s.questionId,
-                            title: s.title || "Elite Gauntlet Question",
-                            options: s.options || ["Correct Answer"],
-                            correct_option: 0,
-                            subject: 'Excellence'
-                        })));
-                        const ansMap: Record<number, number> = {};
-                        snap.forEach((s: any, i: number) => {
-                            if (s.isCorrect) ansMap[i] = 0;
-                            else ansMap[i] = 1;
-                        });
-                        setAnswers(ansMap);
-                    }
-                }
-           }
            return;
-        }
-
-        // 1. Fast-path: check localStorage first (instant, no network round-trip)
-        if (typeof window !== 'undefined' && localStorage.getItem('dheeyudha_class9_hard_test_completed') === 'true') {
-            const { data: { session } } = await (await import('@/lib/supabaseClient')).supabase.auth.getSession();
-            if (session) {
-                const resResults = await fetch('/api/test/results?testId=class-9-hard', {
-                    headers: { 'Authorization': `Bearer ${session.access_token}` }
-                });
-                const resultData = await resResults.json();
-                if (resultData.hasSubmission) {
-                    const snap = resultData.summary.metadata?.answers_snapshot || [];
-                    setIsSubmitted(true);
-                    setTimeTaken(resultData.summary.time_taken);
-                    if (snap.length > 0) {
-                        setQuestions(snap.map((s: any) => ({
-                            id: s.questionId,
-                            title: s.title || "Elite Gauntlet Question",
-                            options: s.options || ["Correct Answer"],
-                            correct_option: 0,
-                            subject: 'Excellence'
-                        })));
-                        const ansMap: Record<number, number> = {};
-                        snap.forEach((s: any, i: number) => {
-                            if (s.isCorrect) ansMap[i] = 0;
-                            else ansMap[i] = 1;
-                        });
-                        setAnswers(ansMap);
-                    }
-                    setLoading(false);
-                    return;
-                }
-            }
-            setIsSubmitted(true);
-            setLoading(false);
-            return;
         }
 
         const { data: { session } } = await (await import('@/lib/supabaseClient')).supabase.auth.getSession();
 
-        if (session) {
-            const resResults = await fetch('/api/test/results?testId=class-9-hard', {
-                headers: { 'Authorization': `Bearer ${session.access_token}` }
-            });
-            const resultData = await resResults.json();
-
-            if (resultData.hasSubmission) {
-                const snap = resultData.summary.metadata?.answers_snapshot || [];
-                setIsSubmitted(true);
-                setTimeTaken(resultData.summary.time_taken);
-                if (snap.length > 0) {
-                    setQuestions(snap.map((s: any) => ({
-                        id: s.questionId,
-                        title: s.title || "Elite Gauntlet Question",
-                        options: s.options || ["Correct Answer"],
-                        correct_option: 0,
-                        subject: 'Excellence'
-                    })));
-                    const ansMap: Record<number, number> = {};
-                    snap.forEach((s: any, i: number) => {
-                        if (s.isCorrect) ansMap[i] = 0;
-                        else ansMap[i] = 1;
-                    });
-                    setAnswers(ansMap);
-                }
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem('dheeyudha_class9_hard_test_completed', 'true');
-                }
-                setLoading(false);
-                return;
-            }
-        }
-
+        // 2. Fetch a NEW test challenge (Direct entry, no more retake blocks)
         const res = await fetch('/api/test/generate?classGrade=9&limit=40');
         const data = await res.json();
         if (data.error) throw new Error(data.error);
@@ -273,6 +178,38 @@ function TestYourselfPage() {
   }
 
   if (isSubmitted) {
+    if (viewOnly) {
+       return (
+          <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-4 sm:p-8 flex items-center justify-center">
+             <div className="max-w-xl w-full text-center space-y-8">
+                <div className="space-y-2">
+                   <h1 className="text-4xl font-black italic uppercase tracking-tighter">Hall of Fame</h1>
+                   <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest bg-indigo-500/10 px-3 py-1 rounded-full inline-block">Arena Records</p>
+                </div>
+                
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-[2.5rem] shadow-xl">
+                   <TestLeaderboard testId="class-9-hard" />
+                </div>
+
+                <div className="flex gap-4">
+                   <button 
+                      onClick={() => router.push('/tests/class-9-hard')} 
+                      className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
+                   >
+                     Enter the Gauntlet
+                   </button>
+                   <button 
+                      onClick={() => router.push('/tests')} 
+                      className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all"
+                   >
+                     Exit
+                   </button>
+                </div>
+             </div>
+          </div>
+       );
+    }
+
     let correctCount = 0;
     let incorrectCount = 0;
     questions.forEach((q, idx) => {
@@ -286,60 +223,33 @@ function TestYourselfPage() {
     const secs = timeTaken % 60;
 
     return (
-      <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-4 sm:p-8 pb-32">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="text-center relative p-6 sm:p-8 md:p-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-xl">
-            <Trophy className="w-14 h-14 text-yellow-500 mx-auto mb-4" />
-            <h1 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter mb-4 text-slate-900 dark:text-white">Test Complete</h1>
-            <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-4 sm:p-8 pb-32 flex justify-center">
+        <div className="max-w-2xl w-full space-y-8">
+          <div className="text-center relative p-6 sm:p-8 md:p-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] md:rounded-[2.5rem] shadow-xl">
+            <Trophy className="w-10 h-10 text-yellow-500 mx-auto mb-4" />
+            <h1 className="text-3xl font-black italic uppercase tracking-tighter mb-4">Gauntlet Result</h1>
+            
+            <div className="grid grid-cols-2 gap-3">
               <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <Target className="w-5 h-5 text-indigo-500 mx-auto mb-2" />
-                <p className="text-2xl font-black">{totalScore}</p>
-                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Score / {maxScore}</p>
+                <Target className="w-4 h-4 text-indigo-500 mx-auto mb-1" />
+                <p className="text-xl font-black">{totalScore} <span className="text-[10px] text-slate-400">/ {maxScore}</span></p>
+                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Score</p>
               </div>
               <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto mb-2" />
-                <p className="text-2xl font-black text-emerald-600">{accuracy}%</p>
-                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Accuracy</p>
-              </div>
-              <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <Clock className="w-5 h-5 text-amber-500 mx-auto mb-2" />
-                <p className="text-2xl font-black text-amber-600">{mins}m {secs}s</p>
-                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Time</p>
-              </div>
-              <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <BarChart2 className="w-5 h-5 text-red-500 mx-auto mb-2" />
-                <p className="text-2xl font-black text-red-600">{incorrectCount}</p>
-                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Incorrect</p>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
+                <p className="text-xl font-black text-emerald-500">{accuracy}%</p>
+                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Accuracy</p>
               </div>
             </div>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button onClick={handleShare} className="w-full sm:w-auto px-6 py-3.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2">Share Analysis</button>
-              <button onClick={() => router.push('/')} className="w-full sm:w-auto px-6 py-3.5 bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-xs uppercase tracking-widest">Return Hub</button>
+
+            <div className="mt-8 flex gap-3">
+              <button onClick={handleShare} className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">Share Analysis</button>
+              <button onClick={() => router.push('/tests/class-9-hard')} className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-[10px] uppercase tracking-widest">Try Again</button>
             </div>
           </div>
+
           <div className="space-y-4">
-            {questions.length > 0 && <h3 className="text-xl font-black italic uppercase tracking-widest px-2">Detailed Breakdown</h3>}
-            {questions.map((q, idx) => {
-              const userAns = answers[idx];
-              const isCorrect = userAns === q.correct_option;
-              return (
-                <div key={q.id} className={`p-4 rounded-2xl border-2 ${isCorrect ? 'bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-200 dark:border-emerald-500/20' : userAns === undefined ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800' : 'bg-red-50/50 dark:bg-red-500/5 border-red-200 dark:border-red-500/20'}`}>
-                  <p className="text-sm font-medium mb-4"><span className="font-black mr-2">Q{idx + 1}.</span> {q.title}</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {q.options.map((opt, optIdx) => (
-                      <div key={optIdx} className={`p-3 rounded-xl border text-xs flex justify-between ${optIdx === q.correct_option ? 'bg-emerald-100 dark:bg-emerald-500/20 border-emerald-400 text-emerald-800 font-bold' : optIdx === userAns ? 'bg-red-50 dark:bg-red-500/10 border-red-300 text-red-700' : 'bg-slate-50 dark:bg-slate-950 border-slate-200 text-slate-600'}`}>
-                        <span>{opt}</span>
-                        {optIdx === userAns && <span className="font-black uppercase text-[8px] opacity-60">Your Ans</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="pt-12 border-t border-slate-200 dark:border-slate-800">
-            <TestLeaderboard testId="class-9-hard" />
+             <TestLeaderboard testId="class-9-hard" />
           </div>
         </div>
       </div>
