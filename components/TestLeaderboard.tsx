@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Star, Clock, Target, User } from 'lucide-react';
+import { Trophy, Medal, Star, Clock, Target, User, BarChart3, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 type LeaderboardEntry = {
     rank: number;
@@ -47,7 +48,13 @@ export default function TestLeaderboard({ testId }: { testId: string }) {
         fetchLeaderboard();
     }, [testId]);
 
-    if (loading) return null; // keep it silent until ready
+    if (loading) return (
+        <div className="w-full space-y-3 animate-pulse">
+            {[1, 2, 3].map(i => (
+                <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl w-full" />
+            ))}
+        </div>
+    );
 
     if (leaderboard.length === 0) {
         return (
@@ -60,74 +67,101 @@ export default function TestLeaderboard({ testId }: { testId: string }) {
     const isTop10 = userStats && leaderboard.some(e => e.userId === userStats.userId);
 
     return (
-        <div className="w-full space-y-3">
-            <div className="grid gap-2">
+        <div className="w-full space-y-4">
+            <div className="grid gap-2.5">
                 {leaderboard.map((entry, idx) => (
-                    <div 
+                    <Link 
                         key={entry.userId}
-                        className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
+                        href={`/scholar/${entry.username || entry.userId}`}
+                        className={`group flex items-center justify-between p-4 rounded-3xl border transition-all hover:scale-[1.02] active:scale-[0.98] ${
                             idx === 0 
-                                ? 'bg-amber-50/50 dark:bg-amber-500/5 border-amber-200 dark:border-amber-500/20 shadow-sm' 
-                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                                ? 'bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-200 dark:border-amber-500/30 shadow-lg shadow-amber-500/5' 
+                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/50'
                         } ${entry.userId === userStats?.userId ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-950' : ''}`}
                     >
-                        <div className="flex items-center gap-3">
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-[10px] ${
-                                idx === 0 ? 'bg-amber-500 text-white' :
+                        <div className="flex items-center gap-4">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${
+                                idx === 0 ? 'bg-amber-500 text-white shadow-md' :
                                 idx === 1 ? 'bg-slate-300 text-slate-700' :
                                 idx === 2 ? 'bg-amber-700 text-white' :
                                 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                             }`}>
                                 {entry.rank}
                             </div>
-                            <div className="flex flex-col">
-                                <span className="text-xs font-black tracking-tight flex items-center gap-1.5">
+                            
+                            <div className="relative w-11 h-11 shrink-0">
+                                <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
+                                {entry.avatar ? (
+                                    <Image 
+                                        src={entry.avatar} 
+                                        alt={entry.name} 
+                                        fill 
+                                        className="rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-800 flex items-center justify-center">
+                                        <User className="w-5 h-5 text-slate-400" />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-sm font-black tracking-tight flex items-center gap-1.5 text-slate-900 dark:text-white truncate">
                                     {entry.name}
-                                    {entry.userId === userStats?.userId && <span className="text-[8px] bg-indigo-500 text-white px-1 rounded-sm uppercase">You</span>}
+                                    {entry.userId === userStats?.userId && <span className="shrink-0 text-[7px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest leading-none">You</span>}
                                 </span>
-                                <span className="text-[9px] font-bold text-slate-500 truncate max-w-[100px]">
+                                <span className="text-[10px] font-bold text-slate-500 truncate">
                                     {entry.school || 'Private Scholar'}
                                 </span>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <div className="flex flex-col items-end">
-                                <span className="text-xs font-black italic tracking-tighter text-indigo-600 dark:text-indigo-400">
-                                    {entry.score} <span className="text-[9px] text-slate-400 font-bold">/ {entry.maxScore}</span>
-                                </span>
-                                <span className="text-[8px] font-black text-emerald-500 uppercase tracking-tighter">
-                                    {entry.accuracy}% {Math.floor(entry.timeTaken / 60)}m
-                                </span>
+                        <div className="flex items-center gap-2">
+                            <div className="text-right pr-2">
+                                <div className="text-sm font-black italic tracking-tighter text-indigo-600 dark:text-indigo-400">
+                                    {entry.score} <span className="text-[10px] text-slate-400 font-bold">/ {entry.maxScore}</span>
+                                </div>
+                                <div className="text-[9px] font-black text-emerald-500 uppercase tracking-tighter flex items-center justify-end gap-1">
+                                    <span>{entry.accuracy}%</span>
+                                    <span className="opacity-40">•</span>
+                                    <span>{Math.floor(entry.timeTaken / 60)}m</span>
+                                </div>
                             </div>
+                            <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
                         </div>
-                    </div>
+                    </Link>
                 ))}
 
-                {/* Show current user if they aren't in Top 10 but have an attempt */}
-                {userStats && !isTop10 && (
-                    <div className="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-800">
-                        <div className="flex items-center justify-between p-3.5 bg-indigo-50/50 dark:bg-indigo-500/5 border-2 border-indigo-200 dark:border-indigo-500/30 rounded-2xl shadow-lg">
-                            <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-[10px] bg-indigo-600 text-white">
-                                    ??
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-xs font-black tracking-tight text-indigo-600 dark:text-indigo-400">Your Current Best</span>
-                                    <span className="text-[9px] font-bold text-slate-500 uppercase">Keep pushing to hit Top 10!</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="flex flex-col items-end">
-                                    <span className="text-xs font-black italic tracking-tighter text-indigo-600">
-                                        {userStats.score} <span className="text-[9px] text-slate-400 font-bold">/ {userStats.maxScore}</span>
-                                    </span>
-                                    <span className="text-[8px] font-black text-emerald-500 uppercase tracking-tighter">
-                                        {userStats.accuracy}% {Math.floor(userStats.timeTaken / 60)}m
-                                    </span>
+                {/* Personal Rank Section */}
+                {userStats && (
+                    <div className="mt-8 pt-6 border-t border-dashed border-slate-200 dark:border-slate-800">
+                        {!isTop10 && (
+                            <div className="mb-4">
+                                <div className="p-4 bg-indigo-900 text-white rounded-3xl shadow-xl shadow-indigo-500/10 flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center font-black">
+                                            #{userStats.rank || '??'}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-black italic uppercase">Current Standing</span>
+                                            <span className="text-[10px] opacity-70">Keep pushing for the Top 10!</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-lg font-black">{userStats.score} / {userStats.maxScore}</span>
+                                        <div className="text-[10px] font-bold opacity-60 uppercase">{userStats.accuracy}% Accuracy</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
+
+                        <Link 
+                            href="/stats" 
+                            className="w-full py-4 bg-white dark:bg-slate-900 border-2 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-3xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-indigo-50 dark:hover:bg-indigo-500/5 transition-all shadow-sm"
+                        >
+                            <BarChart3 className="w-4 h-4" />
+                            See Your Full Analytics
+                        </Link>
                     </div>
                 )}
             </div>
