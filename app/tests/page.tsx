@@ -16,9 +16,21 @@ const CHALLENGES = [
         color: 'from-indigo-600 to-indigo-800',
         glow: 'shadow-indigo-500/20',
         href: '/tests/class-9-hard'
-    }
-    // and room for future ones like 'science-sprint', 'math-marathon', etc.
+    },
+    {
+        id: 'english-grammar',
+        title: 'English Grammar Gauntlet',
+        description: '40 brutally hard grammar questions. One hour. Silence all doubts.',
+        questions: 40,
+        time: '60 Mins',
+        difficulty: 'Hard',
+        reward: 'Master the language',
+        color: 'from-emerald-600 to-teal-700',
+        glow: 'shadow-emerald-500/20',
+        href: '/tests/english-grammar'
+    },
 ];
+
 
 export default function TestsHubPage() {
     const router = useRouter();
