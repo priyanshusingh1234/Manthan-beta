@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ArrowLeft, 
-  MoreVertical, 
-  Send, 
-  Paperclip, 
+import {
+  ArrowLeft,
+  MoreVertical,
+  Send,
+  Paperclip,
   CheckCheck,
   Check,
   Loader2,
@@ -32,7 +32,7 @@ interface Message {
 
 interface Participant {
   user_id: string;
-  fullName: string;
+  full_name: string;
   avatar_url: string | null;
   username: string;
 }
@@ -40,7 +40,7 @@ interface Participant {
 export default function ChatRoomPage() {
   const router = useRouter();
   const { roomId } = useParams() as { roomId: string };
-  
+
   const [user, setUser] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,22 +61,22 @@ export default function ChatRoomPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return router.push('/login');
       setUser(user);
-      
+
       const { data: participants } = await supabase
         .from('chat_participants')
         .select('user_id')
         .eq('room_id', roomId)
         .neq('user_id', user.id);
-      
+
       const otherUserId = participants?.[0]?.user_id;
       if (otherUserId) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('fullName, avatar_url, username')
+          .select('full_name, avatar_url, username')
           .eq('id', otherUserId)
           .single();
-        
-        if (profile) setParticipant({ user_id: otherUserId, ...profile });
+
+        if (profile) setParticipant({ user_id: otherUserId, full_name: profile.full_name, avatar_url: profile.avatar_url, username: profile.username });
       }
 
       const { data: initialMessages } = await supabase
@@ -84,7 +84,7 @@ export default function ChatRoomPage() {
         .select('*')
         .eq('room_id', roomId)
         .order('created_at', { ascending: true });
-      
+
       setMessages(initialMessages || []);
       setLoading(false);
 
@@ -107,11 +107,11 @@ export default function ChatRoomPage() {
         async (payload) => {
           const msg = payload.new as Message;
           setMessages(prev => [...prev, msg]);
-          
+
           if (msg.sender_id !== user?.id) {
             scrollToBottom();
-            Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
-            
+            Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+
             // Mark as read if we are in the room viewing it
             await supabase.from('chat_messages').update({ is_read: true }).eq('id', msg.id);
           }
@@ -133,11 +133,11 @@ export default function ChatRoomPage() {
         setTimeout(() => scrollToBottom(), 50);
       });
       Keyboard.addListener('keyboardWillHide', () => setKeyboardHeight(0));
-    } catch (e) {}
+    } catch (e) { }
 
     return () => {
       supabase.removeChannel(channel);
-      try { Keyboard.removeAllListeners(); } catch(e) {}
+      try { Keyboard.removeAllListeners(); } catch (e) { }
     };
   }, [roomId, router, user?.id]);
 
@@ -150,7 +150,7 @@ export default function ChatRoomPage() {
     setSending(true);
 
     try {
-      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
       const { error } = await supabase
         .from('chat_messages')
         .insert({ room_id: roomId, sender_id: user.id, content, message_type: 'text' });
@@ -174,16 +174,16 @@ export default function ChatRoomPage() {
     <div className="flex flex-col h-[100dvh] bg-[#f0f2f5] dark:bg-[#0b141a] relative overflow-hidden">
       {/* Premium Wallpaper */}
       <div className="absolute inset-0 z-0 opacity-40 dark:opacity-[0.06] pointer-events-none mix-blend-overlay">
-         <Image src="https://i.pinimg.com/originals/97/c0/07/97c00754731d1136da3ca270d473465b.png" alt="pattern" fill className="object-cover opacity-50" />
+        <Image src="https://i.pinimg.com/originals/97/c0/07/97c00754731d1136da3ca270d473465b.png" alt="pattern" fill className="object-cover opacity-50" />
       </div>
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 px-2 py-2 flex items-center justify-between shadow-sm">
+      <header className="fixed top-0 lg:top-16 left-0 lg:left-64 right-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 px-2 py-2 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-1">
-          <button onClick={() => { Haptics.impact({ style: ImpactStyle.Light }).catch(()=>{}); router.push('/chat'); }} className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95">
+          <button onClick={() => { Haptics.impact({ style: ImpactStyle.Light }).catch(() => { }); router.push('/chat'); }} className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95">
             <ArrowLeft className="w-6 h-6 text-slate-700 dark:text-slate-300" strokeWidth={2.5} />
           </button>
-          
+
           <div onClick={() => router.push(`/user/${participant?.user_id}`)} className="flex items-center gap-3 cursor-pointer p-1 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <div className="relative">
               <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
@@ -199,7 +199,7 @@ export default function ChatRoomPage() {
             </div>
             <div>
               <h2 className="text-[16px] sm:text-[17px] font-bold text-slate-900 dark:text-white leading-tight tracking-tight">
-                {participant?.fullName || 'Scholar'}
+                {participant?.full_name || 'Scholar'}
               </h2>
               <p className="text-[12px] text-emerald-600 dark:text-emerald-400 font-semibold tracking-wide">
                 Online
@@ -216,22 +216,22 @@ export default function ChatRoomPage() {
             <Video className="w-5 h-5" />
           </button>
           <button className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
-             <MoreVertical className="w-5 h-5" />
+            <MoreVertical className="w-5 h-5" />
           </button>
         </div>
       </header>
 
       {/* Messages View */}
-      <div className="flex-1 overflow-y-auto px-4 pt-[88px] pb-4 z-10 custom-scrollbar relative">
+      <div className="flex-1 overflow-y-auto px-4 pt-[88px] lg:pt-[104px] pb-4 z-10 custom-scrollbar relative">
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
-             <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm border border-yellow-200 dark:border-yellow-900/50 max-w-[280px]">
-               🔒 Messages are securely processed. Start a battle of minds and connect.
-             </div>
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm border border-yellow-200 dark:border-yellow-900/50 max-w-[280px]">
+              🔒 Messages are securely processed. Start a battle of minds and connect.
+            </div>
           </div>
         ) : (
           <div className="space-y-4 max-w-3xl mx-auto">
@@ -239,7 +239,7 @@ export default function ChatRoomPage() {
               const isMe = msg.sender_id === user?.id;
               const prevMsg = messages[index - 1];
               const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
-              
+
               // To handle border radius smoothing (consecutive messages)
               const nextMsg = messages[index + 1];
               const isNextSame = nextMsg && nextMsg.sender_id === msg.sender_id && format(new Date(nextMsg.created_at), 'yyyy-MM-dd') === format(new Date(msg.created_at), 'yyyy-MM-dd');
@@ -255,26 +255,26 @@ export default function ChatRoomPage() {
                       </span>
                     </div>
                   )}
-                  
+
                   <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isNextSame ? 'mb-0.5' : 'mb-3'}`}>
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className={`
                         relative max-w-[85%] sm:max-w-[75%] px-3.5 py-2 group
-                        ${isMe 
-                          ? 'bg-gradient-to-tr from-blue-600 to-blue-500 text-white shadow-blue-500/20' 
+                        ${isMe
+                          ? 'bg-gradient-to-tr from-blue-600 to-blue-500 text-white shadow-blue-500/20'
                           : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700/50'
                         }
                         shadow-sm
-                        ${isMe 
-                          ? `rounded-l-[20px] ${!isPrevSame ? 'rounded-tr-[20px]' : 'rounded-tr-[8px]'} ${!isNextSame ? 'rounded-br-[20px]' : 'rounded-br-[8px]'}` 
+                        ${isMe
+                          ? `rounded-l-[20px] ${!isPrevSame ? 'rounded-tr-[20px]' : 'rounded-tr-[8px]'} ${!isNextSame ? 'rounded-br-[20px]' : 'rounded-br-[8px]'}`
                           : `rounded-r-[20px] ${!isPrevSame ? 'rounded-tl-[20px]' : 'rounded-tl-[8px]'} ${!isNextSame ? 'rounded-bl-[20px]' : 'rounded-bl-[8px]'}`
                         }
                       `}
                     >
                       <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
-                      
+
                       <div className={`flex items-center justify-end gap-1.5 mt-0.5 select-none`}>
                         <span className={`text-[10px] font-semibold ${isMe ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
                           {format(new Date(msg.created_at), 'HH:mm')}
@@ -296,8 +296,8 @@ export default function ChatRoomPage() {
       </div>
 
       {/* Input Overlay */}
-      <div 
-        className="bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-3xl px-2 py-2 sm:px-4 sm:py-3 z-50 flex items-end gap-2 border-t border-slate-200/50 dark:border-slate-800/50"
+      <div
+        className="bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-3xl px-2 py-2 sm:px-4 sm:py-3 z-50 flex items-end gap-2 border-t border-slate-200/50 dark:border-slate-800/50 fixed bottom-0 left-0 lg:left-64 right-0"
         style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: `max(env(safe-area-inset-bottom), 12px)` }}
       >
         <button className="p-3 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 active:scale-90 transition-transform mb-0.5">
@@ -305,7 +305,7 @@ export default function ChatRoomPage() {
         </button>
 
         <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 rounded-3xl min-h-[44px] flex items-center shadow-sm">
-          <textarea 
+          <textarea
             ref={inputRef}
             rows={1}
             placeholder="Type a message..."
@@ -325,13 +325,13 @@ export default function ChatRoomPage() {
           />
         </div>
 
-        <button 
+        <button
           onClick={handleSend}
           disabled={!newMessage.trim() || sending}
           className={`
             mb-0.5 p-3 sm:p-3.5 rounded-full shadow-lg active:scale-95 transition-all
-            ${newMessage.trim() 
-              ? 'bg-blue-600 text-white shadow-blue-600/30' 
+            ${newMessage.trim()
+              ? 'bg-blue-600 text-white shadow-blue-600/30'
               : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-300 dark:border-slate-700 shadow-none'}
           `}
         >

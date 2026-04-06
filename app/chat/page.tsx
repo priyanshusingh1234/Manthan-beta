@@ -22,7 +22,7 @@ interface ChatRoom {
   is_group: boolean;
   participant: {
     user_id: string;
-    fullName: string;
+    full_name: string;
     avatar_url: string | null;
   };
   last_message?: {
@@ -95,16 +95,16 @@ export default function ChatListPage() {
           .neq('user_id', userId);
 
         const otherUserId = otherParticipants?.[0]?.user_id;
-        let participantInfo = { fullName: 'Scholar', avatar_url: null };
+        let participantInfo = { full_name: 'Scholar', avatar_url: null as string | null };
 
         if (otherUserId) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('fullName, avatar_url')
+            .select('full_name, avatar_url')
             .eq('id', otherUserId)
             .single();
           
-          if (profile) participantInfo = profile;
+          if (profile) participantInfo = { full_name: profile.full_name, avatar_url: profile.avatar_url };
         }
 
         const { data: lastMessage } = await supabase
@@ -121,7 +121,8 @@ export default function ChatListPage() {
           is_group: room.is_group,
           participant: {
             user_id: otherUserId || '',
-            ...participantInfo
+            full_name: participantInfo.full_name,
+            avatar_url: participantInfo.avatar_url
           },
           last_message: lastMessage || undefined
         });
@@ -146,14 +147,14 @@ export default function ChatListPage() {
       
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, fullName, username, avatar_url')
+        .select('id, full_name, username, avatar_url')
         .in('id', followingIds)
         .limit(20);
       
       if (profiles) {
         setFollowing(profiles.map((p: any) => ({
           id: p.id,
-          name: p.fullName || 'Scholar',
+          name: p.full_name || 'Scholar',
           username: p.username || '',
           avatar: p.avatar_url
         })));
@@ -187,7 +188,12 @@ export default function ChatListPage() {
 
   const startChat = async (targetUserId: string) => {
     try {
-      if (!user?.id) return;
+      if (!user?.id) {
+        alert('You are not logged in. Please refresh or login again.');
+        return;
+      }
+      
+      // Start loading state would go here
       const response = await fetch('/api/chat/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -195,24 +201,28 @@ export default function ChatListPage() {
       });
       
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      if (!response.ok) throw new Error(data.error || 'Failed to initialize chat');
       
-      router.push(`/chat/${data.roomId}`);
+      if (data.roomId) {
+        router.push(`/chat/${data.roomId}`);
+      } else {
+        throw new Error('No roomId returned from server');
+      }
     } catch (err: any) {
       console.error('Error starting chat:', err);
-      alert('Error starting chat: ' + err.message);
+      alert('⚠️ Chat Error: ' + err.message);
     }
   };
 
   const filteredLocalRooms = useMemo(() => {
     if (!searchQuery) return rooms;
-    return rooms.filter(r => r.participant.fullName.toLowerCase().includes(searchQuery.toLowerCase()));
+    return rooms.filter(r => r.participant.full_name?.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [rooms, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
-      {/* Dynamic Header */}
-      <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-950/80 backdrop-blur-3xl border-b border-slate-200/50 dark:border-slate-800/50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 mt-4 lg:mt-0">
+      {/* Dynamic Header - Positioned below global header if desktop */}
+      <div className="sticky top-0 lg:top-[64px] z-30 bg-white/80 dark:bg-slate-950/80 backdrop-blur-3xl border-b border-slate-200/50 dark:border-slate-800/50">
         <div className="max-w-3xl mx-auto px-4 pt-6 pb-4">
           <div className="flex justify-between items-center mb-5">
             <h1 className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
@@ -293,7 +303,11 @@ export default function ChatListPage() {
               {searchResults.map((res: any, idx) => (
                 <button
                   key={res.id}
-                  onClick={() => startChat(res.id)}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    startChat(res.id);
+                  }}
                   className={`w-full flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group ${idx !== searchResults.length - 1 ? 'border-b border-slate-100 dark:border-slate-800' : ''}`}
                 >
                   <div className="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-800 relative overflow-hidden shrink-0">
@@ -363,10 +377,10 @@ function ChatCard({ room, onClick, user }: { room: ChatRoom; onClick: () => void
       <div className="relative">
         <div className="h-14 w-14 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 relative z-10">
           {room.participant.avatar_url ? (
-            <Image src={room.participant.avatar_url} alt={room.participant.fullName} fill className="object-cover" />
+            <Image src={room.participant.avatar_url} alt={room.participant.full_name} fill className="object-cover" />
           ) : (
             <div className="h-full w-full flex items-center justify-center font-bold text-slate-400 text-lg">
-              {room.participant.fullName[0].toUpperCase()}
+              {room.participant.full_name?.[0]?.toUpperCase() || 'U'}
             </div>
           )}
         </div>
@@ -376,7 +390,7 @@ function ChatCard({ room, onClick, user }: { room: ChatRoom; onClick: () => void
       <div className="flex-1 min-w-0 pr-2">
         <div className="flex items-center justify-between mb-1">
           <h3 className={`text-[16px] truncate pr-4 transition-colors ${isUnread ? 'font-black text-slate-900 dark:text-white' : 'font-bold text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
-            {room.participant.fullName}
+            {room.participant.full_name}
           </h3>
           {room.last_message && (
             <span className={`text-[11px] font-semibold tracking-wide shrink-0 ${isUnread ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`}>
@@ -389,11 +403,11 @@ function ChatCard({ room, onClick, user }: { room: ChatRoom; onClick: () => void
             {room.last_message ? room.last_message.content : 'Break the ice!'}
           </p>
 
-          {room.last_message?.sender_id === user?.id ? (
+          {room.last_message && room.last_message.sender_id === user?.id && (
             <div className={`shrink-0 ${room.last_message.is_read ? 'text-blue-500' : 'text-slate-400'}`}>
               <CheckCheck className="w-[18px] h-[18px]" strokeWidth={2.5} />
             </div>
-          ) : null}
+          )}
 
           {isUnread && (
             <div className="w-3 h-3 bg-blue-600 rounded-full shrink-0 shadow-lg shadow-blue-600/50" />
