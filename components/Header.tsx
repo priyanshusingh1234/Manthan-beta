@@ -213,11 +213,9 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
         {user && (
           <div className="mt-3 overflow-x-auto scrollbar-hide flex items-center gap-1.5 pb-1 snap-x">
             {[
-              { label: 'Feed', href: '/feed', icon: Compass },
               { label: 'Arena', href: '/tests', icon: Zap },
               { label: 'Search', href: '/search', icon: Search },
               { label: 'Community', href: '/posts', icon: MessageSquare },
-              { label: 'Ranks', href: '/leaderboard', icon: Trophy },
               { label: 'Top Schools', href: '/top-schools', icon: GraduationCap },
               { label: 'Checker', href: '/checker-feed', icon: Shield },
               { label: 'Solved', href: '/solved', icon: CheckSquare },
@@ -336,16 +334,6 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
 
                 {/* Desktop Icons */}
                 <div className="hidden lg:flex items-center gap-4">
-                  {user?.user_metadata?.isTeacher && (
-                    <Link
-                      href="/questions/create"
-                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 border border-white/30 rounded-xl text-white font-semibold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                    >
-                      <PlusCircle className="h-5 w-5" />
-                      <span>Post Question</span>
-                    </Link>
-                  )}
-
                   <div className="flex items-center gap-2">
                     <NotificationBell isMobile={false} />
                   </div>
