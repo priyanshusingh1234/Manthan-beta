@@ -198,8 +198,9 @@ export default function ChatListPage() {
       if (!response.ok) throw new Error(data.error);
       
       router.push(`/chat/${data.roomId}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error starting chat:', err);
+      alert('Error starting chat: ' + err.message);
     }
   };
 

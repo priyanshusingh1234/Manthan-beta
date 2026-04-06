@@ -43,9 +43,10 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Room doesn't exist, create it (bypassing RLS)
+        const roomId = crypto.randomUUID();
         const { data: newRoom, error: roomError } = await supabaseAdmin
             .from('chat_rooms')
-            .insert({ is_group: false, created_by: currentUserId })
+            .insert({ id: roomId, is_group: false, created_by: currentUserId })
             .select('id')
             .single();
 
@@ -55,8 +56,8 @@ export async function POST(req: NextRequest) {
         const { error: insertError } = await supabaseAdmin
             .from('chat_participants')
             .insert([
-                { room_id: newRoom.id, user_id: currentUserId },
-                { room_id: newRoom.id, user_id: targetUserId }
+                { id: crypto.randomUUID(), room_id: newRoom.id, user_id: currentUserId },
+                { id: crypto.randomUUID(), room_id: newRoom.id, user_id: targetUserId }
             ]);
 
         if (insertError) throw insertError;
