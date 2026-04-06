@@ -4,8 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Search, 
+import {
+  Search,
   X,
   Loader2,
   CheckCheck,
@@ -103,7 +103,7 @@ export default function ChatListPage() {
             .select('full_name, avatar_url')
             .eq('id', otherUserId)
             .single();
-          
+
           if (profile) participantInfo = { full_name: profile.full_name, avatar_url: profile.avatar_url };
         }
 
@@ -140,17 +140,17 @@ export default function ChatListPage() {
         .from('follows')
         .select('following_id')
         .eq('follower_id', userId);
-      
+
       if (!follows || follows.length === 0) return;
 
       const followingIds = follows.map((f: any) => f.following_id);
-      
+
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, username, avatar_url')
         .in('id', followingIds)
         .limit(20);
-      
+
       if (profiles) {
         setFollowing(profiles.map((p: any) => ({
           id: p.id,
@@ -186,14 +186,13 @@ export default function ChatListPage() {
     }
   };
 
-  const startChat = async (targetUserId: string) => {
+  const startChat = async (targetUserId: string, targetName?: string) => {
     try {
       if (!user?.id) {
         alert('You are not logged in. Please refresh or login again.');
         return;
       }
       
-      // Start loading state would go here
       const response = await fetch('/api/chat/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -204,7 +203,8 @@ export default function ChatListPage() {
       if (!response.ok) throw new Error(data.error || 'Failed to initialize chat');
       
       if (data.roomId) {
-        router.push(`/chat/${data.roomId}`);
+        // Pass name and avatar as hint to jumpstart the UI
+        router.push(`/chat/${data.roomId}?name=${encodeURIComponent(targetName || '')}`);
       } else {
         throw new Error('No roomId returned from server');
       }
@@ -220,10 +220,10 @@ export default function ChatListPage() {
   }, [rooms, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24 mt-4 lg:mt-0">
-      {/* Dynamic Header - Positioned below global header if desktop */}
-      <div className="sticky top-0 lg:top-[64px] z-30 bg-white/80 dark:bg-slate-950/80 backdrop-blur-3xl border-b border-slate-200/50 dark:border-slate-800/50">
-        <div className="max-w-3xl mx-auto px-4 pt-6 pb-4">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
+      {/* Dynamic Header - Adjusted for global layout */}
+      <div className="sticky top-0 lg:top-[64px] z-40 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50">
+        <div className="max-w-3xl mx-auto px-4 pt-4 sm:pt-6 pb-4">
           <div className="flex justify-between items-center mb-5">
             <h1 className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
               Messages
@@ -239,13 +239,13 @@ export default function ChatListPage() {
             </div>
             <input
               type="text"
-              className="block w-full pl-12 pr-10 py-3.5 bg-slate-100/80 dark:bg-slate-900/80 border border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500/50 dark:focus:border-blue-500/50 rounded-2xl text-[15px] font-medium text-slate-900 dark:text-white transition-all outline-none placeholder:text-slate-500 dark:placeholder:text-slate-500 shadow-sm"
+              className="block w-full pl-12 pr-10 py-3.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500/50 dark:focus:border-blue-500/50 rounded-2xl text-[15px] font-medium text-slate-900 dark:text-white transition-all outline-none placeholder:text-slate-500 shadow-sm"
               placeholder="Search chats or find scholars..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
             />
             {searchQuery && (
-              <button 
+              <button
                 onClick={() => handleSearch('')}
                 className="absolute inset-y-0 right-4 flex items-center text-slate-400 hover:text-slate-600"
               >
@@ -265,7 +265,7 @@ export default function ChatListPage() {
             </h2>
             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
               {following.map((fw) => (
-                <button 
+                <button
                   key={fw.id}
                   onClick={() => startChat(fw.id)}
                   className="flex flex-col items-center gap-2 min-w-[72px] snap-start group"
@@ -298,7 +298,7 @@ export default function ChatListPage() {
         ) : searchQuery && searchResults.length > 0 ? (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <h2 className="text-xs font-bold uppercase tracking-widest text-blue-500 ml-1">Global Matches</h2>
-            
+
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
               {searchResults.map((res: any, idx) => (
                 <button
@@ -306,7 +306,7 @@ export default function ChatListPage() {
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
-                    startChat(res.id);
+                    startChat(res.id, res.full_name);
                   }}
                   className={`w-full flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group ${idx !== searchResults.length - 1 ? 'border-b border-slate-100 dark:border-slate-800' : ''}`}
                 >
@@ -335,7 +335,7 @@ export default function ChatListPage() {
         {/* Local Chat List */}
         <div className="space-y-2">
           {!searchQuery && <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-4 ml-1">Recent Chats</h2>}
-          
+
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="animate-pulse bg-slate-100 dark:bg-slate-900 h-[88px] rounded-3xl mb-2" />
@@ -361,7 +361,7 @@ function ChatCard({ room, onClick, user }: { room: ChatRoom; onClick: () => void
   const isUnread = room.last_message && !room.last_message.is_read && room.last_message.sender_id !== user?.id;
 
   return (
-    <motion.button 
+    <motion.button
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -369,8 +369,8 @@ function ChatCard({ room, onClick, user }: { room: ChatRoom; onClick: () => void
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={`w-full flex items-center gap-4 p-4 rounded-3xl transition-all duration-200 group text-left
-        ${isUnread 
-          ? 'bg-white dark:bg-slate-900 shadow-md shadow-blue-900/5 ring-1 ring-blue-500/20' 
+        ${isUnread
+          ? 'bg-white dark:bg-slate-900 shadow-md shadow-blue-900/5 ring-1 ring-blue-500/20'
           : 'bg-transparent hover:bg-white dark:hover:bg-slate-900/80 hover:shadow-sm'
         }`}
     >

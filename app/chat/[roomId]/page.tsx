@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -38,8 +38,9 @@ interface Participant {
 }
 
 export default function ChatRoomPage() {
-  const router = useRouter();
   const { roomId } = useParams() as { roomId: string };
+  const searchParams = useSearchParams();
+  const initialName = searchParams.get('name');
 
   const [user, setUser] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -62,21 +63,43 @@ export default function ChatRoomPage() {
       if (!user) return router.push('/login');
       setUser(user);
 
-      const { data: participants } = await supabase
+      const { data: participants, error: pError } = await supabase
         .from('chat_participants')
         .select('user_id')
         .eq('room_id', roomId)
         .neq('user_id', user.id);
 
+      if (pError) console.error("Participant fetch error:", pError);
+
       const otherUserId = participants?.[0]?.user_id;
+
+      // Set initial state from query params to avoid "Scholar" flash
+      if (initialName && !participant) {
+        setParticipant({
+          user_id: otherUserId || '',
+          full_name: initialName,
+          avatar_url: null,
+          username: ''
+        });
+      }
+
       if (otherUserId) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('full_name, avatar_url, username')
           .eq('id', otherUserId)
           .single();
 
-        if (profile) setParticipant({ user_id: otherUserId, full_name: profile.full_name, avatar_url: profile.avatar_url, username: profile.username });
+        if (profileError) console.error("Profile fetch error:", profileError);
+
+        if (profile) {
+          setParticipant({
+            user_id: otherUserId,
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
+            username: profile.username
+          });
+        }
       }
 
       const { data: initialMessages } = await supabase
@@ -177,8 +200,10 @@ export default function ChatRoomPage() {
         <Image src="https://i.pinimg.com/originals/97/c0/07/97c00754731d1136da3ca270d473465b.png" alt="pattern" fill className="object-cover opacity-50" />
       </div>
 
-      {/* Header */}
-      <header className="fixed top-0 lg:top-16 left-0 lg:left-64 right-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 px-2 py-2 flex items-center justify-between shadow-sm">
+      {/* Header - Positioned below global headers */}
+      <header
+        className="fixed top-[64px] lg:top-[64px] left-0 lg:left-64 right-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 px-2 sm:px-4 py-2 flex items-center justify-between shadow-sm"
+      >
         <div className="flex items-center gap-1">
           <button onClick={() => { Haptics.impact({ style: ImpactStyle.Light }).catch(() => { }); router.push('/chat'); }} className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95">
             <ArrowLeft className="w-6 h-6 text-slate-700 dark:text-slate-300" strokeWidth={2.5} />
@@ -191,7 +216,8 @@ export default function ChatRoomPage() {
                   <Image src={participant.avatar_url} alt="User" fill className="object-cover" />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-slate-500 font-bold text-lg">
-                    {participant?.fullName?.[0]?.toUpperCase() || 'U'}
+                    {/* FIXED: changed fullName to full_name */}
+                    {participant?.full_name?.[0]?.toUpperCase() || 'U'}
                   </div>
                 )}
               </div>
@@ -221,8 +247,8 @@ export default function ChatRoomPage() {
         </div>
       </header>
 
-      {/* Messages View */}
-      <div className="flex-1 overflow-y-auto px-4 pt-[88px] lg:pt-[104px] pb-4 z-10 custom-scrollbar relative">
+      {/* Messages View - Adjusted top padding to sitting below our fixed header */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4 z-10 custom-scrollbar relative pt-[80px]">
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
@@ -240,7 +266,6 @@ export default function ChatRoomPage() {
               const prevMsg = messages[index - 1];
               const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
 
-              // To handle border radius smoothing (consecutive messages)
               const nextMsg = messages[index + 1];
               const isNextSame = nextMsg && nextMsg.sender_id === msg.sender_id && format(new Date(nextMsg.created_at), 'yyyy-MM-dd') === format(new Date(msg.created_at), 'yyyy-MM-dd');
               const isPrevSame = prevMsg && prevMsg.sender_id === msg.sender_id && !showDate;
