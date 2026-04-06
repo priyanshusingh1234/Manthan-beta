@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,14 +12,13 @@ import {
   CheckCheck,
   Check,
   Loader2,
-  Calendar,
-  X,
-  Plus
+  Phone,
+  Video
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Keyboard } from '@capacitor/keyboard';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 
 interface Message {
   id: string;
@@ -36,6 +34,7 @@ interface Participant {
   user_id: string;
   fullName: string;
   avatar_url: string | null;
+  username: string;
 }
 
 export default function ChatRoomPage() {
@@ -58,15 +57,11 @@ export default function ChatRoomPage() {
   };
 
   useEffect(() => {
-    const checkUserAndFetchRoom = async () => {
+    const initChat = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
+      if (!user) return router.push('/login');
       setUser(user);
       
-      // Fetch participant
       const { data: participants } = await supabase
         .from('chat_participants')
         .select('user_id')
@@ -77,68 +72,76 @@ export default function ChatRoomPage() {
       if (otherUserId) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('fullName, avatar_url')
+          .select('fullName, avatar_url, username')
           .eq('id', otherUserId)
           .single();
         
-        if (profile) {
-          setParticipant({ user_id: otherUserId, ...profile });
-        }
+        if (profile) setParticipant({ user_id: otherUserId, ...profile });
       }
 
-      // Fetch messages
-      const { data: initialMessages, error } = await supabase
+      const { data: initialMessages } = await supabase
         .from('chat_messages')
         .select('*')
         .eq('room_id', roomId)
         .order('created_at', { ascending: true });
       
-      if (error) console.error('Error fetching messages:', error);
-      else setMessages(initialMessages || []);
+      setMessages(initialMessages || []);
       setLoading(false);
+
+      // Mark unread as read
+      const unreadIds = (initialMessages || []).filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id);
+      if (unreadIds.length > 0) {
+        await supabase.from('chat_messages').update({ is_read: true }).in('id', unreadIds);
+      }
+
       setTimeout(() => scrollToBottom('auto'), 100);
     };
 
-    checkUserAndFetchRoom();
+    initChat();
 
-    // Subscribe to REALTIME messages
     const channel = supabase
       .channel(`room-${roomId}`)
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `room_id=eq.${roomId}`
-        },
-        (payload) => {
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` },
+        async (payload) => {
           const msg = payload.new as Message;
-          setMessages((prev) => [...prev, msg]);
+          setMessages(prev => [...prev, msg]);
+          
           if (msg.sender_id !== user?.id) {
             scrollToBottom();
-            Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+            Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+            
+            // Mark as read if we are in the room viewing it
+            await supabase.from('chat_messages').update({ is_read: true }).eq('id', msg.id);
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` },
+        (payload) => {
+          const updatedMsg = payload.new as Message;
+          setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
         }
       )
       .subscribe();
 
-    // Handle Keyboard for Mobile
-    Keyboard.addListener('keyboardWillShow', info => {
-      setKeyboardHeight(info.keyboardHeight);
-      setTimeout(() => scrollToBottom(), 50);
-    });
-    Keyboard.addListener('keyboardWillHide', () => {
-      setKeyboardHeight(0);
-    });
+    try {
+      Keyboard.addListener('keyboardWillShow', info => {
+        setKeyboardHeight(info.keyboardHeight);
+        setTimeout(() => scrollToBottom(), 50);
+      });
+      Keyboard.addListener('keyboardWillHide', () => setKeyboardHeight(0));
+    } catch (e) {}
 
     return () => {
       supabase.removeChannel(channel);
-      Keyboard.removeAllListeners();
+      try { Keyboard.removeAllListeners(); } catch(e) {}
     };
   }, [roomId, router, user?.id]);
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
+  const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!newMessage.trim() || !user || sending) return;
 
@@ -147,147 +150,161 @@ export default function ChatRoomPage() {
     setSending(true);
 
     try {
-      // Optimistic Update can go here, but Supabase Realtime is fast enough
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
       const { error } = await supabase
         .from('chat_messages')
-        .insert({
-          room_id: roomId,
-          sender_id: user.id,
-          content: content,
-          message_type: 'text'
-        });
-
+        .insert({ room_id: roomId, sender_id: user.id, content, message_type: 'text' });
       if (error) throw error;
-      
-      // Native Feedback
-      Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
       scrollToBottom();
     } catch (err) {
-      console.error('Error sending message:', err);
-      // Revert optimism or show error
+      console.error('Send error:', err);
     } finally {
       setSending(false);
     }
   };
 
-  const handleBack = () => {
-    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-    router.push('/chat');
+  const formatDateLabel = (dateStr: string) => {
+    const d = new Date(dateStr);
+    if (isToday(d)) return 'Today';
+    if (isYesterday(d)) return 'Yesterday';
+    return format(d, 'MMMM d, yyyy');
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#E5DDD5] dark:bg-slate-950/40 relative overflow-hidden">
-      {/* Background Pattern Wallpaper - WhatsApp feel */}
-      <div className="absolute inset-0 z-0 opacity-[0.05] pointer-events-none bg-[url('https://i.pinimg.com/originals/97/c0/07/97c00754731d1136da3ca270d473465b.png')] bg-repeat" />
+    <div className="flex flex-col h-[100dvh] bg-[#f0f2f5] dark:bg-[#0b141a] relative overflow-hidden">
+      {/* Premium Wallpaper */}
+      <div className="absolute inset-0 z-0 opacity-40 dark:opacity-[0.06] pointer-events-none mix-blend-overlay">
+         <Image src="https://i.pinimg.com/originals/97/c0/07/97c00754731d1136da3ca270d473465b.png" alt="pattern" fill className="object-cover opacity-50" />
+      </div>
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-[50] bg-white dark:bg-slate-900 shadow-sm flex items-center justify-between px-2 py-2.5 backdrop-blur-xl bg-opacity-95 dark:bg-opacity-95">
-        <div className="flex items-center gap-2">
-          <button onClick={handleBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
-            <ArrowLeft className="w-6 h-6 text-slate-700 dark:text-slate-300" />
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 px-2 py-2 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-1">
+          <button onClick={() => { Haptics.impact({ style: ImpactStyle.Light }).catch(()=>{}); router.push('/chat'); }} className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95">
+            <ArrowLeft className="w-6 h-6 text-slate-700 dark:text-slate-300" strokeWidth={2.5} />
           </button>
           
-          <div 
-            onClick={() => router.push(`/user/${participant?.user_id}`)}
-            className="flex items-center gap-3 cursor-pointer"
-          >
-            <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
-              {participant?.avatar_url ? (
-                <Image src={participant.avatar_url} alt="User" width={40} height={40} className="object-cover" />
-              ) : (
-                <div className="h-full w-full bg-blue-100 dark:bg-slate-800 flex items-center justify-center text-blue-600 dark:text-slate-400 font-bold">
-                  {participant?.fullName?.[0]?.toUpperCase() || 'U'}
-                </div>
-              )}
+          <div onClick={() => router.push(`/user/${participant?.user_id}`)} className="flex items-center gap-3 cursor-pointer p-1 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <div className="relative">
+              <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                {participant?.avatar_url ? (
+                  <Image src={participant.avatar_url} alt="User" fill className="object-cover" />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-slate-500 font-bold text-lg">
+                    {participant?.fullName?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                )}
+              </div>
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white leading-none mb-0.5">{participant?.fullName || 'Chatting...'}</h2>
-              <p className="text-[11px] text-emerald-500 font-bold flex items-center gap-1 uppercase tracking-widest">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <h2 className="text-[16px] sm:text-[17px] font-bold text-slate-900 dark:text-white leading-tight tracking-tight">
+                {participant?.fullName || 'Scholar'}
+              </h2>
+              <p className="text-[12px] text-emerald-600 dark:text-emerald-400 font-semibold tracking-wide">
                 Online
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center">
-          <button className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full">
-             <MoreVertical className="w-5 h-5 text-slate-500" />
+        <div className="flex items-center space-x-1">
+          <button className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+            <Phone className="w-5 h-5" />
+          </button>
+          <button className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hidden sm:block">
+            <Video className="w-5 h-5" />
+          </button>
+          <button className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+             <MoreVertical className="w-5 h-5" />
           </button>
         </div>
       </header>
 
-      {/* Messages List */}
-      <div className="flex-1 overflow-y-auto pt-20 pb-2 z-10 px-4 space-y-3 custom-scrollbar scroll-smooth">
+      {/* Messages View */}
+      <div className="flex-1 overflow-y-auto px-4 pt-[88px] pb-4 z-10 custom-scrollbar relative">
         {loading ? (
-          <div className="flex justify-center p-10 h-full items-center">
-            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+          <div className="flex justify-center items-center h-full">
+            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="text-center py-20 flex flex-col items-center">
-             <div className="px-6 py-4 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-white/20 shadow-sm max-w-[280px]">
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                  Messages are end-to-end encrypted on Dheeyudha. Start a safe conversation.
-                </p>
+          <div className="flex flex-col items-center justify-center h-full text-center px-4">
+             <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm border border-yellow-200 dark:border-yellow-900/50 max-w-[280px]">
+               🔒 Messages are securely processed. Start a battle of minds and connect.
              </div>
           </div>
         ) : (
-          messages.map((msg, index) => {
-            const isMe = msg.sender_id === user?.id;
-            const prevMsg = messages[index - 1];
-            const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
-            
-            return (
-              <React.Fragment key={msg.id}>
-                {showDate && (
-                  <div className="flex justify-center my-4">
-                    <span className="px-3 py-1 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest border border-white/10 shadow-sm">
-                      {format(new Date(msg.created_at), 'MMMM dd, yyyy')}
-                    </span>
-                  </div>
-                )}
-                
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`
-                    max-w-[85%] px-3.5 py-2.5 rounded-2xl shadow-sm relative group
-                    ${isMe 
-                      ? 'bg-blue-600 text-white rounded-br-none' 
-                      : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-bl-none border border-slate-100/50 dark:border-slate-800/80'}
-                  `}>
-                    <p className="text-[15px] leading-relaxed break-words">{msg.content}</p>
-                    <div className="flex items-center justify-end gap-1.5 mt-1">
-                      <span className={`text-[10px] font-medium opacity-60 ${isMe ? 'text-blue-50' : 'text-slate-400'}`}>
-                        {format(new Date(msg.created_at), 'HH:mm')}
+          <div className="space-y-4 max-w-3xl mx-auto">
+            {messages.map((msg, index) => {
+              const isMe = msg.sender_id === user?.id;
+              const prevMsg = messages[index - 1];
+              const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
+              
+              // To handle border radius smoothing (consecutive messages)
+              const nextMsg = messages[index + 1];
+              const isNextSame = nextMsg && nextMsg.sender_id === msg.sender_id && format(new Date(nextMsg.created_at), 'yyyy-MM-dd') === format(new Date(msg.created_at), 'yyyy-MM-dd');
+              const isPrevSame = prevMsg && prevMsg.sender_id === msg.sender_id && !showDate;
+
+              return (
+                <div key={msg.id} className="w-full flex flex-col">
+                  {/* Date Pill */}
+                  {showDate && (
+                    <div className="flex justify-center my-5">
+                      <span className="px-4 py-1.5 bg-slate-900/5 dark:bg-white/5 backdrop-blur-md rounded-full text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest shadow-sm">
+                        {formatDateLabel(msg.created_at)}
                       </span>
-                      {isMe && (
-                        <span className="text-blue-100">
-                          {msg.is_read ? <CheckCheck size={14} className="text-blue-50" /> : <Check size={14} className="opacity-60" />}
-                        </span>
-                      )}
                     </div>
+                  )}
+                  
+                  <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isNextSame ? 'mb-0.5' : 'mb-3'}`}>
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className={`
+                        relative max-w-[85%] sm:max-w-[75%] px-3.5 py-2 group
+                        ${isMe 
+                          ? 'bg-gradient-to-tr from-blue-600 to-blue-500 text-white shadow-blue-500/20' 
+                          : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700/50'
+                        }
+                        shadow-sm
+                        ${isMe 
+                          ? `rounded-l-[20px] ${!isPrevSame ? 'rounded-tr-[20px]' : 'rounded-tr-[8px]'} ${!isNextSame ? 'rounded-br-[20px]' : 'rounded-br-[8px]'}` 
+                          : `rounded-r-[20px] ${!isPrevSame ? 'rounded-tl-[20px]' : 'rounded-tl-[8px]'} ${!isNextSame ? 'rounded-bl-[20px]' : 'rounded-bl-[8px]'}`
+                        }
+                      `}
+                    >
+                      <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
+                      
+                      <div className={`flex items-center justify-end gap-1.5 mt-0.5 select-none`}>
+                        <span className={`text-[10px] font-semibold ${isMe ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                          {format(new Date(msg.created_at), 'HH:mm')}
+                        </span>
+                        {isMe && (
+                          <span className={`flex translate-y-[1px]`}>
+                            <CheckCheck className={`w-3.5 h-3.5 ${msg.is_read ? 'text-blue-200' : 'text-blue-300 opacity-70'}`} strokeWidth={3} />
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
                   </div>
-                </motion.div>
-              </React.Fragment>
-            );
-          })
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} className="h-2" />
+          </div>
         )}
-        <div ref={messagesEndRef} className="h-4" />
       </div>
 
-      {/* Input Bar */}
+      {/* Input Overlay */}
       <div 
-        className="fixed bottom-0 left-0 right-0 z-[60] bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 p-3 flex items-end gap-3 transition-all duration-200"
-        style={{ transform: `translateY(-${keyboardHeight}px)` }}
+        className="bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-3xl px-2 py-2 sm:px-4 sm:py-3 z-50 flex items-end gap-2 border-t border-slate-200/50 dark:border-slate-800/50"
+        style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: `max(env(safe-area-inset-bottom), 12px)` }}
       >
-        <button className="p-3 bg-slate-50 dark:bg-slate-800 rounded-full text-slate-500 hover:text-blue-600 active:scale-95 transition-all">
-          <Paperclip className="w-6 h-6" />
+        <button className="p-3 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 active:scale-90 transition-transform mb-0.5">
+          <Paperclip className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.2} />
         </button>
 
-        <div className="flex-1 min-h-[44px] bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100/50 dark:border-slate-700/50 px-4 py-2 flex items-center">
+        <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 rounded-3xl min-h-[44px] flex items-center shadow-sm">
           <textarea 
             ref={inputRef}
             rows={1}
@@ -296,34 +313,33 @@ export default function ChatRoomPage() {
             onChange={(e) => {
               setNewMessage(e.target.value);
               e.target.style.height = 'auto';
-              e.target.style.height = `${e.target.scrollHeight}px`;
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                handleSendMessage();
+                handleSend();
               }
             }}
-            className="w-full bg-transparent border-none outline-none text-[15px] text-slate-800 dark:text-slate-200 resize-none max-h-32 py-1 scrollbar-hide"
+            className="w-full bg-transparent border-none outline-none text-[15px] sm:text-base text-slate-800 dark:text-slate-100 resize-none py-3 px-4 max-h-[120px] custom-scrollbar placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
         </div>
 
         <button 
-          onClick={() => handleSendMessage()}
+          onClick={handleSend}
           disabled={!newMessage.trim() || sending}
           className={`
-            p-3.5 rounded-full shadow-lg transition-all active:scale-90
+            mb-0.5 p-3 sm:p-3.5 rounded-full shadow-lg active:scale-95 transition-all
             ${newMessage.trim() 
-              ? 'bg-blue-600 text-white shadow-blue-500/40' 
-              : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'}
+              ? 'bg-blue-600 text-white shadow-blue-600/30' 
+              : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-300 dark:border-slate-700 shadow-none'}
           `}
         >
-          {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+          {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 sm:w-[22px] sm:h-[22px]" style={{ transform: 'translate(1px, -1px)' }} />}
         </button>
       </div>
 
-      {/* Background Overlay for Keyboard */}
-      {keyboardHeight > 0 && <div className="fixed inset-0 z-40 bg-transparent" onClick={() => Keyboard.hide()} />}
+      {keyboardHeight > 0 && <div className="absolute inset-0 z-40 bg-transparent" onClick={() => Keyboard.hide()} />}
     </div>
   );
 }
