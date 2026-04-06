@@ -46,6 +46,9 @@ export default function PostCard({
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true }).replace('about ', '').replace('less than ', '');
     const isOwner = Boolean(currentUserId && post.author?.id === currentUserId);
 
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [isPinning, setIsPinning] = useState(false);
+
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
@@ -54,6 +57,15 @@ export default function PostCard({
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data }) => {
+            const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim());
+            if (data?.user?.email && adminEmails.includes(data.user.email)) {
+                setIsAdmin(true);
+            }
+        });
     }, []);
 
     useEffect(() => {
@@ -198,6 +210,29 @@ export default function PostCard({
         } finally { setDeletingPost(false); }
     };
 
+    const handlePinPost = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isAdmin || isPinning) return;
+        setIsPinning(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const action = post.is_pinned ? 'unpin' : 'pin';
+            const res = await fetch(`/api/posts/${post.id}/pin`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({ action })
+            });
+            if (res.ok) {
+                onUpdate?.();
+                alert(action === 'pin' ? 'Post Pinned!' : 'Post Unpinned!');
+                setShowMenu(false);
+            }
+        } finally { setIsPinning(false); }
+    };
+
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newComment.trim() || isSubmitting || !currentUserId) return;
@@ -247,6 +282,13 @@ export default function PostCard({
 
                 {/* Right: Content Column */}
                 <div className="flex-1 min-w-0 pb-1">
+                    {/* Admin Pinned Ribbon */}
+                    {post.is_pinned && !isSinglePost && (
+                        <div className="flex items-center gap-1.5 text-slate-500 font-bold text-xs uppercase tracking-widest mb-2">
+                            <span className="text-[10px]">📌</span> Pinned by Admin
+                        </div>
+                    )}
+                    
                     {/* Post Header */}
                     <div className="flex items-center justify-between gap-1 mb-0.5">
                         <div className="flex items-center gap-1 min-w-0 flex-nowrap">
@@ -269,7 +311,7 @@ export default function PostCard({
                             </Link>
                         </div>
 
-                        {isOwner && (
+                        {(isOwner || isAdmin) && (
                             <div className="relative">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
@@ -279,14 +321,26 @@ export default function PostCard({
                                 </button>
                                 {showMenu && (
                                     <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-100">
-                                        <button
-                                            onClick={handleDeletePost}
-                                            disabled={deletingPost}
-                                            className="w-full px-4 py-3 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/10 flex items-center gap-2 transition-colors disabled:opacity-50"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                            {deletingPost ? 'Removing...' : 'Delete Content'}
-                                        </button>
+                                        {(isOwner || isAdmin) && (
+                                            <button
+                                                onClick={handleDeletePost}
+                                                disabled={deletingPost}
+                                                className="w-full px-4 py-3 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/10 flex items-center gap-2 transition-colors disabled:opacity-50"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                                {deletingPost ? 'Removing...' : 'Delete Content'}
+                                            </button>
+                                        )}
+                                        {isAdmin && (
+                                            <button
+                                                onClick={handlePinPost}
+                                                disabled={isPinning}
+                                                className="w-full px-4 py-3 text-left text-sm font-bold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 flex items-center gap-2 transition-colors disabled:opacity-50 border-t border-slate-100 dark:border-slate-800"
+                                            >
+                                                <span className="text-[14px]">📌</span>
+                                                {isPinning ? 'Processing...' : post.is_pinned ? 'Unpin Post' : 'Pin Post Globally'}
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>

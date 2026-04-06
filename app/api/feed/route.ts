@@ -60,14 +60,23 @@ function normalizeQuestion(
 
 function normalizePost(p: any, profilesMap: Map<string, any>, currentUserId: string | null) {
     const profile = profilesMap.get(p.author_id);
+    let finalContent = p.content || '';
+    let isPinned = false;
+
+    if (finalContent.startsWith('[PINNED]')) {
+        isPinned = true;
+        finalContent = finalContent.substring(8).trim();
+    }
+
     return {
         id: p.id,
         type: 'post',
-        content: p.content,
+        content: finalContent,
         image_url: p.image_url,
         likes_count: p.likes_count || 0,
         comments_count: p.comments_count || 0,
         created_at: p.created_at,
+        is_pinned: isPinned,
         is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
         author: {
             id: p.author_id,
@@ -77,9 +86,9 @@ function normalizePost(p: any, profilesMap: Map<string, any>, currentUserId: str
             school: profile?.school || null,
             isTeacher: profile?.is_teacher || false,
         },
-        _feedLabel: '📣 Community Update',
-        _feedScore: 75,
-        _layer: 7
+        _feedLabel: isPinned ? '📌 Pinned by Admin' : '📣 Community Update',
+        _feedScore: isPinned ? 200 : 75,
+        _layer: isPinned ? 10 : 7
     };
 }
 
@@ -435,26 +444,40 @@ export async function GET(req: NextRequest) {
         // LAYER 7 (Community Posts): ONLY if no subject filter is active
         if (!subject) {
             let postPool: any[] = [];
+            
+            // 1. Explicitly fetch globally Pinned posts first to ensure they don't fall off the 30 post limit
+            const { data: globalPinnedRaw } = await supabaseAdmin
+                .from('posts')
+                .select('*, post_likes(user_id)')
+                .ilike('content', '[PINNED]%')
+                .order('created_at', { ascending: false })
+                .limit(3);
+
+            // 2. Fetch standard recent posts
             const { data: rawPosts } = await supabaseAdmin
                 .from('posts')
                 .select('*, post_likes(user_id)')
                 .order('created_at', { ascending: false })
                 .limit(30);
 
-            if (rawPosts && rawPosts.length > 0) {
-                const postAuthorIds = [...new Set(rawPosts.map(p => p.author_id))];
+            // Combine and dedupe
+            const allRawPosts = [...(globalPinnedRaw || []), ...(rawPosts || [])];
+            const uniqueRawPostsResult = Array.from(new Map(allRawPosts.map(item => [item.id, item])).values());
+
+            if (uniqueRawPostsResult && uniqueRawPostsResult.length > 0) {
+                const postAuthorIds = [...new Set(uniqueRawPostsResult.map(p => p.author_id))];
                 const profilesMap = await getProfilesMap(postAuthorIds);
                 
-                rawPosts.forEach(p => {
+                uniqueRawPostsResult.forEach(p => {
+                    const norm = normalizePost(p, profilesMap, userId);
                     const isFollowed = followingIds.includes(p.author_id);
                     const isSchoolmate = userSchoolName && profilesMap.get(p.author_id)?.school === userSchoolName;
                     
-                    if (isFollowed || isSchoolmate || (p.likes_count || 0) > 5) {
-                        const norm = normalizePost(p, profilesMap, userId);
-                        if (isFollowed) { 
+                    if (norm.is_pinned || isFollowed || isSchoolmate || (p.likes_count || 0) > 5) {
+                        if (isFollowed && !norm.is_pinned) { 
                             norm._feedLabel = '👤 Post from Peer You Follow'; 
                             norm._feedScore = 95; 
-                        } else if (isSchoolmate) { 
+                        } else if (isSchoolmate && !norm.is_pinned) { 
                             norm._feedLabel = '🏫 Trending at Your School'; 
                             norm._feedScore = 85; 
                         }
