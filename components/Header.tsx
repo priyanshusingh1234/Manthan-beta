@@ -162,6 +162,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
     if (pathname.startsWith('/docs')) return { title: 'Documentation', icon: HelpCircle };
     if (pathname.startsWith('/privacy')) return { title: 'Privacy Policy', icon: Shield };
     if (pathname.startsWith('/notifications')) return { title: 'Notifications', icon: Bell };
+    if (pathname.startsWith('/chat')) return { title: 'Messages', icon: MessageSquare };
     return null;
   };
 
@@ -213,9 +214,11 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
         {user && (
           <div className="mt-3 overflow-x-auto scrollbar-hide flex items-center gap-1.5 pb-1 snap-x">
             {[
+              { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
               { label: 'Arena', href: '/tests', icon: Zap },
               { label: 'Search', href: '/search', icon: Search },
               { label: 'Community', href: '/posts', icon: MessageSquare },
+              { label: 'Chat', href: '/chat', icon: MessageSquare },
               { label: 'Top Schools', href: '/top-schools', icon: GraduationCap },
               { label: 'Checker', href: '/checker-feed', icon: Shield },
               { label: 'Solved', href: '/solved', icon: CheckSquare },
