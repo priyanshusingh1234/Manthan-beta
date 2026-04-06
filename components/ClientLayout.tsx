@@ -81,7 +81,7 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       const path = normalizeInAppPath(rawUrl);
       if (path) {
         // Persist across cold-start: if navigate fails (too early), session storage will pick it up
-        try { sessionStorage.setItem('pendingNotifNav', path); } catch {}
+        try { sessionStorage.setItem('pendingNotifNav', path); } catch { }
         safeNavigate(path, navigate);
       }
     };
@@ -94,7 +94,7 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
         // Slight delay so router is ready
         setTimeout(() => safeNavigate(pending, navigate), 500);
       }
-    } catch {}
+    } catch { }
 
     // ── Register listeners BEFORE calling register() so no events are missed ──
     await PushNotifications.addListener('registration', async (token) => {
