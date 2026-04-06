@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X, BarChart2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
@@ -319,7 +319,7 @@ export default function PostCard({
                     )}
 
                     {/* Post Actions */}
-                    <div className="flex items-center justify-between max-w-[425px] -ml-2 text-slate-500">
+                    <div className="flex items-center justify-between max-w-[320px] -ml-2 text-slate-500">
                         {/* Reply */}
                         <button
                             onClick={toggleComments}
@@ -331,14 +331,6 @@ export default function PostCard({
                             <span className="text-[13px] font-medium tracking-tight">{commentsCount > 0 ? commentsCount : ''}</span>
                         </button>
 
-                        {/* Repost */}
-                        <button className="group flex items-center gap-1.5 sm:gap-2 pr-4 transition-colors hover:text-emerald-500">
-                           <div className="p-2 rounded-full group-hover:bg-emerald-500/10 transition-all">
-                                <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] fill-current" aria-hidden="true"><g><path d="M4.5 3.88l4.432 4.43-1.414 1.414L4.5 6.71v8.79c0 1.38 1.12 2.5 2.5 2.5h10v2H7c-2.485 0-4.5-2.015-4.5-4.5V6.71l-3.018 3.018-1.414-1.414L4.5 3.88zM19.5 20.12l-4.432-4.43 1.414-1.414 3.018 3.018V8.41c0-1.38-1.12-2.5-2.5-2.5H7v-2h10c2.485 0 4.5 2.015 4.5 4.5v8.79l3.018-3.018 1.414 1.414-4.432 4.432z"></path></g></svg>
-                           </div>
-                           <span className="text-[13px] font-medium tracking-tight"></span>
-                        </button>
-
                         {/* Like */}
                         <button
                             onClick={handleLike}
@@ -348,14 +340,6 @@ export default function PostCard({
                                 <Heart className={`w-[18px] h-[18px] ${isLiked ? 'fill-current' : ''}`} />
                             </div>
                             <span className={`text-[13px] font-medium tracking-tight ${isLiked ? 'text-rose-500' : ''}`}>{likesCount > 0 ? likesCount : ''}</span>
-                        </button>
-
-                        {/* Analytics */}
-                        <button className="group flex items-center gap-1.5 sm:gap-2 pr-4 transition-colors hover:text-sky-500">
-                           <div className="p-2 rounded-full group-hover:bg-sky-500/10 transition-all">
-                                <BarChart2 className="w-[18px] h-[18px]" />
-                           </div>
-                           <span className="text-[13px] font-medium tracking-tight">{post.views_count || Math.floor(Math.random() * 500) + 124}</span>
                         </button>
 
                         {/* Share */}

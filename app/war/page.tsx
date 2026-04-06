@@ -23,6 +23,7 @@ export default function WarLobbyDynamic() {
   const [selectedWarMemberIds, setSelectedWarMemberIds] = useState<string[]>([]);
   const teamSizeOptions = [5, 10, 15, 20, 25, 30];
   const [nowMs, setNowMs] = useState(Date.now());
+  const [hasNoSchool, setHasNoSchool] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -111,6 +112,7 @@ export default function WarLobbyDynamic() {
       });
       const json = await res.json();
       if (res.ok) {
+        setHasNoSchool(false);
         setSchoolData(json.school);
         const { data: { user } } = await supabase.auth.getUser();
         setIsGeneral(json.squad?.general_id === user?.id);
@@ -124,6 +126,9 @@ export default function WarLobbyDynamic() {
         setRoster(json.members || []);
         setGlobalStandings(json.globalStandings || []);
       } else {
+        if (res.status === 400 && (json.error === 'No school assigned' || json.error === 'School not found in database')) {
+          setHasNoSchool(true);
+        }
         console.error("Failed to load squad:", json.error);
       }
     } catch (e) {
@@ -230,6 +235,52 @@ export default function WarLobbyDynamic() {
                 <h1 className="text-3xl font-black mb-2 text-red-600 dark:text-red-500">RESTRICTED ACCESS</h1>
                 <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm">You must log in to access the War Room.</p>
                 <Link href="/login" className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-indigo-500 transition-all">Log in</Link>
+            </div>
+        );
+    }
+
+    if (hasNoSchool) {
+        return (
+            <div className="min-h-[100svh] bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+                {/* Background effects */}
+                <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
+                <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full" />
+                <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-pink-500/10 blur-[120px] rounded-full" />
+
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative z-10 max-w-md w-full bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border border-white/20 dark:border-slate-800/30 p-10 rounded-[3rem] shadow-2xl"
+                >
+                    <div className="w-24 h-24 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-indigo-500/30 rotate-3 group hover:rotate-0 transition-transform">
+                        <ShieldAlert className="w-12 h-12 text-white" />
+                    </div>
+
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-4 tracking-tighter uppercase">
+                        Neutral Territory
+                    </h1>
+                    
+                    <p className="text-slate-500 dark:text-slate-400 font-medium mb-10 leading-relaxed">
+                        The War Room is reserved for schools. You must list your faction before you can scout rivals or declare conflict.
+                    </p>
+
+                    <div className="space-y-4">
+                        <Link 
+                            href="/profile" 
+                            className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 px-6 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all transform hover:-translate-y-1 active:scale-95"
+                        >
+                            ENLIST IN A SCHOOL
+                        </Link>
+                        
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800/50 py-2 rounded-lg">
+                            REQUIRES VALID SCHOOL ASSIGNMENT
+                        </p>
+                    </div>
+                </motion.div>
+                
+                <Link href="/feed" className="mt-8 text-sm font-bold text-slate-500 hover:text-indigo-500 transition-colors flex items-center gap-2">
+                    ← Return to safety
+                </Link>
             </div>
         );
     }
