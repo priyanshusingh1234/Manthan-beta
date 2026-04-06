@@ -157,10 +157,16 @@ function ArenaPage({ params }: { params: { id: string } }) {
                 setTimeLeft(found.time_minutes * 60);
 
                 const { supabase } = await import('@/lib/supabaseClient');
-                const { data: { session } } = await supabase.auth.getSession();
+
+                // Use refreshSession() so Capacitor restores token from device storage
+                // before we check — getSession() alone can return null on cold start
+                let session = (await supabase.auth.getSession()).data.session;
+                if (!session) {
+                    const { data: refreshed } = await supabase.auth.refreshSession();
+                    session = refreshed.session;
+                }
 
                 if (viewOnly) {
-                    // Fetch their stored result for breakdown
                     if (session) {
                         const res = await fetch(`/api/test/results?testId=${found.slug}`, {
                             headers: { 'Authorization': `Bearer ${session.access_token}` }
@@ -177,24 +183,27 @@ function ArenaPage({ params }: { params: { id: string } }) {
                     return;
                 }
 
-                // ── Check for existing submission FIRST (before loading questions) ──
-                if (session) {
-                    const res = await fetch(`/api/test/results?testId=${found.slug}`, {
-                        headers: { 'Authorization': `Bearer ${session.access_token}` }
-                    });
-                    const d = await res.json();
-                    if (d.hasSubmission) {
-                        if (d.summary) {
-                            setDbResult(d.summary);
-                            const snap: AttemptSnapshot[] = d.summary.metadata?.answers_snapshot || [];
-                            setSnapshot(snap);
-                            setCorrectCount(snap.filter((s: AttemptSnapshot) => s.isCorrect).length);
-                            setTimeTaken(d.summary.time_taken || 0);
-                        }
-                        setIsSubmitted(true);
-                        setLoading(false);
-                        return;
+                // ── ALWAYS check for existing submission before loading questions ──
+                // If no session, show login prompt — no anonymous attempts allowed
+                if (!session) {
+                    throw new Error('You must be logged in to take a Gauntlet.');
+                }
+
+                const subRes = await fetch(`/api/test/results?testId=${found.slug}`, {
+                    headers: { 'Authorization': `Bearer ${session.access_token}` }
+                });
+                const subData = await subRes.json();
+                if (subData.hasSubmission) {
+                    if (subData.summary) {
+                        setDbResult(subData.summary);
+                        const snap: AttemptSnapshot[] = subData.summary.metadata?.answers_snapshot || [];
+                        setSnapshot(snap);
+                        setCorrectCount(snap.filter((s: AttemptSnapshot) => s.isCorrect).length);
+                        setTimeTaken(subData.summary.time_taken || 0);
                     }
+                    setIsSubmitted(true);
+                    setLoading(false);
+                    return;
                 }
 
                 // Fresh attempt — load questions (custom or from DB)
