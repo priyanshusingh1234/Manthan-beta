@@ -177,6 +177,13 @@ function ArenaPage({ params }: { params: { id: string } }) {
                     return;
                 }
 
+                // If gauntlet has custom questions, use them directly
+                if (found.custom_questions && Array.isArray(found.custom_questions) && found.custom_questions.length > 0) {
+                    setQuestions(found.custom_questions);
+                    setLoading(false);
+                    return;
+                }
+
                 // Check for existing submission
                 if (session) {
                     const res = await fetch(`/api/test/results?testId=${found.slug}`, {
