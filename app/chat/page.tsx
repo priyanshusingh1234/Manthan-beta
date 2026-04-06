@@ -187,49 +187,17 @@ export default function ChatListPage() {
 
   const startChat = async (targetUserId: string) => {
     try {
-      const { data: myParticipants } = await supabase
-        .from('chat_participants')
-        .select('room_id')
-        .eq('user_id', user.id);
+      if (!user?.id) return;
+      const response = await fetch('/api/chat/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId, currentUserId: user.id })
+      });
       
-      const myRoomIds = myParticipants?.map((p: any) => p.room_id) || [];
-
-      if (myRoomIds.length > 0) {
-        const { data: commonRooms } = await supabase
-          .from('chat_participants')
-          .select('room_id')
-          .in('room_id', myRoomIds)
-          .eq('user_id', targetUserId);
-        
-        if (commonRooms && commonRooms.length > 0) {
-          for (const cr of commonRooms) {
-            const { count } = await supabase
-              .from('chat_participants')
-              .select('*', { count: 'exact', head: true })
-              .eq('room_id', cr.room_id);
-            
-            if (count === 2) {
-              router.push(`/chat/${cr.room_id}`);
-              return;
-            }
-          }
-        }
-      }
-
-      const { data: newRoom, error: roomError } = await supabase
-        .from('chat_rooms')
-        .insert({ is_group: false })
-        .select()
-        .single();
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
       
-      if (roomError) throw roomError;
-
-      await supabase.from('chat_participants').insert([
-        { room_id: newRoom.id, user_id: user.id },
-        { room_id: newRoom.id, user_id: targetUserId }
-      ]);
-
-      router.push(`/chat/${newRoom.id}`);
+      router.push(`/chat/${data.roomId}`);
     } catch (err) {
       console.error('Error starting chat:', err);
     }
