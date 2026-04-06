@@ -49,9 +49,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             .eq('id', post.author_id)
             .maybeSingle();
 
+        let finalContent = post.content || '';
+        let isPinned = false;
+        if (finalContent.startsWith('[PINNED]')) {
+            isPinned = true;
+            finalContent = finalContent.substring(8).trim();
+        }
+
         const enriched = {
             id: post.id,
-            content: post.content,
+            content: finalContent,
+            is_pinned: isPinned,
             image_url: post.image_url,
             likes_count: post.likes_count || 0,
             comments_count: post.comments_count || 0,

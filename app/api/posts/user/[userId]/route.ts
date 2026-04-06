@@ -32,17 +32,28 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
         const profilesMap = await getProfilesMap([userId]);
         const profile = profilesMap.get(userId);
 
-        const enriched = (posts || []).map(p => ({
-            ...p,
-            is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
-            author: {
-                id: userId,
-                name: profile?.full_name || 'Student',
-                username: profile?.username || null,
-                avatar_url: profile?.avatar_url || null,
-                isTeacher: profile?.is_teacher || false
+        const enriched = (posts || []).map(p => {
+            let finalContent = p.content || '';
+            let isPinned = false;
+            if (finalContent.startsWith('[PINNED]')) {
+                isPinned = true;
+                finalContent = finalContent.substring(8).trim();
             }
-        }));
+
+            return {
+                ...p,
+                content: finalContent,
+                is_pinned: isPinned,
+                is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
+                author: {
+                    id: userId,
+                    name: profile?.full_name || 'Student',
+                    username: profile?.username || null,
+                    avatar_url: profile?.avatar_url || null,
+                    isTeacher: profile?.is_teacher || false
+                }
+            };
+        });
 
         return NextResponse.json(enriched);
     } catch (err: any) {
