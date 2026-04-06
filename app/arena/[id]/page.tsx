@@ -158,13 +158,13 @@ function ArenaPage({ params }: { params: { id: string } }) {
 
                 const { supabase } = await import('@/lib/supabaseClient');
 
-                // Use refreshSession() so Capacitor restores token from device storage
-                // before we check — getSession() alone can return null on cold start
-                let session = (await supabase.auth.getSession()).data.session;
-                if (!session) {
-                    const { data: refreshed } = await supabase.auth.refreshSession();
-                    session = refreshed.session;
-                }
+                // Step 1: getUser() makes a live server-side HTTP call to verify auth.
+                // This populates Supabase's internal session cache even when
+                // WebSocket/realtime is broken — getSession() alone returns null in that case.
+                const { data: { user } } = await supabase.auth.getUser();
+
+                // Step 2: Now that getUser() has warmed the cache, getSession() is reliable.
+                const { data: { session } } = await supabase.auth.getSession();
 
                 if (viewOnly) {
                     if (session) {
@@ -183,12 +183,12 @@ function ArenaPage({ params }: { params: { id: string } }) {
                     return;
                 }
 
-                // ── ALWAYS check for existing submission before loading questions ──
-                // If no session, show login prompt — no anonymous attempts allowed
-                if (!session) {
+                // Must be logged in to attempt — no anonymous access
+                if (!user || !session) {
                     throw new Error('You must be logged in to take a Gauntlet.');
                 }
 
+                // ── ALWAYS check for existing submission before loading questions ──
                 const subRes = await fetch(`/api/test/results?testId=${found.slug}`, {
                     headers: { 'Authorization': `Bearer ${session.access_token}` }
                 });
