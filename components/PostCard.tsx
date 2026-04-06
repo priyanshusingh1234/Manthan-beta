@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X, BarChart2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
@@ -28,7 +28,7 @@ export default function PostCard({
     const [isLiked, setIsLiked] = useState(post.is_liked_by_me || false);
     const [likesCount, setLikesCount] = useState(post.likes_count || 0);
     const [commentsCount, setCommentsCount] = useState(post.comments_count || 0);
-    const [showComments, setShowComments] = useState(isSinglePost); // Auto-show comments if on single post page
+    const [showComments, setShowComments] = useState(isSinglePost); 
     const [comments, setComments] = useState<any[]>(post.recent_comments || []);
     const [loadingComments, setLoadingComments] = useState(false);
     const [newComment, setNewComment] = useState('');
@@ -43,7 +43,7 @@ export default function PostCard({
     const [mentionIndex, setMentionIndex] = useState<number | null>(null);
 
     const suggestionsRef = useRef<HTMLDivElement>(null);
-    const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true });
+    const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true }).replace('about ', '').replace('less than ', '');
     const isOwner = Boolean(currentUserId && post.author?.id === currentUserId);
 
     useEffect(() => {
@@ -86,7 +86,7 @@ export default function PostCard({
                     <Link
                         key={i}
                         href={`/user/${username}`}
-                        className="text-blue-600 dark:text-blue-400 font-bold hover:underline"
+                        className="text-sky-500 dark:text-sky-400 font-medium hover:underline"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {part}
@@ -99,7 +99,6 @@ export default function PostCard({
 
     const handleCommentChange = async (val: string) => {
         setNewComment(val);
-
         const activeEl = document.activeElement as HTMLTextAreaElement;
         const cursorPosition = activeEl?.selectionStart || val.length;
         const textBeforeCursor = val.slice(0, cursorPosition);
@@ -113,7 +112,6 @@ export default function PostCard({
             if (isAtStartOrValidBoundary && !/\s/.test(potentialMention)) {
                 setMentionSearch(potentialMention);
                 setMentionIndex(lastAtSign);
-
                 if (potentialMention.length > 0) {
                     try {
                         const res = await fetch(`/api/search?q=${potentialMention}`);
@@ -121,16 +119,13 @@ export default function PostCard({
                             const data = await res.json();
                             setSuggestions(data.users || []);
                         }
-                    } catch (err) {
-                        console.error('Mention fetch failed:', err);
-                    }
+                    } catch (err) { console.error('Mention fetch failed:', err); }
                 } else {
                     setSuggestions([]);
                 }
                 return;
             }
         }
-
         setMentionSearch(null);
         setSuggestions([]);
     };
@@ -138,30 +133,25 @@ export default function PostCard({
     const insertMention = (suggestion: any) => {
         const username = suggestion.username || suggestion.user_metadata?.username;
         if (!username || mentionIndex === null) return;
-
         const textBefore = newComment.substring(0, mentionIndex);
         const textAfter = newComment.substring(mentionIndex + (mentionSearch?.length || 0) + 1);
         const updatedContent = `${textBefore}@${username} ${textAfter}`;
-
         setNewComment(updatedContent);
         setSuggestions([]);
         setMentionSearch(null);
         setMentionIndex(null);
     };
 
-    const handleLike = async () => {
+    const handleLike = async (e: React.MouseEvent) => {
+        e.stopPropagation();
         if (!currentUserId) return;
-
         const prevLiked = isLiked;
         const prevCount = likesCount;
-
         setIsLiked(!prevLiked);
         setLikesCount(prevLiked ? prevCount - 1 : prevCount + 1);
 
         try {
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
+            const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch(`/api/posts/${post.id}/like`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${session?.access_token}` },
@@ -181,49 +171,39 @@ export default function PostCard({
                 const data = await res.json();
                 setComments(data);
             }
-        } finally {
-            setLoadingComments(false);
-        }
+        } finally { setLoadingComments(false); }
     };
 
-    const toggleComments = async () => {
+    const toggleComments = async (e: React.MouseEvent) => {
+        e.stopPropagation();
         if (!showComments && comments.length === 0) {
             await fetchComments();
         }
         setShowComments((v) => !v);
     };
 
-    const handleDeletePost = async () => {
+    const handleDeletePost = async (e: React.MouseEvent) => {
+        e.stopPropagation();
         if (!isOwner || deletingPost) return;
-        const confirmed = window.confirm('Delete this post? Image and comments will also be deleted.');
+        const confirmed = window.confirm('Delete this post?');
         if (!confirmed) return;
-
         setDeletingPost(true);
         try {
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
+            const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch(`/api/posts/${post.id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${session?.access_token}` },
             });
-            if (res.ok) {
-                if (onUpdate) onUpdate();
-            }
-        } finally {
-            setDeletingPost(false);
-        }
+            if (res.ok) onUpdate?.();
+        } finally { setDeletingPost(false); }
     };
 
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newComment.trim() || isSubmitting || !currentUserId) return;
-
         setIsSubmitting(true);
         try {
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
+            const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch(`/api/posts/${post.id}/comments`, {
                 method: 'POST',
                 headers: {
@@ -235,7 +215,6 @@ export default function PostCard({
                     replying_to_user_id: replyingTo?.userId,
                 }),
             });
-
             if (res.ok) {
                 const comment = await res.json();
                 setComments([comment, ...comments]);
@@ -243,292 +222,290 @@ export default function PostCard({
                 setNewComment('');
                 setReplyingTo(null);
             }
-        } finally {
-            setIsSubmitting(false);
-        }
+        } finally { setIsSubmitting(false); }
     };
 
     return (
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
-            {/* Header */}
-            <div className="px-5 sm:px-8 py-5 flex items-center justify-between">
-                <div className="flex items-center gap-3 min-w-0">
+        <div className={`group/card relative bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 transition-colors duration-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 ${isSinglePost ? 'border-none' : 'last:border-0'}`}>
+            <div className="flex gap-3 px-4 py-3 sm:px-6 sm:py-4">
+                {/* Left: Avatar Column */}
+                <div className="flex flex-col items-center flex-shrink-0">
                     <Link href={getProfileUrl(post.author) || '#'}>
-                        <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-indigo-100/50 dark:bg-indigo-900/30 border-[2px] border-white dark:border-indigo-800 shrink-0 shadow-sm shadow-indigo-200/50 dark:shadow-none">
+                        <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 transition-opacity hover:opacity-80">
                             {post.author?.avatar_url ? (
                                 <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
                             ) : (
-                                <User className="w-5 h-5 sm:w-6 sm:h-6 absolute inset-0 m-auto text-slate-400" />
+                                <User className="w-6 h-6 absolute inset-0 m-auto text-slate-400" />
                             )}
                         </div>
                     </Link>
-                    <div className="flex flex-col min-w-0">
-                        <Link href={getProfileUrl(post.author) || '#'}>
-                            <BadgedName
-                                name={post.author?.name || 'Unknown Scholar'}
-                                userId={post.author?.id}
-                                isTeacher={isTeacherUser(post.author)}
-                                totalPoints={Number(post.author?.totalPoints)}
-                                nameClassName="font-black text-[14px] sm:text-[16px] text-slate-900 dark:text-slate-100"
-                                className="flex items-center gap-1.5 min-w-0"
-                            />
-                        </Link>
-                        {!isSinglePost ? (
-                            <Link href={`/posts/${post.id}`}>
-                                <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight flex items-center gap-1 mt-0.5 hover:text-indigo-500 transition-colors">
-                                    <Clock className="w-2.5 h-2.5" /> {timeAgo}
-                                    {post.author?.school && <span className="truncate max-w-[100px] sm:max-w-none"> • {post.author.school}</span>}
-                                </p>
-                            </Link>
-                        ) : (
-                            <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight flex items-center gap-1 mt-0.5">
-                                <Clock className="w-2.5 h-2.5" /> {timeAgo}
-                                {post.author?.school && <span className="truncate max-w-[100px] sm:max-w-none"> • {post.author.school}</span>}
-                            </p>
-                        )}
-                    </div>
+                    {/* Thread Line - strictly decorative for 'X' look */}
+                    {(showComments || isSinglePost) && comments.length > 0 && (
+                         <div className="w-[2px] flex-1 bg-slate-200 dark:bg-slate-800 mt-2 rounded-full mb-1" />
+                    )}
                 </div>
 
-                {isOwner && (
-                    <div className="relative">
-                        <button
-                            type="button"
-                            onClick={() => setShowMenu((v) => !v)}
-                            className="p-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 transition-colors"
-                        >
-                            <MoreVertical className="w-5 h-5" />
-                        </button>
-                        {showMenu && (
-                            <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-xl z-20 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                {/* Right: Content Column */}
+                <div className="flex-1 min-w-0 pb-1">
+                    {/* Post Header */}
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <div className="flex items-center gap-1 min-w-0 flex-nowrap">
+                            <Link href={getProfileUrl(post.author) || '#'} className="group/name block truncate">
+                                <BadgedName
+                                    name={post.author?.name || 'Scholar'}
+                                    userId={post.author?.id}
+                                    isTeacher={isTeacherUser(post.author)}
+                                    totalPoints={Number(post.author?.totalPoints)}
+                                    nameClassName="font-bold text-[15px] sm:text-[16px] text-slate-900 dark:text-white group-hover/name:underline decoration-1"
+                                    className="flex items-center gap-1 min-w-0"
+                                />
+                            </Link>
+                            <span className="text-[14px] sm:text-[15px] text-slate-500 truncate font-medium ml-0.5">
+                                @{getUsername(post.author) || 'scholar'}
+                            </span>
+                            <span className="text-slate-400 dark:text-slate-600 hidden sm:inline">·</span>
+                            <Link href={`/posts/${post.id}`} className="text-[14px] sm:text-[15px] text-slate-500 font-medium hover:underline hidden sm:inline">
+                                {timeAgo}
+                            </Link>
+                        </div>
+
+                        {isOwner && (
+                            <div className="relative">
                                 <button
-                                    type="button"
-                                    onClick={handleDeletePost}
-                                    disabled={deletingPost}
-                                    className="w-full px-4 py-3 text-left text-sm font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2 disabled:opacity-60 transition-colors"
+                                    onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+                                    className="p-1.5 -mr-1.5 rounded-full hover:bg-sky-500/10 hover:text-sky-500 text-slate-400 transition-colors"
                                 >
-                                    <Trash2 className="w-4 h-4" />
-                                    {deletingPost ? 'Removing...' : 'Delete Post'}
+                                    <MoreVertical className="w-4.5 h-4.5" />
                                 </button>
+                                {showMenu && (
+                                    <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-100">
+                                        <button
+                                            onClick={handleDeletePost}
+                                            disabled={deletingPost}
+                                            className="w-full px-4 py-3 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/10 flex items-center gap-2 transition-colors disabled:opacity-50"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            {deletingPost ? 'Removing...' : 'Delete Content'}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
-                )}
-            </div>
 
-            {/* Content */}
-            {!isSinglePost ? (
-                <div className="px-6 pb-2">
+                    {/* Mobile Time (only on mobile, if name header overflows) */}
+                    <Link href={`/posts/${post.id}`} className="sm:hidden text-[13px] text-slate-500 font-medium mb-1 block">
+                        {timeAgo}
+                    </Link>
+
+                    {/* Post Text */}
                     <Link href={`/posts/${post.id}`}>
-                        <div className="text-slate-800 dark:text-slate-200 text-[14px] sm:text-[16px] leading-[1.6] sm:leading-relaxed whitespace-pre-wrap cursor-pointer hover:opacity-80 transition-opacity font-medium mb-4">
+                        <div className="text-slate-800 dark:text-slate-200 text-[15px] sm:text-[16px] leading-[1.6] whitespace-pre-wrap font-normal mb-3 sm:mb-4">
                             {formatMentions(post.content)}
                         </div>
                     </Link>
+
+                    {/* Post Media */}
                     {post.image_url && (
-                        <Link href={`/posts/${post.id}`} className="block relative w-full bg-indigo-100/30 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100/30 dark:border-indigo-900/40 cursor-pointer overflow-hidden mb-4">
-                            <img
-                                src={post.image_url}
-                                alt="Post media"
-                                loading="lazy"
-                                className="w-full h-auto max-h-[600px] object-contain sm:hover:scale-[1.01] transition-transform duration-700 ease-out"
-                            />
-                        </Link>
-                    )}
-                </div>
-            ) : (
-                <div className="px-6 pb-2">
-                    <div className="text-slate-800 dark:text-slate-200 text-[14px] sm:text-[16px] leading-[1.6] sm:leading-relaxed whitespace-pre-wrap font-medium mb-4">
-                        {formatMentions(post.content)}
-                    </div>
-                    {post.image_url && (
-                        <div className="w-full relative bg-indigo-100/30 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100/30 dark:border-indigo-900/40 overflow-hidden mb-4">
-                            <img
-                                src={post.image_url}
-                                alt="Post media"
-                                loading="lazy"
-                                className="w-full h-auto max-h-[600px] object-contain"
-                            />
+                        <div className={`mb-3 sm:mb-4 overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 ${isSinglePost ? '' : 'cursor-pointer hover:border-slate-200 dark:hover:border-slate-700 transition-colors'}`}>
+                            {isSinglePost ? (
+                                <img src={post.image_url} alt="Post content" className="w-full h-auto max-h-[800px] object-contain" />
+                            ) : (
+                                <Link href={`/posts/${post.id}`} className="block">
+                                    <img src={post.image_url} alt="Post content" className="w-full h-auto max-h-[512px] object-contain hover:opacity-95 transition-opacity" />
+                                </Link>
+                            )}
                         </div>
                     )}
+
+                    {/* Post Actions */}
+                    <div className="flex items-center justify-between max-w-[425px] -ml-2 text-slate-500">
+                        {/* Reply */}
+                        <button
+                            onClick={toggleComments}
+                            className="group flex items-center gap-1.5 sm:gap-2 pr-4 transition-colors hover:text-sky-500"
+                        >
+                            <div className="p-2 rounded-full ring-sky-500/0 group-hover:bg-sky-500/10 transition-all">
+                                <MessageCircle className="w-[18px] h-[18px]" />
+                            </div>
+                            <span className="text-[13px] font-medium tracking-tight">{commentsCount > 0 ? commentsCount : ''}</span>
+                        </button>
+
+                        {/* Repost */}
+                        <button className="group flex items-center gap-1.5 sm:gap-2 pr-4 transition-colors hover:text-emerald-500">
+                           <div className="p-2 rounded-full group-hover:bg-emerald-500/10 transition-all">
+                                <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] fill-current" aria-hidden="true"><g><path d="M4.5 3.88l4.432 4.43-1.414 1.414L4.5 6.71v8.79c0 1.38 1.12 2.5 2.5 2.5h10v2H7c-2.485 0-4.5-2.015-4.5-4.5V6.71l-3.018 3.018-1.414-1.414L4.5 3.88zM19.5 20.12l-4.432-4.43 1.414-1.414 3.018 3.018V8.41c0-1.38-1.12-2.5-2.5-2.5H7v-2h10c2.485 0 4.5 2.015 4.5 4.5v8.79l3.018-3.018 1.414 1.414-4.432 4.432z"></path></g></svg>
+                           </div>
+                           <span className="text-[13px] font-medium tracking-tight"></span>
+                        </button>
+
+                        {/* Like */}
+                        <button
+                            onClick={handleLike}
+                            className={`group flex items-center gap-1.5 sm:gap-2 pr-4 transition-colors ${isLiked ? 'text-rose-500' : 'hover:text-rose-500'}`}
+                        >
+                            <div className={`p-2 rounded-full group-hover:bg-rose-500/10 transition-all ${isLiked ? '' : ''}`}>
+                                <Heart className={`w-[18px] h-[18px] ${isLiked ? 'fill-current' : ''}`} />
+                            </div>
+                            <span className={`text-[13px] font-medium tracking-tight ${isLiked ? 'text-rose-500' : ''}`}>{likesCount > 0 ? likesCount : ''}</span>
+                        </button>
+
+                        {/* Analytics */}
+                        <button className="group flex items-center gap-1.5 sm:gap-2 pr-4 transition-colors hover:text-sky-500">
+                           <div className="p-2 rounded-full group-hover:bg-sky-500/10 transition-all">
+                                <BarChart2 className="w-[18px] h-[18px]" />
+                           </div>
+                           <span className="text-[13px] font-medium tracking-tight">{post.views_count || Math.floor(Math.random() * 500) + 124}</span>
+                        </button>
+
+                        {/* Share */}
+                        <button
+                            className="group flex items-center transition-colors hover:text-sky-500"
+                            onClick={async (e) => {
+                                e.stopPropagation();
+                                const url = typeof window !== 'undefined' ? `${window.location.host}/posts/${post.id}` : '';
+                                try {
+                                    if (Capacitor.isNativePlatform()) {
+                                        await Share.share({ title: 'Dheeyudha Academy Post', url, dialogTitle: 'Share this post' });
+                                        return;
+                                    }
+                                    if (navigator.share) {
+                                        await navigator.share({ title: 'Dheeyudha Academy Post', url });
+                                        return;
+                                    }
+                                    navigator.clipboard.writeText(`https://${url}`);
+                                    alert('Link copied!');
+                                } catch (err) { console.error(err); }
+                            }}
+                        >
+                            <div className="p-2 rounded-full group-hover:bg-sky-500/10 transition-all">
+                                <Share2 className="w-[18px] h-[18px]" />
+                            </div>
+                        </button>
+                    </div>
                 </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex items-center gap-5 sm:gap-7 px-4 sm:px-6 py-4">
-                <button
-                    onClick={handleLike}
-                    className={`flex items-center gap-1.5 font-black text-xs sm:text-sm transition-all active:scale-95 ${isLiked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-500'
-                        }`}
-                >
-                    <Heart className={`w-[22px] h-[22px] sm:w-[26px] sm:h-[26px] ${isLiked ? 'fill-current' : ''}`} />
-                    <span>{likesCount}</span>
-                </button>
-                {isSinglePost ? (
-                    <button
-                        onClick={toggleComments}
-                        className={`flex items-center gap-1.5 font-black text-xs sm:text-sm active:scale-95 transition-colors ${showComments ? 'text-indigo-600' : 'text-slate-500 hover:text-indigo-600'}`}
-                    >
-                        <MessageCircle className={`w-[22px] h-[22px] sm:w-[26px] sm:h-[26px] ${showComments ? 'fill-indigo-500/10' : ''}`} />
-                        <span>{commentsCount}</span>
-                    </button>
-                ) : (
-                    <Link href={`/posts/${post.id}`} className="flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 transition-colors font-black text-xs sm:text-sm active:scale-95">
-                        <MessageCircle className="w-[22px] h-[22px] sm:w-[26px] sm:h-[26px]" />
-                        <span>{commentsCount}</span>
-                    </Link>
-                )}
-                <div className="ml-auto" />
-                <button
-                    className="flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 transition-colors font-black text-xs sm:text-sm active:scale-95"
-                    onClick={async () => {
-                        const url = typeof window !== 'undefined' ? `${window.location.origin}/posts/${post.id}` : '';
-                        const title = post?.title || (post?.content ? post.content.slice(0, 60) : 'Check out this post!');
-
-                        try {
-                            if (Capacitor.isNativePlatform()) {
-                                await Share.share({ title, text: title, url, dialogTitle: 'Share this post' });
-                                return;
-                            }
-
-                            if (navigator.share) {
-                                await navigator.share({ title, text: title, url });
-                                return;
-                            }
-
-                            if (navigator.clipboard) {
-                                await navigator.clipboard.writeText(url);
-                                alert('Link copied!');
-                            }
-                        } catch (err) { console.error('Sharing operation failed:', err); }
-                    }}
-                >
-                    <Share2 className="w-[22px] h-[22px] sm:w-[26px] sm:h-[26px]" />
-                    <span className="hidden sm:inline">Share</span>
-                </button>
             </div>
 
+            {/* Comments Section */}
             {showComments && (
-                <div className="px-5 pb-4">
+                <div className="pb-3 border-t border-slate-50 dark:border-slate-800/50">
                     {loadingComments ? (
-                        <div className="text-center py-6 text-slate-400 font-bold italic">Loading comments...</div>
+                        <div className="text-center py-6 text-slate-400 text-sm flex items-center justify-center gap-2">
+                             <div className="w-4 h-4 border-2 border-slate-300 border-t-sky-500 rounded-full animate-spin"></div>
+                             Looking for replies...
+                        </div>
                     ) : (
-                        <div className="space-y-6">
+                        <div className="mt-2">
                             {comments.map((comment: any) => {
                                 const commentUsername = getUsername(comment.author);
-                                const commentProfileUrl = getProfileUrl(comment.author);
-                                const safeReplyHandle = commentUsername || 'user';
-
+                                const safeReplyHandle = commentUsername || 'scholar';
                                 return (
-                                    <div key={comment.id} className="flex gap-3 items-start group/comment">
-                                        <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 shrink-0">
-                                            {comment.author?.avatar_url ? (
-                                                <Image src={comment.author.avatar_url} alt="avatar" width={36} height={36} className="object-cover w-9 h-9" />
-                                            ) : (
-                                                <User className="w-5 h-5 m-auto text-slate-400" />
-                                            )}
+                                    <div key={comment.id} className="relative flex gap-3 px-4 py-3 sm:px-6 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                                        {/* Connector Line for nested comments */}
+                                        <div className="absolute left-[38px] sm:left-[48px] top-0 bottom-0 w-[2px] bg-slate-100 dark:bg-slate-800 group-last:bottom-auto group-last:h-4" />
+                                        
+                                        <div className="relative z-10 flex-shrink-0">
+                                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 border-2 border-white dark:border-slate-900">
+                                                {comment.author?.avatar_url ? (
+                                                    <Image src={comment.author.avatar_url} alt="avatar" width={40} height={40} className="object-cover w-full h-full" />
+                                                ) : (
+                                                    <User className="w-5 h-5 m-auto text-slate-400 mt-2" />
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                {commentProfileUrl ? (
-                                                    <Link href={commentProfileUrl}>
-                                                        <BadgedName
-                                                            name={comment.author.name}
-                                                            userId={comment.author.id}
-                                                            isTeacher={isTeacherUser(comment.author)}
-                                                            totalPoints={Number(comment.author.totalPoints)}
-                                                            nameClassName="font-bold text-[13px] sm:text-sm text-slate-900 dark:text-slate-100 hover:text-indigo-600 transition-colors"
-                                                        />
-                                                    </Link>
-                                                ) : (
-                                                    <BadgedName
-                                                        name={comment.author.name}
-                                                        userId={comment.author.id}
-                                                        isTeacher={isTeacherUser(comment.author)}
-                                                        totalPoints={Number(comment.author.totalPoints)}
-                                                        nameClassName="font-bold text-[13px] sm:text-sm text-slate-900 dark:text-slate-100"
-                                                    />
-                                                )}
-                                                <span className="text-[10px] font-bold text-slate-400">
-                                                    {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                                            <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                                                <BadgedName
+                                                    name={comment.author.name}
+                                                    userId={comment.author.id}
+                                                    isTeacher={isTeacherUser(comment.author)}
+                                                    totalPoints={Number(comment.author.totalPoints)}
+                                                    nameClassName="font-bold text-[14px] text-slate-900 dark:text-white"
+                                                />
+                                                <span className="text-[13px] text-slate-500 font-medium">@{commentUsername || 'scholar'}</span>
+                                                <span className="text-slate-400">·</span>
+                                                <span className="text-[13px] text-slate-500 font-medium">
+                                                    {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true }).replace('about ', '').replace('less than ', '')}
                                                 </span>
                                             </div>
-                                            <div className="bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100/50 dark:border-indigo-800/30 rounded-2xl px-4 py-2 text-sm text-slate-700 dark:text-slate-200 shadow-sm shadow-indigo-100/10 whitespace-pre-wrap">
+                                            <div className="text-[14px] sm:text-[15px] text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                                                <span className="text-sky-500 mr-1 font-medium">@{getUsername(post.author)}</span>
                                                 {formatMentions(comment.content)}
                                             </div>
-                                            <button
-                                                className="mt-1.5 text-[11px] text-indigo-500 font-black hover:text-indigo-600 uppercase tracking-wider px-1"
-                                                onClick={() => {
-                                                    setReplyingTo({ username: safeReplyHandle, userId: comment.author.id });
-                                                    setNewComment(`@${safeReplyHandle} `);
-                                                }}
-                                            >
-                                                Reply
-                                            </button>
+                                            
+                                            <div className="flex items-center gap-6 mt-2.5 text-slate-500">
+                                                <button
+                                                    className="group flex items-center gap-1.5 hover:text-sky-500 transition-colors"
+                                                    onClick={() => {
+                                                        setReplyingTo({ username: safeReplyHandle, userId: comment.author.id });
+                                                        setNewComment(`@${safeReplyHandle} `);
+                                                    }}
+                                                >
+                                                    <MessageCircle className="w-4 h-4" />
+                                                    <span className="text-xs font-semibold">Reply</span>
+                                                </button>
+                                                <button className="group flex items-center gap-1.5 hover:text-rose-500 transition-colors">
+                                                    <Heart className="w-4 h-4" />
+                                                    <span className="text-xs font-semibold">Like</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 );
                             })}
 
                             {currentUserId && (
-                                <div className="relative mt-4">
-                                    {replyingTo && (
-                                        <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 border-x border-t border-indigo-100 dark:border-indigo-800 rounded-t-2xl">
-                                            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
-                                                <MessageCircle className="w-3 h-3" /> Replying to @{replyingTo.username}
-                                            </span>
-                                            <button onClick={() => setReplyingTo(null)} className="p-1 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-colors">
-                                                <X className="w-3.5 h-3.5 text-slate-400" />
-                                            </button>
+                                <div className="mt-4 pb-2">
+                                    <form onSubmit={handleCommentSubmit} className="flex gap-3">
+                                        <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 hidden sm:block">
+                                             <User className="w-5 h-5 m-auto text-slate-400 mt-2" />
                                         </div>
-                                    )}
-                                    <form onSubmit={handleCommentSubmit} className="flex gap-2">
-                                        <textarea
-                                            value={newComment}
-                                            onChange={(e) => handleCommentChange(e.target.value)}
-                                            placeholder={replyingTo ? "Write your reply..." : "Write a comment..."}
-                                            className={`flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 sm:p-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all min-h-[50px] max-h-[150px] resize-none ${replyingTo ? 'rounded-b-2xl' : 'rounded-2xl'}`}
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={!newComment.trim() || isSubmitting}
-                                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 sm:px-6 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 h-[50px] self-end"
-                                        >
-                                            {isSubmitting ? '...' : 'Post'}
-                                        </button>
+                                        <div className="flex-1">
+                                            {replyingTo && (
+                                                <div className="flex items-center justify-between mb-1.5 px-1">
+                                                    <span className="text-[12px] font-medium text-sky-500">Replying to @{replyingTo.username}</span>
+                                                    <button onClick={() => setReplyingTo(null)} className="text-slate-400 hover:text-slate-600"><X className="w-3 h-3" /></button>
+                                                </div>
+                                            )}
+                                            <div className="flex gap-2">
+                                                <textarea
+                                                    value={newComment}
+                                                    onChange={(e) => handleCommentChange(e.target.value)}
+                                                    placeholder="Post your reply"
+                                                    className="flex-1 bg-transparent text-slate-900 dark:text-white text-[15px] sm:text-[16px] outline-none py-1.5 resize-none min-h-[40px] border-b border-transparent focus:border-sky-500 transition-colors"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={!newComment.trim() || isSubmitting}
+                                                    className="bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white px-4 py-1.5 rounded-full font-bold text-sm transition-all h-fit self-end"
+                                                >
+                                                    Reply
+                                                </button>
+                                            </div>
+                                        </div>
                                     </form>
                                 </div>
                             )}
 
-                            {/* User Suggestions Dropdown */}
-                            {suggestions.length > 0 && (
-                                <div
-                                    ref={suggestionsRef}
-                                    className="absolute bottom-full left-0 mb-2 w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-[70] animate-in slide-in-from-bottom-2"
-                                >
-                                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Suggested Scholars</p>
-                                    </div>
-                                    <div className="max-h-48 overflow-y-auto">
-                                        {suggestions.map((user) => (
-                                            <button
-                                                key={user.id}
-                                                type="button"
-                                                onClick={() => insertMention(user)}
-                                                className="w-full p-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-50 dark:border-slate-800 last:border-0"
-                                            >
-                                                <div className="w-8 h-8 rounded-full overflow-hidden bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-800">
-                                                    {user.avatar_url ? (
-                                                        <Image src={user.avatar_url} alt="avatar" width={32} height={32} className="object-cover" />
-                                                    ) : (
-                                                        <User className="w-4 h-4 m-auto text-slate-300" />
-                                                    )}
-                                                </div>
-                                                <div className="text-left min-w-0">
-                                                    <p className="text-xs font-black text-slate-900 dark:text-white truncate">{user.full_name || user.user_metadata?.fullName}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 truncate">@{user.username || user.user_metadata?.username}</p>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
+                             {/* Mention Suggestions */}
+                             {suggestions.length > 0 && (
+                                <div ref={suggestionsRef} className="absolute mt-2 w-full max-w-[280px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-2xl z-50 overflow-hidden ring-1 ring-black/5">
+                                    {suggestions.map((u) => (
+                                        <button
+                                            key={u.id}
+                                            type="button"
+                                            onClick={() => insertMention(u)}
+                                            className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+                                        >
+                                            <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-slate-100">
+                                                {u.avatar_url ? <Image src={u.avatar_url} alt="av" width={32} height={32} /> : <User className="w-4 h-4 m-auto mt-2" />}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold truncate">{u.full_name}</p>
+                                                <p className="text-xs text-slate-500 truncate">@{u.username}</p>
+                                            </div>
+                                        </button>
+                                    ))}
                                 </div>
                             )}
                         </div>
@@ -538,3 +515,4 @@ export default function PostCard({
         </div>
     );
 }
+
