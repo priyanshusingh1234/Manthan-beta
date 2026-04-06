@@ -37,7 +37,7 @@ interface Participant {
   username: string;
 }
 
-export default function ChatRoomPage() {
+function ChatRoomContent() {
   const { roomId } = useParams() as { roomId: string };
   const searchParams = useSearchParams();
   const initialName = searchParams.get('name');
@@ -194,15 +194,15 @@ export default function ChatRoomPage() {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-[#f0f2f5] dark:bg-[#0b141a] relative overflow-hidden">
+    <div className="flex flex-col min-h-screen pb-20 bg-[#f0f2f5] dark:bg-[#0b141a] relative">
       {/* Premium Wallpaper */}
-      <div className="absolute inset-0 z-0 opacity-40 dark:opacity-[0.06] pointer-events-none mix-blend-overlay">
+      <div className="fixed inset-0 z-0 opacity-40 dark:opacity-[0.06] pointer-events-none mix-blend-overlay">
         <Image src="https://i.pinimg.com/originals/97/c0/07/97c00754731d1136da3ca270d473465b.png" alt="pattern" fill className="object-cover opacity-50" />
       </div>
 
-      {/* Header - Positioned below global headers */}
+      {/* Header - Flowing naturally with sticky top */}
       <header
-        className="fixed top-[64px] lg:top-[64px] left-0 lg:left-64 right-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 px-2 sm:px-4 py-2 flex items-center justify-between shadow-sm"
+        className="sticky top-[60px] md:top-0 left-0 lg:left-64 right-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 px-2 sm:px-4 py-3 flex items-center justify-between shadow-sm"
       >
         <div className="flex items-center gap-1">
           <button onClick={() => { Haptics.impact({ style: ImpactStyle.Light }).catch(() => { }); router.push('/chat'); }} className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95">
@@ -247,8 +247,8 @@ export default function ChatRoomPage() {
         </div>
       </header>
 
-      {/* Messages View - Adjusted top padding to sitting below our fixed header */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 z-10 custom-scrollbar relative pt-[80px]">
+      {/* Messages View */}
+      <div className="flex-1 px-4 py-6 z-10 relative max-w-3xl mx-auto w-full">
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
@@ -367,4 +367,16 @@ export default function ChatRoomPage() {
       {keyboardHeight > 0 && <div className="absolute inset-0 z-40 bg-transparent" onClick={() => Keyboard.hide()} />}
     </div>
   );
+}
+
+export default function ChatRoomPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5] dark:bg-[#0b141a]">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    }>
+      <ChatRoomContent />
+    </React.Suspense>
+  )
 }
