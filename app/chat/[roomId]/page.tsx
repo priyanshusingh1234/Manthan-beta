@@ -38,6 +38,7 @@ interface Participant {
 }
 
 function ChatRoomContent() {
+  const router = useRouter();
   const { roomId } = useParams() as { roomId: string };
   const searchParams = useSearchParams();
   const initialName = searchParams.get('name');
@@ -60,7 +61,14 @@ function ChatRoomContent() {
   useEffect(() => {
     const initChat = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return router.push('/login');
+      if (!user) {
+        if (router && typeof router.push === 'function') {
+          router.push('/login');
+        } else {
+          window.location.href = '/login';
+        }
+        return;
+      }
       setUser(user);
 
       const { data: participants, error: pError } = await supabase
@@ -205,7 +213,14 @@ function ChatRoomContent() {
         className="sticky top-[60px] md:top-0 left-0 lg:left-64 right-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 px-2 sm:px-4 py-3 flex items-center justify-between shadow-sm"
       >
         <div className="flex items-center gap-1">
-          <button onClick={() => { Haptics.impact({ style: ImpactStyle.Light }).catch(() => { }); router.push('/chat'); }} className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95">
+          <button onClick={() => {
+            Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
+            if (router && typeof router.push === 'function') {
+              router.push('/chat');
+            } else {
+              window.location.href = '/chat';
+            }
+          }} className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95">
             <ArrowLeft className="w-6 h-6 text-slate-700 dark:text-slate-300" strokeWidth={2.5} />
           </button>
 

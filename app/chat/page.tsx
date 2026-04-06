@@ -54,7 +54,11 @@ export default function ChatListPage() {
     const initData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/login');
+        if (router && typeof router.push === 'function') {
+          router.push('/login');
+        } else {
+          window.location.href = '/login';
+        }
         return;
       }
       setUser(user);
@@ -204,7 +208,12 @@ export default function ChatListPage() {
       
       if (data.roomId) {
         // Pass name and avatar as hint to jumpstart the UI
-        router.push(`/chat/${data.roomId}?name=${encodeURIComponent(targetName || '')}`);
+        const path = `/chat/${data.roomId}?name=${encodeURIComponent(targetName || '')}`;
+        if (router && typeof router.push === 'function') {
+          router.push(path);
+        } else {
+          window.location.href = path;
+        }
       } else {
         throw new Error('No roomId returned from server');
       }
@@ -349,7 +358,14 @@ export default function ChatListPage() {
               <p className="text-slate-500 dark:text-slate-400 font-medium">Message your friends above to start a conversation.</p>
             </div>
           ) : filteredLocalRooms.map((room) => (
-            <ChatCard key={room.id} room={room} onClick={() => router.push(`/chat/${room.id}`)} user={user} />
+            <ChatCard key={room.id} room={room} onClick={() => {
+              const path = `/chat/${room.id}`;
+              if (router && typeof router.push === 'function') {
+                router.push(path);
+              } else {
+                window.location.href = path;
+              }
+            }} user={user} />
           ))}
         </div>
       </div>
