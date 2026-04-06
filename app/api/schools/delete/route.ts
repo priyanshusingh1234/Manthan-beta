@@ -42,6 +42,12 @@ export async function POST(req: NextRequest) {
         await supabaseAdmin.from('squads').delete().eq('id', squadData.id);
         await supabaseAdmin.from('schools').delete().eq('id', squadData.school_id);
 
+        // Ensure the General is explicitly included in the memberIds list
+        // to handle legacy missing records in school_members
+        if (!memberIds.includes(user.id)) {
+            memberIds.push(user.id);
+        }
+
         // Update metadata for ALL members to release them from the faction
         if (memberIds.length > 0) {
             await Promise.all(memberIds.map(async (mId) => {
@@ -52,6 +58,7 @@ export async function POST(req: NextRequest) {
                         delete newMeta.school;
                         delete newMeta.school_id;
                         delete newMeta.schoolName; // Clearing potential legacy keys
+                        delete newMeta.is_general; // Remove General rank
                         
                         await supabaseAdmin.auth.admin.updateUserById(mId, {
                             user_metadata: newMeta
