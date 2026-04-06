@@ -177,14 +177,7 @@ function ArenaPage({ params }: { params: { id: string } }) {
                     return;
                 }
 
-                // If gauntlet has custom questions, use them directly
-                if (found.custom_questions && Array.isArray(found.custom_questions) && found.custom_questions.length > 0) {
-                    setQuestions(found.custom_questions);
-                    setLoading(false);
-                    return;
-                }
-
-                // Check for existing submission
+                // ── Check for existing submission FIRST (before loading questions) ──
                 if (session) {
                     const res = await fetch(`/api/test/results?testId=${found.slug}`, {
                         headers: { 'Authorization': `Bearer ${session.access_token}` }
@@ -193,9 +186,9 @@ function ArenaPage({ params }: { params: { id: string } }) {
                     if (d.hasSubmission) {
                         if (d.summary) {
                             setDbResult(d.summary);
-                            setSnapshot(d.summary.metadata?.answers_snapshot || []);
                             const snap: AttemptSnapshot[] = d.summary.metadata?.answers_snapshot || [];
-                            setCorrectCount(snap.filter(s => s.isCorrect).length);
+                            setSnapshot(snap);
+                            setCorrectCount(snap.filter((s: AttemptSnapshot) => s.isCorrect).length);
                             setTimeTaken(d.summary.time_taken || 0);
                         }
                         setIsSubmitted(true);
@@ -204,7 +197,14 @@ function ArenaPage({ params }: { params: { id: string } }) {
                     }
                 }
 
-                // Fetch questions for fresh attempt
+                // Fresh attempt — load questions (custom or from DB)
+                if (found.custom_questions && Array.isArray(found.custom_questions) && found.custom_questions.length > 0) {
+                    setQuestions(found.custom_questions);
+                    setLoading(false);
+                    return;
+                }
+
+                // Fetch questions for fresh attempt (non-custom gauntlets)
                 const qParams = new URLSearchParams({ difficulty: found.difficulty, limit: String(found.question_count) });
                 if (found.class_grade) qParams.set('classGrade', found.class_grade);
                 if (found.subject) qParams.set('subject', found.subject);
