@@ -253,17 +253,14 @@ export async function GET(req: NextRequest) {
             for (const bData of bucketsData) {
                 if (layer8AddedCount >= layer8Count) break;
                 
-                const pullCount = bData.isWeakness ? 4 : 1;
-                for (let i = 0; i < pullCount; i++) {
-                    if (layer8AddedCount >= layer8Count) break;
-                    // find the first unseen in A
-                    const qIdx = bData.A.findIndex((q: any) => !userAttempted.has(String(q.id)) && !pool.some((p: any) => p.id === q.id));
-                    if (qIdx !== -1) {
-                        const q = bData.A.splice(qIdx, 1)[0]; 
-                        pool.push({ ...q, _layer: 8, _label: bData.isWeakness ? '🎯 Target Weakness' : '✨ Just Added', _score: 120 });
-                        layer8AddedCount++;
-                        addedInRound = true;
-                    }
+                if (layer8AddedCount >= layer8Count) break;
+                // find the first unseen in A
+                const qIdx = bData.A.findIndex((q: any) => !userAttempted.has(String(q.id)) && !pool.some((p: any) => p.id === q.id));
+                if (qIdx !== -1) {
+                    const q = bData.A.splice(qIdx, 1)[0]; 
+                    pool.push({ ...q, _layer: 8, _label: bData.isWeakness ? '🎯 Target Weakness' : '✨ Just Added', _score: 120 });
+                    layer8AddedCount++;
+                    addedInRound = true;
                 }
             }
             if (!addedInRound) runningL8 = false;
@@ -279,24 +276,21 @@ export async function GET(req: NextRequest) {
             for (const bData of bucketsData) {
                 if (layer1AddedCount >= layer1Count) break;
                 
-                const pullCount = bData.isWeakness ? 4 : 1;
-                for (let i = 0; i < pullCount; i++) {
-                    if (layer1AddedCount >= layer1Count) break;
-                    // Combine remaining A, B, C for this subject
-                    const combined = [...bData.A, ...bData.B, ...bData.C];
-                    const qIdx = combined.findIndex((q: any) => !userAttempted.has(String(q.id)) && !pool.some((p: any) => p.id === q.id));
-                    
-                    if (qIdx !== -1) {
-                        const q = combined[qIdx];
-                        // Remove from original array
-                        if (bData.A.includes(q)) bData.A.splice(bData.A.indexOf(q), 1);
-                        else if (bData.B.includes(q)) bData.B.splice(bData.B.indexOf(q), 1);
-                        else if (bData.C.includes(q)) bData.C.splice(bData.C.indexOf(q), 1);
+                if (layer1AddedCount >= layer1Count) break;
+                // Combine remaining A, B, C for this subject
+                const combined = [...bData.A, ...bData.B, ...bData.C];
+                const qIdx = combined.findIndex((q: any) => !userAttempted.has(String(q.id)) && !pool.some((p: any) => p.id === q.id));
+                
+                if (qIdx !== -1) {
+                    const q = combined[qIdx];
+                    // Remove from original array
+                    if (bData.A.includes(q)) bData.A.splice(bData.A.indexOf(q), 1);
+                    else if (bData.B.includes(q)) bData.B.splice(bData.B.indexOf(q), 1);
+                    else if (bData.C.includes(q)) bData.C.splice(bData.C.indexOf(q), 1);
 
-                        pool.push({ ...q, _layer: 1, _label: bData.isWeakness ? '🎯 Target Weakness' : '✨ For You', _score: 100 });
-                        layer1AddedCount++;
-                        addedInRound = true;
-                    }
+                    pool.push({ ...q, _layer: 1, _label: bData.isWeakness ? '🎯 Target Weakness' : '✨ For You', _score: 100 });
+                    layer1AddedCount++;
+                    addedInRound = true;
                 }
             }
             if (!addedInRound) runningL1 = false;
