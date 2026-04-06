@@ -16,6 +16,19 @@ export async function POST(req: NextRequest) {
 
         const { testId, answers, score, maxScore, timeTaken, accuracy } = await req.json();
 
+        // 0. Anti-cheat server-side lock: prevent duplicate submissions!
+        const { data: existing } = await supabaseAdmin
+            .from('test_results' as any)
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('test_id', testId)
+            .limit(1)
+            .maybeSingle();
+
+        if (existing) {
+            return NextResponse.json({ error: 'You have already completed this Gauntlet. No duplicate records allowed.' }, { status: 403 });
+        }
+
         // 1. Store the test result
         const { error: logErr } = await supabaseAdmin.from('test_results' as any).insert({
             user_id: user.id,
