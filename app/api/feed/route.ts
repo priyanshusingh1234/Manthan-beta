@@ -145,17 +145,33 @@ export async function GET(req: NextRequest) {
         // ── Get attempted & failed question IDs ────────────────────────────
         const userAttempted = new Set<string>();
         const userFailed = new Set<string>();
+        let recentFailedSubject: string | null = null;
 
         if (userId) {
             const { data: attempts } = await supabaseAdmin
                 .from('question_attempts')
-                .select('question_id, is_correct')
-                .eq('user_id', userId);
+                .select('question_id, is_correct, created_at')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false });
 
             (attempts || []).forEach((a: any) => {
                 userAttempted.add(String(a.question_id));
                 if (!a.is_correct) userFailed.add(String(a.question_id));
             });
+
+            // "Redemption Protocol": If user failed any of their last 3 questions, aggressively target that subject
+            const recentAttempts = (attempts || []).slice(0, 3);
+            const recentFail = recentAttempts.find((a: any) => !a.is_correct);
+            if (recentFail && !subject) {
+                const { data: qData } = await supabaseAdmin
+                    .from('questions')
+                    .select('subject')
+                    .eq('id', recentFail.question_id)
+                    .maybeSingle();
+                if (qData && qData.subject) {
+                    recentFailedSubject = qData.subject;
+                }
+            }
 
             const { data: written } = await supabaseAdmin
                 .from('written_submissions')
@@ -208,6 +224,9 @@ export async function GET(req: NextRequest) {
         let bucketsData: any[] = [];
         if (subject) {
             bucketsData = [await fetchSubjectTimeBuckets(subject, userGrade)];
+        } else if (recentFailedSubject) {
+            // Redemption Protocol: Aggressively target the failed subject
+            bucketsData = [await fetchSubjectTimeBuckets(recentFailedSubject, userGrade)];
         } else {
             bucketsData = await Promise.all(CORE_SUBJECTS.map(sub => fetchSubjectTimeBuckets(sub, userGrade)));
         }
