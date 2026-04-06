@@ -35,6 +35,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const action = body.action || 'pin'; // 'pin' or 'unpin'
 
         if (action === 'pin') {
+            // Unpin ALL currently pinned posts first to maintain exclusivity
+            const { data: existingPinned } = await supabaseAdmin
+                .from('posts')
+                .select('id, content')
+                .ilike('content', '[PINNED]%')
+                .limit(5);
+            
+            if (existingPinned && existingPinned.length > 0) {
+                for (const old of existingPinned) {
+                    if (old.id === postId) continue;
+                    let clean = old.content || '';
+                    while (clean.startsWith('[PINNED]')) {
+                        clean = clean.substring(8).trim();
+                    }
+                    await supabaseAdmin.from('posts').update({ content: clean }).eq('id', old.id);
+                }
+            }
+
             if (!newContent.startsWith('[PINNED]')) {
                 newContent = `[PINNED] ${newContent}`;
             }

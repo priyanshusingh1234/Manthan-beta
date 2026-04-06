@@ -244,7 +244,7 @@ export async function GET(req: NextRequest) {
         }
 
         // LAYER 8 (New Questions Booster): Pick equally from each subject's Bucket A
-        const layer8Count = Math.ceil(5 * overFetch);
+        const layer8Count = Math.ceil(limit * 0.10 * overFetch);
         let layer8AddedCount = 0;
         let runningL8 = true;
         
@@ -590,7 +590,7 @@ function shuffleWithinGroups(arr: any[]): any[] {
     });
 
     const result: any[] = [];
-    const layerOrder = [8, 6, 1, 7, 2, 3, 4, 5, 0];
+    const layerOrder = [10, 8, 6, 1, 7, 2, 3, 4, 5, 0];
     let hasMore = true;
     while (hasMore) {
         hasMore = false;
