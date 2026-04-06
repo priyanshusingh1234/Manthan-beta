@@ -6,55 +6,35 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-async function test() {
-    const testId = 'english-voice-hard';
-
-    // Simulate exactly what the leaderboard API does
-    const { data: topData, error: topError } = await supabase
+async function diagnose() {
+    console.log('\n=== ALL rows in test_results ===');
+    const { data, error } = await supabase
         .from('test_results')
-        .select('user_id, score, max_score, time_taken, accuracy, completed_at')
-        .eq('test_id', testId)
-        .order('score', { ascending: false })
-        .order('time_taken', { ascending: true })
-        .limit(50);
+        .select('id, user_id, test_id, score, max_score, accuracy, completed_at')
+        .order('completed_at', { ascending: false });
 
-    if (topError) {
-        console.error('❌ Leaderboard query error:', topError.message, topError.code);
-        return;
-    }
-
-    console.log('✅ Rows returned:', topData?.length);
-
-    // Dedupe best per user
-    const seenUsers = new Set();
-    const bestAttempts = (topData || []).filter(e => {
-        if (seenUsers.has(e.user_id)) return false;
-        seenUsers.add(e.user_id);
-        return true;
-    }).slice(0, 10);
-
-    // Fetch profiles
-    const userIds = bestAttempts.map(e => e.user_id);
-    const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, full_name, username, avatar_url, school')
-        .in('id', userIds);
-
-    const profileMap = {};
-    (profilesData || []).forEach(p => { profileMap[p.id] = p; });
-
-    const leaderboard = bestAttempts.map((entry, i) => {
-        const profile = profileMap[entry.user_id] || {};
-        return {
-            rank: i + 1,
-            name: profile.full_name || profile.username || 'Scholar',
-            score: entry.score,
-            maxScore: entry.max_score,
-            accuracy: entry.accuracy,
-        };
+    if (error) { console.error('❌', error.message); return; }
+    console.log(`Total rows: ${data.length}`);
+    data.forEach((r, i) => {
+        console.log(`\n[${i+1}] user_id: ${r.user_id}`);
+        console.log(`     test_id: ${r.test_id}`);
+        console.log(`     score: ${r.score}/${r.max_score} (${r.accuracy}%)`);
+        console.log(`     at: ${r.completed_at}`);
     });
 
-    console.log('Leaderboard:', JSON.stringify(leaderboard, null, 2));
+    console.log('\n=== ALL users in profiles ===');
+    const userIds = [...new Set(data.map(r => r.user_id))];
+    const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, email')
+        .in('id', userIds);
+    profiles?.forEach(p => {
+        console.log(`  ${p.id} → ${p.full_name || p.username} (${p.email || 'no email'})`);
+    });
+
+    console.log('\n=== Unique test_ids ===');
+    const uniqueTests = [...new Set(data.map(r => r.test_id))];
+    console.log(uniqueTests);
 }
 
-test().catch(console.error);
+diagnose().catch(console.error);

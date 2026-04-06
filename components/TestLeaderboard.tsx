@@ -36,6 +36,7 @@ export default function TestLeaderboard({ testId }: { testId: string }) {
 
                 const res = await fetch(`/api/test/leaderboard?testId=${testId}`, { headers });
                 const data = await res.json();
+                console.log('[TestLeaderboard] raw response:', JSON.stringify(data));
                 if (data.error) throw new Error(data.error);
                 setLeaderboard(data.leaderboard || []);
                 setUserStats(data.userStats);
@@ -57,10 +58,19 @@ export default function TestLeaderboard({ testId }: { testId: string }) {
         </div>
     );
 
+    if (error) return (
+        <div className="w-full p-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-3xl text-center space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Leaderboard Error</p>
+            <p className="text-xs text-red-400 font-mono">{error}</p>
+            <p className="text-[9px] text-red-300">testId: {testId}</p>
+        </div>
+    );
+
     if (leaderboard.length === 0) {
         return (
             <div className="w-full p-8 bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl text-center">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">No recorded stats yet</p>
+                <p className="text-[9px] text-slate-300 dark:text-slate-600 mt-1">testId: {testId}</p>
             </div>
         );
     }
