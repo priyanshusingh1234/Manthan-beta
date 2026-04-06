@@ -71,6 +71,11 @@ export default function QuestionsFeed() {
             }
           });
 
+          // 3. Admin Pin Override
+          if (item.is_pinned) {
+             score = 999999;
+          }
+
           return { ...item, _localScore: score };
         });
 
