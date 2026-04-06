@@ -18,14 +18,17 @@ export async function GET(req: NextRequest) {
 
         // 1. Fetch top results from test_results (no join — avoids schema cache issues)
         const { data: topData, error: topError } = await supabaseAdmin
-            .from('test_results')
+            .from('test_results' as any)
             .select('user_id, score, max_score, time_taken, accuracy, completed_at')
             .eq('test_id', testId)
             .order('score', { ascending: false })
             .order('time_taken', { ascending: true })
             .limit(50);
 
-        if (topError) throw topError;
+        if (topError) {
+            console.error('[leaderboard] topError:', topError);
+            throw topError;
+        }
 
         // 2. Dedupe — keep only the best attempt per user
         const seenUsers = new Set<string>();
@@ -71,7 +74,7 @@ export async function GET(req: NextRequest) {
                 userStats = inTop10;
             } else {
                 const { data: personalBest } = await supabaseAdmin
-                    .from('test_results')
+                    .from('test_results' as any)
                     .select('*')
                     .eq('test_id', testId)
                     .eq('user_id', currentUserId)

@@ -336,7 +336,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isTrailerPage = pathname === '/trailer';
   const isSearchPage = pathname === '/search';
   const isTestArena = pathname === '/tests';
-  const isIndividualTest = pathname?.startsWith('/tests/') || pathname?.startsWith('/test/') || false;
+  const isIndividualTest = pathname?.startsWith('/tests/') || pathname?.startsWith('/test/') || pathname?.startsWith('/arena/') || false;
 
   const hideMainSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isSearchPage || isIndividualTest;
   const hideBottomNav = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isIndividualTest;
