@@ -69,38 +69,69 @@ export default function ChatListPage() {
 
       if (participantsError) throw participantsError;
 
+      if (!participants || participants.length === 0) {
+        setRooms([]);
+        return;
+      }
+
       const roomData: ChatRoom[] = [];
+      const validRooms = participants.filter(p => p.chat_rooms != null);
+      if (validRooms.length === 0) {
+        setRooms([]);
+        return;
+      }
 
-      for (const p of participants) {
-        const room = p.chat_rooms as any;
-        if (!room) continue;
+      const roomIds = validRooms.map(p => p.room_id);
 
-        const { data: otherParticipants } = await supabase
-          .from('chat_participants')
-          .select('user_id')
-          .eq('room_id', room.id)
-          .neq('user_id', userId);
+      // 1. Bulk fetch other participants
+      const { data: otherParticipants } = await supabase
+        .from('chat_participants')
+        .select('room_id, user_id')
+        .in('room_id', roomIds)
+        .neq('user_id', userId);
 
-        const otherUserId = otherParticipants?.[0]?.user_id;
-        let participantInfo = { full_name: 'Scholar', avatar_url: null as string | null };
+      const otherUserIds = Array.from(new Set(otherParticipants?.map(p => p.user_id) || []));
 
-        if (otherUserId) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .eq('id', otherUserId)
-            .single();
+      // 2. Bulk fetch profiles
+      let profileMap = new Map();
+      if (otherUserIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url')
+          .in('id', otherUserIds);
+        
+        profileMap = new Map((profiles || []).map(p => [p.id, p]));
+      }
 
-          if (profile) participantInfo = { full_name: profile.full_name, avatar_url: profile.avatar_url };
-        }
-
-        const { data: lastMessage } = await supabase
+      // 3. Concurrent fetch last messages to prevent N+1 query waterfall loop
+      const lastMessagePromises = validRooms.map(p => 
+        supabase
           .from('chat_messages')
           .select('content, created_at, sender_id, is_read')
-          .eq('room_id', room.id)
+          .eq('room_id', p.room_id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .single()
+      );
+
+      const lastMessagesResponses = await Promise.all([...lastMessagePromises]);
+      const lastMessageMap = new Map();
+      
+      lastMessagesResponses.forEach((res, i) => {
+        if (res.data) lastMessageMap.set(validRooms[i].room_id, res.data);
+      });
+
+      for (const p of validRooms) {
+        const room = p.chat_rooms as any;
+        const otherUserId = otherParticipants?.find(op => op.room_id === room.id)?.user_id;
+
+        let participantInfo = { full_name: 'Scholar', avatar_url: null as string | null };
+        if (otherUserId && profileMap.has(otherUserId)) {
+          const profile = profileMap.get(otherUserId);
+          participantInfo = { full_name: profile.full_name, avatar_url: profile.avatar_url };
+        }
+
+        const lastMessage = lastMessageMap.get(room.id);
 
         roomData.push({
           id: room.id,
@@ -114,6 +145,13 @@ export default function ChatListPage() {
           last_message: lastMessage || undefined
         });
       }
+
+      // Sort by last message date so recent matches appear at the top
+      roomData.sort((a, b) => {
+        const aTime = a.last_message ? new Date(a.last_message.created_at).getTime() : 0;
+        const bTime = b.last_message ? new Date(b.last_message.created_at).getTime() : 0;
+        return bTime - aTime;
+      });
 
       setRooms(roomData);
     } catch (err) {
