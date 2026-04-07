@@ -186,6 +186,10 @@ function ChatRoomContent() {
     };
 
     initChat();
+  }, [roomId, router, initialName]);
+
+  useEffect(() => {
+    if (!user?.id) return;
 
     const channel = supabaseRealtime
       .channel(`room-${roomId}`, {
@@ -279,7 +283,7 @@ function ChatRoomContent() {
       clearInterval(pollInterval);
       try { Keyboard.removeAllListeners(); } catch (e) { }
     };
-  }, [roomId, router, user?.id]);
+  }, [roomId, user?.id]);
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
