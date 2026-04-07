@@ -6,6 +6,7 @@ import DesktopSidebar from '@/components/DesktopSidebar';
 import { usePathname, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import PushNotificationPrompt from '@/components/PushNotificationPrompt';
+import GlobalChatListener from '@/components/GlobalChatListener';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { StatusBar } from '@capacitor/status-bar';
@@ -353,7 +354,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </div>
       {isAuthenticated && <PushNotificationPrompt />}
       {isAuthenticated && <CongratsBadgeModal />}
-
+      {isAuthenticated && <GlobalChatListener />}
     </>
   );
 }
