@@ -234,19 +234,6 @@ export default function ChatListPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
-      <div className="mx-auto w-full max-w-7xl px-4 pt-4 sm:pt-6 lg:pt-8">
-        <div className="rounded-[32px] border border-slate-200/70 dark:border-slate-800/70 bg-white/85 dark:bg-slate-900/70 backdrop-blur-2xl shadow-[0_18px_45px_rgba(15,23,42,0.08)] px-5 sm:px-6 py-5 sm:py-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-[11px] font-black tracking-[0.28em] uppercase text-blue-600 dark:text-blue-400">Direct Messages</p>
-              <h1 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                Open a room to start chatting
-              </h1>
-              <p className="mt-2 text-sm sm:text-[15px] font-medium leading-6 text-slate-500 dark:text-slate-400 max-w-xl">
-                Pick someone you follow or open an existing conversation. Every chat lives at a room ID, so the thread opens cleanly without a fixed header blocking the page.
-              </p>
-            </div>
-
       {/* Dynamic Header */}
       <div className="sticky top-0 lg:top-[64px] z-40 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50">
         <div className="max-w-3xl mx-auto px-4 pt-4 sm:pt-6 pb-4">
