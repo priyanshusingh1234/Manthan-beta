@@ -45,7 +45,6 @@ export default function ChatListPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
-  const [following, setFollowing] = useState<FollowingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -121,39 +120,9 @@ export default function ChatListPage() {
     }
   }, []);
 
-  const fetchFollowing = useCallback(async (userId: string) => {
-    try {
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', userId);
-
-      if (!follows || follows.length === 0) return;
-
-      const followingIds = follows.map((f: any) => f.following_id);
-
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name, username, avatar_url')
-        .in('id', followingIds)
-        .limit(20);
-
-      if (profiles) {
-        setFollowing(profiles.map((p: any) => ({
-          id: p.id,
-          name: p.full_name || 'Scholar',
-          username: p.username || '',
-          avatar: p.avatar_url
-        })));
-      }
-    } catch (err) {
-      console.error('Failed following fetching:', err);
-    }
-  }, []);
-
   const refreshChatData = useCallback(async (userId: string) => {
-    await Promise.all([fetchRooms(userId), fetchFollowing(userId)]);
-  }, [fetchRooms, fetchFollowing]);
+    await fetchRooms(userId);
+  }, [fetchRooms]);
 
   useEffect(() => {
     const initData = async () => {
@@ -167,11 +136,11 @@ export default function ChatListPage() {
         return;
       }
       setUser(user);
-      await refreshChatData(user.id);
+      await fetchRooms(user.id);
       setLoading(false);
     };
     initData();
-  }, [router, refreshChatData]);
+  }, [router, fetchRooms]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -243,7 +212,6 @@ export default function ChatListPage() {
       if (!response.ok) throw new Error(data.error || 'Failed to initialize chat');
       
       if (data.roomId) {
-        // Pass name and avatar as hint to jumpstart the UI
         const path = `/chat/${data.roomId}?name=${encodeURIComponent(targetName || '')}`;
         if (router && typeof router.push === 'function') {
           router.push(path);
@@ -279,21 +247,26 @@ export default function ChatListPage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-              <span className="rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2">Room ID based</span>
-              <span className="rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2">No sticky header</span>
-              <span className="rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2">Fast start</span>
-            </div>
+      {/* Dynamic Header */}
+      <div className="sticky top-0 lg:top-[64px] z-40 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50">
+        <div className="max-w-3xl mx-auto px-4 pt-4 sm:pt-6 pb-4">
+          <div className="flex justify-between items-center mb-5">
+            <h1 className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
+              Messages
+            </h1>
+            <button className="h-10 w-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-600/30 active:scale-95 transition-transform">
+              <MessageCirclePlus className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="mt-5 relative group">
+          <div className="relative group">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
             </div>
             <input
               type="text"
-              className="block w-full pl-12 pr-10 py-3.5 bg-white/80 dark:bg-slate-950/80 border border-slate-200/60 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500/50 dark:focus:border-blue-500/50 rounded-2xl text-[15px] font-medium text-slate-900 dark:text-white transition-all outline-none placeholder:text-slate-500 shadow-sm"
-              placeholder="Search chats or find scholars..."
+              className="block w-full pl-12 pr-10 py-3.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500/50 dark:focus:border-blue-500/50 rounded-2xl text-[15px] font-medium text-slate-900 dark:text-white transition-all outline-none placeholder:text-slate-500 shadow-sm"
+              placeholder="Search active chats or find new scholars..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
             />
@@ -309,135 +282,61 @@ export default function ChatListPage() {
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-7xl px-4 mt-6 lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
-        <div className="hidden lg:block">
-          <div className="sticky top-[108px] h-[calc(100vh-132px)]">
-            <ChatRail
-              rooms={rooms.map((room) => ({
-                id: room.id,
-                participant: room.participant,
-                last_message: room.last_message,
-              }))}
-              following={following}
-              loading={loading}
-              activeRoomId={undefined}
-              currentUserId={user?.id}
-              onOpenRoom={(roomId) => {
-                const path = `/chat/${roomId}`;
-                if (router && typeof router.push === 'function') {
-                  router.push(path);
-                } else {
-                  window.location.href = path;
-                }
-              }}
-              onStartChat={(targetUserId, targetName) => startChat(targetUserId, targetName)}
-            />
+      <div className="max-w-3xl mx-auto px-4 mt-6">
+        {/* Global Search Results */}
+        {searchQuery && isSearching ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
           </div>
-        </div>
-
-        <div className="min-w-0">
-          {/* Following Tray */}
-          {!searchQuery && !loading && following.length > 0 && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 mb-8 lg:hidden">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-4 ml-1">
-                Start Chat
-              </h2>
-              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
-                {following.map((fw) => (
-                  <button
-                    key={fw.id}
-                    onClick={() => startChat(fw.id)}
-                    className="flex flex-col items-center gap-2 min-w-[72px] snap-start group"
-                  >
-                    <div className="relative p-[3px] rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-xl shadow-blue-600/20 group-active:scale-95 transition-transform duration-200">
-                      <div className="relative h-14 w-14 bg-white dark:bg-slate-900 rounded-full border-2 border-white dark:border-slate-950 overflow-hidden">
-                        {fw.avatar ? (
-                          <Image src={fw.avatar} alt={fw.name} fill className="object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center font-black text-slate-700 dark:text-slate-300 text-lg">
-                            {fw.name[0].toUpperCase()}
-                          </div>
-                        )}
+        ) : searchQuery && searchResults.length > 0 ? (
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-blue-500 ml-1">Global Matches</h2>
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+              {searchResults.map((res: any, idx) => (
+                <button
+                  key={res.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    startChat(res.id, res.full_name);
+                  }}
+                  className={`w-full flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group ${idx !== searchResults.length - 1 ? 'border-b border-slate-100 dark:border-slate-800' : ''}`}
+                >
+                  <div className="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-800 relative overflow-hidden shrink-0">
+                    {res.avatar_url || res.avatar ? (
+                      <Image src={res.avatar_url || res.avatar} alt="Avatar" fill className="object-cover" />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-slate-500 font-bold">
+                        {(res.full_name || res.name)?.[0]?.toUpperCase()}
                       </div>
-                    </div>
-                    <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-300 w-full truncate text-center px-1">
-                      {fw.name.split(' ')[0]}
-                    </span>
-                  </button>
-                ))}
-              </div>
+                    )}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-bold text-slate-900 dark:text-white text-[15px]">{res.full_name || res.name}</p>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">@{res.username || 'scholar'}</p>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-slate-800 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <ArrowRight className="w-4 h-4" />
+                  </div>
+                </button>
+              ))}
             </div>
-          )}
-
-          {/* Global Search Results */}
-          {searchQuery && isSearching ? (
-            <div className="flex justify-center py-20">
-              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-            </div>
-          ) : searchQuery && searchResults.length > 0 ? (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-blue-500 ml-1">Global Matches</h2>
-
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-                {searchResults.map((res: any, idx) => (
-                  <button
-                    key={res.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      startChat(res.id, res.full_name);
-                    }}
-                    className={`w-full flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group ${idx !== searchResults.length - 1 ? 'border-b border-slate-100 dark:border-slate-800' : ''}`}
-                  >
-                    <div className="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-800 relative overflow-hidden shrink-0">
-                      {res.avatar_url || res.avatar ? (
-                        <Image src={res.avatar_url || res.avatar} alt="Avatar" fill className="object-cover" />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-slate-500 font-bold">
-                          {(res.full_name || res.name)?.[0]?.toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="font-bold text-slate-900 dark:text-white text-[15px]">{res.full_name || res.name}</p>
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">@{res.username || 'scholar'}</p>
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-slate-800 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                      <ArrowRight className="w-4 h-4" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : !searchQuery ? (
-            <div className="hidden lg:flex min-h-[520px] items-center justify-center rounded-[32px] border border-dashed border-slate-300/70 dark:border-slate-800/70 bg-white/60 dark:bg-slate-900/40 px-6 text-center">
-              <div className="max-w-md">
-                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <MessageCirclePlus className="h-8 w-8" />
-                </div>
-                <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Choose a room ID</h2>
-                <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
-                  Use the sidebar to open an active conversation or start a new chat with someone you follow. The thread opens directly from its room ID, so nothing is pinned over the page.
-                </p>
-              </div>
-            </div>
-          ) : null}
-
-          {/* Local Chat List */}
-          <div className="space-y-2 lg:hidden">
+          </div>
+        ) : !searchQuery ? (
+          <div className="space-y-2">
             {!searchQuery && <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-4 ml-1">Recent Chats</h2>}
 
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="animate-pulse bg-slate-100 dark:bg-slate-900 h-[88px] rounded-3xl mb-2" />
               ))
-            ) : filteredLocalRooms.length === 0 && !searchQuery ? (
+            ) : rooms.length === 0 ? (
               <div className="text-center py-20 px-6">
                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-12">
                   <MessageCirclePlus className="w-8 h-8 text-blue-600 dark:text-blue-400 -rotate-12" />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No active chats</h3>
-                <p className="text-slate-500 dark:text-slate-400 font-medium">Message your friends above to start a conversation.</p>
+                <p className="text-slate-500 dark:text-slate-400 font-medium">Search for someone above to start a conversation.</p>
               </div>
             ) : filteredLocalRooms.map((room) => (
               <ChatCard key={room.id} room={room} onClick={() => {
@@ -450,7 +349,7 @@ export default function ChatListPage() {
               }} user={user} />
             ))}
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );

@@ -149,7 +149,10 @@ function ChatRoomContent() {
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` },
         async (payload) => {
           const msg = payload.new as Message;
-          replaceOrAppendMessage(msg);
+          setMessages(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
 
           if (msg.sender_id !== user?.id) {
             scrollToBottom();
@@ -165,7 +168,7 @@ function ChatRoomContent() {
         { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` },
         (payload) => {
           const updatedMsg = payload.new as Message;
-          replaceOrAppendMessage(updatedMsg);
+          setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
         }
       )
       .subscribe();
@@ -202,7 +205,10 @@ function ChatRoomContent() {
       if (error) throw error;
 
       if (insertedMessage) {
-        replaceOrAppendMessage(insertedMessage as Message);
+        setMessages(prev => {
+          if (prev.some(m => m.id === insertedMessage.id)) return prev;
+          return [...prev, insertedMessage as Message];
+        });
       }
 
       scrollToBottom();
