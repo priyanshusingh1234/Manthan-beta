@@ -266,25 +266,33 @@ export default function ChatListPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
-      {/* Dynamic Header - Adjusted for global layout */}
-      <div className="sticky top-0 lg:top-[64px] z-40 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50">
-        <div className="max-w-3xl mx-auto px-4 pt-4 sm:pt-6 pb-4">
-          <div className="flex justify-between items-center mb-5">
-            <h1 className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
-              Messages
-            </h1>
-            <button className="h-10 w-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-600/30 active:scale-95 transition-transform">
-              <MessageCirclePlus className="w-5 h-5" />
-            </button>
+      <div className="mx-auto w-full max-w-7xl px-4 pt-4 sm:pt-6 lg:pt-8">
+        <div className="rounded-[32px] border border-slate-200/70 dark:border-slate-800/70 bg-white/85 dark:bg-slate-900/70 backdrop-blur-2xl shadow-[0_18px_45px_rgba(15,23,42,0.08)] px-5 sm:px-6 py-5 sm:py-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-[11px] font-black tracking-[0.28em] uppercase text-blue-600 dark:text-blue-400">Direct Messages</p>
+              <h1 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                Open a room to start chatting
+              </h1>
+              <p className="mt-2 text-sm sm:text-[15px] font-medium leading-6 text-slate-500 dark:text-slate-400 max-w-xl">
+                Pick someone you follow or open an existing conversation. Every chat lives at a room ID, so the thread opens cleanly without a fixed header blocking the page.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+              <span className="rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2">Room ID based</span>
+              <span className="rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2">No sticky header</span>
+              <span className="rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3 py-2">Fast start</span>
+            </div>
           </div>
 
-          <div className="relative group">
+          <div className="mt-5 relative group">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
             </div>
             <input
               type="text"
-              className="block w-full pl-12 pr-10 py-3.5 bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500/50 dark:focus:border-blue-500/50 rounded-2xl text-[15px] font-medium text-slate-900 dark:text-white transition-all outline-none placeholder:text-slate-500 shadow-sm"
+              className="block w-full pl-12 pr-10 py-3.5 bg-white/80 dark:bg-slate-950/80 border border-slate-200/60 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500/50 dark:focus:border-blue-500/50 rounded-2xl text-[15px] font-medium text-slate-900 dark:text-white transition-all outline-none placeholder:text-slate-500 shadow-sm"
               placeholder="Search chats or find scholars..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
@@ -407,9 +415,9 @@ export default function ChatListPage() {
                 <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
                   <MessageCirclePlus className="h-8 w-8" />
                 </div>
-                <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Choose a chat</h2>
+                <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Choose a room ID</h2>
                 <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
-                  Use the sidebar to open an active conversation or start a new chat with someone you follow.
+                  Use the sidebar to open an active conversation or start a new chat with someone you follow. The thread opens directly from its room ID, so nothing is pinned over the page.
                 </p>
               </div>
             </div>
