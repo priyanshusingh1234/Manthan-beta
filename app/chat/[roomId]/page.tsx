@@ -362,7 +362,7 @@ function ChatRoomContent() {
         )}
       </AnimatePresence>
 
-      <header className="z-40 px-4 pt-4 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-40 px-4 pt-4 sm:px-6 lg:px-8">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between rounded-[28px] border border-white/60 bg-white/85 px-3 py-3 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-950/85">
           <div className="flex min-w-0 items-center gap-3">
             <button
