@@ -539,7 +539,26 @@ function ChatRoomContent() {
                   <button 
                     onClick={async () => {
                       Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+                      
+                      // 🖼️ If it's an image, also try to scrub it from storage
+                      if (selectedMessage.message_type === 'image') {
+                        try {
+                          // Extract the storage path from the public URL
+                          // Example: .../public/avatars/chat_ROOMID_USERID_TIMESTAMP.png
+                          const pathSegments = selectedMessage.content.split('/public/avatars/');
+                          if (pathSegments.length > 1) {
+                            const storagePath = decodeURIComponent(pathSegments[1]);
+                            await supabase.storage.from('avatars').remove([storagePath]);
+                          }
+                        } catch (e) {
+                          console.error("Failed to scrub storage file:", e);
+                        }
+                      }
+
+                      // Delete from database
                       await supabase.from('chat_messages').delete().eq('id', selectedMessage.id);
+                      
+                      // Alert local state
                       setMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
                       setSelectedMessage(null);
                     }} 
