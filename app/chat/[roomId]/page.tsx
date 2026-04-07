@@ -760,7 +760,45 @@ function ChatRoomContent() {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <button className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
+            <button
+              onClick={async () => {
+                if (!user || !participant) return;
+                Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                
+                // Unique call room per conversation session
+                const callRoom = `${roomId}_${Date.now()}`;
+                const callUrl = `/call/${callRoom}?caller=${encodeURIComponent(user.user_metadata?.full_name || 'Scholar')}&avatar=${encodeURIComponent(user.user_metadata?.avatar_url || '')}`;
+                
+                // Navigate self to call page
+                router.push(callUrl);
+
+                // Send push notification to recipient
+                const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.())
+                  ? (process.env.NEXT_PUBLIC_APP_URL || 'https://manthan-beta-c975.vercel.app')
+                  : '';
+                fetch(`${appUrl}/api/chat/call-notify`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    receiverId: participant.user_id,
+                    senderId: user.id,
+                    callerName: user.user_metadata?.full_name || 'Scholar',
+                    callerAvatar: user.user_metadata?.avatar_url || '',
+                    callRoom,
+                  })
+                }).catch(console.error);
+
+                // Drop a chat message so they can tap to join
+                await supabase.from('chat_messages').insert({
+                  room_id: roomId,
+                  sender_id: user.id,
+                  content: `📞 Voice call started. [Join here](${callUrl})`,
+                  message_type: 'text'
+                });
+              }}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white active:scale-95"
+              aria-label="Voice Call"
+            >
               <Phone className="h-5 w-5" />
             </button>
             <button className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white sm:flex">
