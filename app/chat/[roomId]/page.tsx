@@ -311,12 +311,32 @@ function ChatRoomContent() {
     };
   }, [roomId, user?.id]);
 
-  const handleClearChat = () => {
-    const allIds = messages.map(m => m.id);
-    const newDeleted = [...new Set([...deletedForMe, ...allIds])];
-    setDeletedForMe(newDeleted);
-    localStorage.setItem(`deleted_${roomId}`, JSON.stringify(newDeleted));
-    setShowMenu(false);
+  const handleClearChat = async () => {
+    if (!user || messages.length === 0) return;
+
+    try {
+      Haptics.notification({ type: Haptics.NotificationType.Warning }).catch(() => { });
+      
+      // 1. Delete MY messages from the database (Deletes for everyone)
+      const myMessageIds = messages.filter(m => m.sender_id === user.id).map(m => m.id);
+      if (myMessageIds.length > 0) {
+        await supabase.from('chat_messages').delete().in('id', myMessageIds);
+      }
+
+      // 2. Hide all other messages from MY view (Local storage)
+      const allCurrentIds = messages.map(m => m.id);
+      const newDeleted = [...new Set([...deletedForMe, ...allCurrentIds])];
+      setDeletedForMe(newDeleted);
+      localStorage.setItem(`deleted_${roomId}`, JSON.stringify(newDeleted));
+      
+      // Update local state immediately for a snapier feel
+      setMessages(prev => prev.filter(m => !allCurrentIds.includes(m.id)));
+      
+    } catch (e) {
+      console.error("Error clearing chat:", e);
+    } finally {
+      setShowMenu(false);
+    }
   };
 
   const toggleBlock = () => {
