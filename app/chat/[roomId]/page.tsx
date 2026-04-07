@@ -272,7 +272,11 @@ function ChatRoomContent() {
 
         // Trigger Android/Web push notifications for the receiver
         if (participant?.user_id) {
-          fetch('/api/chat/notify', {
+          const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.()) 
+            ? (process.env.NEXT_PUBLIC_APP_URL || 'https://manthan-beta-c975.vercel.app')
+            : '';
+            
+          fetch(`${appUrl}/api/chat/notify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
