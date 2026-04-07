@@ -25,9 +25,9 @@ export type NotificationType =
     | 'war_declared'
     | 'war_preparation'
     | 'war_started'
-    | 'war_result'
     | 'post_mention'
-    | 'weekly_report';
+    | 'weekly_report'
+    | 'chat_message';
 
 interface CreateNotificationParams {
     userId: string;          // who receives the notification

@@ -251,6 +251,20 @@ function ChatRoomContent() {
           if (prev.some(m => m.id === insertedMessage.id)) return prev;
           return [...prev, insertedMessage as Message];
         });
+
+        // Trigger Android/Web push notifications for the receiver
+        if (participant?.user_id) {
+          fetch('/api/chat/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              receiverId: participant.user_id,
+              senderName: user.user_metadata?.full_name || 'Scholar',
+              content: content,
+              roomId: roomId
+            })
+          }).catch(console.error);
+        }
       }
 
       scrollToBottom();
