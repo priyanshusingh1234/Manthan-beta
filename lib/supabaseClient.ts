@@ -69,3 +69,15 @@ export const supabase = createClient(supabaseRuntimeUrl, supabaseAnonKey, {
   },
 })
 
+// Realtime channels do not work reliably through the HTTP proxy, so use the
+// direct Supabase endpoint for subscriptions while keeping normal data fetches proxied.
+export const supabaseRealtime = createClient(realSupabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    detectSessionInUrl: true,
+    lock: async (name: string, acquireTimeout: number, fn: () => Promise<unknown>) => {
+      return fn();
+    },
+  },
+})
+

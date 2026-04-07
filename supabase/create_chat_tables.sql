@@ -35,6 +35,11 @@ ALTER TABLE public.chat_rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 
+-- Publish chat tables to Supabase Realtime so inserts and updates stream to clients.
+ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_rooms;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_participants;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
+
 -- Policies for chat_rooms
 CREATE POLICY "Users can see rooms they are part of" ON public.chat_rooms
     FOR SELECT USING (
@@ -68,6 +73,20 @@ CREATE POLICY "Users can see messages in their rooms" ON public.chat_messages
 CREATE POLICY "Users can send messages in their rooms" ON public.chat_messages
     FOR INSERT WITH CHECK (
         auth.uid() = sender_id AND
+        EXISTS (
+            SELECT 1 FROM public.chat_participants 
+            WHERE room_id = public.chat_messages.room_id AND user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can update messages in their rooms" ON public.chat_messages
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM public.chat_participants 
+            WHERE room_id = public.chat_messages.room_id AND user_id = auth.uid()
+        )
+    )
+    WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.chat_participants 
             WHERE room_id = public.chat_messages.room_id AND user_id = auth.uid()

@@ -13,9 +13,10 @@ import {
   Check,
   Loader2,
   Phone,
-  Video
+  Video,
+  MessageCirclePlus
 } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Keyboard } from '@capacitor/keyboard';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -141,7 +142,7 @@ function ChatRoomContent() {
 
     initChat();
 
-    const channel = supabase
+    const channel = supabaseRealtime
       .channel(`room-${roomId}`)
       .on(
         'postgres_changes',
@@ -178,7 +179,7 @@ function ChatRoomContent() {
     } catch (e) { }
 
     return () => {
-      supabase.removeChannel(channel);
+      supabaseRealtime.removeChannel(channel);
       try { Keyboard.removeAllListeners(); } catch (e) { }
     };
   }, [roomId, router, user?.id]);
@@ -220,80 +221,102 @@ function ChatRoomContent() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-20 bg-[#f0f2f5] dark:bg-[#0b141a] relative">
-      {/* Premium Wallpaper */}
-      <div className="fixed inset-0 z-0 opacity-40 dark:opacity-[0.06] pointer-events-none mix-blend-overlay">
-        <Image src="https://i.pinimg.com/originals/97/c0/07/97c00754731d1136da3ca270d473465b.png" alt="pattern" fill className="object-cover opacity-50" />
-      </div>
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#0b0f14] dark:text-white pb-28">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,153,240,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_24%),linear-gradient(to_bottom,rgba(255,255,255,0.9),rgba(241,245,249,0.86))] dark:bg-[radial-gradient(circle_at_top_left,rgba(56,153,240,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_24%),linear-gradient(to_bottom,rgba(2,6,23,0.96),rgba(9,14,20,0.96))]" />
 
-      {/* Header - Flowing naturally with sticky top */}
-      <header
-        className="sticky top-[60px] md:top-0 left-0 lg:left-64 right-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 px-2 sm:px-4 py-3 flex items-center justify-between shadow-sm"
-      >
-        <div className="flex items-center gap-1">
-          <button onClick={() => {
-            Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
-            if (router && typeof router.push === 'function') {
-              router.push('/chat');
-            } else {
-              window.location.href = '/chat';
-            }
-          }} className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95">
-            <ArrowLeft className="w-6 h-6 text-slate-700 dark:text-slate-300" strokeWidth={2.5} />
-          </button>
+      <header className="sticky top-0 z-40 px-4 pt-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-4xl items-center justify-between rounded-[28px] border border-white/60 bg-white/85 px-3 py-3 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-950/85">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              onClick={() => {
+                Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
+                if (router && typeof router.push === 'function') {
+                  router.push('/chat');
+                } else {
+                  window.location.href = '/chat';
+                }
+              }}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition-all active:scale-95 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-800"
+              aria-label="Back to chats"
+            >
+              <ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
+            </button>
 
-          <div onClick={() => router.push(`/user/${participant?.user_id}`)} className="flex items-center gap-3 cursor-pointer p-1 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <div className="relative">
-              <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
-                {participant?.avatar_url ? (
-                  <Image src={participant.avatar_url} alt="User" fill className="object-cover" />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center text-slate-500 font-bold text-lg">
-                    {/* FIXED: changed fullName to full_name */}
-                    {participant?.full_name?.[0]?.toUpperCase() || 'U'}
-                  </div>
-                )}
+            <button
+              type="button"
+              onClick={() => {
+                if (participant?.user_id) router.push(`/user/${participant.user_id}`);
+              }}
+              className="flex min-w-0 items-center gap-3 rounded-[22px] px-2 py-1 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/70"
+            >
+              <div className="relative shrink-0">
+                <div className="h-11 w-11 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
+                  {participant?.avatar_url ? (
+                    <Image src={participant.avatar_url} alt="User" fill className="object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500 dark:text-slate-400">
+                      {participant?.full_name?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                  )}
+                </div>
+                <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-950" />
               </div>
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
-            </div>
-            <div>
-              <h2 className="text-[16px] sm:text-[17px] font-bold text-slate-900 dark:text-white leading-tight tracking-tight">
-                {participant?.full_name || 'Scholar'}
-              </h2>
-              <p className="text-[12px] text-emerald-600 dark:text-emerald-400 font-semibold tracking-wide">
-                Online
-              </p>
-            </div>
-          </div>
-        </div>
 
-        <div className="flex items-center space-x-1">
-          <button className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
-            <Phone className="w-5 h-5" />
-          </button>
-          <button className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hidden sm:block">
-            <Video className="w-5 h-5" />
-          </button>
-          <button className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
-            <MoreVertical className="w-5 h-5" />
-          </button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-white sm:text-[16px]">
+                    {participant?.full_name || 'Scholar'}
+                  </h2>
+                  <span className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 sm:inline-flex">
+                    Online
+                  </span>
+                </div>
+                <p className="truncate text-[12px] font-medium text-slate-500 dark:text-slate-400">
+                  Room ID {String(roomId).slice(0, 8).toUpperCase()}
+                </p>
+              </div>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
+              <Phone className="h-5 w-5" />
+            </button>
+            <button className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white sm:flex">
+              <Video className="h-5 w-5" />
+            </button>
+            <button className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
+              <MoreVertical className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Messages View */}
-      <div className="flex-1 px-4 py-6 z-10 relative max-w-3xl mx-auto w-full">
+      <div className="relative z-10 flex-1">
+        <div className="mx-auto flex w-full max-w-4xl flex-col px-4 py-5 sm:px-6 sm:py-8">
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center px-4">
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm border border-yellow-200 dark:border-yellow-900/50 max-w-[280px]">
-              🔒 Messages are securely processed. Start a battle of minds and connect.
+          <div className="flex min-h-[55vh] flex-col items-center justify-center px-4 text-center">
+            <div className="max-w-md rounded-[30px] border border-slate-200/80 bg-white/90 px-6 py-8 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-600/20">
+                <MessageCirclePlus className="h-8 w-8" />
+              </div>
+              <h3 className="mt-5 text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                Your conversation starts here
+              </h3>
+              <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
+                Send the first message to open the thread in this room. The design stays quiet so the conversation is the focus.
+              </p>
+              <div className="mt-5 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                Room ID {String(roomId).slice(0, 8).toUpperCase()}
+              </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-4 max-w-3xl mx-auto">
+          <div className="space-y-4">
             {messages.map((msg, index) => {
               const isMe = msg.sender_id === user?.id;
               const prevMsg = messages[index - 1];
@@ -308,7 +331,7 @@ function ChatRoomContent() {
                   {/* Date Pill */}
                   {showDate && (
                     <div className="flex justify-center my-5">
-                      <span className="px-4 py-1.5 bg-slate-900/5 dark:bg-white/5 backdrop-blur-md rounded-full text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest shadow-sm">
+                      <span className="px-4 py-1.5 bg-slate-900/5 dark:bg-white/5 backdrop-blur-md rounded-full text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest shadow-sm border border-white/50 dark:border-slate-800/50">
                         {formatDateLabel(msg.created_at)}
                       </span>
                     </div>
@@ -319,12 +342,11 @@ function ChatRoomContent() {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className={`
-                        relative max-w-[85%] sm:max-w-[75%] px-3.5 py-2 group
+                        relative max-w-[85%] sm:max-w-[72%] px-4 py-3 group
                         ${isMe
-                          ? 'bg-gradient-to-tr from-blue-600 to-blue-500 text-white shadow-blue-500/20'
-                          : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700/50'
+                          ? 'bg-gradient-to-br from-[#3897f0] to-[#1d4ed8] text-white shadow-[0_16px_35px_rgba(59,130,246,0.28)]'
+                          : 'bg-white/95 dark:bg-slate-950/80 text-slate-800 dark:text-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.08)] border border-slate-200/80 dark:border-slate-800/80'
                         }
-                        shadow-sm
                         ${isMe
                           ? `rounded-l-[20px] ${!isPrevSame ? 'rounded-tr-[20px]' : 'rounded-tr-[8px]'} ${!isNextSame ? 'rounded-br-[20px]' : 'rounded-br-[8px]'}`
                           : `rounded-r-[20px] ${!isPrevSame ? 'rounded-tl-[20px]' : 'rounded-tl-[8px]'} ${!isNextSame ? 'rounded-bl-[20px]' : 'rounded-bl-[8px]'}`
@@ -334,7 +356,7 @@ function ChatRoomContent() {
                       <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
 
                       <div className={`flex items-center justify-end gap-1.5 mt-0.5 select-none`}>
-                        <span className={`text-[10px] font-semibold ${isMe ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                        <span className={`text-[10px] font-semibold ${isMe ? 'text-blue-100/90' : 'text-slate-400 dark:text-slate-500'}`}>
                           {format(new Date(msg.created_at), 'HH:mm')}
                         </span>
                         {isMe && (
@@ -355,50 +377,53 @@ function ChatRoomContent() {
             <div ref={messagesEndRef} className="h-2" />
           </div>
         )}
-      </div>
+          </div>
+        </div>
 
       {/* Input Overlay */}
       <div
-        className="bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-3xl px-2 py-2 sm:px-4 sm:py-3 z-50 flex items-end gap-2 border-t border-slate-200/50 dark:border-slate-800/50 fixed bottom-0 left-0 lg:left-64 right-0"
+          className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 sm:px-6"
         style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: `max(env(safe-area-inset-bottom), 12px)` }}
       >
-        <button className="p-3 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 active:scale-90 transition-transform mb-0.5">
-          <Paperclip className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2.2} />
-        </button>
+          <div className="mx-auto flex w-full max-w-4xl items-end gap-2 rounded-[30px] border border-white/70 bg-white/90 px-3 py-3 shadow-[0_18px_50px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-slate-800 dark:bg-slate-950/90">
+            <button className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
+              <Paperclip className="h-5 w-5 sm:h-5 sm:w-5" strokeWidth={2.2} />
+            </button>
 
-        <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 rounded-3xl min-h-[44px] flex items-center shadow-sm">
-          <textarea
-            ref={inputRef}
-            rows={1}
-            placeholder="Type a message..."
-            value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-              e.target.style.height = 'auto';
-              e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            className="w-full bg-transparent border-none outline-none text-[15px] sm:text-base text-slate-800 dark:text-slate-100 resize-none py-3 px-4 max-h-[120px] custom-scrollbar placeholder:text-slate-400 dark:placeholder:text-slate-500"
-          />
-        </div>
+            <div className="flex-1 rounded-[24px] border border-slate-200 bg-slate-50/90 min-h-[48px] flex items-center shadow-inner dark:border-slate-800 dark:bg-slate-900/80">
+              <textarea
+                ref={inputRef}
+                rows={1}
+                placeholder="Write a message..."
+                value={newMessage}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                className="w-full resize-none border-none bg-transparent px-4 py-3 text-[15px] text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+              />
+            </div>
 
-        <button
-          onClick={handleSend}
-          disabled={!newMessage.trim() || sending}
-          className={`
-            mb-0.5 p-3 sm:p-3.5 rounded-full shadow-lg active:scale-95 transition-all
-            ${newMessage.trim()
-              ? 'bg-blue-600 text-white shadow-blue-600/30'
-              : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-300 dark:border-slate-700 shadow-none'}
-          `}
-        >
-          {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 sm:w-[22px] sm:h-[22px]" style={{ transform: 'translate(1px, -1px)' }} />}
-        </button>
+            <button
+              onClick={handleSend}
+              disabled={!newMessage.trim() || sending}
+              className={`
+                mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all active:scale-95
+                ${newMessage.trim()
+                  ? 'bg-gradient-to-br from-[#3897f0] to-[#1d4ed8] text-white shadow-[0_12px_28px_rgba(59,130,246,0.28)]'
+                  : 'border border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-600'}
+              `}
+            >
+              {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 translate-x-[1px] -translate-y-[1px]" />}
+            </button>
+          </div>
       </div>
 
       {keyboardHeight > 0 && <div className="absolute inset-0 z-40 bg-transparent" onClick={() => Keyboard.hide()} />}

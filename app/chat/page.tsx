@@ -13,7 +13,7 @@ import {
   MessageCirclePlus,
   ArrowRight
 } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { formatDistanceToNow } from 'date-fns';
 import ChatRail from '@/components/ChatRail';
 
@@ -176,7 +176,7 @@ export default function ChatListPage() {
   useEffect(() => {
     if (!user?.id) return;
 
-    const channel = supabase
+    const channel = supabaseRealtime
       .channel(`chat-list-${user.id}`)
       .on(
         'postgres_changes',
@@ -199,7 +199,7 @@ export default function ChatListPage() {
     }, 60000);
 
     return () => {
-      supabase.removeChannel(channel);
+      supabaseRealtime.removeChannel(channel);
       clearInterval(interval);
     };
   }, [user?.id, fetchRooms, refreshChatData]);
