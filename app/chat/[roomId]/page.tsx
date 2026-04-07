@@ -58,6 +58,15 @@ function ChatRoomContent() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const touchTimer = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const playNotificationSound = () => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio('/universfield-new-notification-040-493469.mp3');
+    }
+    audioRef.current.currentTime = 0;
+    audioRef.current.play().catch(() => {});
+  };
 
   useEffect(() => {
     try {
@@ -169,6 +178,7 @@ function ChatRoomContent() {
 
           if (msg.sender_id !== user?.id) {
             scrollToBottom();
+            playNotificationSound();
             Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
 
             // Mark as read if we are in the room viewing it
@@ -207,6 +217,14 @@ function ChatRoomContent() {
           // If lengths differ or last message differs, update state
           if (latest.length !== prev.length || (latest.length > 0 && prev.length > 0 && latest[latest.length-1].id !== prev[prev.length-1].id)) {
             setTimeout(() => scrollToBottom(), 100);
+            
+            // Check if last message is from someone else
+            const lastMsg = latest[latest.length-1];
+            if (lastMsg && lastMsg.sender_id !== user?.id) {
+              playNotificationSound();
+              Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+            }
+            
             return latest;
           }
           return prev;
