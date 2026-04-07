@@ -46,23 +46,25 @@ interface CreateNotificationParams {
  */
 export async function createNotification(params: CreateNotificationParams): Promise<void> {
     try {
-        const { error } = await supabaseAdmin
-            .from('notifications')
-            .insert({
-                user_id: params.userId,
-                type: params.type,
-                title: params.title,
-                body: params.body,
-                href: params.href ?? null,
-                actor_id: params.actorId ?? null,
-                actor_name: params.actorName ?? null,
-                actor_avatar: params.actorAvatar ?? null,
-                read: false,
-            });
+        if (params.type !== 'chat_message') {
+            const { error } = await supabaseAdmin
+                .from('notifications')
+                .insert({
+                    user_id: params.userId,
+                    type: params.type,
+                    title: params.title,
+                    body: params.body,
+                    href: params.href ?? null,
+                    actor_id: params.actorId ?? null,
+                    actor_name: params.actorName ?? null,
+                    actor_avatar: params.actorAvatar ?? null,
+                    read: false,
+                });
 
-        if (error) {
-            console.error('[createNotification] DB error:', error.message);
-        } else {
+            if (error) {
+                console.error('[createNotification] DB error:', error.message);
+            }
+        }
             // Broadcast to user's push subscriptions
             const { data: subs } = await supabaseAdmin
                 .from('push_subscriptions')
@@ -139,7 +141,6 @@ export async function createNotification(params: CreateNotificationParams): Prom
                     })
                 );
             }
-        }
     } catch (e) {
         console.error('[createNotification] Unexpected error:', e);
     }

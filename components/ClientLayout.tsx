@@ -254,11 +254,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.access_token) {
-        // Trigger weekly report check/generation
-        fetch('/api/report/generate-notification', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${session.access_token}` }
-        }).catch(() => { });
+        // Trigger weekly report check/generation max once a week to stop popup spam
+        const lastCheck = localStorage.getItem('last_weekly_report_check');
+        const now = Date.now();
+        if (!lastCheck || now - parseInt(lastCheck) > 7 * 24 * 60 * 60 * 1000) {
+          localStorage.setItem('last_weekly_report_check', now.toString());
+          fetch('/api/report/generate-notification', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${session.access_token}` }
+          }).catch(() => { });
+        }
       }
     });
 
@@ -271,10 +276,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         ActivityTracker.restoreFromCloud();
       }
       if (session?.access_token) {
-        fetch('/api/report/generate-notification', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${session.access_token}` }
-        }).catch(() => { });
+        const lastCheck = localStorage.getItem('last_weekly_report_check');
+        const now = Date.now();
+        if (!lastCheck || now - parseInt(lastCheck) > 7 * 24 * 60 * 60 * 1000) {
+          localStorage.setItem('last_weekly_report_check', now.toString());
+          fetch('/api/report/generate-notification', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${session.access_token}` }
+          }).catch(() => { });
+        }
       }
     });
 

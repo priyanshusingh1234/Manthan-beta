@@ -55,6 +55,7 @@ function ChatRoomContent() {
   const [newMessage, setNewMessage] = useState('');
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [sending, setSending] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [deletedForMe, setDeletedForMe] = useState<string[]>([]);
@@ -70,6 +71,7 @@ function ChatRoomContent() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const touchTimer = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isBlockedRef = useRef(false);
   const isMutedRef = useRef(false);
 
@@ -343,6 +345,68 @@ function ChatRoomContent() {
     }
     setShowMenu(false);
     setShowProfileModal(false);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingImage(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('roomId', roomId);
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const res = await fetch('/api/chat/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session?.access_token}` },
+        body: formData
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
+      const { data: insertedMessage, error } = await supabase
+        .from('chat_messages')
+        .insert({ room_id: roomId, sender_id: user.id, content: result.publicUrl, message_type: 'image' })
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+
+      if (insertedMessage) {
+        setMessages(prev => {
+          if (prev.some(m => m.id === insertedMessage.id)) return prev;
+          return [...prev, insertedMessage as Message];
+        });
+
+        if (participant?.user_id) {
+          const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.()) 
+            ? (process.env.NEXT_PUBLIC_APP_URL || 'https://manthan-beta-c975.vercel.app')
+            : '';
+            
+          fetch(`${appUrl}/api/chat/notify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              receiverId: participant.user_id,
+              senderId: user.id,
+              content: 'Sent an image 🖼️',
+              roomId: roomId
+            })
+          }).catch(console.error);
+        }
+      }
+      scrollToBottom();
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Failed to upload image.');
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleSend = async (e?: React.FormEvent) => {
@@ -751,7 +815,11 @@ function ChatRoomContent() {
                       `}
                     >
                       <div className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">
-                        {msg.content.startsWith('> Replying to **') ? (
+                        {msg.message_type === 'image' ? (
+                          <div className="relative w-[200px] h-[200px] sm:w-[240px] sm:h-[240px] rounded-xl overflow-hidden mb-1 border border-black/10 dark:border-white/10">
+                            <Image src={msg.content} alt="Chat Attachment" fill className="object-cover" unoptimized />
+                          </div>
+                        ) : msg.content.startsWith('> Replying to **') ? (
                           <>
                             <div className={`mb-2 rounded-xl border-l-4 p-2 text-sm ${isMe ? 'border-blue-200 bg-blue-500/20 text-blue-50' : 'border-blue-500 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
                               <span className="font-bold opacity-80">{msg.content.split('**: "')[0].replace('> Replying to **', '')}</span>
@@ -802,8 +870,19 @@ function ChatRoomContent() {
           </div>
         ) : (
           <div className="mx-auto flex w-full max-w-4xl items-end gap-2 rounded-[30px] border border-white/70 bg-white/90 px-3 py-3 shadow-[0_18px_50px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-slate-800 dark:bg-slate-950/90">
-            <button className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
-              <Paperclip className="h-5 w-5 sm:h-5 sm:w-5" strokeWidth={2.2} />
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+            />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingImage}
+              className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white disabled:opacity-50"
+            >
+              {uploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5 sm:h-5 sm:w-5" strokeWidth={2.2} />}
             </button>
 
             <div className="flex-1 rounded-[24px] border border-slate-200 bg-slate-50/90 min-h-[48px] flex flex-col justify-center shadow-inner dark:border-slate-800 dark:bg-slate-900/80 overflow-hidden">
