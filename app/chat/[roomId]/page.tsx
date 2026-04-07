@@ -788,11 +788,11 @@ function ChatRoomContent() {
                   })
                 }).catch(console.error);
 
-                // Drop a chat message so they can tap to join
+                // Store just the call room ID cleanly
                 await supabase.from('chat_messages').insert({
                   room_id: roomId,
                   sender_id: user.id,
-                  content: `📞 Voice call started. [Join here](${callUrl})`,
+                  content: `__CALL__:${callRoom}`,
                   message_type: 'text'
                 });
               }}
@@ -930,6 +930,32 @@ function ChatRoomContent() {
                         {msg.message_type === 'image' ? (
                           <div className="relative w-[200px] h-[200px] sm:w-[240px] sm:h-[240px] rounded-xl overflow-hidden mb-1 border border-black/10 dark:border-white/10">
                             <Image src={msg.content} alt="Chat Attachment" fill className="object-cover" unoptimized />
+                          </div>
+                        ) : msg.content.startsWith('__CALL__:') ? (
+                          // Render voice call card
+                          <div className="flex flex-col items-center gap-3 px-1 py-2 min-w-[180px]">
+                            <div className={`flex h-12 w-12 items-center justify-center rounded-full ${isMe ? 'bg-blue-400/30' : 'bg-emerald-500/20'}`}>
+                              <Phone className={`h-6 w-6 ${isMe ? 'text-blue-100' : 'text-emerald-400'}`} />
+                            </div>
+                            <div className="text-center">
+                              <p className={`text-sm font-bold ${isMe ? 'text-white' : 'text-slate-800 dark:text-white'}`}>Voice Call</p>
+                              <p className={`text-[11px] mt-0.5 ${isMe ? 'text-blue-100/70' : 'text-slate-500 dark:text-slate-400'}`}>{isMe ? 'You started a call' : 'Incoming call'}</p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const cr = msg.content.replace('__CALL__:', '');
+                                const callerQ = encodeURIComponent(participant?.full_name || 'Scholar');
+                                const avatarQ = encodeURIComponent(participant?.avatar_url || '');
+                                router.push(`/call/${cr}?caller=${callerQ}&avatar=${avatarQ}`);
+                              }}
+                              className={`w-full rounded-xl py-2 text-sm font-bold transition-all active:scale-95 ${
+                                isMe
+                                  ? 'bg-white/20 text-white hover:bg-white/30'
+                                  : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20'
+                              }`}
+                            >
+                              {isMe ? 'Open Call' : '📞 Join Call'}
+                            </button>
                           </div>
                         ) : msg.content.startsWith('> Replying to **') ? (
                           <>
