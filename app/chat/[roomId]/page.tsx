@@ -55,11 +55,33 @@ function ChatRoomContent() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [deletedForMe, setDeletedForMe] = useState<string[]>([]);
   const [isOnline, setIsOnline] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileStats, setProfileStats] = useState({ followers: 0, following: 0, loaded: false });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const touchTimer = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const openProfileModal = async () => {
+    if (!participant?.user_id) return;
+    setShowProfileModal(true);
+    if (profileStats.loaded) return;
+
+    try {
+      const [followersRes, followingRes] = await Promise.all([
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', participant.user_id),
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', participant.user_id),
+      ]);
+      setProfileStats({
+        followers: followersRes.count || 0,
+        following: followingRes.count || 0,
+        loaded: true
+      });
+    } catch (e) {
+      console.error("Error fetching stats", e);
+    }
+  };
 
   const playNotificationSound = () => {
     if (!audioRef.current) {
@@ -374,6 +396,86 @@ function ChatRoomContent() {
         )}
       </AnimatePresence>
 
+      {/* Profile Modal */}
+      <AnimatePresence>
+        {showProfileModal && participant && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-[2px]"
+              onClick={() => setShowProfileModal(false)}
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: "spring", damping: 28, stiffness: 300, mass: 0.8 }}
+              className="fixed bottom-0 left-0 right-0 z-[90] bg-white dark:bg-slate-900 rounded-t-[28px] px-6 pt-3 pb-8 shadow-[0_-10px_40px_rgba(0,0,0,0.15)]"
+            >
+              <div className="mx-auto mb-6 h-1.5 w-10 rounded-full bg-slate-300/80 dark:bg-slate-700" />
+              
+              <div className="flex flex-col items-center pb-6">
+                <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-slate-100 dark:border-slate-800 bg-slate-200 dark:bg-slate-900 mb-4 shadow-sm relative">
+                  {participant.avatar_url ? (
+                    <Image src={participant.avatar_url} alt="Profile" fill className="object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-slate-500 dark:text-slate-400">
+                      {participant.full_name?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                  )}
+                </div>
+                <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  {participant.full_name}
+                </h2>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-4">
+                  @{participant.username || 'user'}
+                </p>
+
+                <div className="flex w-full max-w-xs justify-center gap-8 border-y border-slate-100 dark:border-slate-800/50 py-4 mb-6">
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-bold text-slate-900 dark:text-white">
+                      {profileStats.followers}
+                    </span>
+                    <span className="text-xs font-medium text-slate-500">Followers</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-bold text-slate-900 dark:text-white">
+                      {profileStats.following}
+                    </span>
+                    <span className="text-xs font-medium text-slate-500">Following</span>
+                  </div>
+                </div>
+
+                <div className="w-full space-y-3">
+                  <button
+                    onClick={() => {
+                      setShowProfileModal(false);
+                      router.push(`/user/${participant.username || participant.user_id}`);
+                    }}
+                    className="w-full rounded-2xl bg-sky-500 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-sky-600 active:scale-95"
+                  >
+                    View Full Profile
+                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => alert('Mute functionality coming soon!')}
+                      className="flex-1 rounded-2xl bg-slate-100 dark:bg-slate-800 py-3.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95"
+                    >
+                      Mute User
+                    </button>
+                    <button
+                      onClick={() => alert('Block functionality coming soon!')}
+                      className="flex-1 rounded-2xl bg-rose-50 dark:bg-rose-500/10 py-3.5 text-sm font-bold text-rose-600 dark:text-rose-400 transition-colors hover:bg-rose-100 dark:hover:bg-rose-500/20 active:scale-95"
+                    >
+                      Block User
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       <header className="fixed top-0 inset-x-0 z-40 px-4 pt-4 sm:px-6 lg:px-8">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between rounded-[28px] border border-white/60 bg-white/85 px-3 py-3 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-950/85">
           <div className="flex min-w-0 items-center gap-3">
@@ -394,9 +496,7 @@ function ChatRoomContent() {
 
             <button
               type="button"
-              onClick={() => {
-                if (participant?.user_id) router.push(`/user/${participant.user_id}`);
-              }}
+              onClick={openProfileModal}
               className="flex min-w-0 items-center gap-3 rounded-[22px] px-2 py-1 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/70"
             >
               <div className="relative shrink-0">

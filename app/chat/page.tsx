@@ -384,7 +384,6 @@ function ChatCard({ room, onClick, user }: { room: ChatRoom; onClick: () => void
             </div>
           )}
         </div>
-        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-500 border-2 border-slate-50 dark:border-slate-950 rounded-full z-20" />
       </div>
 
       <div className="flex-1 min-w-0 pr-2">
