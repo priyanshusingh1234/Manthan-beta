@@ -155,6 +155,7 @@ export default function PostCard({
     };
 
     const handleLike = async (e: React.MouseEvent) => {
+        e.preventDefault();
         e.stopPropagation();
         if (!currentUserId) return;
         const prevLiked = isLiked;
@@ -400,8 +401,9 @@ export default function PostCard({
                         <button
                             className="group flex items-center transition-colors hover:text-sky-500"
                             onClick={async (e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
-                                const url = typeof window !== 'undefined' ? `${window.location.host}/posts/${post.id}` : '';
+                                const url = typeof window !== 'undefined' ? `${window.location.origin}/posts/${post.id}` : '';
                                 try {
                                     if (Capacitor.isNativePlatform()) {
                                         await Share.share({ title: 'Dheeyudha Academy Post', url, dialogTitle: 'Share this post' });
@@ -411,7 +413,7 @@ export default function PostCard({
                                         await navigator.share({ title: 'Dheeyudha Academy Post', url });
                                         return;
                                     }
-                                    navigator.clipboard.writeText(`https://${url}`);
+                                    navigator.clipboard.writeText(url);
                                     alert('Link copied!');
                                 } catch (err) { console.error(err); }
                             }}
