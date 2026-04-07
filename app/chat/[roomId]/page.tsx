@@ -193,6 +193,27 @@ function ChatRoomContent() {
       )
       .subscribe();
 
+    // 🚀 GUARANTEED REALTIME FALLBACK (For users with ISP Socket Blocks)
+    // Polls securely via the HTTP Proxy every 2.5 seconds
+    const pollInterval = setInterval(async () => {
+      const { data: latest } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true });
+
+      if (latest) {
+        setMessages(prev => {
+          // If lengths differ or last message differs, update state
+          if (latest.length !== prev.length || (latest.length > 0 && prev.length > 0 && latest[latest.length-1].id !== prev[prev.length-1].id)) {
+            setTimeout(() => scrollToBottom(), 100);
+            return latest;
+          }
+          return prev;
+        });
+      }
+    }, 2500);
+
     try {
       Keyboard.addListener('keyboardWillShow', info => {
         setKeyboardHeight(info.keyboardHeight);
@@ -203,6 +224,7 @@ function ChatRoomContent() {
 
     return () => {
       supabaseRealtime.removeChannel(channel);
+      clearInterval(pollInterval);
       try { Keyboard.removeAllListeners(); } catch (e) { }
     };
   }, [roomId, router, user?.id]);
