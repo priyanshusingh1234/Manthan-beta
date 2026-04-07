@@ -315,7 +315,7 @@ function ChatRoomContent() {
     if (!user || messages.length === 0) return;
 
     try {
-      Haptics.notification({ type: Haptics.NotificationType.Warning }).catch(() => { });
+      Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
       
       // 1. Delete MY messages from the database (Deletes for everyone)
       const myMessageIds = messages.filter(m => m.sender_id === user.id).map(m => m.id);
@@ -367,12 +367,46 @@ function ChatRoomContent() {
     setShowProfileModal(false);
   };
 
+  // Compress image to max 1080px / 80% quality before upload
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 1080;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round((height * MAX) / width); width = MAX; }
+          else { width = Math.round((width * MAX) / height); height = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+          } else {
+            resolve(file); // fallback to original if compression fails
+          }
+        }, 'image/jpeg', 0.8);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
+    const rawFile = e.target.files?.[0];
+    if (!rawFile || !user) return;
     setUploadingImage(true);
 
     try {
+      // Compress before upload
+      const file = await compressImage(rawFile);
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('roomId', roomId);
@@ -402,6 +436,7 @@ function ChatRoomContent() {
           return [...prev, insertedMessage as Message];
         });
 
+        // Push notification for image
         if (participant?.user_id) {
           const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.()) 
             ? (process.env.NEXT_PUBLIC_APP_URL || 'https://manthan-beta-c975.vercel.app')
@@ -413,7 +448,7 @@ function ChatRoomContent() {
             body: JSON.stringify({
               receiverId: participant.user_id,
               senderId: user.id,
-              content: 'Sent an image 🖼️',
+              content: '📸 Sent you a photo',
               roomId: roomId
             })
           }).catch(console.error);

@@ -42,6 +42,11 @@ export async function POST(req: NextRequest) {
         const currentUser = await getVerifiedUser(authHeader);
         if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+        // Teachers don't receive weekly reports
+        if (currentUser.user_metadata?.isTeacher) {
+            return NextResponse.json({ message: 'Skipped: teacher account' });
+        }
+
         const userId = currentUser.id;
         const body = await req.json().catch(() => ({}));
         const force = !!body?.force;
