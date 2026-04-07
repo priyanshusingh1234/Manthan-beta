@@ -54,6 +54,7 @@ function ChatRoomContent() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [deletedForMe, setDeletedForMe] = useState<string[]>([]);
+  const [isOnline, setIsOnline] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -165,7 +166,14 @@ function ChatRoomContent() {
     initChat();
 
     const channel = supabaseRealtime
-      .channel(`room-${roomId}`)
+      .channel(`room-${roomId}`, {
+        config: { presence: { key: user.id } }
+      })
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const othersOnline = Object.keys(state).some(id => id !== user.id);
+        setIsOnline(othersOnline);
+      })
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` },
@@ -201,7 +209,11 @@ function ChatRoomContent() {
           setMessages(prev => prev.filter(m => m.id !== payload.old.id));
         }
       )
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ online_at: new Date().toISOString() });
+        }
+      });
 
     // 🚀 GUARANTEED REALTIME FALLBACK (For users with ISP Socket Blocks)
     // Polls securely via the HTTP Proxy every 2.5 seconds
@@ -405,8 +417,12 @@ function ChatRoomContent() {
                   <h2 className="truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-white sm:text-[16px]">
                     {participant?.full_name || 'Scholar'}
                   </h2>
-                  <span className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 sm:inline-flex">
-                    Online
+                  <span className={`hidden rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.22em] sm:inline-flex transition-colors ${
+                    isOnline 
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                      : "border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                  }`}>
+                    {isOnline ? 'Online' : 'Offline'}
                   </span>
                 </div>
                 <p className="truncate text-[12px] font-medium text-slate-500 dark:text-slate-400">
