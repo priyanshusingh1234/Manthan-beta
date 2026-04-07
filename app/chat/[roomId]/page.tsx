@@ -281,7 +281,7 @@ function ChatRoomContent() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               receiverId: participant.user_id,
-              senderName: user.user_metadata?.full_name || 'Scholar',
+              senderId: user.id,
               content: content,
               roomId: roomId
             })
