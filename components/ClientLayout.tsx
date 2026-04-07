@@ -337,16 +337,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isSearchPage = pathname === '/search';
   const isTestArena = pathname === '/tests';
   const isIndividualTest = pathname?.startsWith('/tests/') || pathname?.startsWith('/test/') || pathname?.startsWith('/arena/') || false;
+  const isChatPage = pathname?.startsWith('/chat');
 
-  const hideMainSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isSearchPage || isIndividualTest;
-  const hideBottomNav = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isIndividualTest;
+  const hideMainSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isSearchPage || isIndividualTest || isChatPage;
+  const hideBottomNav = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isIndividualTest || isChatPage;
 
 
   return (
     <>
       {!hideMainSidebar && <DesktopSidebar />}
       <div className={`${hideMainSidebar ? 'lg:pl-0' : 'lg:pl-64'} ${showBottomNav && !hideBottomNav ? 'pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''}`}>
-        {!hideMainSidebar && !isIndividualTest && <Header isMobile={isMobile} />}
+        {!hideMainSidebar && !isIndividualTest && !isChatPage && <Header isMobile={isMobile} />}
         {children}
         {showBottomNav && !hideBottomNav && <BottomNav />}
       </div>

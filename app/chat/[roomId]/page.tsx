@@ -14,7 +14,8 @@ import {
   Loader2,
   Phone,
   Video,
-  MessageCirclePlus
+  MessageCirclePlus,
+  Trash2
 } from 'lucide-react';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -51,9 +52,21 @@ function ChatRoomContent() {
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [sending, setSending] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [deletedForMe, setDeletedForMe] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const touchTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`deleted_${roomId}`);
+      if (stored) {
+        setDeletedForMe(JSON.parse(stored));
+      }
+    } catch (e) {}
+  }, [roomId]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -171,6 +184,13 @@ function ChatRoomContent() {
           setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` },
+        (payload) => {
+          setMessages(prev => prev.filter(m => m.id !== payload.old.id));
+        }
+      )
       .subscribe();
 
     try {
@@ -227,10 +247,64 @@ function ChatRoomContent() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#0b0f14] dark:text-white pb-28">
+    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#0b0f14] dark:text-white pb-28">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,153,240,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_24%),linear-gradient(to_bottom,rgba(255,255,255,0.9),rgba(241,245,249,0.86))] dark:bg-[radial-gradient(circle_at_top_left,rgba(56,153,240,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_24%),linear-gradient(to_bottom,rgba(2,6,23,0.96),rgba(9,14,20,0.96))]" />
 
-      <header className="sticky top-0 z-40 px-4 pt-4 sm:px-6 lg:px-8">
+      {/* Action Sheet */}
+      <AnimatePresence>
+        {selectedMessage && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm"
+              onClick={() => setSelectedMessage(null)}
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              className="fixed bottom-0 left-0 right-0 z-[70] bg-white dark:bg-slate-900 rounded-t-[32px] p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.2)]"
+            >
+              <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-800" />
+              <div className="space-y-3 pb-8">
+                <button 
+                  onClick={() => {
+                    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                    const newDeleted = [...deletedForMe, selectedMessage.id];
+                    setDeletedForMe(newDeleted);
+                    localStorage.setItem(`deleted_${roomId}`, JSON.stringify(newDeleted));
+                    setSelectedMessage(null);
+                  }} 
+                  className="flex w-full items-center justify-between rounded-[20px] bg-slate-100 p-4 font-bold text-slate-800 transition-colors hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Delete for me
+                  <Trash2 className="h-5 w-5 text-slate-500" />
+                </button>
+                {selectedMessage.sender_id === user?.id && (
+                  <button 
+                    onClick={async () => {
+                      Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+                      await supabase.from('chat_messages').delete().eq('id', selectedMessage.id);
+                      setMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
+                      setSelectedMessage(null);
+                    }} 
+                    className="flex w-full items-center justify-between rounded-[20px] bg-red-50 p-4 font-bold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/40"
+                  >
+                    Delete for everyone
+                    <Trash2 className="h-5 w-5 text-red-500" />
+                  </button>
+                )}
+                <button 
+                  onClick={() => setSelectedMessage(null)} 
+                  className="mt-2 w-full p-4 font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <header className="z-40 px-4 pt-4 sm:px-6 lg:px-8">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between rounded-[28px] border border-white/60 bg-white/85 px-3 py-3 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-950/85">
           <div className="flex min-w-0 items-center gap-3">
             <button
@@ -278,7 +352,7 @@ function ChatRoomContent() {
                   </span>
                 </div>
                 <p className="truncate text-[12px] font-medium text-slate-500 dark:text-slate-400">
-                  Room ID {String(roomId).slice(0, 8).toUpperCase()}
+                  Tap for more info
                 </p>
               </div>
             </button>
@@ -316,19 +390,16 @@ function ChatRoomContent() {
               <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
                 Send the first message to open the thread in this room. The design stays quiet so the conversation is the focus.
               </p>
-              <div className="mt-5 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-                Room ID {String(roomId).slice(0, 8).toUpperCase()}
-              </div>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
-            {messages.map((msg, index) => {
+            {messages.filter(m => !deletedForMe.includes(m.id)).map((msg, index, arr) => {
               const isMe = msg.sender_id === user?.id;
-              const prevMsg = messages[index - 1];
+              const prevMsg = arr[index - 1];
               const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
 
-              const nextMsg = messages[index + 1];
+              const nextMsg = arr[index + 1];
               const isNextSame = nextMsg && nextMsg.sender_id === msg.sender_id && format(new Date(nextMsg.created_at), 'yyyy-MM-dd') === format(new Date(msg.created_at), 'yyyy-MM-dd');
               const isPrevSame = prevMsg && prevMsg.sender_id === msg.sender_id && !showDate;
 
@@ -345,6 +416,23 @@ function ChatRoomContent() {
 
                   <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isNextSame ? 'mb-0.5' : 'mb-3'}`}>
                     <motion.div
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+                        setSelectedMessage(msg);
+                      }}
+                      onTouchStart={() => {
+                        touchTimer.current = setTimeout(() => {
+                          Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+                          setSelectedMessage(msg);
+                        }, 500);
+                      }}
+                      onTouchEnd={() => {
+                        if (touchTimer.current) clearTimeout(touchTimer.current);
+                      }}
+                      onTouchMove={() => {
+                        if (touchTimer.current) clearTimeout(touchTimer.current);
+                      }}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className={`

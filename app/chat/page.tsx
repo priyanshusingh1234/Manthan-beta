@@ -11,7 +11,8 @@ import {
   Check,
   CheckCheck,
   MessageCirclePlus,
-  ArrowRight
+  ArrowRight,
+  ArrowLeft
 } from 'lucide-react';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { formatDistanceToNow } from 'date-fns';
@@ -235,12 +236,26 @@ export default function ChatListPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
       {/* Dynamic Header */}
-      <div className="sticky top-0 lg:top-[64px] z-40 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50">
+      <div className="sticky top-0 z-40 bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50">
         <div className="max-w-3xl mx-auto px-4 pt-4 sm:pt-6 pb-4">
           <div className="flex justify-between items-center mb-5">
-            <h1 className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
-              Messages
-            </h1>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => {
+                  if (router && typeof router.push === 'function') {
+                    router.push('/feed');
+                  } else {
+                    window.location.href = '/feed';
+                  }
+                }}
+                className="h-10 w-10 flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <h1 className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
+                Messages
+              </h1>
+            </div>
             <button className="h-10 w-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-600/30 active:scale-95 transition-transform">
               <MessageCirclePlus className="w-5 h-5" />
             </button>
