@@ -767,10 +767,13 @@ function ChatRoomContent() {
                 
                 // Unique call room per conversation session
                 const callRoom = `${roomId}_${Date.now()}`;
-                const callUrl = `/call/${callRoom}?caller=${encodeURIComponent(user.user_metadata?.full_name || 'Scholar')}&avatar=${encodeURIComponent(user.user_metadata?.avatar_url || '')}`;
+                const callUrl = `/call/${callRoom}?caller=${encodeURIComponent(user.user_metadata?.full_name || 'Scholar')}&avatar=${encodeURIComponent(user.user_metadata?.avatar_url || '')}&mode=outgoing`;
                 
-                // Navigate self to call page
+                // Navigate self to call page (outgoing)
                 router.push(callUrl);
+
+                // Incoming URL for recipient (mode=incoming)
+                const incomingUrl = `/call/${callRoom}?caller=${encodeURIComponent(user.user_metadata?.full_name || 'Scholar')}&avatar=${encodeURIComponent(user.user_metadata?.avatar_url || '')}&mode=incoming`;
 
                 // Send push notification to recipient
                 const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.())
@@ -785,6 +788,7 @@ function ChatRoomContent() {
                     callerName: user.user_metadata?.full_name || 'Scholar',
                     callerAvatar: user.user_metadata?.avatar_url || '',
                     callRoom,
+                    incomingUrl,
                   })
                 }).catch(console.error);
 
@@ -946,7 +950,8 @@ function ChatRoomContent() {
                                 const cr = msg.content.replace('__CALL__:', '');
                                 const callerQ = encodeURIComponent(participant?.full_name || 'Scholar');
                                 const avatarQ = encodeURIComponent(participant?.avatar_url || '');
-                                router.push(`/call/${cr}?caller=${callerQ}&avatar=${avatarQ}`);
+                                const modeQ = isMe ? 'outgoing' : 'incoming';
+                                router.push(`/call/${cr}?caller=${callerQ}&avatar=${avatarQ}&mode=${modeQ}`);
                               }}
                               className={`w-full rounded-xl py-2 text-sm font-bold transition-all active:scale-95 ${
                                 isMe

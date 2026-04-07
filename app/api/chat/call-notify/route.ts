@@ -4,7 +4,7 @@ import { firebaseAdmin } from '@/lib/firebaseAdmin';
 
 export async function POST(req: Request) {
   try {
-    const { receiverId, senderId, callerName, callerAvatar, callRoom } = await req.json();
+    const { receiverId, senderId, callerName, callerAvatar, callRoom, incomingUrl } = await req.json();
 
     if (!receiverId || !senderId || !callRoom) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message: 'No native push tokens found' });
     }
 
-    const callUrl = `/call/${callRoom}?caller=${encodeURIComponent(callerName || 'Scholar')}&avatar=${encodeURIComponent(callerAvatar || '')}`;
+    const callUrl = incomingUrl || `/call/${callRoom}?caller=${encodeURIComponent(callerName || 'Scholar')}&avatar=${encodeURIComponent(callerAvatar || '')}&mode=incoming`;
 
     const sendPromises = subs.map(async (sub) => {
       if (firebaseAdmin.apps.length > 0) {
