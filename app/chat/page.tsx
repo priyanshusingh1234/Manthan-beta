@@ -1,20 +1,21 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Search,
   X,
   Loader2,
-  CheckCheck,
   Check,
+  CheckCheck,
   MessageCirclePlus,
   ArrowRight
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { formatDistanceToNow } from 'date-fns';
+import ChatRail from '@/components/ChatRail';
 
 interface ChatRoom {
   id: string;
@@ -50,25 +51,7 @@ export default function ChatListPage() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  useEffect(() => {
-    const initData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        if (router && typeof router.push === 'function') {
-          router.push('/login');
-        } else {
-          window.location.href = '/login';
-        }
-        return;
-      }
-      setUser(user);
-      await Promise.all([fetchRooms(user.id), fetchFollowing(user.id)]);
-      setLoading(false);
-    };
-    initData();
-  }, [router]);
-
-  const fetchRooms = async (userId: string) => {
+  const fetchRooms = useCallback(async (userId: string) => {
     try {
       const { data: participants, error: participantsError } = await supabase
         .from('chat_participants')
@@ -136,9 +119,9 @@ export default function ChatListPage() {
     } catch (err) {
       console.error('[Chat] Failed:', err);
     }
-  };
+  }, []);
 
-  const fetchFollowing = async (userId: string) => {
+  const fetchFollowing = useCallback(async (userId: string) => {
     try {
       const { data: follows } = await supabase
         .from('follows')
@@ -164,9 +147,62 @@ export default function ChatListPage() {
         })));
       }
     } catch (err) {
-      console.error("Failed following fetching:", err);
+      console.error('Failed following fetching:', err);
     }
-  };
+  }, []);
+
+  const refreshChatData = useCallback(async (userId: string) => {
+    await Promise.all([fetchRooms(userId), fetchFollowing(userId)]);
+  }, [fetchRooms, fetchFollowing]);
+
+  useEffect(() => {
+    const initData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        if (router && typeof router.push === 'function') {
+          router.push('/login');
+        } else {
+          window.location.href = '/login';
+        }
+        return;
+      }
+      setUser(user);
+      await refreshChatData(user.id);
+      setLoading(false);
+    };
+    initData();
+  }, [router, refreshChatData]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`chat-list-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_messages' },
+        () => {
+          fetchRooms(user.id);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_participants', filter: `user_id=eq.${user.id}` },
+        () => {
+          refreshChatData(user.id);
+        }
+      )
+      .subscribe();
+
+    const interval = setInterval(() => {
+      refreshChatData(user.id);
+    }, 60000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, [user?.id, fetchRooms, refreshChatData]);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -265,108 +301,147 @@ export default function ChatListPage() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 mt-6">
-        {/* Following Tray */}
-        {!searchQuery && !loading && following.length > 0 && (
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 mb-8">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-4 ml-1">
-              Start Chat
-            </h2>
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
-              {following.map((fw) => (
-                <button
-                  key={fw.id}
-                  onClick={() => startChat(fw.id)}
-                  className="flex flex-col items-center gap-2 min-w-[72px] snap-start group"
-                >
-                  <div className="relative p-[3px] rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-xl shadow-blue-600/20 group-active:scale-95 transition-transform duration-200">
-                    <div className="relative h-14 w-14 bg-white dark:bg-slate-900 rounded-full border-2 border-white dark:border-slate-950 overflow-hidden">
-                      {fw.avatar ? (
-                        <Image src={fw.avatar} alt={fw.name} fill className="object-cover" />
+      <div className="mx-auto w-full max-w-7xl px-4 mt-6 lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6">
+        <div className="hidden lg:block">
+          <div className="sticky top-[108px] h-[calc(100vh-132px)]">
+            <ChatRail
+              rooms={rooms.map((room) => ({
+                id: room.id,
+                participant: room.participant,
+                last_message: room.last_message,
+              }))}
+              following={following}
+              loading={loading}
+              activeRoomId={undefined}
+              currentUserId={user?.id}
+              onOpenRoom={(roomId) => {
+                const path = `/chat/${roomId}`;
+                if (router && typeof router.push === 'function') {
+                  router.push(path);
+                } else {
+                  window.location.href = path;
+                }
+              }}
+              onStartChat={(targetUserId, targetName) => startChat(targetUserId, targetName)}
+            />
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          {/* Following Tray */}
+          {!searchQuery && !loading && following.length > 0 && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 mb-8 lg:hidden">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-4 ml-1">
+                Start Chat
+              </h2>
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
+                {following.map((fw) => (
+                  <button
+                    key={fw.id}
+                    onClick={() => startChat(fw.id)}
+                    className="flex flex-col items-center gap-2 min-w-[72px] snap-start group"
+                  >
+                    <div className="relative p-[3px] rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-xl shadow-blue-600/20 group-active:scale-95 transition-transform duration-200">
+                      <div className="relative h-14 w-14 bg-white dark:bg-slate-900 rounded-full border-2 border-white dark:border-slate-950 overflow-hidden">
+                        {fw.avatar ? (
+                          <Image src={fw.avatar} alt={fw.name} fill className="object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center font-black text-slate-700 dark:text-slate-300 text-lg">
+                            {fw.name[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-300 w-full truncate text-center px-1">
+                      {fw.name.split(' ')[0]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Global Search Results */}
+          {searchQuery && isSearching ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            </div>
+          ) : searchQuery && searchResults.length > 0 ? (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-blue-500 ml-1">Global Matches</h2>
+
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+                {searchResults.map((res: any, idx) => (
+                  <button
+                    key={res.id}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      startChat(res.id, res.full_name);
+                    }}
+                    className={`w-full flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group ${idx !== searchResults.length - 1 ? 'border-b border-slate-100 dark:border-slate-800' : ''}`}
+                  >
+                    <div className="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-800 relative overflow-hidden shrink-0">
+                      {res.avatar_url || res.avatar ? (
+                        <Image src={res.avatar_url || res.avatar} alt="Avatar" fill className="object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center font-black text-slate-700 dark:text-slate-300 text-lg">
-                          {fw.name[0].toUpperCase()}
+                        <div className="h-full w-full flex items-center justify-center text-slate-500 font-bold">
+                          {(res.full_name || res.name)?.[0]?.toUpperCase()}
                         </div>
                       )}
                     </div>
-                  </div>
-                  <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-300 w-full truncate text-center px-1">
-                    {fw.name.split(' ')[0]}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Global Search Results */}
-        {searchQuery && isSearching ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-          </div>
-        ) : searchQuery && searchResults.length > 0 ? (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-blue-500 ml-1">Global Matches</h2>
-
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
-              {searchResults.map((res: any, idx) => (
-                <button
-                  key={res.id}
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    startChat(res.id, res.full_name);
-                  }}
-                  className={`w-full flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group ${idx !== searchResults.length - 1 ? 'border-b border-slate-100 dark:border-slate-800' : ''}`}
-                >
-                  <div className="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-800 relative overflow-hidden shrink-0">
-                    {res.avatar_url || res.avatar ? (
-                      <Image src={res.avatar_url || res.avatar} alt="Avatar" fill className="object-cover" />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-slate-500 font-bold">
-                        {(res.full_name || res.name)?.[0]?.toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-bold text-slate-900 dark:text-white text-[15px]">{res.full_name || res.name}</p>
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">@{res.username || 'scholar'}</p>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-slate-800 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                    <ArrowRight className="w-4 h-4" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {/* Local Chat List */}
-        <div className="space-y-2">
-          {!searchQuery && <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-4 ml-1">Recent Chats</h2>}
-
-          {loading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="animate-pulse bg-slate-100 dark:bg-slate-900 h-[88px] rounded-3xl mb-2" />
-            ))
-          ) : filteredLocalRooms.length === 0 && !searchQuery ? (
-            <div className="text-center py-20 px-6">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-12">
-                <MessageCirclePlus className="w-8 h-8 text-blue-600 dark:text-blue-400 -rotate-12" />
+                    <div className="flex-1 text-left">
+                      <p className="font-bold text-slate-900 dark:text-white text-[15px]">{res.full_name || res.name}</p>
+                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">@{res.username || 'scholar'}</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-slate-800 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
+                  </button>
+                ))}
               </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No active chats</h3>
-              <p className="text-slate-500 dark:text-slate-400 font-medium">Message your friends above to start a conversation.</p>
             </div>
-          ) : filteredLocalRooms.map((room) => (
-            <ChatCard key={room.id} room={room} onClick={() => {
-              const path = `/chat/${room.id}`;
-              if (router && typeof router.push === 'function') {
-                router.push(path);
-              } else {
-                window.location.href = path;
-              }
-            }} user={user} />
-          ))}
+          ) : !searchQuery ? (
+            <div className="hidden lg:flex min-h-[520px] items-center justify-center rounded-[32px] border border-dashed border-slate-300/70 dark:border-slate-800/70 bg-white/60 dark:bg-slate-900/40 px-6 text-center">
+              <div className="max-w-md">
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  <MessageCirclePlus className="h-8 w-8" />
+                </div>
+                <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Choose a chat</h2>
+                <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
+                  Use the sidebar to open an active conversation or start a new chat with someone you follow.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Local Chat List */}
+          <div className="space-y-2 lg:hidden">
+            {!searchQuery && <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-4 ml-1">Recent Chats</h2>}
+
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="animate-pulse bg-slate-100 dark:bg-slate-900 h-[88px] rounded-3xl mb-2" />
+              ))
+            ) : filteredLocalRooms.length === 0 && !searchQuery ? (
+              <div className="text-center py-20 px-6">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-12">
+                  <MessageCirclePlus className="w-8 h-8 text-blue-600 dark:text-blue-400 -rotate-12" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No active chats</h3>
+                <p className="text-slate-500 dark:text-slate-400 font-medium">Message your friends above to start a conversation.</p>
+              </div>
+            ) : filteredLocalRooms.map((room) => (
+              <ChatCard key={room.id} room={room} onClick={() => {
+                const path = `/chat/${room.id}`;
+                if (router && typeof router.push === 'function') {
+                  router.push(path);
+                } else {
+                  window.location.href = path;
+                }
+              }} user={user} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -420,8 +495,12 @@ function ChatCard({ room, onClick, user }: { room: ChatRoom; onClick: () => void
           </p>
 
           {room.last_message && room.last_message.sender_id === user?.id && (
-            <div className={`shrink-0 ${room.last_message.is_read ? 'text-blue-500' : 'text-slate-400'}`}>
-              <CheckCheck className="w-[18px] h-[18px]" strokeWidth={2.5} />
+            <div className={`shrink-0 ${room.last_message.is_read ? 'text-blue-500' : 'text-slate-400 dark:text-slate-500'}`}>
+              {room.last_message.is_read ? (
+                <CheckCheck className="w-[18px] h-[18px]" strokeWidth={2.5} />
+              ) : (
+                <Check className="w-[18px] h-[18px]" strokeWidth={2.5} />
+              )}
             </div>
           )}
 

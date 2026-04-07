@@ -58,6 +58,17 @@ function ChatRoomContent() {
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
+  const replaceOrAppendMessage = (message: Message) => {
+    setMessages((prev) => {
+      const exists = prev.some((item) => item.id === message.id);
+      if (exists) {
+        return prev.map((item) => (item.id === message.id ? message : item));
+      }
+
+      return [...prev, message];
+    });
+  };
+
   useEffect(() => {
     const initChat = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -137,7 +148,7 @@ function ChatRoomContent() {
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` },
         async (payload) => {
           const msg = payload.new as Message;
-          setMessages(prev => [...prev, msg]);
+          replaceOrAppendMessage(msg);
 
           if (msg.sender_id !== user?.id) {
             scrollToBottom();
@@ -153,7 +164,7 @@ function ChatRoomContent() {
         { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` },
         (payload) => {
           const updatedMsg = payload.new as Message;
-          setMessages(prev => prev.map(m => m.id === updatedMsg.id ? updatedMsg : m));
+          replaceOrAppendMessage(updatedMsg);
         }
       )
       .subscribe();
@@ -182,10 +193,17 @@ function ChatRoomContent() {
 
     try {
       Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
-      const { error } = await supabase
+      const { data: insertedMessage, error } = await supabase
         .from('chat_messages')
-        .insert({ room_id: roomId, sender_id: user.id, content, message_type: 'text' });
+        .insert({ room_id: roomId, sender_id: user.id, content, message_type: 'text' })
+        .select('*')
+        .single();
       if (error) throw error;
+
+      if (insertedMessage) {
+        replaceOrAppendMessage(insertedMessage as Message);
+      }
+
       scrollToBottom();
     } catch (err) {
       console.error('Send error:', err);
@@ -321,7 +339,11 @@ function ChatRoomContent() {
                         </span>
                         {isMe && (
                           <span className={`flex translate-y-[1px]`}>
-                            <CheckCheck className={`w-3.5 h-3.5 ${msg.is_read ? 'text-blue-200' : 'text-blue-300 opacity-70'}`} strokeWidth={3} />
+                            {msg.is_read ? (
+                              <CheckCheck className="w-3.5 h-3.5 text-blue-200" strokeWidth={3} />
+                            ) : (
+                              <Check className="w-3.5 h-3.5 text-blue-300/80" strokeWidth={3} />
+                            )}
                           </span>
                         )}
                       </div>
