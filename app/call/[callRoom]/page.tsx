@@ -28,17 +28,34 @@ export default function CallPage() {
   const jitsiRoom = encodeURIComponent(`Dheeyudha_${callRoom}`);
   const jitsiUrl = `https://meet.jit.si/${jitsiRoom}#config.startWithVideoMuted=true&config.startWithAudioMuted=${isMuted}&config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.notifications=[]&config.toolbarButtons=[]&config.disableInviteFunctions=true&config.hideLobbyButton=true&interfaceConfig.SHOW_JITSI_WATERMARK=false&interfaceConfig.SHOW_BRAND_WATERMARK=false&interfaceConfig.TOOLBAR_BUTTONS=[]`;
 
+  const localStreamRef = useRef<MediaStream | null>(null);
+
   useEffect(() => {
-    // Simulate connection after iframe loads
-    const timer = setTimeout(() => {
-      setCallStatus('connected');
-      timerRef.current = setInterval(() => {
-        setCallDuration(prev => prev + 1);
-      }, 1000);
-    }, 2000);
+    // 🎙️ Request mic permission immediately — triggers browser/Android dialog
+    const requestMic = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        localStreamRef.current = stream;
+        // Connection confirmed once mic granted
+        setCallStatus('connected');
+        timerRef.current = setInterval(() => {
+          setCallDuration(prev => prev + 1);
+        }, 1000);
+      } catch (err) {
+        console.error('[Call] Mic permission denied or unavailable:', err);
+        // Still start timer — Jitsi will handle its own permission request
+        setTimeout(() => {
+          setCallStatus('connected');
+          timerRef.current = setInterval(() => setCallDuration(prev => prev + 1), 1000);
+        }, 2000);
+      }
+    };
+
+    requestMic();
 
     return () => {
-      clearTimeout(timer);
+      // Release mic track when leaving call page
+      localStreamRef.current?.getTracks().forEach(t => t.stop());
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
