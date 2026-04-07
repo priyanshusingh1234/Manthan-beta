@@ -9,7 +9,7 @@ export const metadata = {
   description: 'Learn how Dheeyudha collects, uses, and protects your personal data.',
 };
 
-const LAST_UPDATED = 'February 20, 2026';
+const LAST_UPDATED = 'April 08, 2026';
 
 const sections = [
   { id: 'overview', label: 'Overview', icon: Shield },
@@ -233,6 +233,15 @@ export default function PrivacyPage() {
                     badge: 'Hosting',
                     badgeColor: 'bg-slate-100 text-slate-700',
                   },
+                  {
+                    name: 'Google Firebase',
+                    role: 'Push Notifications & Messaging',
+                    desc: 'We use Firebase Cloud Messaging (FCM) to deliver real-time notifications (e.g. follows, chat messages). This involves processing anonymous device tokens to route messages to your mobile device.',
+                    link: 'https://firebase.google.com/support/privacy',
+                    linkLabel: 'Firebase Privacy Policy',
+                    badge: 'Notifications',
+                    badgeColor: 'bg-orange-100 text-orange-700',
+                  },
                 ].map(service => (
                   <InfoCard key={service.name}>
                     <div className="flex items-start justify-between gap-4 mb-3">
@@ -322,11 +331,10 @@ export default function PrivacyPage() {
                   <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
                     <Trash2 className="w-4 h-4 text-red-400" /> Account Deletion
                   </h3>
-                  <p>You have the right to request complete deletion of your account and all associated personal data. To do so:</p>
                   <BulletList items={[
-                    'Contact us at the email listed in the Contact section below.',
-                    'Include your registered email address in your request.',
-                    'We will process the deletion within 14 business days.',
+                    'Use the "Delete Account" button in your App Settings.',
+                    'Or contact us at the email listed in the Contact section below.',
+                    'Account deletion requests are processed manually within 14 business days.',
                     'Note: some data (quiz outcomes, posted questions) may be retained in anonymised form for platform integrity.',
                   ]} />
                 </InfoCard>

@@ -3,6 +3,8 @@ import React from 'react';
 import { Home, Trophy, Swords, Compass, Zap, LucideIcon, Settings, ShieldAlert, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Capacitor } from '@capacitor/core';
 
 interface NavItem {
   href: string;
@@ -13,6 +15,12 @@ interface NavItem {
 
 const BottomNav: React.FC = () => {
   const pathname = usePathname();
+
+  const handleNavClick = () => {
+    if (Capacitor.isNativePlatform()) {
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
+    }
+  };
 
   const navItems: NavItem[] = [
     { href: '/', icon: Home, label: 'Home' },
@@ -38,6 +46,7 @@ const BottomNav: React.FC = () => {
               <div key={item.href} className="relative -top-8 group">
                 <Link
                   href={item.href}
+                  onClick={handleNavClick}
                   aria-label="War"
                   className={`
                     flex flex-col items-center justify-center
@@ -65,6 +74,7 @@ const BottomNav: React.FC = () => {
             <Link
               key={item.href}
               href={item.href}
+              onClick={handleNavClick}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
               className={`

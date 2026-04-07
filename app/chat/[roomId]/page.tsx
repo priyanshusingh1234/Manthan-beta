@@ -15,7 +15,11 @@ import {
   Phone,
   Video,
   MessageCirclePlus,
-  Trash2
+  Trash2,
+  Reply,
+  X,
+  VolumeX,
+  Ban
 } from 'lucide-react';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -57,11 +61,17 @@ function ChatRoomContent() {
   const [isOnline, setIsOnline] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileStats, setProfileStats] = useState({ followers: 0, following: 0, loaded: false });
+  const [showMenu, setShowMenu] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const touchTimer = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isBlockedRef = useRef(false);
+  const isMutedRef = useRef(false);
 
   const openProfileModal = async () => {
     if (!participant?.user_id) return;
@@ -84,6 +94,7 @@ function ChatRoomContent() {
   };
 
   const playNotificationSound = () => {
+    if (isMutedRef.current) return;
     if (!audioRef.current) {
       audioRef.current = new Audio('/universfield-new-notification-040-493469.mp3');
     }
@@ -99,6 +110,17 @@ function ChatRoomContent() {
       }
     } catch (e) {}
   }, [roomId]);
+
+  useEffect(() => {
+    if (participant?.user_id) {
+      const blocked = localStorage.getItem(`blocked_${participant.user_id}`) === 'true';
+      const muted = localStorage.getItem(`muted_${participant.user_id}`) === 'true';
+      setIsBlocked(blocked);
+      setIsMuted(muted);
+      isBlockedRef.current = blocked;
+      isMutedRef.current = muted;
+    }
+  }, [participant?.user_id]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -211,12 +233,14 @@ function ChatRoomContent() {
           });
 
           if (msg.sender_id !== user?.id) {
-            scrollToBottom();
-            playNotificationSound();
-            Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
-
             // Mark as read if we are in the room viewing it
             await supabase.from('chat_messages').update({ is_read: true }).eq('id', msg.id);
+            
+            if (!isBlockedRef.current) {
+              scrollToBottom();
+              playNotificationSound();
+              Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+            }
           }
         }
       )
@@ -258,7 +282,7 @@ function ChatRoomContent() {
             
             // Check if last message is from someone else
             const lastMsg = latest[latest.length-1];
-            if (lastMsg && lastMsg.sender_id !== user?.id) {
+            if (lastMsg && lastMsg.sender_id !== user?.id && !isBlockedRef.current) {
               playNotificationSound();
               Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
             }
@@ -285,11 +309,52 @@ function ChatRoomContent() {
     };
   }, [roomId, user?.id]);
 
+  const handleClearChat = () => {
+    const allIds = messages.map(m => m.id);
+    const newDeleted = [...new Set([...deletedForMe, ...allIds])];
+    setDeletedForMe(newDeleted);
+    localStorage.setItem(`deleted_${roomId}`, JSON.stringify(newDeleted));
+    setShowMenu(false);
+  };
+
+  const toggleBlock = () => {
+    if (!participant?.user_id) return;
+    const nextState = !isBlocked;
+    setIsBlocked(nextState);
+    isBlockedRef.current = nextState;
+    if (nextState) {
+      localStorage.setItem(`blocked_${participant.user_id}`, 'true');
+    } else {
+      localStorage.removeItem(`blocked_${participant.user_id}`);
+    }
+    setShowMenu(false);
+    setShowProfileModal(false);
+  };
+
+  const toggleMute = () => {
+    if (!participant?.user_id) return;
+    const nextState = !isMuted;
+    setIsMuted(nextState);
+    isMutedRef.current = nextState;
+    if (nextState) {
+      localStorage.setItem(`muted_${participant.user_id}`, 'true');
+    } else {
+      localStorage.removeItem(`muted_${participant.user_id}`);
+    }
+    setShowMenu(false);
+    setShowProfileModal(false);
+  };
+
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!newMessage.trim() || !user || sending) return;
 
-    const content = newMessage.trim();
+    let content = newMessage.trim();
+    if (replyingTo) {
+      const replyPreview = replyingTo.content.length > 50 ? replyingTo.content.substring(0, 50) + '...' : replyingTo.content;
+      content = `> Replying to **${replyingTo.sender_id === user.id ? 'You' : participant?.full_name || 'User'}**: "${replyPreview.replace(/\n/g, ' ')}"\n\n${content}`;
+      setReplyingTo(null);
+    }
     setNewMessage('');
     setSending(true);
 
@@ -361,6 +426,18 @@ function ChatRoomContent() {
             >
               <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-800" />
               <div className="space-y-3 pb-8">
+                <button 
+                  onClick={() => {
+                    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                    setReplyingTo(selectedMessage);
+                    setSelectedMessage(null);
+                    setTimeout(() => inputRef.current?.focus(), 100);
+                  }} 
+                  className="flex w-full items-center justify-between rounded-[20px] bg-slate-100 p-4 font-bold text-slate-800 transition-colors hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Reply
+                  <Reply className="h-5 w-5 text-slate-500" />
+                </button>
                 <button 
                   onClick={() => {
                     Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
@@ -461,16 +538,24 @@ function ChatRoomContent() {
                   </button>
                   <div className="flex gap-3">
                     <button
-                      onClick={() => alert('Mute functionality coming soon!')}
-                      className="flex-1 rounded-2xl bg-slate-100 dark:bg-slate-800 py-3.5 text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95"
+                      onClick={toggleMute}
+                      className={`flex-1 rounded-2xl py-3.5 text-sm font-bold transition-colors active:scale-95 ${
+                        isMuted
+                          ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
                     >
-                      Mute User
+                      {isMuted ? 'Unmute User' : 'Mute User'}
                     </button>
                     <button
-                      onClick={() => alert('Block functionality coming soon!')}
-                      className="flex-1 rounded-2xl bg-rose-50 dark:bg-rose-500/10 py-3.5 text-sm font-bold text-rose-600 dark:text-rose-400 transition-colors hover:bg-rose-100 dark:hover:bg-rose-500/20 active:scale-95"
+                      onClick={toggleBlock}
+                      className={`flex-1 rounded-2xl py-3.5 text-sm font-bold transition-colors active:scale-95 ${
+                        isBlocked
+                          ? 'bg-rose-500 text-white hover:bg-rose-600'
+                          : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20'
+                      }`}
                     >
-                      Block User
+                      {isBlocked ? 'Unblock User' : 'Block User'}
                     </button>
                   </div>
                 </div>
@@ -480,7 +565,7 @@ function ChatRoomContent() {
         )}
       </AnimatePresence>
 
-      <header className="fixed top-0 inset-x-0 z-40 px-4 pt-4 sm:px-6 lg:px-8">
+      <header className="fixed top-0 inset-x-0 z-40 px-4 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-6 lg:px-8">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between rounded-[28px] border border-white/60 bg-white/85 px-3 py-3 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-950/85">
           <div className="flex min-w-0 items-center gap-3">
             <button
@@ -543,14 +628,44 @@ function ChatRoomContent() {
             <button className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white sm:flex">
               <Video className="h-5 w-5" />
             </button>
-            <button className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
-              <MoreVertical className="h-5 w-5" />
-            </button>
+            <div className="relative">
+              <button onClick={() => setShowMenu(!showMenu)} className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
+                <MoreVertical className="h-5 w-5" />
+              </button>
+              <AnimatePresence>
+                {showMenu && (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowMenu(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-800 dark:bg-slate-900"
+                    >
+                      <button onClick={handleClearChat} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+                        <Trash2 className="h-4 w-4" /> Clear Chat
+                      </button>
+                      <button onClick={toggleMute} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+                        <VolumeX className={`h-4 w-4 ${isMuted ? 'text-emerald-500' : ''}`} /> {isMuted ? 'Unmute' : 'Mute'}
+                      </button>
+                      <button onClick={toggleBlock} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10">
+                        <Ban className="h-4 w-4" /> {isBlocked ? 'Unblock' : 'Block'}
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="relative z-10 flex-1 pt-[90px]">
+      <div className="relative z-10 flex-1 pt-[calc(env(safe-area-inset-top)+100px)]">
         <div className="mx-auto flex w-full max-w-4xl flex-col px-4 py-5 sm:px-6 sm:py-8">
         {loading ? (
           <div className="flex justify-center items-center h-full">
@@ -572,7 +687,7 @@ function ChatRoomContent() {
           </div>
         ) : (
           <div className="space-y-4">
-            {messages.filter(m => !deletedForMe.includes(m.id)).map((msg, index, arr) => {
+            {messages.filter(m => !deletedForMe.includes(m.id) && (!isBlocked || m.sender_id === user?.id)).map((msg, index, arr) => {
               const isMe = msg.sender_id === user?.id;
               const prevMsg = arr[index - 1];
               const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
@@ -613,6 +728,16 @@ function ChatRoomContent() {
                       }}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
+                      drag="x"
+                      dragConstraints={{ left: 0, right: 0 }}
+                      dragElastic={{ left: 0, right: 0.3 }}
+                      onDragEnd={(_e, info) => {
+                        if (info.offset.x > 50) {
+                          Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
+                          setReplyingTo(msg);
+                          setTimeout(() => inputRef.current?.focus(), 100);
+                        }
+                      }}
                       className={`
                         relative max-w-[85%] sm:max-w-[72%] px-4 py-3 group
                         ${isMe
@@ -625,7 +750,19 @@ function ChatRoomContent() {
                         }
                       `}
                     >
-                      <p className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">{msg.content}</p>
+                      <div className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">
+                        {msg.content.startsWith('> Replying to **') ? (
+                          <>
+                            <div className={`mb-2 rounded-xl border-l-4 p-2 text-sm ${isMe ? 'border-blue-200 bg-blue-500/20 text-blue-50' : 'border-blue-500 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+                              <span className="font-bold opacity-80">{msg.content.split('**: "')[0].replace('> Replying to **', '')}</span>
+                              <p className="mt-0.5 truncate opacity-90">{msg.content.split('**: "')[1]?.split('"\n\n')[0]}</p>
+                            </div>
+                            <p>{msg.content.split('"\n\n').slice(1).join('"\n\n')}</p>
+                          </>
+                        ) : (
+                          <p>{msg.content}</p>
+                        )}
+                      </div>
 
                       <div className={`flex items-center justify-end gap-1.5 mt-0.5 select-none`}>
                         <span className={`text-[10px] font-semibold ${isMe ? 'text-blue-100/90' : 'text-slate-400 dark:text-slate-500'}`}>
@@ -657,12 +794,44 @@ function ChatRoomContent() {
           className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 sm:px-6"
         style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: `max(env(safe-area-inset-bottom), 12px)` }}
       >
+        {isBlocked ? (
+          <div className="mx-auto flex w-full max-w-4xl items-center justify-center rounded-[30px] border border-white/70 bg-white/90 px-3 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-slate-800 dark:bg-slate-950/90">
+            <span className="text-[15px] font-semibold text-slate-600 dark:text-slate-400">
+              You blocked this user. Unblock to send messages.
+            </span>
+          </div>
+        ) : (
           <div className="mx-auto flex w-full max-w-4xl items-end gap-2 rounded-[30px] border border-white/70 bg-white/90 px-3 py-3 shadow-[0_18px_50px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-slate-800 dark:bg-slate-950/90">
             <button className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
               <Paperclip className="h-5 w-5 sm:h-5 sm:w-5" strokeWidth={2.2} />
             </button>
 
-            <div className="flex-1 rounded-[24px] border border-slate-200 bg-slate-50/90 min-h-[48px] flex items-center shadow-inner dark:border-slate-800 dark:bg-slate-900/80">
+            <div className="flex-1 rounded-[24px] border border-slate-200 bg-slate-50/90 min-h-[48px] flex flex-col justify-center shadow-inner dark:border-slate-800 dark:bg-slate-900/80 overflow-hidden">
+              <AnimatePresence>
+                {replyingTo && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="relative flex items-center justify-between border-b border-slate-200/60 bg-slate-100/50 px-4 py-2 dark:border-slate-800/60 dark:bg-slate-800/50"
+                  >
+                    <div className="flex flex-1 flex-col overflow-hidden border-l-4 border-blue-500 pl-3">
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                        {replyingTo.sender_id === user?.id ? 'You' : participant?.full_name || 'User'}
+                      </span>
+                      <span className="truncate text-sm text-slate-600 dark:text-slate-300">
+                        {replyingTo.content.replace(/\n/g, ' ')}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setReplyingTo(null)}
+                      className="ml-2 rounded-full p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <textarea
                 ref={inputRef}
                 rows={1}
@@ -696,6 +865,7 @@ function ChatRoomContent() {
               {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 translate-x-[1px] -translate-y-[1px]" />}
             </button>
           </div>
+        )}
       </div>
 
       {keyboardHeight > 0 && <div className="absolute inset-0 z-40 bg-transparent" onClick={() => Keyboard.hide()} />}

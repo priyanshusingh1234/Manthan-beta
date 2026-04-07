@@ -220,9 +220,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const setupUI = async () => {
       try {
         const isDark = document.documentElement.classList.contains('dark');
-        await StatusBar.setOverlaysWebView({ overlay: false });
+        await StatusBar.setOverlaysWebView({ overlay: true });
+        // Inverse logic: Dark background needs LIGHT icons, Light background needs DARK icons
         await StatusBar.setStyle({ style: isDark ? 'DARK' : 'LIGHT' } as any);
-        await StatusBar.setBackgroundColor({ color: isDark ? '#0f172a' : '#ffffff' });
+        // On Android, we set background to transparent to allow the app background to show through the status bar
+        await StatusBar.setBackgroundColor({ color: 'transparent' });
       } catch (e) {
         console.error('Failed to setup status bar:', e);
       }
