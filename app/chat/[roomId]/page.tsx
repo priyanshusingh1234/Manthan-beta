@@ -526,7 +526,7 @@ function ChatRoomContent() {
   };
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#0b0f14] dark:text-white pb-28">
+    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#0b0f14] dark:text-white pb-36">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,153,240,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_24%),linear-gradient(to_bottom,rgba(255,255,255,0.9),rgba(241,245,249,0.86))] dark:bg-[radial-gradient(circle_at_top_left,rgba(56,153,240,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_24%),linear-gradient(to_bottom,rgba(2,6,23,0.96),rgba(9,14,20,0.96))]" />
 
       {/* Action Sheet */}
@@ -677,8 +677,8 @@ function ChatRoomContent() {
                     <button
                       onClick={toggleMute}
                       className={`flex-1 rounded-2xl py-3.5 text-sm font-bold transition-colors active:scale-95 ${isMuted
-                          ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                         }`}
                     >
                       {isMuted ? 'Unmute User' : 'Mute User'}
@@ -686,8 +686,8 @@ function ChatRoomContent() {
                     <button
                       onClick={toggleBlock}
                       className={`flex-1 rounded-2xl py-3.5 text-sm font-bold transition-colors active:scale-95 ${isBlocked
-                          ? 'bg-rose-500 text-white hover:bg-rose-600'
-                          : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20'
+                        ? 'bg-rose-500 text-white hover:bg-rose-600'
+                        : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20'
                         }`}
                     >
                       {isBlocked ? 'Unblock User' : 'Block User'}
@@ -742,8 +742,8 @@ function ChatRoomContent() {
                     {participant?.full_name || 'Scholar'}
                   </h2>
                   <span className={`hidden rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.22em] sm:inline-flex transition-colors ${isOnline
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
-                      : "border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                    : "border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
                     }`}>
                     {isOnline ? 'Online' : 'Offline'}
                   </span>
