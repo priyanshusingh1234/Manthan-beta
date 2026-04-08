@@ -410,6 +410,18 @@ export default function ChatListPage() {
   );
 }
 
+function formatPreview(content: string): string {
+  // Handle call-ended internal tag
+  if (content.startsWith('__CALL_ENDED__')) return '📞 Call ended';
+  // Handle reply messages — strip markdown and show just the reply text
+  if (content.startsWith('> Replying to **')) {
+    const parts = content.split('\n\n');
+    const replyText = parts.slice(1).join(' ').trim();
+    return replyText ? `↩ ${replyText}` : 'Replied to a message';
+  }
+  return content;
+}
+
 function ChatCard({ room, onClick, user }: { room: ChatRoom; onClick: () => void; user: any }) {
   const isUnread = room.last_message && !room.last_message.is_read && room.last_message.sender_id !== user?.id;
 
@@ -452,7 +464,7 @@ function ChatCard({ room, onClick, user }: { room: ChatRoom; onClick: () => void
         </div>
         <div className="flex items-center justify-between gap-2">
           <p className={`text-[14px] truncate flex-1 ${isUnread ? 'font-bold text-slate-800 dark:text-slate-200' : 'font-medium text-slate-500'}`}>
-            {room.last_message ? room.last_message.content : 'Break the ice!'}
+            {room.last_message ? formatPreview(room.last_message.content) : 'Break the ice!'}
           </p>
 
           {room.last_message && room.last_message.sender_id === user?.id && (
