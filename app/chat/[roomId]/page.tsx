@@ -12,8 +12,6 @@ import {
   CheckCheck,
   Check,
   Loader2,
-  Phone,
-  Video,
   MessageCirclePlus,
   Trash2,
   Reply,
@@ -760,64 +758,6 @@ function ChatRoomContent() {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <button
-              onClick={async () => {
-                if (!user || !participant) return;
-                Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-
-                // Request mic permission immediately while the user gesture is still active.
-                try {
-                  const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                  (window as any).__pendingCallAudioStream = stream;
-                } catch (err) {
-                  console.warn('[Call] Mic permission denied before call:', err);
-                  // Continue anyway — the call screen will ask again if needed.
-                }
-                
-                // Unique call room per conversation session
-                const callRoom = `${roomId}_${Date.now()}`;
-                // Outgoing screen should show the person you are calling.
-                const callUrl = `/call/${callRoom}?caller=${encodeURIComponent(participant.full_name || 'Scholar')}&avatar=${encodeURIComponent(participant.avatar_url || '')}&mode=outgoing`;
-                
-                // Navigate self to call page (outgoing)
-                router.push(callUrl);
-
-                // Incoming URL for recipient (mode=incoming)
-                const incomingUrl = `/call/${callRoom}?caller=${encodeURIComponent(user.user_metadata?.full_name || 'Scholar')}&avatar=${encodeURIComponent(user.user_metadata?.avatar_url || '')}&mode=incoming`;
-
-                // Send push notification to recipient
-                const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.())
-                  ? (process.env.NEXT_PUBLIC_APP_URL || 'https://manthan-beta-c975.vercel.app')
-                  : '';
-                fetch(`${appUrl}/api/chat/call-notify`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    receiverId: participant.user_id,
-                    senderId: user.id,
-                    callerName: user.user_metadata?.full_name || 'Scholar',
-                    callerAvatar: user.user_metadata?.avatar_url || '',
-                    callRoom,
-                    incomingUrl,
-                  })
-                }).catch(console.error);
-
-                // Store just the call room ID cleanly
-                await supabase.from('chat_messages').insert({
-                  room_id: roomId,
-                  sender_id: user.id,
-                  content: `__CALL__:${callRoom}`,
-                  message_type: 'text'
-                });
-              }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white active:scale-95"
-              aria-label="Voice Call"
-            >
-              <Phone className="h-5 w-5" />
-            </button>
-            <button className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white sm:flex">
-              <Video className="h-5 w-5" />
-            </button>
             <div className="relative">
               <button onClick={() => setShowMenu(!showMenu)} className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
                 <MoreVertical className="h-5 w-5" />
@@ -944,51 +884,6 @@ function ChatRoomContent() {
                         {msg.message_type === 'image' ? (
                           <div className="relative w-[200px] h-[200px] sm:w-[240px] sm:h-[240px] rounded-xl overflow-hidden mb-1 border border-black/10 dark:border-white/10">
                             <Image src={msg.content} alt="Chat Attachment" fill className="object-cover" unoptimized />
-                          </div>
-                        ) : (msg.content.startsWith('__CALL__:') || msg.content.startsWith('__CALL_ENDED__:') || msg.content.startsWith('__CALL_DECLINED__:')) ? (
-                          // Render voice call card
-                          <div className="flex flex-col items-center gap-3 px-1 py-2 min-w-[180px]">
-                            {(() => {
-                              const isEnded = msg.content.startsWith('__CALL_ENDED__:');
-                              const isDeclined = msg.content.startsWith('__CALL_DECLINED__:');
-                              const isActive = msg.content.startsWith('__CALL__:');
-                              const callRoomId = msg.content
-                                .replace('__CALL__:', '')
-                                .replace('__CALL_ENDED__:', '')
-                                .replace('__CALL_DECLINED__:', '');
-                              return (
-                                <>
-                            <div className={`flex h-12 w-12 items-center justify-center rounded-full ${isMe ? 'bg-blue-400/30' : 'bg-emerald-500/20'}`}>
-                              <Phone className={`h-6 w-6 ${isMe ? 'text-blue-100' : 'text-emerald-400'}`} />
-                            </div>
-                            <div className="text-center">
-                              <p className={`text-sm font-bold ${isMe ? 'text-white' : 'text-slate-800 dark:text-white'}`}>Voice Call</p>
-                              <p className={`text-[11px] mt-0.5 ${isMe ? 'text-blue-100/70' : 'text-slate-500 dark:text-slate-400'}`}>
-                                {isDeclined ? 'Call declined' : isEnded ? 'Call ended' : (isMe ? 'You started a call' : 'Incoming call')}
-                              </p>
-                            </div>
-                            <button
-                              disabled={!isActive}
-                              onClick={() => {
-                                if (!isActive) return;
-                                const callerQ = encodeURIComponent(participant?.full_name || 'Scholar');
-                                const avatarQ = encodeURIComponent(participant?.avatar_url || '');
-                                const modeQ = isMe ? 'outgoing' : 'incoming';
-                                router.push(`/call/${callRoomId}?caller=${callerQ}&avatar=${avatarQ}&mode=${modeQ}`);
-                              }}
-                              className={`w-full rounded-xl py-2 text-sm font-bold transition-all active:scale-95 ${
-                                !isActive
-                                  ? 'bg-slate-400/20 text-slate-500 cursor-not-allowed dark:bg-slate-700/40 dark:text-slate-300'
-                                  : isMe
-                                  ? 'bg-white/20 text-white hover:bg-white/30'
-                                  : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20'
-                              }`}
-                            >
-                              {!isActive ? 'Call Finished' : (isMe ? 'Open Call' : 'Join Call')}
-                            </button>
-                                </>
-                              );
-                            })()}
                           </div>
                         ) : msg.content.startsWith('> Replying to **') ? (
                           <>
