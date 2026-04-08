@@ -768,8 +768,7 @@ function ChatRoomContent() {
                 // Request mic permission immediately while the user gesture is still active.
                 try {
                   const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                  // Immediately release so the call page can take over the mic.
-                  stream.getTracks().forEach(t => t.stop());
+                  (window as any).__pendingCallAudioStream = stream;
                 } catch (err) {
                   console.warn('[Call] Mic permission denied before call:', err);
                   // Continue anyway — the call screen will ask again if needed.

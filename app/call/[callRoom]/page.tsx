@@ -104,6 +104,13 @@ export default function CallPage() {
 
   const ensureLocalStream = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current;
+    const pendingStream = typeof window !== 'undefined' ? (window as any).__pendingCallAudioStream as MediaStream | undefined : undefined;
+    if (pendingStream) {
+      localStreamRef.current = pendingStream;
+      delete (window as any).__pendingCallAudioStream;
+      return pendingStream;
+    }
+
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     localStreamRef.current = stream;
     return stream;
@@ -432,6 +439,12 @@ export default function CallPage() {
         ringTimeoutRef.current = null;
       }
       stopLocalMedia();
+      if (typeof window !== 'undefined' && (window as any).__pendingCallAudioStream) {
+        try {
+          ((window as any).__pendingCallAudioStream as MediaStream).getTracks().forEach((track: MediaStreamTrack) => track.stop());
+        } catch {}
+        delete (window as any).__pendingCallAudioStream;
+      }
       try {
         peerRef.current?.close();
       } catch {}
