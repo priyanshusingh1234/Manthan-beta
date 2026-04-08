@@ -765,14 +765,14 @@ function ChatRoomContent() {
                 if (!user || !participant) return;
                 Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
 
-                // 🎙️ Request mic permission NOW (user gesture = browser allows it)
+                // Request mic permission immediately while the user gesture is still active.
                 try {
                   const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                  // Immediately release — Jitsi will grab it on the call page
+                  // Immediately release so the call page can take over the mic.
                   stream.getTracks().forEach(t => t.stop());
                 } catch (err) {
                   console.warn('[Call] Mic permission denied before call:', err);
-                  // Continue anyway — Jitsi may re-ask internally
+                  // Continue anyway — the call screen will ask again if needed.
                 }
                 
                 // Unique call room per conversation session

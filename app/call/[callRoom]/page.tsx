@@ -1,24 +1,44 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { PhoneOff, Mic, MicOff, Volume2, VolumeX, Phone } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { supabase } from '@/lib/supabaseClient';
+import { Mic, MicOff, Phone, PhoneOff, Radio, Sparkles, Volume2, VolumeX, Loader2 } from 'lucide-react';
+import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 
-type JitsiApi = {
-  addListener: (event: string, cb: (payload?: any) => void) => void;
-  executeCommand: (command: string, ...args: any[]) => void;
-  dispose: () => void;
-  getNumberOfParticipants?: () => number;
+type Phase = 'ringing' | 'connecting' | 'connected' | 'ended' | 'declined' | 'error';
+type SignalKind = 'accepted' | 'offer' | 'answer' | 'ice' | 'hangup' | 'declined';
+
+type SignalPayload = {
+  from: string;
+  kind: SignalKind;
+  sdp?: RTCSessionDescriptionInit;
+  candidate?: RTCIceCandidateInit;
 };
 
-declare global {
-  interface Window {
-    JitsiMeetExternalAPI?: new (domain: string, options: any) => JitsiApi;
+const ICE_SERVERS: RTCIceServer[] = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+];
+
+const TURN_URL = process.env.NEXT_PUBLIC_TURN_URL;
+const TURN_USERNAME = process.env.NEXT_PUBLIC_TURN_USERNAME;
+const TURN_CREDENTIAL = process.env.NEXT_PUBLIC_TURN_CREDENTIAL;
+
+if (TURN_URL) {
+  ICE_SERVERS.push({
+    urls: TURN_URL,
+    username: TURN_USERNAME,
+    credential: TURN_CREDENTIAL,
+  });
+}
+
+function randomId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
   }
+  return `peer_${Math.random().toString(36).slice(2)}_${Date.now()}`;
 }
 
 export default function CallPage() {
@@ -28,22 +48,27 @@ export default function CallPage() {
 
   const callerName = searchParams.get('caller') || 'Scholar';
   const callerAvatar = searchParams.get('avatar') || '';
-  // 'outgoing' = you called, 'incoming' = someone is calling you
   const mode = searchParams.get('mode') || 'outgoing';
 
-  type Phase = 'ringing' | 'connected' | 'ended' | 'declined';
   const [phase, setPhase] = useState<Phase>('ringing');
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
-  const [isStarting, setIsStarting] = useState(false);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [statusText, setStatusText] = useState('Preparing call room...');
 
-  const jitsiContainerRef = useRef<HTMLDivElement>(null);
-  const jitsiApiRef = useRef<JitsiApi | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream>(new MediaStream());
+  const peerRef = useRef<RTCPeerConnection | null>(null);
+  const channelRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const ringTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const hasRemoteParticipantRef = useRef(false);
-  const hasMarkedCallStatusRef = useRef(false);
+  const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
+  const sessionIdRef = useRef<string>(randomId());
+  const phaseRef = useRef<Phase>('ringing');
+  const endingRef = useRef(false);
+  const callStatusSavedRef = useRef(false);
 
   const safeDecode = (value: string) => {
     try {
@@ -68,195 +93,319 @@ export default function CallPage() {
     timerRef.current = setInterval(() => setCallDuration((prev) => prev + 1), 1000);
   }, []);
 
-  const markCallStatus = useCallback(async (status: 'ended' | 'declined') => {
-    if (hasMarkedCallStatusRef.current) return;
-    hasMarkedCallStatusRef.current = true;
+  const stopLocalMedia = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
+    }
+  }, []);
+
+  const ensureLocalStream = useCallback(async () => {
+    if (localStreamRef.current) return localStreamRef.current;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    localStreamRef.current = stream;
+    return stream;
+  }, []);
+
+  const syncCallStatus = useCallback(async (status: 'ended' | 'declined') => {
+    if (callStatusSavedRef.current) return;
+    callStatusSavedRef.current = true;
     const marker = status === 'declined' ? '__CALL_DECLINED__:' : '__CALL_ENDED__:';
+
     try {
       await supabase
         .from('chat_messages')
         .update({ content: `${marker}${callRoom}` })
         .eq('content', `__CALL__:${callRoom}`);
-    } catch (err) {
-      console.warn('[Call] Unable to sync call status:', err);
+    } catch (error) {
+      console.warn('[Call] Could not sync call status:', error);
     }
   }, [callRoom]);
 
-  const disposeJitsi = useCallback(() => {
-    if (jitsiApiRef.current) {
-      try {
-        jitsiApiRef.current.dispose();
-      } catch {}
-      jitsiApiRef.current = null;
-    }
-  }, []);
+  const sendSignal = useCallback((kind: SignalKind, data: Partial<SignalPayload> = {}) => {
+    const channel = channelRef.current;
+    if (!channel) return;
 
-  const loadJitsiScript = useCallback(async () => {
-    if (window.JitsiMeetExternalAPI) return;
-
-    await new Promise<void>((resolve, reject) => {
-      const existing = document.querySelector('script[data-jitsi-external-api="true"]') as HTMLScriptElement | null;
-      if (existing) {
-        existing.addEventListener('load', () => resolve(), { once: true });
-        existing.addEventListener('error', () => reject(new Error('Failed to load Jitsi script')), { once: true });
-        if (window.JitsiMeetExternalAPI) resolve();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = 'https://meet.jit.si/external_api.js';
-      script.async = true;
-      script.defer = true;
-      script.dataset.jitsiExternalApi = 'true';
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Jitsi script'));
-      document.body.appendChild(script);
+    channel.send({
+      type: 'broadcast',
+      event: 'signal',
+      payload: {
+        from: sessionIdRef.current,
+        kind,
+        ...data,
+      },
     });
   }, []);
 
-  const createJitsiInstance = useCallback(async () => {
-    if (jitsiApiRef.current || !jitsiContainerRef.current) return;
+  const attachLocalTracks = useCallback((peer: RTCPeerConnection) => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
 
-    await loadJitsiScript();
-    if (!window.JitsiMeetExternalAPI) throw new Error('Jitsi API unavailable');
-
-    const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
-      roomName: `Dheeyudha_${callRoom}`,
-      parentNode: jitsiContainerRef.current,
-      width: 1,
-      height: 1,
-      configOverwrite: {
-        prejoinPageEnabled: false,
-        disableDeepLinking: true,
-        startWithVideoMuted: true,
-        startWithAudioMuted: false,
-        disableInviteFunctions: true,
-        notifications: [],
-      },
-      interfaceConfigOverwrite: {
-        SHOW_JITSI_WATERMARK: false,
-        TOOLBAR_BUTTONS: ['microphone', 'hangup'],
-      },
-      userInfo: {
-        displayName: mode === 'incoming' ? 'Receiver' : 'Caller',
-      },
-    });
-
-    api.addListener('audioMuteStatusChanged', (payload?: { muted?: boolean }) => {
-      if (typeof payload?.muted === 'boolean') {
-        setIsMuted(payload.muted);
+    const existingTrackIds = new Set(peer.getSenders().map((sender) => sender.track?.id).filter(Boolean) as string[]);
+    stream.getTracks().forEach((track) => {
+      if (!existingTrackIds.has(track.id)) {
+        peer.addTrack(track, stream);
       }
     });
+  }, []);
 
-    api.addListener('videoConferenceJoined', () => {
-      // Incoming accept should become active immediately after local join.
-      // Outgoing still waits for a remote participant (handled below).
-      if (mode === 'incoming') {
-        setPhase('connected');
-        startTimer();
+  const connectPeer = useCallback(() => {
+    if (peerRef.current) return peerRef.current;
+
+    const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+
+    peer.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendSignal('ice', { candidate: event.candidate.toJSON() });
       }
-    });
+    };
 
-    api.addListener('participantJoined', () => {
-      hasRemoteParticipantRef.current = true;
+    peer.ontrack = (event) => {
+      remoteStreamRef.current.addTrack(event.track);
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStreamRef.current;
+        remoteAudioRef.current.volume = isSpeakerOn ? 1 : 0;
+        remoteAudioRef.current.play().catch(() => {});
+      }
       setPhase('connected');
-      if (ringTimeoutRef.current) {
-        clearTimeout(ringTimeoutRef.current);
-        ringTimeoutRef.current = null;
-      }
+      setStatusText('Connected');
       startTimer();
-    });
+    };
 
-    api.addListener('participantLeft', async () => {
-      hasRemoteParticipantRef.current = false;
-      if (phase === 'connected') {
-        setPhase('ended');
-        clearTimer();
-        await markCallStatus('ended');
-        setTimeout(() => router.back(), 1000);
-      }
-    });
-
-    api.addListener('readyToClose', () => {
-      clearTimer();
-    });
-
-    jitsiApiRef.current = api;
-  }, [callRoom, clearTimer, loadJitsiScript, markCallStatus, mode, phase, router, startTimer]);
-
-  const startCall = useCallback(async () => {
-    if (isStarting) return;
-    setIsStarting(true);
-    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-    setPhase('ringing');
-    try {
-      // On mobile webviews, explicitly requesting mic in a user gesture makes
-      // accept/join far more reliable than relying on iframe-internal prompts.
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        stream.getTracks().forEach((t) => t.stop());
-      } catch (micErr) {
-        console.warn('[Call] Mic preflight failed:', micErr);
-      }
-
-      await createJitsiInstance();
-
-      // Fallback: if we successfully initialized Jitsi from incoming accept,
-      // move UI to active state even if event timing is delayed on device.
-      if (mode === 'incoming') {
+    peer.onconnectionstatechange = () => {
+      const state = peer.connectionState;
+      if (state === 'connected') {
         setPhase('connected');
+        setStatusText('Connected');
         startTimer();
       }
-    } catch (err) {
-      console.error('[Call] Failed to start Jitsi call:', err);
-      setPhase('ended');
-      setTimeout(() => router.back(), 1200);
-    } finally {
-      setIsStarting(false);
-    }
-  }, [createJitsiInstance, isStarting, mode, router, startTimer]);
+      if ((state === 'failed' || state === 'disconnected') && !endingRef.current) {
+        void endCall('ended', { broadcast: false });
+      }
+    };
 
-  const handleEndCall = useCallback(async () => {
-    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
-    setPhase('ended');
+    peer.oniceconnectionstatechange = () => {
+      if (peer.iceConnectionState === 'failed' && !endingRef.current) {
+        void endCall('ended', { broadcast: false });
+      }
+    };
+
+    attachLocalTracks(peer);
+    peerRef.current = peer;
+    return peer;
+  }, [attachLocalTracks, isSpeakerOn, sendSignal, startTimer]);
+
+  const flushPendingIce = useCallback(async () => {
+    const peer = peerRef.current;
+    if (!peer || !peer.remoteDescription) return;
+
+    while (pendingIceRef.current.length > 0) {
+      const candidate = pendingIceRef.current.shift();
+      if (!candidate) continue;
+      try {
+        await peer.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (error) {
+        console.warn('[Call] Failed to add ICE candidate:', error);
+      }
+    }
+  }, []);
+
+  const createOutgoingOffer = useCallback(async () => {
+    const peer = connectPeer();
+    attachLocalTracks(peer);
+    setPhase('connecting');
+    setStatusText('Building connection...');
+
+    const offer = await peer.createOffer({ offerToReceiveAudio: true });
+    await peer.setLocalDescription(offer);
+    sendSignal('offer', { sdp: offer });
+    setStatusText('Waiting for answer...');
+  }, [attachLocalTracks, connectPeer, sendSignal]);
+
+  const handleIncomingOffer = useCallback(async (offer: RTCSessionDescriptionInit) => {
+    const peer = connectPeer();
+    await peer.setRemoteDescription(new RTCSessionDescription(offer));
+    await flushPendingIce();
+
+    const answer = await peer.createAnswer();
+    await peer.setLocalDescription(answer);
+    sendSignal('answer', { sdp: answer });
+    setPhase('connecting');
+    setStatusText('Connecting...');
+  }, [connectPeer, flushPendingIce, sendSignal]);
+
+  const endCall = useCallback(async (
+    status: 'ended' | 'declined',
+    options: { broadcast?: boolean; navigate?: boolean } = {},
+  ) => {
+    if (endingRef.current) return;
+    endingRef.current = true;
+
+    const shouldBroadcast = options.broadcast !== false;
+    const shouldNavigate = options.navigate !== false;
+
     clearTimer();
     if (ringTimeoutRef.current) {
       clearTimeout(ringTimeoutRef.current);
       ringTimeoutRef.current = null;
     }
+
+    setPhase(status);
+    setStatusText(status === 'declined' ? 'Call declined' : 'Call ended');
+
+    if (shouldBroadcast) {
+      sendSignal(status === 'declined' ? 'declined' : 'hangup');
+    }
+
     try {
-      jitsiApiRef.current?.executeCommand('hangup');
+      peerRef.current?.close();
     } catch {}
-    disposeJitsi();
-    await markCallStatus('ended');
-    setTimeout(() => router.back(), 900);
-  }, [clearTimer, disposeJitsi, markCallStatus, router]);
+    peerRef.current = null;
 
-  const handleDecline = useCallback(async () => {
-    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
-    setPhase('declined');
-    clearTimer();
-    if (ringTimeoutRef.current) {
-      clearTimeout(ringTimeoutRef.current);
-      ringTimeoutRef.current = null;
+    stopLocalMedia();
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null;
     }
-    disposeJitsi();
-    await markCallStatus('declined');
-    setTimeout(() => router.back(), 900);
-  }, [clearTimer, disposeJitsi, markCallStatus, router]);
+
+    if (channelRef.current) {
+      try {
+        await supabaseRealtime.removeChannel(channelRef.current);
+      } catch {}
+      channelRef.current = null;
+    }
+
+    await syncCallStatus(status);
+
+    if (shouldNavigate) {
+      setTimeout(() => router.back(), 900);
+    }
+  }, [clearTimer, router, sendSignal, stopLocalMedia, syncCallStatus]);
+
+  const handleSignal = useCallback(async (payload: SignalPayload) => {
+    if (!payload || payload.from === sessionIdRef.current || endingRef.current) return;
+
+    switch (payload.kind) {
+      case 'accepted':
+        if (mode === 'outgoing') {
+          setPhase('connecting');
+          setStatusText('Accepted. Connecting...');
+          try {
+            await createOutgoingOffer();
+          } catch (error) {
+            console.error('[Call] Failed to create offer:', error);
+            await endCall('ended', { broadcast: false });
+          }
+        }
+        break;
+      case 'offer':
+        if (payload.sdp) {
+          try {
+            await handleIncomingOffer(payload.sdp);
+          } catch (error) {
+            console.error('[Call] Failed to handle offer:', error);
+            await endCall('ended', { broadcast: false });
+          }
+        }
+        break;
+      case 'answer':
+        if (payload.sdp && peerRef.current) {
+          try {
+            await peerRef.current.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+            await flushPendingIce();
+          } catch (error) {
+            console.error('[Call] Failed to apply answer:', error);
+          }
+        }
+        break;
+      case 'ice':
+        if (payload.candidate) {
+          if (peerRef.current?.remoteDescription) {
+            try {
+              await peerRef.current.addIceCandidate(new RTCIceCandidate(payload.candidate));
+            } catch (error) {
+              console.warn('[Call] Failed to add ICE candidate:', error);
+            }
+          } else {
+            pendingIceRef.current.push(payload.candidate);
+          }
+        }
+        break;
+      case 'hangup':
+        await endCall('ended', { broadcast: false });
+        break;
+      case 'declined':
+        await endCall('declined', { broadcast: false });
+        break;
+    }
+  }, [createOutgoingOffer, endCall, flushPendingIce, handleIncomingOffer, mode]);
+
+  const connectChannel = useCallback(() => {
+    if (channelRef.current) return channelRef.current;
+
+    const channel = supabaseRealtime.channel(`voice-call:${callRoom}`);
+    channel
+      .on('broadcast', { event: 'signal' }, ({ payload }) => {
+        void handleSignal(payload as SignalPayload);
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setStatusText(mode === 'incoming' ? 'Tap accept to answer' : 'Waiting for answer...');
+        }
+      });
+
+    channelRef.current = channel;
+    return channel;
+  }, [callRoom, handleSignal, mode]);
+
+  const acceptCall = useCallback(async () => {
+    if (isAccepting || endingRef.current) return;
+    setIsAccepting(true);
+    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+
+    try {
+      connectChannel();
+      await ensureLocalStream();
+      connectPeer();
+      sendSignal('accepted');
+      setPhase('connecting');
+      setStatusText('Answering...');
+    } catch (error) {
+      console.error('[Call] Accept failed:', error);
+      setPhase('error');
+      setStatusText('Microphone permission required');
+    } finally {
+      setIsAccepting(false);
+    }
+  }, [connectChannel, connectPeer, ensureLocalStream, isAccepting, sendSignal]);
+
+  const startOutgoingSession = useCallback(async () => {
+    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+    try {
+      connectChannel();
+      await ensureLocalStream();
+      setPhase('ringing');
+      setStatusText('Ringing...');
+
+      ringTimeoutRef.current = setTimeout(() => {
+        if (!endingRef.current && phaseRef.current !== 'connected') {
+          void endCall('ended', { broadcast: false });
+        }
+      }, 45000);
+    } catch (error) {
+      console.error('[Call] Outgoing mic setup failed:', error);
+      setPhase('error');
+      setStatusText('Microphone permission required');
+      setTimeout(() => router.back(), 1200);
+    }
+  }, [connectChannel, ensureLocalStream, endCall, phase, router]);
 
   useEffect(() => {
-    // Caller joins immediately, receiver waits to accept.
     if (mode === 'outgoing') {
-      startCall();
-      ringTimeoutRef.current = setTimeout(async () => {
-        if (hasRemoteParticipantRef.current) return;
-        setPhase('ended');
-        clearTimer();
-        await markCallStatus('ended');
-        disposeJitsi();
-        setTimeout(() => router.back(), 1200);
-      }, 45000);
+      void startOutgoingSession();
+    } else {
+      connectChannel();
+      setPhase('ringing');
+      setStatusText('Incoming call');
     }
 
     return () => {
@@ -265,17 +414,41 @@ export default function CallPage() {
         clearTimeout(ringTimeoutRef.current);
         ringTimeoutRef.current = null;
       }
-      disposeJitsi();
+      stopLocalMedia();
+      try {
+        peerRef.current?.close();
+      } catch {}
+      peerRef.current = null;
+      if (channelRef.current) {
+        void supabaseRealtime.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = null;
+      }
     };
-  }, [clearTimer, disposeJitsi, markCallStatus, mode, router, startCall]);
+  }, [clearTimer, connectChannel, mode, startOutgoingSession, stopLocalMedia]);
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
+  useEffect(() => {
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.volume = isSpeakerOn ? 1 : 0;
+      remoteAudioRef.current.muted = !isSpeakerOn;
+    }
+  }, [isSpeakerOn]);
 
   const toggleMute = () => {
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-    try {
-      jitsiApiRef.current?.executeCommand('toggleAudio');
-    } catch {
-      setIsMuted((prev) => !prev);
-    }
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const nextMuted = !isMuted;
+    stream.getAudioTracks().forEach((track) => {
+      track.enabled = !nextMuted;
+    });
+    setIsMuted(nextMuted);
   };
 
   const toggleSpeaker = () => {
@@ -283,145 +456,209 @@ export default function CallPage() {
     setIsSpeakerOn((prev) => !prev);
   };
 
+  const topLabel = phase === 'connected'
+    ? 'Connected'
+    : phase === 'connecting'
+      ? 'Connecting'
+      : phase === 'declined'
+        ? 'Call declined'
+        : phase === 'error'
+          ? 'Setup failed'
+          : mode === 'incoming'
+            ? 'Incoming voice call'
+            : 'Voice call';
+
   return (
-    <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-between overflow-hidden bg-[#0a0f1a]">
-      {/* Hidden Jitsi mount point */}
-      <div ref={jitsiContainerRef} className="pointer-events-none absolute left-[-9999px] top-[-9999px] h-px w-px opacity-0" />
+    <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-between overflow-hidden bg-[#07111f] text-white">
+      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
 
-      {/* Background */}
-      <div className="pointer-events-none absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-[#0a0f1a] to-slate-950" />
-        <motion.div animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }} transition={{ duration: 4, repeat: Infinity }}
-          className="absolute -top-32 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-indigo-600/20 blur-[100px]" />
-        <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }} transition={{ duration: 5, repeat: Infinity, delay: 1 }}
-          className="absolute -bottom-32 left-1/2 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-violet-600/20 blur-[100px]" />
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.24),_transparent_32%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.14),_transparent_36%),linear-gradient(135deg,_#020617_0%,_#07111f_50%,_#0f172a_100%)]" />
+        <motion.div animate={{ scale: [1, 1.12, 1], opacity: [0.22, 0.42, 0.22] }} transition={{ duration: 4.8, repeat: Infinity }}
+          className="absolute -top-32 left-1/2 h-[460px] w-[460px] -translate-x-1/2 rounded-full bg-cyan-500/20 blur-[110px]" />
+        <motion.div animate={{ scale: [1, 1.18, 1], opacity: [0.18, 0.32, 0.18] }} transition={{ duration: 5.6, repeat: Infinity, delay: 0.9 }}
+          className="absolute -bottom-36 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-emerald-400/20 blur-[110px]" />
       </div>
 
-      {/* Top status badge */}
-      <div className="relative z-10 flex w-full items-center justify-center pt-[calc(env(safe-area-inset-top)+2rem)]">
-        <AnimatePresence mode="wait">
-          {phase === 'ringing' && mode === 'outgoing' && (
-            <motion.span key="ringing" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-              className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white/80 backdrop-blur-md">
-              <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }}
-                className="h-2 w-2 rounded-full bg-amber-400" />
-              Ringing...
-            </motion.span>
-          )}
-          {phase === 'ringing' && mode === 'incoming' && (
-            <motion.span key="incoming-badge" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 rounded-full bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-300 backdrop-blur-md border border-emerald-500/30">
-              <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 0.8, repeat: Infinity }}
-                className="h-2 w-2 rounded-full bg-emerald-400" />
-              Incoming Voice Call
-            </motion.span>
-          )}
-          {phase === 'connected' && (
-            <motion.span key="connected" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 rounded-full bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-300 backdrop-blur-md border border-emerald-500/30">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              {formatDuration(callDuration)}
-            </motion.span>
-          )}
-          {(phase === 'ended' || phase === 'declined') && (
-            <motion.span key="ended" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-              className="rounded-full bg-rose-500/20 px-4 py-2 text-sm font-semibold text-rose-300 backdrop-blur-md border border-rose-500/30">
-              {phase === 'declined' ? 'Call Declined' : 'Call Ended'}
-            </motion.span>
-          )}
-        </AnimatePresence>
+      <div className="relative z-10 flex w-full items-center justify-center pt-[calc(env(safe-area-inset-top)+1.5rem)]">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold text-white/80 backdrop-blur-xl shadow-[0_10px_40px_rgba(15,23,42,0.24)]"
+        >
+          <span className={`h-2.5 w-2.5 rounded-full ${phase === 'connected' ? 'bg-emerald-400 animate-pulse' : phase === 'connecting' ? 'bg-amber-400 animate-pulse' : 'bg-sky-400 animate-pulse'}`} />
+          {topLabel}
+          {phase === 'connected' && <span className="text-white/40">•</span>}
+          {phase === 'connected' && <span className="font-mono text-white/70">{formatDuration(callDuration)}</span>}
+        </motion.div>
       </div>
 
-      {/* Center: Avatar + Name */}
-      <div className="relative z-10 flex flex-col items-center gap-6">
-        <div className="relative">
-          {phase === 'ringing' && (
-            <>
-              <motion.div animate={{ scale: [1, 1.5], opacity: [0.4, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
-                className="absolute inset-0 rounded-full bg-indigo-500/40" />
-              <motion.div animate={{ scale: [1, 1.3], opacity: [0.3, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut', delay: 0.4 }}
-                className="absolute inset-0 rounded-full bg-indigo-400/30" />
-            </>
-          )}
-          <div className="relative h-36 w-36 overflow-hidden rounded-full border-4 border-white/20 shadow-2xl shadow-indigo-900/50">
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 py-10">
+        <div className="relative mb-8">
+          <motion.div
+            animate={phase === 'ringing' || phase === 'connecting' ? { scale: [1, 1.16, 1], opacity: [0.55, 0.18, 0.55] } : { scale: 1, opacity: 0.28 }}
+            transition={{ duration: 1.9, repeat: Infinity }}
+            className="absolute inset-0 rounded-full bg-cyan-500/35 blur-2xl"
+          />
+          <motion.div
+            animate={phase === 'ringing' || phase === 'connecting' ? { scale: [1, 1.08, 1], opacity: [0.42, 0.12, 0.42] } : { scale: 1, opacity: 0.18 }}
+            transition={{ duration: 2.2, repeat: Infinity, delay: 0.3 }}
+            className="absolute inset-0 rounded-full bg-emerald-500/25 blur-2xl"
+          />
+          <div className="relative h-40 w-40 overflow-hidden rounded-full border border-white/15 shadow-[0_20px_60px_rgba(15,23,42,0.45)] ring-8 ring-white/5">
             {callerAvatar ? (
-              <Image src={safeDecode(callerAvatar)} alt={callerName} fill className="object-cover" unoptimized />
+              <Image src={safeDecode(callerAvatar)} alt={safeDecode(callerName)} fill className="object-cover" unoptimized />
             ) : (
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-600 to-violet-600 text-5xl font-black text-white">
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-cyan-500 via-sky-500 to-emerald-500 text-6xl font-black text-white">
                 {safeDecode(callerName)[0]?.toUpperCase()}
               </div>
             )}
           </div>
+          {phase === 'connected' && (
+            <div className="absolute -right-2 -bottom-2 rounded-full border border-white/10 bg-emerald-500 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-white shadow-lg shadow-emerald-500/30">
+              Live
+            </div>
+          )}
         </div>
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-3xl font-black tracking-tight text-white">{safeDecode(callerName)}</h1>
-          <p className="text-sm font-medium text-white/50">
-            {phase === 'connected' ? 'Voice Call'
-              : phase === 'ringing' && mode === 'incoming' ? 'is calling you...'
-              : 'Calling...'}
+
+        <div className="text-center">
+          <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">{safeDecode(callerName)}</h1>
+          <p className="mt-2 text-sm font-medium text-white/60">
+            {statusText}
           </p>
+        </div>
+
+        <div className="mt-8 flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.26em] text-white/60 backdrop-blur-xl">
+          <Radio className="h-4 w-4 text-cyan-300" />
+          Raw WebRTC voice
+          <Sparkles className="h-4 w-4 text-emerald-300" />
+        </div>
+
+        <div className="mt-8 flex items-center justify-center gap-2 rounded-3xl border border-white/10 bg-white/10 px-3 py-2 backdrop-blur-xl shadow-[0_20px_60px_rgba(15,23,42,0.24)]">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <motion.span
+              key={index}
+              animate={phase === 'connected' ? { height: [10, 22, 12], opacity: [0.45, 1, 0.55] } : { height: [8, 16, 8], opacity: [0.28, 0.72, 0.28] }}
+              transition={{ duration: 0.85, repeat: Infinity, delay: index * 0.08 }}
+              className="w-2 rounded-full bg-gradient-to-t from-cyan-400 via-sky-400 to-emerald-300"
+            />
+          ))}
         </div>
       </div>
 
-      {/* Bottom Controls */}
-      <div className="relative z-10 w-full pb-[calc(env(safe-area-inset-bottom)+2.5rem)] px-8">
+      <div className="relative z-10 w-full px-5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
         <AnimatePresence mode="wait">
-
-          {/* INCOMING: Accept + Decline */}
           {phase === 'ringing' && mode === 'incoming' && (
-            <motion.div key="incoming-controls" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="flex items-end justify-center gap-16">
-              <div className="flex flex-col items-center gap-3">
-                <motion.button whileTap={{ scale: 0.85 }} onClick={handleDecline}
-                  className="flex h-[80px] w-[80px] items-center justify-center rounded-full bg-rose-600 text-white shadow-xl shadow-rose-600/40">
-                  <PhoneOff className="h-8 w-8" />
-                </motion.button>
-                <span className="text-xs font-bold text-rose-400">Decline</span>
-              </div>
-              <div className="flex flex-col items-center gap-3">
-                <motion.button whileTap={{ scale: 0.85 }} onClick={startCall} disabled={isStarting}
-                  className={`flex h-[80px] w-[80px] items-center justify-center rounded-full text-white shadow-xl shadow-emerald-500/40 ${isStarting ? 'bg-emerald-400/70' : 'bg-emerald-500 animate-pulse'}`}>
-                  <Phone className="h-8 w-8" />
-                </motion.button>
-                <span className="text-xs font-bold text-emerald-400">{isStarting ? 'Connecting...' : 'Accept'}</span>
-              </div>
-            </motion.div>
-          )}
-
-          {/* OUTGOING RINGING: Cancel only */}
-          {phase === 'ringing' && mode === 'outgoing' && (
-            <motion.div key="outgoing-controls" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="flex flex-col items-center gap-3">
-              <motion.button whileTap={{ scale: 0.85 }} onClick={handleEndCall}
-                className="flex h-[80px] w-[80px] items-center justify-center rounded-full bg-rose-600 text-white shadow-xl shadow-rose-600/40">
-                <PhoneOff className="h-8 w-8" />
-              </motion.button>
-              <span className="text-xs font-bold text-rose-400">Cancel</span>
-            </motion.div>
-          )}
-
-          {/* CONNECTED: Mute / End / Speaker */}
-          {phase === 'connected' && (
-            <motion.div key="connected-controls" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="flex items-center justify-center gap-6">
-              <motion.button whileTap={{ scale: 0.9 }} onClick={toggleMute}
-                className={`flex h-[68px] w-[68px] flex-col items-center justify-center gap-1.5 rounded-full border transition-all ${isMuted ? 'border-rose-500/50 bg-rose-500/20 text-rose-300' : 'border-white/15 bg-white/10 text-white/80'}`}>
-                {isMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
-                <span className="text-[10px] font-semibold">{isMuted ? 'Unmute' : 'Mute'}</span>
-              </motion.button>
-              <motion.button whileTap={{ scale: 0.85 }} onClick={handleEndCall}
-                className="flex h-[80px] w-[80px] flex-col items-center justify-center gap-1.5 rounded-full bg-rose-600 text-white shadow-xl shadow-rose-600/40">
+            <motion.div
+              key="incoming-controls"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="mx-auto flex max-w-md items-center justify-between rounded-[28px] border border-white/10 bg-white/10 px-5 py-4 backdrop-blur-2xl shadow-[0_22px_80px_rgba(15,23,42,0.4)]"
+            >
+              <button
+                onClick={() => void endCall('declined', { broadcast: true })}
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg shadow-rose-500/30 transition-transform active:scale-95"
+              >
                 <PhoneOff className="h-7 w-7" />
-                <span className="text-[10px] font-semibold">End</span>
-              </motion.button>
-              <motion.button whileTap={{ scale: 0.9 }} onClick={toggleSpeaker}
-                className={`flex h-[68px] w-[68px] flex-col items-center justify-center gap-1.5 rounded-full border transition-all ${isSpeakerOn ? 'border-indigo-400/50 bg-indigo-500/20 text-indigo-300' : 'border-white/15 bg-white/10 text-white/80'}`}>
-                {isSpeakerOn ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
-                <span className="text-[10px] font-semibold">Speaker</span>
-              </motion.button>
+              </button>
+
+              <div className="text-center">
+                <p className="text-sm font-bold text-white">Incoming call</p>
+                <p className="text-[11px] text-white/45">Decline or answer</p>
+              </div>
+
+              <button
+                onClick={() => void acceptCall()}
+                disabled={isAccepting}
+                className={`flex h-16 w-16 items-center justify-center rounded-full text-white shadow-lg shadow-emerald-500/30 transition-transform active:scale-95 ${isAccepting ? 'bg-emerald-400/70' : 'bg-emerald-500'}`}
+              >
+                {isAccepting ? <Loader2 className="h-7 w-7 animate-spin" /> : <Phone className="h-7 w-7" />}
+              </button>
             </motion.div>
           )}
 
+          {phase === 'ringing' && mode === 'outgoing' && (
+            <motion.div
+              key="outgoing-controls"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="mx-auto flex max-w-sm flex-col items-center gap-3 rounded-[28px] border border-white/10 bg-white/10 px-6 py-5 backdrop-blur-2xl shadow-[0_22px_80px_rgba(15,23,42,0.4)]"
+            >
+              <button
+                onClick={() => void endCall('ended', { broadcast: true })}
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-white shadow-lg shadow-rose-500/30 transition-transform active:scale-95"
+              >
+                <PhoneOff className="h-7 w-7" />
+              </button>
+              <p className="text-sm font-semibold text-white">Cancel call</p>
+              <p className="text-xs text-white/45">Waiting for the other person to answer</p>
+            </motion.div>
+          )}
+
+          {phase === 'connecting' && (
+            <motion.div
+              key="connecting-controls"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="mx-auto flex max-w-sm items-center justify-center gap-3 rounded-[28px] border border-white/10 bg-white/10 px-6 py-5 backdrop-blur-2xl shadow-[0_22px_80px_rgba(15,23,42,0.4)]"
+            >
+              <Loader2 className="h-5 w-5 animate-spin text-cyan-300" />
+              <p className="text-sm font-semibold text-white">Connecting secure audio</p>
+            </motion.div>
+          )}
+
+          {phase === 'connected' && (
+            <motion.div
+              key="connected-controls"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="mx-auto flex max-w-md items-center justify-center gap-3 rounded-[28px] border border-white/10 bg-white/10 px-4 py-4 backdrop-blur-2xl shadow-[0_22px_80px_rgba(15,23,42,0.4)]"
+            >
+              <button
+                onClick={toggleMute}
+                className={`flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-full border transition-transform active:scale-95 ${isMuted ? 'border-rose-400/40 bg-rose-500/20 text-rose-200' : 'border-white/10 bg-white/10 text-white/80'}`}
+              >
+                {isMuted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+                <span className="text-[10px] font-bold">{isMuted ? 'Unmute' : 'Mute'}</span>
+              </button>
+
+              <button
+                onClick={() => void endCall('ended', { broadcast: true })}
+                className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-rose-500 px-6 text-white shadow-xl shadow-rose-500/30 transition-transform active:scale-95"
+              >
+                <PhoneOff className="h-8 w-8" />
+              </button>
+
+              <button
+                onClick={toggleSpeaker}
+                className={`flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-full border transition-transform active:scale-95 ${isSpeakerOn ? 'border-cyan-400/40 bg-cyan-500/20 text-cyan-100' : 'border-white/10 bg-white/10 text-white/80'}`}
+              >
+                {isSpeakerOn ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
+                <span className="text-[10px] font-bold">Speaker</span>
+              </button>
+            </motion.div>
+          )}
+
+          {(phase === 'ended' || phase === 'declined' || phase === 'error') && (
+            <motion.div
+              key="finished-controls"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="mx-auto flex max-w-sm items-center justify-center rounded-[28px] border border-white/10 bg-white/10 px-6 py-4 backdrop-blur-2xl shadow-[0_22px_80px_rgba(15,23,42,0.4)]"
+            >
+              <button
+                onClick={() => router.back()}
+                className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-slate-950 transition-transform active:scale-95"
+              >
+                Back to chat
+              </button>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
     </div>
