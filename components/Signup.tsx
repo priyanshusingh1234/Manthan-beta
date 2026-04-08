@@ -66,11 +66,11 @@ const Signup: React.FC = () => {
       setError('Username cannot contain spaces');
       return;
     }
+
     setLoading(true);
     setError('');
 
     try {
-      // Check username uniqueness
       try {
         const uniqueCheckRes = await fetch(`/api/check-username?username=${encodeURIComponent(username)}`);
         if (uniqueCheckRes.ok) {
@@ -82,10 +82,10 @@ const Signup: React.FC = () => {
           }
         }
       } catch {
-        // Continue anyway if check fails
+        // Continue anyway if check fails.
       }
 
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -94,24 +94,26 @@ const Signup: React.FC = () => {
             fullName,
             classGrade,
             ageConfirmed: true,
-            username_updates: []
-          }
-        }
+            username_updates: [],
+          },
+        },
       });
 
       if (signUpError) {
         const msg = signUpError.message || '';
         if (msg.toLowerCase().includes('already registered')) {
           throw new Error('This email is already registered. Please log in instead.');
-        } else if (msg.toLowerCase().includes('rate limit')) {
-          throw new Error('Too many signup attempts. Please wait a few minutes and try again.');
-        } else if (msg.toLowerCase().includes('invalid email')) {
-          throw new Error('Please enter a valid email address.');
-        } else if (msg.toLowerCase().includes('password')) {
-          throw new Error('Password must be at least 6 characters long.');
-        } else {
-          throw signUpError;
         }
+        if (msg.toLowerCase().includes('rate limit')) {
+          throw new Error('Too many signup attempts. Please wait a few minutes and try again.');
+        }
+        if (msg.toLowerCase().includes('invalid email')) {
+          throw new Error('Please enter a valid email address.');
+        }
+        if (msg.toLowerCase().includes('password')) {
+          throw new Error('Password must be at least 6 characters long.');
+        }
+        throw signUpError;
       }
 
       router.push('/profile');
@@ -363,6 +365,7 @@ const Signup: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              </div>
               <p className="text-xs text-slate-500 -mt-1">📌 You can join a school after signup from the War Room.</p>
 
               {/* Age Confirmation */}
