@@ -12,6 +12,7 @@ type JitsiApi = {
   addListener: (event: string, cb: (payload?: any) => void) => void;
   executeCommand: (command: string, ...args: any[]) => void;
   dispose: () => void;
+  getNumberOfParticipants?: () => number;
 };
 
 declare global {
@@ -143,6 +144,15 @@ export default function CallPage() {
     api.addListener('audioMuteStatusChanged', (payload?: { muted?: boolean }) => {
       if (typeof payload?.muted === 'boolean') {
         setIsMuted(payload.muted);
+      }
+    });
+
+    api.addListener('videoConferenceJoined', () => {
+      // Incoming accept should become active immediately after local join.
+      // Outgoing still waits for a remote participant (handled below).
+      if (mode === 'incoming') {
+        setPhase('connected');
+        startTimer();
       }
     });
 
