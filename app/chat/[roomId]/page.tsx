@@ -41,6 +41,9 @@ interface Participant {
   username: string;
 }
 
+const MESSAGES_CACHE_KEY = (roomId: string) => `chat_msgs_${roomId}`;
+const PARTICIPANT_CACHE_KEY = (roomId: string) => `chat_part_${roomId}`;
+
 function ChatRoomContent() {
   const router = useRouter();
   const { roomId } = useParams() as { roomId: string };
@@ -99,7 +102,7 @@ function ChatRoomContent() {
       audioRef.current = new Audio('/universfield-new-notification-040-493469.mp3');
     }
     audioRef.current.currentTime = 0;
-    audioRef.current.play().catch(() => {});
+    audioRef.current.play().catch(() => { });
   };
 
   useEffect(() => {
@@ -108,7 +111,7 @@ function ChatRoomContent() {
       if (stored) {
         setDeletedForMe(JSON.parse(stored));
       }
-    } catch (e) {}
+    } catch (e) { }
   }, [roomId]);
 
   useEffect(() => {
@@ -150,58 +153,53 @@ function ChatRoomContent() {
       }
       setUser(user);
 
-      const { data: participants, error: pError } = await supabase
-        .from('chat_participants')
-        .select('user_id')
-        .eq('room_id', roomId)
-        .neq('user_id', user.id);
-
-      if (pError) console.error("Participant fetch error:", pError);
-
-      const otherUserId = participants?.[0]?.user_id;
-
-      // Set initial state from query params to avoid "Scholar" flash
-      if (initialName && !participant) {
-        setParticipant({
-          user_id: otherUserId || '',
-          full_name: initialName,
-          avatar_url: null,
-          username: ''
-        });
-      }
-
-      if (otherUserId) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('full_name, avatar_url, username')
-          .eq('id', otherUserId)
-          .single();
-
-        if (profileError) console.error("Profile fetch error:", profileError);
-
-        if (profile) {
-          setParticipant({
-            user_id: otherUserId,
-            full_name: profile.full_name,
-            avatar_url: profile.avatar_url,
-            username: profile.username
-          });
+      // ⚡ WhatsApp-style: show cached messages INSTANTLY (zero loading time)
+      try {
+        const cachedMsgs = localStorage.getItem(MESSAGES_CACHE_KEY(roomId));
+        const cachedPart = localStorage.getItem(PARTICIPANT_CACHE_KEY(roomId));
+        if (cachedMsgs) {
+          setMessages(JSON.parse(cachedMsgs));
+          setLoading(false); // show cached data immediately, no spinner
+          setTimeout(() => scrollToBottom('auto'), 50);
         }
+        if (cachedPart) {
+          setParticipant(JSON.parse(cachedPart));
+        } else if (initialName) {
+          setParticipant({ user_id: '', full_name: initialName, avatar_url: null, username: '' });
+        }
+      } catch { }
+
+      // Fetch participant info and messages IN PARALLEL (not sequentially)
+      const [participantsRes, messagesRes] = await Promise.all([
+        supabase.from('chat_participants').select('user_id').eq('room_id', roomId).neq('user_id', user.id),
+        supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: true }).limit(60)
+      ]);
+
+      const otherUserId = participantsRes.data?.[0]?.user_id;
+
+      // Fetch profile only if we have a userId
+      if (otherUserId) {
+        supabase.from('profiles').select('full_name, avatar_url, username').eq('id', otherUserId).single()
+          .then(({ data: profile }) => {
+            if (profile) {
+              const p = { user_id: otherUserId, full_name: profile.full_name, avatar_url: profile.avatar_url, username: profile.username };
+              setParticipant(p);
+              try { localStorage.setItem(PARTICIPANT_CACHE_KEY(roomId), JSON.stringify(p)); } catch { }
+            }
+          });
       }
 
-      const { data: initialMessages } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('room_id', roomId)
-        .order('created_at', { ascending: true });
-
-      setMessages(initialMessages || []);
+      const freshMessages = messagesRes.data || [];
+      setMessages(freshMessages);
       setLoading(false);
 
-      // Mark unread as read
-      const unreadIds = (initialMessages || []).filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id);
+      // Cache messages for next instant open
+      try { localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(freshMessages)); } catch { }
+
+      // Mark unread as read (fire-and-forget)
+      const unreadIds = freshMessages.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id);
       if (unreadIds.length > 0) {
-        await supabase.from('chat_messages').update({ is_read: true }).in('id', unreadIds);
+        supabase.from('chat_messages').update({ is_read: true }).in('id', unreadIds);
       }
 
       setTimeout(() => scrollToBottom('auto'), 100);
@@ -229,13 +227,16 @@ function ChatRoomContent() {
           const msg = payload.new as Message;
           setMessages(prev => {
             if (prev.some(m => m.id === msg.id)) return prev;
-            return [...prev, msg];
+            const next = [...prev, msg];
+            // Update cache with new message
+            try { localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(next.slice(-60))); } catch { }
+            return next;
           });
 
           if (msg.sender_id !== user?.id) {
             // Mark as read if we are in the room viewing it
             await supabase.from('chat_messages').update({ is_read: true }).eq('id', msg.id);
-            
+
             if (!isBlockedRef.current) {
               scrollToBottom();
               playNotificationSound();
@@ -277,22 +278,22 @@ function ChatRoomContent() {
       if (latest) {
         setMessages(prev => {
           // If lengths differ or last message differs, update state
-          if (latest.length !== prev.length || (latest.length > 0 && prev.length > 0 && latest[latest.length-1].id !== prev[prev.length-1].id)) {
+          if (latest.length !== prev.length || (latest.length > 0 && prev.length > 0 && latest[latest.length - 1].id !== prev[prev.length - 1].id)) {
             setTimeout(() => scrollToBottom(), 100);
-            
+
             // Check if last message is from someone else
-            const lastMsg = latest[latest.length-1];
+            const lastMsg = latest[latest.length - 1];
             if (lastMsg && lastMsg.sender_id !== user?.id && !isBlockedRef.current) {
               playNotificationSound();
-              Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+              Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
             }
-            
+
             return latest;
           }
           return prev;
         });
       }
-    }, 2500);
+    }, 5000); // Reduced polling - realtime is the primary mechanism
 
     try {
       Keyboard.addListener('keyboardWillShow', info => {
@@ -314,7 +315,7 @@ function ChatRoomContent() {
 
     try {
       Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
-      
+
       // 1. Delete MY messages from the database (Deletes for everyone)
       const myMessageIds = messages.filter(m => m.sender_id === user.id).map(m => m.id);
       if (myMessageIds.length > 0) {
@@ -326,10 +327,10 @@ function ChatRoomContent() {
       const newDeleted = [...new Set([...deletedForMe, ...allCurrentIds])];
       setDeletedForMe(newDeleted);
       localStorage.setItem(`deleted_${roomId}`, JSON.stringify(newDeleted));
-      
+
       // Update local state immediately for a snapier feel
       setMessages(prev => prev.filter(m => !allCurrentIds.includes(m.id)));
-      
+
     } catch (e) {
       console.error("Error clearing chat:", e);
     } finally {
@@ -425,7 +426,7 @@ function ChatRoomContent() {
         .insert({ room_id: roomId, sender_id: user.id, content: result.publicUrl, message_type: 'image' })
         .select('*')
         .single();
-        
+
       if (error) throw error;
 
       if (insertedMessage) {
@@ -436,10 +437,10 @@ function ChatRoomContent() {
 
         // Push notification for image
         if (participant?.user_id) {
-          const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.()) 
+          const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.())
             ? (process.env.NEXT_PUBLIC_APP_URL || 'https://manthan-beta-c975.vercel.app')
             : '';
-            
+
           fetch(`${appUrl}/api/chat/notify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -492,10 +493,10 @@ function ChatRoomContent() {
 
         // Trigger Android/Web push notifications for the receiver
         if (participant?.user_id) {
-          const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.()) 
+          const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.())
             ? (process.env.NEXT_PUBLIC_APP_URL || 'https://manthan-beta-c975.vercel.app')
             : '';
-            
+
           fetch(`${appUrl}/api/chat/notify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -532,7 +533,7 @@ function ChatRoomContent() {
       <AnimatePresence>
         {selectedMessage && (
           <>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm"
               onClick={() => setSelectedMessage(null)}
@@ -543,36 +544,36 @@ function ChatRoomContent() {
             >
               <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-800" />
               <div className="space-y-3 pb-8">
-                <button 
+                <button
                   onClick={() => {
-                    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                    Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
                     setReplyingTo(selectedMessage);
                     setSelectedMessage(null);
                     setTimeout(() => inputRef.current?.focus(), 100);
-                  }} 
+                  }}
                   className="flex w-full items-center justify-between rounded-[20px] bg-slate-100 p-4 font-bold text-slate-800 transition-colors hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   Reply
                   <Reply className="h-5 w-5 text-slate-500" />
                 </button>
-                <button 
+                <button
                   onClick={() => {
-                    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                    Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
                     const newDeleted = [...deletedForMe, selectedMessage.id];
                     setDeletedForMe(newDeleted);
                     localStorage.setItem(`deleted_${roomId}`, JSON.stringify(newDeleted));
                     setSelectedMessage(null);
-                  }} 
+                  }}
                   className="flex w-full items-center justify-between rounded-[20px] bg-slate-100 p-4 font-bold text-slate-800 transition-colors hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   Delete for me
                   <Trash2 className="h-5 w-5 text-slate-500" />
                 </button>
                 {selectedMessage.sender_id === user?.id && (
-                  <button 
+                  <button
                     onClick={async () => {
-                      Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
-                      
+                      Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+
                       // 🖼️ If it's an image, also try to scrub it from storage
                       if (selectedMessage.message_type === 'image') {
                         try {
@@ -590,19 +591,19 @@ function ChatRoomContent() {
 
                       // Delete from database
                       await supabase.from('chat_messages').delete().eq('id', selectedMessage.id);
-                      
+
                       // Alert local state
                       setMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
                       setSelectedMessage(null);
-                    }} 
+                    }}
                     className="flex w-full items-center justify-between rounded-[20px] bg-red-50 p-4 font-bold text-red-600 transition-colors hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-900/40"
                   >
                     Delete for everyone
                     <Trash2 className="h-5 w-5 text-red-500" />
                   </button>
                 )}
-                <button 
-                  onClick={() => setSelectedMessage(null)} 
+                <button
+                  onClick={() => setSelectedMessage(null)}
                   className="mt-2 w-full p-4 font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                 >
                   Cancel
@@ -629,7 +630,7 @@ function ChatRoomContent() {
               className="fixed bottom-0 left-0 right-0 z-[90] bg-white dark:bg-slate-900 rounded-t-[28px] px-6 pt-3 pb-8 shadow-[0_-10px_40px_rgba(0,0,0,0.15)]"
             >
               <div className="mx-auto mb-6 h-1.5 w-10 rounded-full bg-slate-300/80 dark:bg-slate-700" />
-              
+
               <div className="flex flex-col items-center pb-6">
                 <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-slate-100 dark:border-slate-800 bg-slate-200 dark:bg-slate-900 mb-4 shadow-sm relative">
                   {participant.avatar_url ? (
@@ -675,21 +676,19 @@ function ChatRoomContent() {
                   <div className="flex gap-3">
                     <button
                       onClick={toggleMute}
-                      className={`flex-1 rounded-2xl py-3.5 text-sm font-bold transition-colors active:scale-95 ${
-                        isMuted
+                      className={`flex-1 rounded-2xl py-3.5 text-sm font-bold transition-colors active:scale-95 ${isMuted
                           ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                      }`}
+                        }`}
                     >
                       {isMuted ? 'Unmute User' : 'Mute User'}
                     </button>
                     <button
                       onClick={toggleBlock}
-                      className={`flex-1 rounded-2xl py-3.5 text-sm font-bold transition-colors active:scale-95 ${
-                        isBlocked
+                      className={`flex-1 rounded-2xl py-3.5 text-sm font-bold transition-colors active:scale-95 ${isBlocked
                           ? 'bg-rose-500 text-white hover:bg-rose-600'
                           : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20'
-                      }`}
+                        }`}
                     >
                       {isBlocked ? 'Unblock User' : 'Block User'}
                     </button>
@@ -742,11 +741,10 @@ function ChatRoomContent() {
                   <h2 className="truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-white sm:text-[16px]">
                     {participant?.full_name || 'Scholar'}
                   </h2>
-                  <span className={`hidden rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.22em] sm:inline-flex transition-colors ${
-                    isOnline 
+                  <span className={`hidden rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.22em] sm:inline-flex transition-colors ${isOnline
                       ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
                       : "border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
-                  }`}>
+                    }`}>
                     {isOnline ? 'Online' : 'Offline'}
                   </span>
                 </div>
@@ -797,135 +795,135 @@ function ChatRoomContent() {
 
       <div className="relative z-10 flex-1 pt-[calc(env(safe-area-inset-top)+100px)]">
         <div className="mx-auto flex w-full max-w-4xl flex-col px-4 py-5 sm:px-6 sm:py-8">
-        {loading ? (
-          <div className="flex justify-center items-center h-full">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex min-h-[55vh] flex-col items-center justify-center px-4 text-center">
-            <div className="max-w-md rounded-[30px] border border-slate-200/80 bg-white/90 px-6 py-8 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-600/20">
-                <MessageCirclePlus className="h-8 w-8" />
-              </div>
-              <h3 className="mt-5 text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                Your conversation starts here
-              </h3>
-              <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
-                Send the first message to open the thread in this room. The design stays quiet so the conversation is the focus.
-              </p>
+          {loading ? (
+            <div className="flex justify-center items-center h-full">
+              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
             </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {messages.filter(m => !deletedForMe.includes(m.id) && (!isBlocked || m.sender_id === user?.id)).map((msg, index, arr) => {
-              const isMe = msg.sender_id === user?.id;
-              const prevMsg = arr[index - 1];
-              const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
+          ) : messages.length === 0 ? (
+            <div className="flex min-h-[55vh] flex-col items-center justify-center px-4 text-center">
+              <div className="max-w-md rounded-[30px] border border-slate-200/80 bg-white/90 px-6 py-8 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-600/20">
+                  <MessageCirclePlus className="h-8 w-8" />
+                </div>
+                <h3 className="mt-5 text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                  Your conversation starts here
+                </h3>
+                <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
+                  Send the first message to open the thread in this room. The design stays quiet so the conversation is the focus.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {messages.filter(m => !deletedForMe.includes(m.id) && (!isBlocked || m.sender_id === user?.id)).map((msg, index, arr) => {
+                const isMe = msg.sender_id === user?.id;
+                const prevMsg = arr[index - 1];
+                const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
 
-              const nextMsg = arr[index + 1];
-              const isNextSame = nextMsg && nextMsg.sender_id === msg.sender_id && format(new Date(nextMsg.created_at), 'yyyy-MM-dd') === format(new Date(msg.created_at), 'yyyy-MM-dd');
-              const isPrevSame = prevMsg && prevMsg.sender_id === msg.sender_id && !showDate;
+                const nextMsg = arr[index + 1];
+                const isNextSame = nextMsg && nextMsg.sender_id === msg.sender_id && format(new Date(nextMsg.created_at), 'yyyy-MM-dd') === format(new Date(msg.created_at), 'yyyy-MM-dd');
+                const isPrevSame = prevMsg && prevMsg.sender_id === msg.sender_id && !showDate;
 
-              return (
-                <div key={msg.id} className="w-full flex flex-col">
-                  {/* Date Pill */}
-                  {showDate && (
-                    <div className="flex justify-center my-5">
-                      <span className="px-4 py-1.5 bg-slate-900/5 dark:bg-white/5 backdrop-blur-md rounded-full text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest shadow-sm border border-white/50 dark:border-slate-800/50">
-                        {formatDateLabel(msg.created_at)}
-                      </span>
-                    </div>
-                  )}
+                return (
+                  <div key={msg.id} className="w-full flex flex-col">
+                    {/* Date Pill */}
+                    {showDate && (
+                      <div className="flex justify-center my-5">
+                        <span className="px-4 py-1.5 bg-slate-900/5 dark:bg-white/5 backdrop-blur-md rounded-full text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest shadow-sm border border-white/50 dark:border-slate-800/50">
+                          {formatDateLabel(msg.created_at)}
+                        </span>
+                      </div>
+                    )}
 
-                  <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isNextSame ? 'mb-0.5' : 'mb-3'}`}>
-                    <motion.div
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
-                        setSelectedMessage(msg);
-                      }}
-                      onTouchStart={() => {
-                        touchTimer.current = setTimeout(() => {
-                          Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+                    <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isNextSame ? 'mb-0.5' : 'mb-3'}`}>
+                      <motion.div
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
                           setSelectedMessage(msg);
-                        }, 500);
-                      }}
-                      onTouchEnd={() => {
-                        if (touchTimer.current) clearTimeout(touchTimer.current);
-                      }}
-                      onTouchMove={() => {
-                        if (touchTimer.current) clearTimeout(touchTimer.current);
-                      }}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      drag="x"
-                      dragConstraints={{ left: 0, right: 0 }}
-                      dragElastic={{ left: 0, right: 0.3 }}
-                      onDragEnd={(_e, info) => {
-                        if (info.offset.x > 50) {
-                          Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
-                          setReplyingTo(msg);
-                          setTimeout(() => inputRef.current?.focus(), 100);
-                        }
-                      }}
-                      className={`
+                        }}
+                        onTouchStart={() => {
+                          touchTimer.current = setTimeout(() => {
+                            Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+                            setSelectedMessage(msg);
+                          }, 500);
+                        }}
+                        onTouchEnd={() => {
+                          if (touchTimer.current) clearTimeout(touchTimer.current);
+                        }}
+                        onTouchMove={() => {
+                          if (touchTimer.current) clearTimeout(touchTimer.current);
+                        }}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        drag="x"
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={{ left: 0, right: 0.3 }}
+                        onDragEnd={(_e, info) => {
+                          if (info.offset.x > 50) {
+                            Haptics.impact({ style: ImpactStyle.Medium }).catch(() => { });
+                            setReplyingTo(msg);
+                            setTimeout(() => inputRef.current?.focus(), 100);
+                          }
+                        }}
+                        className={`
                         relative max-w-[85%] sm:max-w-[72%] px-4 py-3 group
                         ${isMe
-                          ? 'bg-gradient-to-br from-[#3897f0] to-[#1d4ed8] text-white shadow-[0_16px_35px_rgba(59,130,246,0.28)]'
-                          : 'bg-white/95 dark:bg-slate-950/80 text-slate-800 dark:text-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.08)] border border-slate-200/80 dark:border-slate-800/80'
-                        }
+                            ? 'bg-gradient-to-br from-[#3897f0] to-[#1d4ed8] text-white shadow-[0_16px_35px_rgba(59,130,246,0.28)]'
+                            : 'bg-white/95 dark:bg-slate-950/80 text-slate-800 dark:text-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.08)] border border-slate-200/80 dark:border-slate-800/80'
+                          }
                         ${isMe
-                          ? `rounded-l-[20px] ${!isPrevSame ? 'rounded-tr-[20px]' : 'rounded-tr-[8px]'} ${!isNextSame ? 'rounded-br-[20px]' : 'rounded-br-[8px]'}`
-                          : `rounded-r-[20px] ${!isPrevSame ? 'rounded-tl-[20px]' : 'rounded-tl-[8px]'} ${!isNextSame ? 'rounded-bl-[20px]' : 'rounded-bl-[8px]'}`
-                        }
+                            ? `rounded-l-[20px] ${!isPrevSame ? 'rounded-tr-[20px]' : 'rounded-tr-[8px]'} ${!isNextSame ? 'rounded-br-[20px]' : 'rounded-br-[8px]'}`
+                            : `rounded-r-[20px] ${!isPrevSame ? 'rounded-tl-[20px]' : 'rounded-tl-[8px]'} ${!isNextSame ? 'rounded-bl-[20px]' : 'rounded-bl-[8px]'}`
+                          }
                       `}
-                    >
-                      <div className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">
-                        {msg.message_type === 'image' ? (
-                          <div className="relative w-[200px] h-[200px] sm:w-[240px] sm:h-[240px] rounded-xl overflow-hidden mb-1 border border-black/10 dark:border-white/10">
-                            <Image src={msg.content} alt="Chat Attachment" fill className="object-cover" unoptimized />
-                          </div>
-                        ) : msg.content.startsWith('> Replying to **') ? (
-                          <>
-                            <div className={`mb-2 rounded-xl border-l-4 p-2 text-sm ${isMe ? 'border-blue-200 bg-blue-500/20 text-blue-50' : 'border-blue-500 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
-                              <span className="font-bold opacity-80">{msg.content.split('**: "')[0].replace('> Replying to **', '')}</span>
-                              <p className="mt-0.5 truncate opacity-90">{msg.content.split('**: "')[1]?.split('"\n\n')[0]}</p>
+                      >
+                        <div className="text-[15px] leading-relaxed break-words whitespace-pre-wrap">
+                          {msg.message_type === 'image' ? (
+                            <div className="relative w-[200px] h-[200px] sm:w-[240px] sm:h-[240px] rounded-xl overflow-hidden mb-1 border border-black/10 dark:border-white/10">
+                              <Image src={msg.content} alt="Chat Attachment" fill className="object-cover" unoptimized />
                             </div>
-                            <p>{msg.content.split('"\n\n').slice(1).join('"\n\n')}</p>
-                          </>
-                        ) : (
-                          <p>{msg.content}</p>
-                        )}
-                      </div>
+                          ) : msg.content.startsWith('> Replying to **') ? (
+                            <>
+                              <div className={`mb-2 rounded-xl border-l-4 p-2 text-sm ${isMe ? 'border-blue-200 bg-blue-500/20 text-blue-50' : 'border-blue-500 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+                                <span className="font-bold opacity-80">{msg.content.split('**: "')[0].replace('> Replying to **', '')}</span>
+                                <p className="mt-0.5 truncate opacity-90">{msg.content.split('**: "')[1]?.split('"\n\n')[0]}</p>
+                              </div>
+                              <p>{msg.content.split('"\n\n').slice(1).join('"\n\n')}</p>
+                            </>
+                          ) : (
+                            <p>{msg.content}</p>
+                          )}
+                        </div>
 
-                      <div className={`flex items-center justify-end gap-1.5 mt-0.5 select-none`}>
-                        <span className={`text-[10px] font-semibold ${isMe ? 'text-blue-100/90' : 'text-slate-400 dark:text-slate-500'}`}>
-                          {format(new Date(msg.created_at), 'HH:mm')}
-                        </span>
-                        {isMe && (
-                          <span className={`flex translate-y-[1px]`}>
-                            {msg.is_read ? (
-                              <CheckCheck className="w-3.5 h-3.5 text-blue-200" strokeWidth={3} />
-                            ) : (
-                              <Check className="w-3.5 h-3.5 text-blue-300/80" strokeWidth={3} />
-                            )}
+                        <div className={`flex items-center justify-end gap-1.5 mt-0.5 select-none`}>
+                          <span className={`text-[10px] font-semibold ${isMe ? 'text-blue-100/90' : 'text-slate-400 dark:text-slate-500'}`}>
+                            {format(new Date(msg.created_at), 'HH:mm')}
                           </span>
-                        )}
-                      </div>
-                    </motion.div>
+                          {isMe && (
+                            <span className={`flex translate-y-[1px]`}>
+                              {msg.is_read ? (
+                                <CheckCheck className="w-3.5 h-3.5 text-blue-200" strokeWidth={3} />
+                              ) : (
+                                <Check className="w-3.5 h-3.5 text-blue-300/80" strokeWidth={3} />
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </motion.div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-            <div ref={messagesEndRef} className="h-2" />
-          </div>
-        )}
-          </div>
+                );
+              })}
+              <div ref={messagesEndRef} className="h-2" />
+            </div>
+          )}
         </div>
+      </div>
 
       {/* Input Overlay */}
       <div
-          className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 sm:px-6"
+        className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 sm:px-6"
         style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: `max(env(safe-area-inset-bottom), 12px)` }}
       >
         {isBlocked ? (
@@ -936,14 +934,14 @@ function ChatRoomContent() {
           </div>
         ) : (
           <div className="mx-auto flex w-full max-w-4xl items-end gap-2 rounded-[30px] border border-white/70 bg-white/90 px-3 py-3 shadow-[0_18px_50px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-slate-800 dark:bg-slate-950/90">
-            <input 
-              type="file" 
-              accept="image/*" 
-              className="hidden" 
-              ref={fileInputRef} 
-              onChange={handleFileChange} 
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleFileChange}
             />
-            <button 
+            <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingImage}
               className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white disabled:opacity-50"

@@ -42,6 +42,8 @@ interface FollowingUser {
   username: string;
 }
 
+const ROOMS_CACHE_KEY = (userId: string) => `chat_rooms_cache_${userId}`;
+
 export default function ChatListPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -154,6 +156,8 @@ export default function ChatListPage() {
       });
 
       setRooms(roomData);
+      // Persist to cache so next open is instant
+      try { localStorage.setItem(ROOMS_CACHE_KEY(userId), JSON.stringify(roomData)); } catch { }
     } catch (err) {
       console.error('[Chat] Failed:', err);
     }
@@ -175,6 +179,17 @@ export default function ChatListPage() {
         return;
       }
       setUser(user);
+
+      // ⚡ WhatsApp-style: show cached rooms INSTANTLY, then refresh in background
+      try {
+        const cached = localStorage.getItem(ROOMS_CACHE_KEY(user.id));
+        if (cached) {
+          setRooms(JSON.parse(cached));
+          setLoading(false); // no spinner — cached data is good enough to show
+        }
+      } catch { }
+
+      // Silently fetch fresh data in the background
       await fetchRooms(user.id);
       setLoading(false);
     };
