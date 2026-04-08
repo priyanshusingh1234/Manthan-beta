@@ -1,11 +1,24 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PhoneOff, Mic, MicOff, Volume2, VolumeX, Phone } from 'lucide-react';
 import Image from 'next/image';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { supabase } from '@/lib/supabaseClient';
+
+type JitsiApi = {
+  addListener: (event: string, cb: (payload?: any) => void) => void;
+  executeCommand: (command: string, ...args: any[]) => void;
+  dispose: () => void;
+};
+
+declare global {
+  interface Window {
+    JitsiMeetExternalAPI?: new (domain: string, options: any) => JitsiApi;
+  }
+}
 
 export default function CallPage() {
   const { callRoom } = useParams() as { callRoom: string };
@@ -23,76 +36,227 @@ export default function CallPage() {
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
 
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const jitsiContainerRef = useRef<HTMLDivElement>(null);
+  const jitsiApiRef = useRef<JitsiApi | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
   const ringTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasRemoteParticipantRef = useRef(false);
+  const hasMarkedCallStatusRef = useRef(false);
 
-  const jitsiRoom = encodeURIComponent(`Dheeyudha_${callRoom}`);
-  const jitsiUrl = `https://meet.jit.si/${jitsiRoom}#config.startWithVideoMuted=true&config.startWithAudioMuted=${isMuted}&config.prejoinPageEnabled=false&config.disableDeepLinking=true&config.notifications=[]&config.toolbarButtons=[]&config.disableInviteFunctions=true&config.hideLobbyButton=true&interfaceConfig.SHOW_JITSI_WATERMARK=false&interfaceConfig.TOOLBAR_BUTTONS=[]`;
-
-  const startCall = async () => {
-    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-    setPhase('connected');
+  const safeDecode = (value: string) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-      localStreamRef.current = stream;
-    } catch (err) {
-      console.error('[Call] Mic permission denied:', err);
+      return decodeURIComponent(value);
+    } catch {
+      return value;
     }
-    timerRef.current = setInterval(() => setCallDuration(prev => prev + 1), 1000);
   };
-
-  const handleEndCall = () => {
-    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
-    setPhase('ended');
-    localStreamRef.current?.getTracks().forEach(t => t.stop());
-    if (timerRef.current) clearInterval(timerRef.current);
-    setTimeout(() => router.back(), 1200);
-  };
-
-  const handleDecline = () => {
-    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
-    setPhase('declined');
-    setTimeout(() => router.back(), 1000);
-  };
-
-  useEffect(() => {
-    // Caller joins immediately, receiver waits to accept
-    if (mode === 'outgoing') {
-      startCall();
-      // Auto-end if no one joins in 45s
-      ringTimeoutRef.current = setTimeout(() => {
-        setPhase(p => {
-          if (p === 'connected') return p;
-          setTimeout(() => router.back(), 1200);
-          return 'ended';
-        });
-      }, 45000);
-    }
-    return () => {
-      localStreamRef.current?.getTracks().forEach(t => t.stop());
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (ringTimeoutRef.current) clearTimeout(ringTimeoutRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
 
   const formatDuration = (s: number) =>
     `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) return;
+    timerRef.current = setInterval(() => setCallDuration((prev) => prev + 1), 1000);
+  }, []);
+
+  const markCallStatus = useCallback(async (status: 'ended' | 'declined') => {
+    if (hasMarkedCallStatusRef.current) return;
+    hasMarkedCallStatusRef.current = true;
+    const marker = status === 'declined' ? '__CALL_DECLINED__:' : '__CALL_ENDED__:';
+    try {
+      await supabase
+        .from('chat_messages')
+        .update({ content: `${marker}${callRoom}` })
+        .eq('content', `__CALL__:${callRoom}`);
+    } catch (err) {
+      console.warn('[Call] Unable to sync call status:', err);
+    }
+  }, [callRoom]);
+
+  const disposeJitsi = useCallback(() => {
+    if (jitsiApiRef.current) {
+      try {
+        jitsiApiRef.current.dispose();
+      } catch {}
+      jitsiApiRef.current = null;
+    }
+  }, []);
+
+  const loadJitsiScript = useCallback(async () => {
+    if (window.JitsiMeetExternalAPI) return;
+
+    await new Promise<void>((resolve, reject) => {
+      const existing = document.querySelector('script[data-jitsi-external-api="true"]') as HTMLScriptElement | null;
+      if (existing) {
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error('Failed to load Jitsi script')), { once: true });
+        if (window.JitsiMeetExternalAPI) resolve();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://meet.jit.si/external_api.js';
+      script.async = true;
+      script.defer = true;
+      script.dataset.jitsiExternalApi = 'true';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load Jitsi script'));
+      document.body.appendChild(script);
+    });
+  }, []);
+
+  const createJitsiInstance = useCallback(async () => {
+    if (jitsiApiRef.current || !jitsiContainerRef.current) return;
+
+    await loadJitsiScript();
+    if (!window.JitsiMeetExternalAPI) throw new Error('Jitsi API unavailable');
+
+    const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
+      roomName: `Dheeyudha_${callRoom}`,
+      parentNode: jitsiContainerRef.current,
+      width: 1,
+      height: 1,
+      configOverwrite: {
+        prejoinPageEnabled: false,
+        disableDeepLinking: true,
+        startWithVideoMuted: true,
+        startWithAudioMuted: false,
+        disableInviteFunctions: true,
+        notifications: [],
+      },
+      interfaceConfigOverwrite: {
+        SHOW_JITSI_WATERMARK: false,
+        TOOLBAR_BUTTONS: ['microphone', 'hangup'],
+      },
+      userInfo: {
+        displayName: mode === 'incoming' ? 'Receiver' : 'Caller',
+      },
+    });
+
+    api.addListener('audioMuteStatusChanged', (payload?: { muted?: boolean }) => {
+      if (typeof payload?.muted === 'boolean') {
+        setIsMuted(payload.muted);
+      }
+    });
+
+    api.addListener('participantJoined', () => {
+      hasRemoteParticipantRef.current = true;
+      setPhase('connected');
+      if (ringTimeoutRef.current) {
+        clearTimeout(ringTimeoutRef.current);
+        ringTimeoutRef.current = null;
+      }
+      startTimer();
+    });
+
+    api.addListener('participantLeft', async () => {
+      hasRemoteParticipantRef.current = false;
+      if (phase === 'connected') {
+        setPhase('ended');
+        clearTimer();
+        await markCallStatus('ended');
+        setTimeout(() => router.back(), 1000);
+      }
+    });
+
+    api.addListener('readyToClose', () => {
+      clearTimer();
+    });
+
+    jitsiApiRef.current = api;
+  }, [callRoom, clearTimer, loadJitsiScript, markCallStatus, mode, phase, router, startTimer]);
+
+  const startCall = useCallback(async () => {
+    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+    setPhase('ringing');
+    try {
+      await createJitsiInstance();
+    } catch (err) {
+      console.error('[Call] Failed to start Jitsi call:', err);
+      setPhase('ended');
+      setTimeout(() => router.back(), 1200);
+    }
+  }, [createJitsiInstance, router]);
+
+  const handleEndCall = useCallback(async () => {
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+    setPhase('ended');
+    clearTimer();
+    if (ringTimeoutRef.current) {
+      clearTimeout(ringTimeoutRef.current);
+      ringTimeoutRef.current = null;
+    }
+    try {
+      jitsiApiRef.current?.executeCommand('hangup');
+    } catch {}
+    disposeJitsi();
+    await markCallStatus('ended');
+    setTimeout(() => router.back(), 900);
+  }, [clearTimer, disposeJitsi, markCallStatus, router]);
+
+  const handleDecline = useCallback(async () => {
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+    setPhase('declined');
+    clearTimer();
+    if (ringTimeoutRef.current) {
+      clearTimeout(ringTimeoutRef.current);
+      ringTimeoutRef.current = null;
+    }
+    disposeJitsi();
+    await markCallStatus('declined');
+    setTimeout(() => router.back(), 900);
+  }, [clearTimer, disposeJitsi, markCallStatus, router]);
+
+  useEffect(() => {
+    // Caller joins immediately, receiver waits to accept.
+    if (mode === 'outgoing') {
+      startCall();
+      ringTimeoutRef.current = setTimeout(async () => {
+        if (hasRemoteParticipantRef.current) return;
+        setPhase('ended');
+        clearTimer();
+        await markCallStatus('ended');
+        disposeJitsi();
+        setTimeout(() => router.back(), 1200);
+      }, 45000);
+    }
+
+    return () => {
+      clearTimer();
+      if (ringTimeoutRef.current) {
+        clearTimeout(ringTimeoutRef.current);
+        ringTimeoutRef.current = null;
+      }
+      disposeJitsi();
+    };
+  }, [clearTimer, disposeJitsi, markCallStatus, mode, router, startCall]);
+
   const toggleMute = () => {
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-    setIsMuted(prev => !prev);
+    try {
+      jitsiApiRef.current?.executeCommand('toggleAudio');
+    } catch {
+      setIsMuted((prev) => !prev);
+    }
   };
 
   const toggleSpeaker = () => {
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-    setIsSpeakerOn(prev => !prev);
+    setIsSpeakerOn((prev) => !prev);
   };
 
   return (
     <div className="relative flex min-h-[100dvh] w-full flex-col items-center justify-between overflow-hidden bg-[#0a0f1a]">
+      {/* Hidden Jitsi mount point */}
+      <div ref={jitsiContainerRef} className="pointer-events-none absolute left-[-9999px] top-[-9999px] h-px w-px opacity-0" />
+
       {/* Background */}
       <div className="pointer-events-none absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-[#0a0f1a] to-slate-950" />
@@ -101,14 +265,6 @@ export default function CallPage() {
         <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }} transition={{ duration: 5, repeat: Infinity, delay: 1 }}
           className="absolute -bottom-32 left-1/2 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-violet-600/20 blur-[100px]" />
       </div>
-
-      {/* Hidden Jitsi iframe - only mounted when connected */}
-      {phase === 'connected' && (
-        <iframe ref={iframeRef} src={jitsiUrl}
-          allow="camera; microphone; fullscreen; display-capture; autoplay"
-          className="absolute inset-0 z-0 h-full w-full opacity-0 pointer-events-none"
-          title="Jitsi Call" />
-      )}
 
       {/* Top status badge */}
       <div className="relative z-10 flex w-full items-center justify-center pt-[calc(env(safe-area-inset-top)+2rem)]">
@@ -158,16 +314,16 @@ export default function CallPage() {
           )}
           <div className="relative h-36 w-36 overflow-hidden rounded-full border-4 border-white/20 shadow-2xl shadow-indigo-900/50">
             {callerAvatar ? (
-              <Image src={decodeURIComponent(callerAvatar)} alt={callerName} fill className="object-cover" unoptimized />
+              <Image src={safeDecode(callerAvatar)} alt={callerName} fill className="object-cover" unoptimized />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-600 to-violet-600 text-5xl font-black text-white">
-                {decodeURIComponent(callerName)[0]?.toUpperCase()}
+                {safeDecode(callerName)[0]?.toUpperCase()}
               </div>
             )}
           </div>
         </div>
         <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-3xl font-black tracking-tight text-white">{decodeURIComponent(callerName)}</h1>
+          <h1 className="text-3xl font-black tracking-tight text-white">{safeDecode(callerName)}</h1>
           <p className="text-sm font-medium text-white/50">
             {phase === 'connected' ? 'Voice Call'
               : phase === 'ringing' && mode === 'incoming' ? 'is calling you...'

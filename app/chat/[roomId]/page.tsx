@@ -777,7 +777,8 @@ function ChatRoomContent() {
                 
                 // Unique call room per conversation session
                 const callRoom = `${roomId}_${Date.now()}`;
-                const callUrl = `/call/${callRoom}?caller=${encodeURIComponent(user.user_metadata?.full_name || 'Scholar')}&avatar=${encodeURIComponent(user.user_metadata?.avatar_url || '')}&mode=outgoing`;
+                // Outgoing screen should show the person you are calling.
+                const callUrl = `/call/${callRoom}?caller=${encodeURIComponent(participant.full_name || 'Scholar')}&avatar=${encodeURIComponent(participant.avatar_url || '')}&mode=outgoing`;
                 
                 // Navigate self to call page (outgoing)
                 router.push(callUrl);
@@ -945,32 +946,50 @@ function ChatRoomContent() {
                           <div className="relative w-[200px] h-[200px] sm:w-[240px] sm:h-[240px] rounded-xl overflow-hidden mb-1 border border-black/10 dark:border-white/10">
                             <Image src={msg.content} alt="Chat Attachment" fill className="object-cover" unoptimized />
                           </div>
-                        ) : msg.content.startsWith('__CALL__:') ? (
+                        ) : (msg.content.startsWith('__CALL__:') || msg.content.startsWith('__CALL_ENDED__:') || msg.content.startsWith('__CALL_DECLINED__:')) ? (
                           // Render voice call card
                           <div className="flex flex-col items-center gap-3 px-1 py-2 min-w-[180px]">
+                            {(() => {
+                              const isEnded = msg.content.startsWith('__CALL_ENDED__:');
+                              const isDeclined = msg.content.startsWith('__CALL_DECLINED__:');
+                              const isActive = msg.content.startsWith('__CALL__:');
+                              const callRoomId = msg.content
+                                .replace('__CALL__:', '')
+                                .replace('__CALL_ENDED__:', '')
+                                .replace('__CALL_DECLINED__:', '');
+                              return (
+                                <>
                             <div className={`flex h-12 w-12 items-center justify-center rounded-full ${isMe ? 'bg-blue-400/30' : 'bg-emerald-500/20'}`}>
                               <Phone className={`h-6 w-6 ${isMe ? 'text-blue-100' : 'text-emerald-400'}`} />
                             </div>
                             <div className="text-center">
                               <p className={`text-sm font-bold ${isMe ? 'text-white' : 'text-slate-800 dark:text-white'}`}>Voice Call</p>
-                              <p className={`text-[11px] mt-0.5 ${isMe ? 'text-blue-100/70' : 'text-slate-500 dark:text-slate-400'}`}>{isMe ? 'You started a call' : 'Incoming call'}</p>
+                              <p className={`text-[11px] mt-0.5 ${isMe ? 'text-blue-100/70' : 'text-slate-500 dark:text-slate-400'}`}>
+                                {isDeclined ? 'Call declined' : isEnded ? 'Call ended' : (isMe ? 'You started a call' : 'Incoming call')}
+                              </p>
                             </div>
                             <button
+                              disabled={!isActive}
                               onClick={() => {
-                                const cr = msg.content.replace('__CALL__:', '');
+                                if (!isActive) return;
                                 const callerQ = encodeURIComponent(participant?.full_name || 'Scholar');
                                 const avatarQ = encodeURIComponent(participant?.avatar_url || '');
                                 const modeQ = isMe ? 'outgoing' : 'incoming';
-                                router.push(`/call/${cr}?caller=${callerQ}&avatar=${avatarQ}&mode=${modeQ}`);
+                                router.push(`/call/${callRoomId}?caller=${callerQ}&avatar=${avatarQ}&mode=${modeQ}`);
                               }}
                               className={`w-full rounded-xl py-2 text-sm font-bold transition-all active:scale-95 ${
-                                isMe
+                                !isActive
+                                  ? 'bg-slate-400/20 text-slate-500 cursor-not-allowed dark:bg-slate-700/40 dark:text-slate-300'
+                                  : isMe
                                   ? 'bg-white/20 text-white hover:bg-white/30'
                                   : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20'
                               }`}
                             >
-                              {isMe ? 'Open Call' : '📞 Join Call'}
+                              {!isActive ? 'Call Finished' : (isMe ? 'Open Call' : 'Join Call')}
                             </button>
+                                </>
+                              );
+                            })()}
                           </div>
                         ) : msg.content.startsWith('> Replying to **') ? (
                           <>
