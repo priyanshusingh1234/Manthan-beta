@@ -36,6 +36,7 @@ export default function CallPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
+  const [isStarting, setIsStarting] = useState(false);
 
   const jitsiContainerRef = useRef<HTMLDivElement>(null);
   const jitsiApiRef = useRef<JitsiApi | null>(null);
@@ -184,16 +185,36 @@ export default function CallPage() {
   }, [callRoom, clearTimer, loadJitsiScript, markCallStatus, mode, phase, router, startTimer]);
 
   const startCall = useCallback(async () => {
+    if (isStarting) return;
+    setIsStarting(true);
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
     setPhase('ringing');
     try {
+      // On mobile webviews, explicitly requesting mic in a user gesture makes
+      // accept/join far more reliable than relying on iframe-internal prompts.
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        stream.getTracks().forEach((t) => t.stop());
+      } catch (micErr) {
+        console.warn('[Call] Mic preflight failed:', micErr);
+      }
+
       await createJitsiInstance();
+
+      // Fallback: if we successfully initialized Jitsi from incoming accept,
+      // move UI to active state even if event timing is delayed on device.
+      if (mode === 'incoming') {
+        setPhase('connected');
+        startTimer();
+      }
     } catch (err) {
       console.error('[Call] Failed to start Jitsi call:', err);
       setPhase('ended');
       setTimeout(() => router.back(), 1200);
+    } finally {
+      setIsStarting(false);
     }
-  }, [createJitsiInstance, router]);
+  }, [createJitsiInstance, isStarting, mode, router, startTimer]);
 
   const handleEndCall = useCallback(async () => {
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
@@ -358,11 +379,11 @@ export default function CallPage() {
                 <span className="text-xs font-bold text-rose-400">Decline</span>
               </div>
               <div className="flex flex-col items-center gap-3">
-                <motion.button whileTap={{ scale: 0.85 }} onClick={startCall}
-                  className="flex h-[80px] w-[80px] items-center justify-center rounded-full bg-emerald-500 text-white shadow-xl shadow-emerald-500/40 animate-pulse">
+                <motion.button whileTap={{ scale: 0.85 }} onClick={startCall} disabled={isStarting}
+                  className={`flex h-[80px] w-[80px] items-center justify-center rounded-full text-white shadow-xl shadow-emerald-500/40 ${isStarting ? 'bg-emerald-400/70' : 'bg-emerald-500 animate-pulse'}`}>
                   <Phone className="h-8 w-8" />
                 </motion.button>
-                <span className="text-xs font-bold text-emerald-400">Accept</span>
+                <span className="text-xs font-bold text-emerald-400">{isStarting ? 'Connecting...' : 'Accept'}</span>
               </div>
             </motion.div>
           )}
