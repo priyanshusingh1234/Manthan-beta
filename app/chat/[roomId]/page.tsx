@@ -525,7 +525,7 @@ function ChatRoomContent() {
   };
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#0b0f14] dark:text-white pb-28">
+    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#0b0f14] dark:text-white pb-36">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,153,240,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_24%),linear-gradient(to_bottom,rgba(255,255,255,0.9),rgba(241,245,249,0.86))] dark:bg-[radial-gradient(circle_at_top_left,rgba(56,153,240,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_24%),linear-gradient(to_bottom,rgba(2,6,23,0.96),rgba(9,14,20,0.96))]" />
 
       {/* Action Sheet */}
@@ -926,7 +926,7 @@ function ChatRoomContent() {
       {/* Input Overlay */}
       <div
           className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 sm:px-6"
-        style={{ transform: `translateY(-${keyboardHeight}px)`, paddingBottom: `max(env(safe-area-inset-bottom), 12px)` }}
+        style={{ paddingBottom: `max(env(safe-area-inset-bottom), 12px)` }}
       >
         {isBlocked ? (
           <div className="mx-auto flex w-full max-w-4xl items-center justify-center rounded-[30px] border border-white/70 bg-white/90 px-3 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-slate-800 dark:bg-slate-950/90">
