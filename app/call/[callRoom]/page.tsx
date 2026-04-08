@@ -69,6 +69,8 @@ export default function CallPage() {
   const phaseRef = useRef<Phase>('ringing');
   const endingRef = useRef(false);
   const callStatusSavedRef = useRef(false);
+  const channelReadyPromiseRef = useRef<Promise<void> | null>(null);
+  const channelReadyResolveRef = useRef<(() => void) | null>(null);
 
   const safeDecode = (value: string) => {
     try {
@@ -135,6 +137,12 @@ export default function CallPage() {
         ...data,
       },
     });
+  }, []);
+
+  const waitForChannelReady = useCallback(async () => {
+    if (channelReadyPromiseRef.current) {
+      await channelReadyPromiseRef.current;
+    }
   }, []);
 
   const attachLocalTracks = useCallback((peer: RTCPeerConnection) => {
@@ -273,6 +281,8 @@ export default function CallPage() {
       } catch {}
       channelRef.current = null;
     }
+    channelReadyPromiseRef.current = null;
+    channelReadyResolveRef.current = null;
 
     await syncCallStatus(status);
 
@@ -342,6 +352,10 @@ export default function CallPage() {
   const connectChannel = useCallback(() => {
     if (channelRef.current) return channelRef.current;
 
+    channelReadyPromiseRef.current = new Promise<void>((resolve) => {
+      channelReadyResolveRef.current = resolve;
+    });
+
     const channel = supabaseRealtime.channel(`voice-call:${callRoom}`);
     channel
       .on('broadcast', { event: 'signal' }, ({ payload }) => {
@@ -349,6 +363,8 @@ export default function CallPage() {
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
+          channelReadyResolveRef.current?.();
+          channelReadyResolveRef.current = null;
           setStatusText(mode === 'incoming' ? 'Tap accept to answer' : 'Waiting for answer...');
         }
       });
@@ -364,6 +380,7 @@ export default function CallPage() {
 
     try {
       connectChannel();
+      await waitForChannelReady();
       await ensureLocalStream();
       connectPeer();
       sendSignal('accepted');
@@ -376,7 +393,7 @@ export default function CallPage() {
     } finally {
       setIsAccepting(false);
     }
-  }, [connectChannel, connectPeer, ensureLocalStream, isAccepting, sendSignal]);
+  }, [connectChannel, connectPeer, ensureLocalStream, isAccepting, sendSignal, waitForChannelReady]);
 
   const startOutgoingSession = useCallback(async () => {
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
@@ -397,7 +414,7 @@ export default function CallPage() {
       setStatusText('Microphone permission required');
       setTimeout(() => router.back(), 1200);
     }
-  }, [connectChannel, ensureLocalStream, endCall, phase, router]);
+  }, [connectChannel, ensureLocalStream, endCall, router]);
 
   useEffect(() => {
     if (mode === 'outgoing') {
@@ -423,6 +440,8 @@ export default function CallPage() {
         void supabaseRealtime.removeChannel(channelRef.current);
         channelRef.current = null;
       }
+      channelReadyPromiseRef.current = null;
+      channelReadyResolveRef.current = null;
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = null;
       }
