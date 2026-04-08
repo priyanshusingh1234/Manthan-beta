@@ -32,6 +32,7 @@ interface ChatRoom {
     created_at: string;
     sender_id: string;
     is_read: boolean;
+    message_type?: string;
   };
 }
 
@@ -109,7 +110,7 @@ export default function ChatListPage() {
       const lastMessagePromises = validRooms.map(p => 
         supabase
           .from('chat_messages')
-          .select('content, created_at, sender_id, is_read')
+          .select('content, created_at, sender_id, is_read, message_type')
           .eq('room_id', p.room_id)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -410,7 +411,10 @@ export default function ChatListPage() {
   );
 }
 
-function formatPreview(content: string): string {
+function formatPreview(content: string, type?: string): string {
+  // Handle explicit image type
+  if (type === 'image' || content.match(/\.(jpg|jpeg|png|webp|gif|avif)($|\?)/i)) return '📸 Photo';
+  
   // Handle call-ended internal tag
   if (content.startsWith('__CALL_ENDED__')) return '📞 Call ended';
   // Handle reply messages — strip markdown and show just the reply text
@@ -464,7 +468,7 @@ function ChatCard({ room, onClick, user }: { room: ChatRoom; onClick: () => void
         </div>
         <div className="flex items-center justify-between gap-2">
           <p className={`text-[14px] truncate flex-1 ${isUnread ? 'font-bold text-slate-800 dark:text-slate-200' : 'font-medium text-slate-500'}`}>
-            {room.last_message ? formatPreview(room.last_message.content) : 'Break the ice!'}
+            {room.last_message ? formatPreview(room.last_message.content, room.last_message.message_type) : 'Break the ice!'}
           </p>
 
           {room.last_message && room.last_message.sender_id === user?.id && (
