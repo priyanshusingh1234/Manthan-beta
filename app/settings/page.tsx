@@ -59,6 +59,7 @@ export default function SettingsPage() {
             items: [
                 { icon: CircleHelp, label: "Help & Support", href: "/contact", description: "Get help with Dheeyudhha" },
                 { icon: FileText, label: "Documentation", href: "/docs", description: "Read the user guides" },
+                { icon: Shield, label: "Child Safety", href: "/child-safety", description: "Learn how we protect minors" },
                 { icon: Shield, label: "Privacy Policy", href: "/privacy", description: "How we protect your data" },
                 { icon: Info, label: "Terms of Service", href: "/about", description: "Rules and agreements" },
             ]

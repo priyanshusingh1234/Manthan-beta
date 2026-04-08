@@ -58,6 +58,7 @@ export default function DesktopSidebar() {
     { label: 'See Docs', href: '/docs' },
     { label: 'Ask', href: '/ask', soon: true },
     { label: 'Contact', href: '/contact' },
+    { label: 'Child Safety', href: '/child-safety' },
     { label: 'About', href: '/about' },
   ];
 
