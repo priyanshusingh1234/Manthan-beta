@@ -173,13 +173,9 @@ export default function SettingsPage() {
                             <span className="font-semibold text-[15px]">Sign Out</span>
                         </div>
                     </button>
-                    
-                    <button
-                        onClick={() => {
-                            if (confirm("Are you sure you want to delete your account? This will permanently remove all your progress, points, and posts. This action cannot be undone.\n\nClick OK to send a deletion request to our team.")) {
-                                window.location.href = "mailto:support@dheeyudha.app?subject=Account%20Deletion%20Request&body=I%20request%20the%20permanent%20deletion%20of%20my%20account%20associated%20with%20this%20email.";
-                            }
-                        }}
+
+                    <Link
+                        href="/delete-account"
                         className="w-full mt-3 bg-slate-100 dark:bg-slate-800/50 flex items-center justify-between px-6 py-4 rounded-3xl border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-900/10 text-slate-500 hover:text-red-500 transition-all group"
                     >
                         <div className="flex items-center gap-4">
@@ -189,7 +185,7 @@ export default function SettingsPage() {
                             <span className="font-semibold text-[15px]">Delete Account</span>
                         </div>
                         <Trash2 size={18} className="text-slate-400 group-hover:text-red-500" />
-                    </button>
+                    </Link>
                 </div>
 
                 <div className="text-center pb-8 pt-4">

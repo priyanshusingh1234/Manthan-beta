@@ -118,7 +118,11 @@ export default function PrivacyPage() {
                 </p>
                 <p className="mt-4">
                   By creating an account or using Dheeyudha, you agree to the practices described in this policy.
-                  If you do not agree, please discontinue use of the service and contact us to delete your account.
+                  If you do not agree, please discontinue use of the service and visit our{' '}
+                  <Link href="/delete-account" className="font-semibold text-indigo-600 hover:underline">
+                    account deletion page
+                  </Link>{' '}
+                  to request deletion.
                 </p>
                 <p className="mt-4">
                   This policy applies to all users — students, teachers, and visitors — regardless of how they
