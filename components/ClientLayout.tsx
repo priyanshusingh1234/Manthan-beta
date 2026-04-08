@@ -344,7 +344,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const showBottomNav = isMobile;
   const pathname = usePathname();
 
-  const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/update-password';
   const isLandingPage = pathname === '/';
   const isTrailerPage = pathname === '/trailer';
   const isSearchPage = pathname === '/search';
