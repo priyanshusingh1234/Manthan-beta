@@ -323,6 +323,9 @@ function ChatRoomContent() {
     setRemoteUsers([]);
     setIsMicOn(true);
     setIsCamOn(true);
+
+    // Also reset any ringing vibrations or sounds if any
+    Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
   };
 
   const initRtc = async () => {
@@ -352,6 +355,18 @@ function ChatRoomContent() {
     return client;
   };
 
+  // Fetches a short-lived token from our backend API
+  const fetchAgoraToken = async (channel: string): Promise<string | null> => {
+    try {
+      const res = await fetch(`/api/agora/token?channel=${encodeURIComponent(channel)}&uid=0`);
+      if (!res.ok) return null;
+      const { token } = await res.json();
+      return token || null;
+    } catch {
+      return null;
+    }
+  };
+
   const startCall = async (type: 'voice' | 'video') => {
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
     setCallType(type);
@@ -363,7 +378,8 @@ function ChatRoomContent() {
     const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
 
     try {
-      await client.join(AGORA_APP_ID, roomId, null, user.id);
+      const token = await fetchAgoraToken(roomId);
+      await client.join(AGORA_APP_ID, roomId, token, 0);
 
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
       setLocalAudioTrack(audioTrack);
@@ -408,7 +424,8 @@ function ChatRoomContent() {
     const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
 
     try {
-      await client.join(AGORA_APP_ID, roomId, null, user.id);
+      const token = await fetchAgoraToken(roomId);
+      await client.join(AGORA_APP_ID, roomId, token, 0);
       const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
       setLocalAudioTrack(audioTrack);
       localAudioRef.current = audioTrack;
@@ -521,7 +538,8 @@ function ChatRoomContent() {
         setIsCalling(true);
         setIsIncomingCall(true);
         setCallStatus('ringing');
-        Haptics.vibrate().catch(() => { });
+        Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+        // Optional: play a ringing sound here if available
       }
     });
 
