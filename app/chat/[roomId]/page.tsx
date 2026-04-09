@@ -123,6 +123,13 @@ function ChatRoomContent() {
   const localAudioRef = useRef<any>(null);
   const localVideoRef = useRef<any>(null);
   const rtcClientRef = useRef<any>(null);
+  const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callStatusRef = useRef<'ringing' | 'connected' | 'ended'>('ringing');
+
+  const updateCallStatus = (status: 'ringing' | 'connected' | 'ended') => {
+    setCallStatus(status);
+    callStatusRef.current = status;
+  };
 
   const toggleSelection = (id: string) => {
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
@@ -315,9 +322,14 @@ function ChatRoomContent() {
       rtcClientRef.current = null;
     }
 
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
+    }
+
     setIsCalling(false);
     setIsIncomingCall(false);
-    setCallStatus('ended');
+    updateCallStatus('ended');
     setLocalAudioTrack(null);
     setLocalVideoTrack(null);
     setRemoteUsers([]);
@@ -326,6 +338,20 @@ function ChatRoomContent() {
 
     // Also reset any ringing vibrations or sounds if any
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
+  };
+
+  const sendMissedCallMessage = async () => {
+    if (!user || !participant) return;
+    try {
+      await supabase.from('chat_messages').insert({
+        room_id: roomId,
+        sender_id: user.id,
+        content: `📞 Missed ${callType} call`,
+        message_type: 'text'
+      });
+    } catch (e) {
+      console.error("Missed call log failed", e);
+    }
   };
 
   const initRtc = async () => {
@@ -341,7 +367,11 @@ function ChatRoomContent() {
       if (mediaType === 'audio') {
         user.audioTrack?.play();
       }
-      setCallStatus('connected');
+      updateCallStatus('connected');
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
+      }
     });
 
     client.on('user-unpublished', (user) => {
@@ -372,7 +402,7 @@ function ChatRoomContent() {
     setCallType(type);
     setIsCalling(true);
     setIsIncomingCall(false);
-    setCallStatus('ringing');
+    updateCallStatus('ringing');
 
     const client = await initRtc();
     const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
@@ -411,6 +441,15 @@ function ChatRoomContent() {
           })
         }).catch(() => { });
       }
+
+    // --- ADDED: 45s Timeout for calls ---
+    callTimeoutRef.current = setTimeout(() => {
+      if (callStatusRef.current === 'ringing') {
+        sendMissedCallMessage();
+        endCall();
+      }
+    }, 45000);
+
     } catch (e) {
       console.error("Call start failed", e);
       endCall();
@@ -419,7 +458,7 @@ function ChatRoomContent() {
 
   const acceptCall = async () => {
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
-    setCallStatus('connected');
+    updateCallStatus('connected');
     const client = await initRtc();
     const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
 
@@ -537,7 +576,7 @@ function ChatRoomContent() {
         setCallType(payload.type);
         setIsCalling(true);
         setIsIncomingCall(true);
-        setCallStatus('ringing');
+        updateCallStatus('ringing');
         Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
         // Optional: play a ringing sound here if available
       }
