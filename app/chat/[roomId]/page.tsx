@@ -17,7 +17,13 @@ import {
   Reply,
   X,
   VolumeX,
-  Ban
+  Ban,
+  Phone,
+  Video,
+  Mic,
+  MicOff,
+  VideoOff,
+  PhoneOff,
 } from 'lucide-react';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -43,6 +49,36 @@ interface Participant {
 
 const MESSAGES_CACHE_KEY = (roomId: string) => `chat_msgs_${roomId}`;
 const PARTICIPANT_CACHE_KEY = (roomId: string) => `chat_part_${roomId}`;
+
+// --- FIX 3: Safe Video Player Components ---
+// These prevent the React re-render loop from crashing Agora's .play() method
+const RemoteVideoPlayer = ({ track }: { track: any }) => {
+  const videoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (track && videoRef.current) {
+      track.play(videoRef.current);
+    }
+    return () => {
+      if (track) track.stop();
+    };
+  }, [track]);
+
+  return <div ref={videoRef} className="h-full w-full object-cover opacity-60" />;
+};
+
+const LocalVideoPlayer = ({ track }: { track: any }) => {
+  const videoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (track && videoRef.current) {
+      track.play(videoRef.current);
+    }
+  }, [track]);
+
+  return <div ref={videoRef} className="h-full w-full scale-x-[-1] object-cover" />;
+};
+
 
 function ChatRoomContent() {
   const router = useRouter();
@@ -70,6 +106,24 @@ function ChatRoomContent() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
+  // --- Calling States ---
+  const [isCalling, setIsCalling] = useState(false);
+  const [callType, setCallType] = useState<'voice' | 'video'>('voice');
+  const [callStatus, setCallStatus] = useState<'ringing' | 'connected' | 'ended'>('ringing');
+  const [isIncomingCall, setIsIncomingCall] = useState(false);
+
+  // UI States for Tracks
+  const [localAudioTrack, setLocalAudioTrack] = useState<any>(null);
+  const [localVideoTrack, setLocalVideoTrack] = useState<any>(null);
+  const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isCamOn, setIsCamOn] = useState(true);
+
+  // --- FIX 2: Refs for guaranteed cleanup regardless of React State ---
+  const localAudioRef = useRef<any>(null);
+  const localVideoRef = useRef<any>(null);
+  const rtcClientRef = useRef<any>(null);
+
   const toggleSelection = (id: string) => {
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
     setSelectedIds(prev => {
@@ -90,19 +144,16 @@ function ChatRoomContent() {
 
     try {
       if (type === 'everyone') {
-        // Only delete MY messages from DB
         const mySelectedIds = messages.filter(m => selectedIds.includes(m.id) && m.sender_id === user.id).map(m => m.id);
         if (mySelectedIds.length > 0) {
           await supabase.from('chat_messages').delete().in('id', mySelectedIds);
         }
       }
 
-      // In both cases, hide them locally
       const newDeleted = [...new Set([...deletedForMe, ...selectedIds])];
       setDeletedForMe(newDeleted);
       localStorage.setItem(`deleted_${roomId}`, JSON.stringify(newDeleted));
-      
-      // Update local state for instant feedback
+
       setMessages(prev => prev.filter(m => !selectedIds.includes(m.id)));
     } catch (e) {
       console.error("Delete error", e);
@@ -172,17 +223,6 @@ function ChatRoomContent() {
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
-  const replaceOrAppendMessage = (message: Message) => {
-    setMessages((prev) => {
-      const exists = prev.some((item) => item.id === message.id);
-      if (exists) {
-        return prev.map((item) => (item.id === message.id ? message : item));
-      }
-
-      return [...prev, message];
-    });
-  };
-
   useEffect(() => {
     const initChat = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -196,13 +236,12 @@ function ChatRoomContent() {
       }
       setUser(user);
 
-      // ⚡ WhatsApp-style: show cached messages INSTANTLY (zero loading time)
       try {
         const cachedMsgs = localStorage.getItem(MESSAGES_CACHE_KEY(roomId));
         const cachedPart = localStorage.getItem(PARTICIPANT_CACHE_KEY(roomId));
         if (cachedMsgs) {
           setMessages(JSON.parse(cachedMsgs));
-          setLoading(false); // show cached data immediately, no spinner
+          setLoading(false);
           setTimeout(() => scrollToBottom('auto'), 50);
         }
         if (cachedPart) {
@@ -212,7 +251,6 @@ function ChatRoomContent() {
         }
       } catch { }
 
-      // Fetch participant info and messages IN PARALLEL (not sequentially)
       const [participantsRes, messagesRes] = await Promise.all([
         supabase.from('chat_participants').select('user_id').eq('room_id', roomId).neq('user_id', user.id),
         supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: true }).limit(60)
@@ -220,7 +258,6 @@ function ChatRoomContent() {
 
       const otherUserId = participantsRes.data?.[0]?.user_id;
 
-      // Fetch profile only if we have a userId
       if (otherUserId) {
         supabase.from('profiles').select('full_name, avatar_url, username').eq('id', otherUserId).single()
           .then(({ data: profile }) => {
@@ -236,10 +273,8 @@ function ChatRoomContent() {
       setMessages(freshMessages);
       setLoading(false);
 
-      // Cache messages for next instant open
       try { localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(freshMessages)); } catch { }
 
-      // Mark unread as read (fire-and-forget)
       const unreadIds = freshMessages.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id);
       if (unreadIds.length > 0) {
         supabase.from('chat_messages').update({ is_read: true }).in('id', unreadIds);
@@ -250,6 +285,179 @@ function ChatRoomContent() {
 
     initChat();
   }, [roomId, router, initialName]);
+
+  // --- Agora Calling Logic ---
+  const AGORA_APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID || '';
+
+  // endCall is defined first so it can be referenced by initRtc, startCall, acceptCall
+  const endCall = async () => {
+    Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
+
+    // Broadcast end-call signal so the other person's UI closes
+    supabaseRealtime.channel(`room-${roomId}`).send({
+      type: 'broadcast',
+      event: 'call-ended',
+    });
+
+    // Stop tracks using refs (guaranteed, immune to React stale state)
+    if (localAudioRef.current) {
+      localAudioRef.current.stop();
+      localAudioRef.current.close();
+      localAudioRef.current = null;
+    }
+    if (localVideoRef.current) {
+      localVideoRef.current.stop();
+      localVideoRef.current.close();
+      localVideoRef.current = null;
+    }
+    if (rtcClientRef.current) {
+      try { await rtcClientRef.current.leave(); } catch { }
+      rtcClientRef.current = null;
+    }
+
+    setIsCalling(false);
+    setIsIncomingCall(false);
+    setCallStatus('ended');
+    setLocalAudioTrack(null);
+    setLocalVideoTrack(null);
+    setRemoteUsers([]);
+    setIsMicOn(true);
+    setIsCamOn(true);
+  };
+
+  const initRtc = async () => {
+    const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+    const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+    rtcClientRef.current = client;
+
+    client.on('user-published', async (user, mediaType) => {
+      await client.subscribe(user, mediaType);
+      if (mediaType === 'video') {
+        setRemoteUsers(prev => [...prev.filter(u => u.uid !== user.uid), user]);
+      }
+      if (mediaType === 'audio') {
+        user.audioTrack?.play();
+      }
+      setCallStatus('connected');
+    });
+
+    client.on('user-unpublished', (user) => {
+      setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+    });
+
+    client.on('user-left', () => {
+      endCall();
+    });
+
+    return client;
+  };
+
+  const startCall = async (type: 'voice' | 'video') => {
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+    setCallType(type);
+    setIsCalling(true);
+    setIsIncomingCall(false);
+    setCallStatus('ringing');
+
+    const client = await initRtc();
+    const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+
+    try {
+      await client.join(AGORA_APP_ID, roomId, null, user.id);
+
+      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+      setLocalAudioTrack(audioTrack);
+      localAudioRef.current = audioTrack;
+      await client.publish(audioTrack);
+
+      if (type === 'video') {
+        const videoTrack = await AgoraRTC.createCameraVideoTrack();
+        setLocalVideoTrack(videoTrack);
+        localVideoRef.current = videoTrack;
+        await client.publish(videoTrack);
+      }
+
+      supabaseRealtime.channel(`room-${roomId}`).send({
+        type: 'broadcast',
+        event: 'call-invite',
+        payload: { type, callerId: user.id, callerName: user.user_metadata?.full_name || 'Scholar' }
+      });
+
+      if (participant?.user_id) {
+        fetch('/api/chat/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            receiverId: participant.user_id,
+            senderId: user.id,
+            content: `📞 Incoming ${type} call...`,
+            roomId: roomId
+          })
+        }).catch(() => { });
+      }
+    } catch (e) {
+      console.error("Call start failed", e);
+      endCall();
+    }
+  };
+
+  const acceptCall = async () => {
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+    setCallStatus('connected');
+    const client = await initRtc();
+    const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+
+    try {
+      await client.join(AGORA_APP_ID, roomId, null, user.id);
+      const audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+      setLocalAudioTrack(audioTrack);
+      localAudioRef.current = audioTrack;
+      await client.publish(audioTrack);
+
+      if (callType === 'video') {
+        const videoTrack = await AgoraRTC.createCameraVideoTrack();
+        setLocalVideoTrack(videoTrack);
+        localVideoRef.current = videoTrack;
+        await client.publish(videoTrack);
+      }
+    } catch (e) {
+      console.error("Call accept failed", e);
+      endCall();
+    }
+  };
+
+  // FIX 4: Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      if (localAudioRef.current) {
+        localAudioRef.current.stop();
+        localAudioRef.current.close();
+      }
+      if (localVideoRef.current) {
+        localVideoRef.current.stop();
+        localVideoRef.current.close();
+      }
+      if (rtcClientRef.current) {
+        rtcClientRef.current.leave();
+      }
+    };
+  }, []);
+
+  const toggleMic = () => {
+    if (localAudioRef.current) {
+      const newState = !isMicOn;
+      localAudioRef.current.setEnabled(newState);
+      setIsMicOn(newState);
+    }
+  };
+
+  const toggleCam = () => {
+    if (localVideoRef.current) {
+      const newState = !isCamOn;
+      localVideoRef.current.setEnabled(newState);
+      setIsCamOn(newState);
+    }
+  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -271,13 +479,11 @@ function ChatRoomContent() {
           setMessages(prev => {
             if (prev.some(m => m.id === msg.id)) return prev;
             const next = [...prev, msg];
-            // Update cache with new message
             try { localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(next.slice(-60))); } catch { }
             return next;
           });
 
           if (msg.sender_id !== user?.id) {
-            // Mark as read if we are in the room viewing it
             await supabase.from('chat_messages').update({ is_read: true }).eq('id', msg.id);
 
             if (!isBlockedRef.current) {
@@ -309,8 +515,20 @@ function ChatRoomContent() {
         }
       });
 
-    // 🚀 GUARANTEED REALTIME FALLBACK (For users with ISP Socket Blocks)
-    // Polls securely via the HTTP Proxy every 2.5 seconds
+    channel.on('broadcast', { event: 'call-invite' }, ({ payload }) => {
+      if (payload.callerId !== user.id) {
+        setCallType(payload.type);
+        setIsCalling(true);
+        setIsIncomingCall(true);
+        setCallStatus('ringing');
+        Haptics.vibrate().catch(() => { });
+      }
+    });
+
+    channel.on('broadcast', { event: 'call-ended' }, () => {
+      endCall();
+    });
+
     const pollInterval = setInterval(async () => {
       const { data: latest } = await supabase
         .from('chat_messages')
@@ -320,23 +538,20 @@ function ChatRoomContent() {
 
       if (latest) {
         setMessages(prev => {
-          // If lengths differ or last message differs, update state
           if (latest.length !== prev.length || (latest.length > 0 && prev.length > 0 && latest[latest.length - 1].id !== prev[prev.length - 1].id)) {
             setTimeout(() => scrollToBottom(), 100);
 
-            // Check if last message is from someone else
             const lastMsg = latest[latest.length - 1];
             if (lastMsg && lastMsg.sender_id !== user?.id && !isBlockedRef.current) {
               playNotificationSound();
               Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
             }
-
             return latest;
           }
           return prev;
         });
       }
-    }, 5000); // Reduced polling - realtime is the primary mechanism
+    }, 5000);
 
     try {
       Keyboard.addListener('keyboardWillShow', info => {
@@ -359,19 +574,16 @@ function ChatRoomContent() {
     try {
       Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
 
-      // 1. Delete MY messages from the database (Deletes for everyone)
       const myMessageIds = messages.filter(m => m.sender_id === user.id).map(m => m.id);
       if (myMessageIds.length > 0) {
         await supabase.from('chat_messages').delete().in('id', myMessageIds);
       }
 
-      // 2. Hide all other messages from MY view (Local storage)
       const allCurrentIds = messages.map(m => m.id);
       const newDeleted = [...new Set([...deletedForMe, ...allCurrentIds])];
       setDeletedForMe(newDeleted);
       localStorage.setItem(`deleted_${roomId}`, JSON.stringify(newDeleted));
 
-      // Update local state immediately for a snapier feel
       setMessages(prev => prev.filter(m => !allCurrentIds.includes(m.id)));
 
     } catch (e) {
@@ -409,7 +621,6 @@ function ChatRoomContent() {
     setShowProfileModal(false);
   };
 
-  // Compress image to max 1080px / 80% quality before upload
   const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve) => {
       const img = new window.Image();
@@ -431,7 +642,7 @@ function ChatRoomContent() {
           if (blob) {
             resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
           } else {
-            resolve(file); // fallback to original if compression fails
+            resolve(file);
           }
         }, 'image/jpeg', 0.8);
       };
@@ -446,9 +657,7 @@ function ChatRoomContent() {
     setUploadingImage(true);
 
     try {
-      // Compress before upload
       const file = await compressImage(rawFile);
-
       const formData = new FormData();
       formData.append('file', file);
       formData.append('roomId', roomId);
@@ -478,7 +687,6 @@ function ChatRoomContent() {
           return [...prev, insertedMessage as Message];
         });
 
-        // Push notification for image
         if (participant?.user_id) {
           const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.())
             ? (process.env.NEXT_PUBLIC_APP_URL || 'https://manthan-beta-c975.vercel.app')
@@ -536,7 +744,6 @@ function ChatRoomContent() {
           return [...prev, insertedMessage as Message];
         });
 
-        // Trigger Android/Web push notifications for the receiver
         if (participant?.user_id) {
           const appUrl = (typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.())
             ? (process.env.NEXT_PUBLIC_APP_URL || 'https://manthan-beta-c975.vercel.app')
@@ -619,11 +826,8 @@ function ChatRoomContent() {
                     onClick={async () => {
                       Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
 
-                      // 🖼️ If it's an image, also try to scrub it from storage
                       if (selectedMessage.message_type === 'image') {
                         try {
-                          // Extract the storage path from the public URL
-                          // Example: .../public/avatars/chat_ROOMID_USERID_TIMESTAMP.png
                           const pathSegments = selectedMessage.content.split('/public/avatars/');
                           if (pathSegments.length > 1) {
                             const storagePath = decodeURIComponent(pathSegments[1]);
@@ -634,10 +838,7 @@ function ChatRoomContent() {
                         }
                       }
 
-                      // Delete from database
                       await supabase.from('chat_messages').delete().eq('id', selectedMessage.id);
-
-                      // Alert local state
                       setMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
                       setSelectedMessage(null);
                     }}
@@ -850,6 +1051,18 @@ function ChatRoomContent() {
               </div>
 
               <div className="flex items-center gap-1 sm:gap-2">
+                <button
+                  onClick={() => startCall('voice')}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-all active:scale-95 hover:bg-slate-100 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-blue-500"
+                >
+                  <Phone className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => startCall('video')}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-all active:scale-95 hover:bg-slate-100 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-blue-500"
+                >
+                  <Video className="h-5 w-5" />
+                </button>
                 <div className="relative">
                   <button onClick={() => setShowMenu(!showMenu)} className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
                     <MoreVertical className="h-5 w-5" />
@@ -933,7 +1146,7 @@ function ChatRoomContent() {
 
                     <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isNextSame ? 'mb-0.5' : 'mb-3'} items-center gap-3`}>
                       {isSelectionMode && (
-                        <div 
+                        <div
                           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all ${selectedIds.includes(msg.id) ? 'border-blue-500 bg-blue-500' : 'border-slate-300 dark:border-slate-700'}`}
                           onClick={() => toggleSelection(msg.id)}
                         >
@@ -970,8 +1183,8 @@ function ChatRoomContent() {
                           if (touchTimer.current) clearTimeout(touchTimer.current);
                         }}
                         initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ 
-                          opacity: 1, 
+                        animate={{
+                          opacity: 1,
                           scale: 1,
                           backgroundColor: selectedIds.includes(msg.id) ? (isMe ? '#1d4ed8' : 'rgba(59, 130, 246, 0.1)') : undefined
                         }}
@@ -1167,6 +1380,109 @@ function ChatRoomContent() {
       </div>
 
       {keyboardHeight > 0 && <div className="absolute inset-0 z-40 bg-transparent" onClick={() => Keyboard.hide()} />}
+
+      {/* --- PREMIUM CALLING OVERLAY --- */}
+      <AnimatePresence mode="wait">
+        {isCalling && (
+          <motion.div
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0 }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-between bg-slate-900/95 p-8 pb-16 backdrop-blur-2xl dark:bg-black/95 text-white"
+          >
+            <div className="mt-20 flex flex-col items-center text-center">
+              <div className="relative mb-8">
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="absolute -inset-4 rounded-full bg-blue-500/20 blur-xl"
+                />
+                <div className="relative h-32 w-32 overflow-hidden rounded-[40px] border-4 border-slate-800/50 bg-slate-800 shadow-2xl">
+                  {participant?.avatar_url ? (
+                    <Image src={participant.avatar_url} alt="User" fill className="object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-4xl font-black text-slate-500">
+                      {participant?.full_name?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <h2 className="text-3xl font-black tracking-tight">{participant?.full_name || 'Scholar'}</h2>
+              <p className="mt-2 text-lg font-medium text-slate-400">
+                {isIncomingCall
+                  ? `Incoming ${callType} call`
+                  : callStatus === 'ringing'
+                    ? `Ringing...`
+                    : `Connected`}
+              </p>
+            </div>
+
+            {/* Video Canvas for Video Calls */}
+            {callType === 'video' && (
+              <div className="absolute inset-0 z-[-1] overflow-hidden">
+                {/* FIX 3: Use the RemoteVideoPlayer to stop re-render crashing */}
+                {remoteUsers.length > 0 ? (
+                  <RemoteVideoPlayer track={remoteUsers[0].videoTrack} />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-slate-900">
+                    <div className="h-full w-full bg-slate-900 animate-pulse" />
+                  </div>
+                )}
+                {/* Local Video Preview */}
+                <div className="absolute bottom-40 right-6 h-48 w-32 overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-800 shadow-2xl">
+                  {/* FIX 3: Safe local video rendering */}
+                  <LocalVideoPlayer track={localVideoTrack} />
+                </div>
+              </div>
+            )}
+
+            <div className="flex w-full max-w-sm flex-col gap-6">
+              {isIncomingCall && callStatus === 'ringing' ? (
+                <div className="flex justify-center gap-12">
+                  <button
+                    onClick={endCall}
+                    className="flex h-20 w-20 flex-col items-center justify-center rounded-full bg-rose-500 shadow-lg shadow-rose-500/30 transition-all hover:scale-105 active:scale-95"
+                  >
+                    <PhoneOff className="h-8 w-8 text-white" />
+                  </button>
+                  <button
+                    onClick={acceptCall}
+                    className="flex h-20 w-20 flex-col items-center justify-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95"
+                  >
+                    <Phone className="h-8 w-8 text-white" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-center gap-6">
+                    <button
+                      onClick={toggleMic}
+                      className={`flex h-16 w-16 items-center justify-center rounded-full transition-all ${isMicOn ? 'bg-slate-800/80 text-white' : 'bg-red-500 text-white'}`}
+                    >
+                      {isMicOn ? <Mic className="h-7 w-7" /> : <MicOff className="h-7 w-7" />}
+                    </button>
+                    {callType === 'video' && (
+                      <button
+                        onClick={toggleCam}
+                        className={`flex h-16 w-16 items-center justify-center rounded-full transition-all ${isCamOn ? 'bg-slate-800/80 text-white' : 'bg-red-500 text-white'}`}
+                      >
+                        {isCamOn ? <Video className="h-7 w-7" /> : <VideoOff className="h-7 w-7" />}
+                      </button>
+                    )}
+                    <button
+                      onClick={endCall}
+                      className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 text-white transition-all active:scale-95 shadow-lg shadow-rose-500/20"
+                    >
+                      <PhoneOff className="h-7 w-7" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
