@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { Home, Trophy, Swords, Compass, Zap, LucideIcon, Settings, ShieldAlert, MessageSquare } from 'lucide-react';
+import { Home, Compass, LucideIcon, ShieldAlert, MessageSquare, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -27,7 +27,7 @@ const BottomNav: React.FC = () => {
     { href: '/chat', icon: MessageSquare, label: 'Chat' },
     { href: '/my-school', icon: ShieldAlert, label: 'Faction', isCenter: true },
     { href: '/feed', icon: Compass, label: 'Feed' },
-    { href: '/settings', icon: Settings, label: 'Settings' },
+    { href: '/papers', icon: FileText, label: 'Archive' },
   ];
 
   return (

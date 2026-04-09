@@ -12,6 +12,7 @@ import { App } from '@capacitor/app';
 import { StatusBar } from '@capacitor/status-bar';
 import { ActivityTracker } from '@/lib/activityTracker';
 import CongratsBadgeModal from '@/components/CongratsBadgeModal';
+import GlobalCallListener from '@/components/GlobalCallListener';
 
 
 let nativePushInitialized = false;
@@ -367,6 +368,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {isAuthenticated && <PushNotificationPrompt />}
       {isAuthenticated && <CongratsBadgeModal />}
       {isAuthenticated && <GlobalChatListener />}
+      {isAuthenticated && <GlobalCallListener />}
     </>
   );
 }

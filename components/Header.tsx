@@ -180,32 +180,32 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {user ? (
-                <>
-                 <div className="flex items-center gap-2">
-                   <NotificationBell isMobile={true} />
-                 </div>
-                 {user?.user_metadata?.isTeacher && (
-                   <Link
-                     href="/questions/create"
-                     className="inline-flex items-center justify-center w-9 h-9 text-indigo-600 bg-indigo-100 dark:bg-indigo-900/50 rounded-full active:scale-95"
-                   >
-                     <PlusCircle className="h-5 w-5" />
-                   </Link>
-                 )}
-                 <Link href="/profile" className="active:scale-95 transition-transform flex items-center justify-center">
-                   <span className="inline-block h-9 w-9 rounded-full overflow-hidden border-[2px] border-slate-200 dark:border-slate-700 shadow-sm relative">
-                      {user.user_metadata?.avatar_url ? (
-                        <Image src={user.user_metadata.avatar_url} alt="avatar" fill className="object-cover" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span className="flex items-center justify-center h-full w-full text-base font-bold text-indigo-600 bg-white">
-                          {user?.user_metadata?.fullName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
-                        </span>
-                      )}
-                    </span>
-                 </Link>
-               </>
+              <>
+                <div className="flex items-center gap-2">
+                  <NotificationBell isMobile={true} />
+                </div>
+                {user?.user_metadata?.isTeacher && (
+                  <Link
+                    href="/questions/create"
+                    className="inline-flex items-center justify-center w-9 h-9 text-indigo-600 bg-indigo-100 dark:bg-indigo-900/50 rounded-full active:scale-95"
+                  >
+                    <PlusCircle className="h-5 w-5" />
+                  </Link>
+                )}
+                <Link href="/profile" className="active:scale-95 transition-transform flex items-center justify-center">
+                  <span className="inline-block h-9 w-9 rounded-full overflow-hidden border-[2px] border-slate-200 dark:border-slate-700 shadow-sm relative">
+                    {user.user_metadata?.avatar_url ? (
+                      <Image src={user.user_metadata.avatar_url} alt="avatar" fill className="object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="flex items-center justify-center h-full w-full text-base font-bold text-indigo-600 bg-white">
+                        {user?.user_metadata?.fullName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              </>
             ) : (
-                <Link href="/login" className="text-sm font-bold text-slate-700 dark:text-slate-300 bg-slate-200/50 dark:bg-slate-800/50 px-4 py-1.5 rounded-full active:scale-95">Sign In</Link>
+              <Link href="/login" className="text-sm font-bold text-slate-700 dark:text-slate-300 bg-slate-200/50 dark:bg-slate-800/50 px-4 py-1.5 rounded-full active:scale-95">Sign In</Link>
             )}
           </div>
         </div>
@@ -230,13 +230,12 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                 <Link
                   key={nav.label}
                   href={nav.href}
-                  className={`flex-shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all relative ${
-                    active 
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md' 
-                      : nav.label === 'Search' && isFirstSearch 
+                  className={`flex-shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all relative ${active
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                      : nav.label === 'Search' && isFirstSearch
                         ? 'bg-blue-500/20 border-blue-400 text-blue-600 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.3)]'
                         : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <nav.icon className={`w-3.5 h-3.5 ${nav.label === 'Search' && isFirstSearch && !active ? 'text-blue-600' : ''}`} />
                   <span>{nav.label}</span>
@@ -252,180 +251,180 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
 
       {/* Desktop Header */}
       <header className="hidden md:block relative isolate z-50">
-      {/* Dynamic Main Header Background */}
-      <div className="absolute inset-0 overflow-hidden -z-10 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-xl pointer-events-none rounded-b-[2rem] border-b border-white/10">
-        <div className="absolute inset-0 bg-transparent bg-center opacity-20" />
-        <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/30 via-blue-500/30 to-cyan-400/30 animate-gradient-slow blur-[2px]" />
+        {/* Dynamic Main Header Background */}
+        <div className="absolute inset-0 overflow-hidden -z-10 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-xl pointer-events-none rounded-b-[2rem] border-b border-white/10">
+          <div className="absolute inset-0 bg-transparent bg-center opacity-20" />
+          <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/30 via-blue-500/30 to-cyan-400/30 animate-gradient-slow blur-[2px]" />
 
-        {/* Animated glowing orbs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/20 rounded-full mix-blend-overlay filter blur-3xl animate-float" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-fuchsia-400/20 rounded-full mix-blend-overlay filter blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-      </div>
-
-      <div className="px-4 py-3 sm:px-6 lg:px-8 mx-auto xl:max-w-screen-2xl">
-        <div className="flex items-center justify-between">
-
-          {/* Top Left: Brand Name */}
-          <Link href="/" className="shrink-0 hover:opacity-80 active:scale-95 transition-all duration-200">
-            <span
-              style={{ fontFamily: "-apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif" }}
-              className="text-[22px] font-semibold tracking-tight text-white select-none"
-            >
-              dheeyudha
-            </span>
-          </Link>
-
-          {/* Top Center: Title & Page Info */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:flex items-center gap-2 px-6 py-2.5 bg-white/10 backdrop-blur-xl rounded-full border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.12)] animate-slideUp overflow-hidden group hover:bg-white/15 transition-colors">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
-            <span className="text-sm sm:text-base font-extrabold tracking-[0.15em] text-white drop-shadow-md">
-              DHEEYUDHA
-            </span>
-            {pageInfo && (
-              <>
-                <span className="text-white/40 text-[10px] sm:text-xs font-bold px-0.5">•</span>
-                <pageInfo.icon className="w-5 h-5 text-indigo-100 animate-pulse hidden sm:block" />
-                <span className="text-[10px] sm:text-sm font-bold text-white tracking-widest uppercase truncate max-w-[200px] lg:max-w-[400px]">
-                  {pageInfo.title}
-                </span>
-              </>
-            )}
-          </div>
-
-          {/* Mobile Centered Title (Removed) */}
-
-          {/* Top Right: Actions & Auth */}
-          <div className="flex items-center gap-3 shrink-0">
-
-            {isMounted && (
-              <div className="flex items-center gap-2">
-                <Link
-                  href="/search"
-                  className={`hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all active:scale-95 relative ${isFirstSearch ? 'animate-pulse bg-white/30 border-white/50 shadow-[0_0_15px_rgba(255,255,255,0.4)]' : ''}`}
-                  title="Search Dheeyudha"
-                >
-                  <Search className="w-5 h-5" />
-                  {isFirstSearch && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-400 rounded-full border border-white shadow-sm" />
-                  )}
-                </Link>
-                <button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all active:scale-95"
-                  title="Toggle Theme"
-                >
-                  {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                </button>
-              </div>
-            )}
-
-            {user ? (
-              <>
-                {/* Mobile Icons */}
-                {user?.user_metadata?.isTeacher && (
-                  <Link
-                    href="/questions/create"
-                    className="lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-full text-white bg-blue-500/40 border border-white/30 hover:bg-blue-500/60 transition-all shadow-md active:scale-95"
-                  >
-                    <PlusCircle className="h-5 w-5" />
-                  </Link>
-                )}
-
-                <Link href="/profile" className="lg:hidden active:scale-95 transition-transform">
-                  <UserAvatar />
-                </Link>
-
-                {/* Desktop Icons */}
-                <div className="hidden lg:flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <NotificationBell isMobile={false} />
-                  </div>
-                  
-                  <div className="relative" ref={dropdownRef}>
-                    <button
-                      ref={avatarButtonRef}
-                      onClick={() => setDropdownOpen(!dropdownOpen)}
-                      className="group flex items-center gap-2 outline-none"
-                    >
-                      <div className="relative transition-transform duration-300 group-hover:scale-105 group-hover:-translate-y-0.5">
-                        <UserAvatar />
-                        {/* Glow ring on hover */}
-                        <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:animate-ping mix-blend-overlay" />
-                      </div>
-                    </button>
-
-                    {/* Portal Dropdown Menu */}
-                    {dropdownOpen && typeof window !== 'undefined' && createPortal(
-                      <div
-                        ref={portalRef}
-                        className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-popIn w-56 flex flex-col"
-                        style={{ position: 'absolute', top: dropdownCoords.top, left: dropdownCoords.left, zIndex: 9999 }}
-                      >
-                        <div className="px-5 py-5 bg-gradient-to-br from-indigo-50 dark:from-indigo-950/30 to-purple-50 dark:to-purple-950/30 border-b border-slate-100 dark:border-slate-800">
-                          <p className="text-xs font-extrabold text-indigo-500 uppercase tracking-widest mb-1 shadow-sm">Account</p>
-                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
-                            {user.email}
-                          </p>
-                        </div>
-
-                        <div className="p-2 space-y-1 bg-white dark:bg-slate-900">
-                          <Link
-                            href="/profile"
-                            onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm border border-transparent hover:border-indigo-100 dark:hover:border-slate-700 transition-all"
-                          >
-                            <User className="h-5 w-5" />
-                            <span>My Profile</span>
-                          </Link>
-
-                          <Link
-                            href="/docs"
-                            onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm border border-transparent hover:border-indigo-100 dark:hover:border-slate-700 transition-all"
-                          >
-                            <HelpCircle className="h-5 w-5" />
-                            <span>Help &amp; Docs</span>
-                          </Link>
-
-                          <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-bold text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 hover:shadow-sm border border-transparent hover:border-red-100 dark:hover:border-red-900/50 transition-all"
-                          >
-                            <LogOut className="h-5 w-5" />
-                            <span>Sign out</span>
-                          </button>
-                        </div>
-                      </div>,
-                      document.body
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/login"
-                  className="hidden sm:inline-block text-white font-semibold hover:text-blue-100 transition-colors px-4 py-2 text-sm"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/signup"
-                  className="hidden sm:inline-block text-indigo-900 bg-white hover:bg-blue-50 transition-all font-bold rounded-xl px-5 py-2.5 shadow-[0_4px_14px_0_rgba(255,255,255,0.39)] hover:shadow-[0_6px_20px_rgba(255,255,255,0.23)] hover:-translate-y-[1px]"
-                >
-                  Join Dheeyudha
-                </Link>
-              </div>
-            )}
-          </div>
+          {/* Animated glowing orbs */}
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/20 rounded-full mix-blend-overlay filter blur-3xl animate-float" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-fuchsia-400/20 rounded-full mix-blend-overlay filter blur-3xl animate-float" style={{ animationDelay: '2s' }} />
         </div>
 
-      </div>
+        <div className="px-4 py-3 sm:px-6 lg:px-8 mx-auto xl:max-w-screen-2xl">
+          <div className="flex items-center justify-between">
 
-      {/* Header spacer */}
-      <div className="md:hidden h-[calc(env(safe-area-inset-top)+100px)]" />
-      <div className="hidden md:block h-20 sm:h-24 md:h-28" />
-    </header>
+            {/* Top Left: Brand Name */}
+            <Link href="/" className="shrink-0 hover:opacity-80 active:scale-95 transition-all duration-200">
+              <span
+                style={{ fontFamily: "-apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif" }}
+                className="text-[22px] font-semibold tracking-tight text-white select-none"
+              >
+                dheeyudha
+              </span>
+            </Link>
+
+            {/* Top Center: Title & Page Info */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:flex items-center gap-2 px-6 py-2.5 bg-white/10 backdrop-blur-xl rounded-full border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.12)] animate-slideUp overflow-hidden group hover:bg-white/15 transition-colors">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+              <span className="text-sm sm:text-base font-extrabold tracking-[0.15em] text-white drop-shadow-md">
+                DHEEYUDHA
+              </span>
+              {pageInfo && (
+                <>
+                  <span className="text-white/40 text-[10px] sm:text-xs font-bold px-0.5">•</span>
+                  <pageInfo.icon className="w-5 h-5 text-indigo-100 animate-pulse hidden sm:block" />
+                  <span className="text-[10px] sm:text-sm font-bold text-white tracking-widest uppercase truncate max-w-[200px] lg:max-w-[400px]">
+                    {pageInfo.title}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Mobile Centered Title (Removed) */}
+
+            {/* Top Right: Actions & Auth */}
+            <div className="flex items-center gap-3 shrink-0">
+
+              {isMounted && (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/search"
+                    className={`hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all active:scale-95 relative ${isFirstSearch ? 'animate-pulse bg-white/30 border-white/50 shadow-[0_0_15px_rgba(255,255,255,0.4)]' : ''}`}
+                    title="Search Dheeyudha"
+                  >
+                    <Search className="w-5 h-5" />
+                    {isFirstSearch && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-400 rounded-full border border-white shadow-sm" />
+                    )}
+                  </Link>
+                  <button
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all active:scale-95"
+                    title="Toggle Theme"
+                  >
+                    {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                  </button>
+                </div>
+              )}
+
+              {user ? (
+                <>
+                  {/* Mobile Icons */}
+                  {user?.user_metadata?.isTeacher && (
+                    <Link
+                      href="/questions/create"
+                      className="lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-full text-white bg-blue-500/40 border border-white/30 hover:bg-blue-500/60 transition-all shadow-md active:scale-95"
+                    >
+                      <PlusCircle className="h-5 w-5" />
+                    </Link>
+                  )}
+
+                  <Link href="/profile" className="lg:hidden active:scale-95 transition-transform">
+                    <UserAvatar />
+                  </Link>
+
+                  {/* Desktop Icons */}
+                  <div className="hidden lg:flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <NotificationBell isMobile={false} />
+                    </div>
+
+                    <div className="relative" ref={dropdownRef}>
+                      <button
+                        ref={avatarButtonRef}
+                        onClick={() => setDropdownOpen(!dropdownOpen)}
+                        className="group flex items-center gap-2 outline-none"
+                      >
+                        <div className="relative transition-transform duration-300 group-hover:scale-105 group-hover:-translate-y-0.5">
+                          <UserAvatar />
+                          {/* Glow ring on hover */}
+                          <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:animate-ping mix-blend-overlay" />
+                        </div>
+                      </button>
+
+                      {/* Portal Dropdown Menu */}
+                      {dropdownOpen && typeof window !== 'undefined' && createPortal(
+                        <div
+                          ref={portalRef}
+                          className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-popIn w-56 flex flex-col"
+                          style={{ position: 'absolute', top: dropdownCoords.top, left: dropdownCoords.left, zIndex: 9999 }}
+                        >
+                          <div className="px-5 py-5 bg-gradient-to-br from-indigo-50 dark:from-indigo-950/30 to-purple-50 dark:to-purple-950/30 border-b border-slate-100 dark:border-slate-800">
+                            <p className="text-xs font-extrabold text-indigo-500 uppercase tracking-widest mb-1 shadow-sm">Account</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
+                              {user.email}
+                            </p>
+                          </div>
+
+                          <div className="p-2 space-y-1 bg-white dark:bg-slate-900">
+                            <Link
+                              href="/profile"
+                              onClick={() => setDropdownOpen(false)}
+                              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm border border-transparent hover:border-indigo-100 dark:hover:border-slate-700 transition-all"
+                            >
+                              <User className="h-5 w-5" />
+                              <span>My Profile</span>
+                            </Link>
+
+                            <Link
+                              href="/docs"
+                              onClick={() => setDropdownOpen(false)}
+                              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm border border-transparent hover:border-indigo-100 dark:hover:border-slate-700 transition-all"
+                            >
+                              <HelpCircle className="h-5 w-5" />
+                              <span>Help &amp; Docs</span>
+                            </Link>
+
+                            <button
+                              onClick={handleLogout}
+                              className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-bold text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 hover:shadow-sm border border-transparent hover:border-red-100 dark:hover:border-red-900/50 transition-all"
+                            >
+                              <LogOut className="h-5 w-5" />
+                              <span>Sign out</span>
+                            </button>
+                          </div>
+                        </div>,
+                        document.body
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Link
+                    href="/login"
+                    className="hidden sm:inline-block text-white font-semibold hover:text-blue-100 transition-colors px-4 py-2 text-sm"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="hidden sm:inline-block text-indigo-900 bg-white hover:bg-blue-50 transition-all font-bold rounded-xl px-5 py-2.5 shadow-[0_4px_14px_0_rgba(255,255,255,0.39)] hover:shadow-[0_6px_20px_rgba(255,255,255,0.23)] hover:-translate-y-[1px]"
+                  >
+                    Join Dheeyudha
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Header spacer */}
+        <div className="md:hidden h-[calc(env(safe-area-inset-top)+100px)]" />
+        <div className="hidden md:block h-20 sm:h-24 md:h-28" />
+      </header>
     </>
   );
 }
