@@ -1038,7 +1038,17 @@ function ChatRoomContent() {
                         }
                       }
 
-                      await supabase.from('chat_messages').delete().eq('id', selectedMessage.id);
+                      const { error: deleteError } = await supabase
+                        .from('chat_messages')
+                        .delete()
+                        .eq('id', selectedMessage.id);
+
+                      if (deleteError) {
+                        console.error('Delete for everyone failed:', deleteError);
+                        alert('Delete failed due to network/proxy error. Please try again.');
+                        return;
+                      }
+
                       setMessages(prev => prev.filter(m => m.id !== selectedMessage.id));
                       setSelectedMessage(null);
                     }}
