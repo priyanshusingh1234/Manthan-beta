@@ -126,6 +126,7 @@ function ChatRoomContent() {
   const rtcClientRef = useRef<any>(null);
   const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const callStatusRef = useRef<'ringing' | 'connected' | 'ended'>('ringing');
+  const roomChannelRef = useRef<any>(null);
 
   const updateCallStatus = (status: 'ringing' | 'connected' | 'ended') => {
     setCallStatus(status);
@@ -311,15 +312,28 @@ function ChatRoomContent() {
   // --- Agora Calling Logic ---
   const AGORA_APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID || '';
 
+  const sendCallBroadcast = async (event: 'call-invite' | 'call-ended', payload?: any) => {
+    const channel = roomChannelRef.current;
+    if (!channel) return;
+    try {
+      await channel.send({
+        type: 'broadcast',
+        event,
+        payload,
+      });
+    } catch (e) {
+      console.error(`Failed to broadcast ${event}`, e);
+    }
+  };
+
   // endCall is defined first so it can be referenced by initRtc, startCall, acceptCall
-  const endCall = async () => {
+  const endCall = async (shouldBroadcast = true) => {
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
 
     // Broadcast end-call signal so the other person's UI closes
-    supabaseRealtime.channel(`room-${roomId}`).send({
-      type: 'broadcast',
-      event: 'call-ended',
-    });
+    if (shouldBroadcast) {
+      await sendCallBroadcast('call-ended');
+    }
 
     // Stop tracks using refs (guaranteed, immune to React stale state)
     if (localAudioRef.current) {
@@ -394,7 +408,7 @@ function ChatRoomContent() {
     });
 
     client.on('user-left', () => {
-      endCall();
+      endCall(false);
     });
 
     return client;
@@ -438,10 +452,10 @@ function ChatRoomContent() {
         await client.publish(videoTrack);
       }
 
-      supabaseRealtime.channel(`room-${roomId}`).send({
-        type: 'broadcast',
-        event: 'call-invite',
-        payload: { type, callerId: user.id, callerName: user.user_metadata?.full_name || 'Scholar' }
+      await sendCallBroadcast('call-invite', {
+        type,
+        callerId: user.id,
+        callerName: user.user_metadata?.full_name || 'Scholar',
       });
 
       if (participant?.user_id) {
@@ -591,13 +605,15 @@ function ChatRoomContent() {
         }
       })
       .on('broadcast', { event: 'call-ended' }, () => {
-        endCall();
+        endCall(false);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({ online_at: new Date().toISOString() });
         }
       });
+
+    roomChannelRef.current = channel;
 
     const pollInterval = setInterval(async () => {
       const { data: latest } = await supabase
@@ -632,6 +648,7 @@ function ChatRoomContent() {
     } catch (e) { }
 
     return () => {
+      roomChannelRef.current = null;
       supabaseRealtime.removeChannel(channel);
       clearInterval(pollInterval);
       try { Keyboard.removeAllListeners(); } catch (e) { }
