@@ -35,8 +35,18 @@ export default function GlobalCallListener() {
   const acceptCall = () => {
     if (!incomingCall) return;
     const roomId = incomingCall.roomId;
+
+    // Unsubscribe THIS room's channel BEFORE navigating so the chat page
+    // gets a clean, sole subscription — prevents duplicate call-ended firing
+    const roomChannelIndex = channelsRef.current.findIndex(
+      ch => ch.topic === `realtime:room-${roomId}`
+    );
+    if (roomChannelIndex !== -1) {
+      supabaseRealtime.removeChannel(channelsRef.current[roomChannelIndex]);
+      channelsRef.current.splice(roomChannelIndex, 1);
+    }
+
     dismissCall();
-    // Navigate into the chat room — the page's own acceptCall will handle Agora join
     router.push(`/chat/${roomId}?incoming=1`);
   };
 

@@ -457,13 +457,13 @@ function ChatRoomContent() {
         }).catch(() => { });
       }
 
-    // --- ADDED: 45s Timeout for calls ---
+    // Timeout: extended to 90s to allow for cross-country navigation + mic permission grant
     callTimeoutRef.current = setTimeout(() => {
       if (callStatusRef.current === 'ringing') {
         sendMissedCallMessage();
         endCall();
       }
-    }, 45000);
+    }, 90000);
 
     } catch (e) {
       console.error("Call start failed", e);
@@ -473,7 +473,8 @@ function ChatRoomContent() {
 
   const acceptCall = async () => {
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
-    updateCallStatus('connected');
+    // Don't mark connected yet — wait until Agora join succeeds
+    updateCallStatus('ringing');
     const client = await initRtc();
     const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
 
