@@ -126,6 +126,8 @@ function ChatRoomContent() {
   const rtcClientRef = useRef<any>(null);
   const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const callStatusRef = useRef<'ringing' | 'connected' | 'ended'>('ringing');
+  // Tracks the call_invites row id so we can update its status reliably
+  const callInviteIdRef = useRef<string | null>(null);
 
   const updateCallStatus = (status: 'ringing' | 'connected' | 'ended') => {
     setCallStatus(status);
@@ -321,6 +323,20 @@ function ChatRoomContent() {
       event: 'call-ended',
     });
 
+    // Update DB invite status so the other party's GlobalCallListener dismisses
+    if (callInviteIdRef.current) {
+      try {
+        await supabase
+          .from('call_invites')
+          .update({ status: 'ended' })
+          .eq('id', callInviteIdRef.current);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[ChatRoom] Call ended, invite id:', callInviteIdRef.current);
+        }
+      } catch { }
+      callInviteIdRef.current = null;
+    }
+
     // Stop tracks using refs (guaranteed, immune to React stale state)
     if (localAudioRef.current) {
       localAudioRef.current.stop();
@@ -366,6 +382,18 @@ function ChatRoomContent() {
       });
     } catch (e) {
       console.error("Missed call log failed", e);
+    }
+    // Update DB invite to 'missed' so receiver's overlay can close
+    if (callInviteIdRef.current) {
+      try {
+        await supabase
+          .from('call_invites')
+          .update({ status: 'missed' })
+          .eq('id', callInviteIdRef.current);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[ChatRoom] Call missed, invite id:', callInviteIdRef.current);
+        }
+      } catch { }
     }
   };
 
@@ -444,6 +472,30 @@ function ChatRoomContent() {
         payload: { type, callerId: user.id, callerName: user.user_metadata?.full_name || 'Scholar' }
       });
 
+      // DB-based signaling: insert a call_invites row for the receiver so the
+      // invite is durable even if the broadcast was missed on their end.
+      if (participant?.user_id) {
+        try {
+          const { data: invite, error: inviteErr } = await supabase
+            .from('call_invites')
+            .insert({
+              room_id: roomId,
+              caller_id: user.id,
+              receiver_id: participant.user_id,
+              type,
+              status: 'ringing',
+            })
+            .select()
+            .single();
+          if (invite && !inviteErr) {
+            callInviteIdRef.current = invite.id;
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[ChatRoom] Call invite created', invite);
+            }
+          }
+        } catch { }
+      }
+
       if (participant?.user_id) {
         fetch('/api/chat/notify', {
           method: 'POST',
@@ -475,6 +527,20 @@ function ChatRoomContent() {
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
     // Don't mark connected yet — wait until Agora join succeeds
     updateCallStatus('ringing');
+
+    // Update DB invite status to accepted (receiver accepting from chat page)
+    if (callInviteIdRef.current) {
+      try {
+        await supabase
+          .from('call_invites')
+          .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+          .eq('id', callInviteIdRef.current);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[ChatRoom] Call accepted (in-page), invite id:', callInviteIdRef.current);
+        }
+      } catch { }
+    }
+
     const client = await initRtc();
     const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
 
@@ -583,6 +649,9 @@ function ChatRoomContent() {
       )
       .on('broadcast', { event: 'call-invite' }, ({ payload }) => {
         if (payload.callerId !== user.id) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[ChatRoom] Broadcast call-invite received', payload);
+          }
           setCallType(payload.type);
           setIsCalling(true);
           setIsIncomingCall(true);
@@ -590,6 +659,40 @@ function ChatRoomContent() {
           Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
         }
       })
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'call_invites',
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const invite = payload.new as {
+            id: string;
+            room_id: string;
+            caller_id: string;
+            type: string;
+            status: string;
+          };
+          // Only handle invites for THIS room
+          if (invite.room_id !== roomId || invite.status !== 'ringing') return;
+          // Ignore if we are the caller (shouldn't happen, but guard)
+          if (invite.caller_id === user.id) return;
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[ChatRoom] DB call invite received (in-page)', invite);
+          }
+
+          // Store invite id so acceptCall/endCall can update its status
+          callInviteIdRef.current = invite.id;
+          setCallType(invite.type as 'voice' | 'video');
+          setIsCalling(true);
+          setIsIncomingCall(true);
+          updateCallStatus('ringing');
+          Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+        }
+      )
       .on('broadcast', { event: 'call-ended' }, () => {
         endCall();
       })

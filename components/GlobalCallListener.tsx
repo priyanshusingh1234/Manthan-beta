@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, PhoneOff, Video } from 'lucide-react';
@@ -17,27 +17,50 @@ interface IncomingCall {
 }
 
 export default function GlobalCallListener() {
-  const pathname = usePathname();
   const router = useRouter();
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const userRef = useRef<any>(null);
   const channelsRef = useRef<any[]>([]);
   const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref mirrors incomingCall state so callbacks always see the latest value
+  const incomingCallRef = useRef<IncomingCall | null>(null);
+  // Tracks the DB call_invites row id for the currently-displayed invite
+  const currentInviteIdRef = useRef<string | null>(null);
+
+  const setIncomingCallWithRef = (call: IncomingCall | null) => {
+    incomingCallRef.current = call;
+    setIncomingCall(call);
+  };
 
   const dismissCall = () => {
-    setIncomingCall(null);
+    setIncomingCallWithRef(null);
+    currentInviteIdRef.current = null;
     if (callTimeoutRef.current) {
       clearTimeout(callTimeoutRef.current);
       callTimeoutRef.current = null;
     }
   };
 
-  const acceptCall = () => {
-    if (!incomingCall) return;
-    const roomId = incomingCall.roomId;
+  const acceptCall = async () => {
+    if (!incomingCallRef.current) return;
+    const roomId = incomingCallRef.current.roomId;
+    const inviteId = currentInviteIdRef.current;
 
-    // Unsubscribe THIS room's channel BEFORE navigating so the chat page
-    // gets a clean, sole subscription — prevents duplicate call-ended firing
+    // Update DB invite status to accepted
+    if (inviteId) {
+      try {
+        await supabase
+          .from('call_invites')
+          .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+          .eq('id', inviteId);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[GlobalCallListener] Call accepted, invite id:', inviteId);
+        }
+      } catch { }
+    }
+
+    // Unsubscribe THIS room's broadcast channel BEFORE navigating so the
+    // chat page gets a clean sole subscription and avoids duplicate events
     const roomChannelIndex = channelsRef.current.findIndex(
       ch => ch.topic === `realtime:room-${roomId}`
     );
@@ -50,17 +73,153 @@ export default function GlobalCallListener() {
     router.push(`/chat/${roomId}?incoming=1`);
   };
 
-  const declineCall = () => {
+  const declineCall = async () => {
+    const inviteId = currentInviteIdRef.current;
+    if (inviteId) {
+      try {
+        await supabase
+          .from('call_invites')
+          .update({ status: 'declined' })
+          .eq('id', inviteId);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[GlobalCallListener] Call declined, invite id:', inviteId);
+        }
+      } catch { }
+    }
     dismissCall();
   };
 
+  const showIncomingCall = async (
+    roomId: string,
+    callerId: string,
+    callerName: string,
+    callType: 'voice' | 'video',
+    inviteId: string | null
+  ) => {
+    // Skip if we are already showing a call overlay
+    if (incomingCallRef.current) return;
+
+    // Fetch caller avatar
+    let callerAvatar: string | undefined;
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', callerId)
+        .single();
+      callerAvatar = profile?.avatar_url ?? undefined;
+    } catch { }
+
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+
+    currentInviteIdRef.current = inviteId;
+    setIncomingCallWithRef({
+      roomId,
+      callerId,
+      callerName: callerName || 'Scholar',
+      callerAvatar,
+      type: callType,
+    });
+
+    // Auto-dismiss after 45 seconds if not answered
+    callTimeoutRef.current = setTimeout(() => {
+      setIncomingCallWithRef(null);
+      currentInviteIdRef.current = null;
+    }, 45000);
+  };
+
   useEffect(() => {
-    // Get current user
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
       userRef.current = user;
 
-      // Fetch all room IDs this user is part of
+      // ─── DB-based signaling (primary, durable) ────────────────────────────
+      // Subscribe to new call_invites rows addressed to this user.
+      // Uses supabaseRealtime (direct URL) since postgres_changes needs a
+      // reliable WebSocket connection — supabase uses an HTTP proxy here.
+      const dbChannel = supabaseRealtime
+        .channel(`call-invites-${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'call_invites',
+            filter: `receiver_id=eq.${user.id}`,
+          },
+          async (payload) => {
+            const invite = payload.new as {
+              id: string;
+              room_id: string;
+              caller_id: string;
+              type: string;
+              status: string;
+            };
+            if (invite.status !== 'ringing') return;
+
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[GlobalCallListener] DB invite received', invite);
+            }
+
+            // If broadcast already showed the overlay for this room but without
+            // an invite id, update the ref so accept/decline can update the DB row
+            if (
+              incomingCallRef.current?.roomId === invite.room_id &&
+              !currentInviteIdRef.current
+            ) {
+              currentInviteIdRef.current = invite.id;
+              return;
+            }
+
+            // Fetch caller name from profiles
+            let callerName = 'Scholar';
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('id', invite.caller_id)
+                .single();
+              callerName = profile?.full_name || 'Scholar';
+            } catch { }
+
+            await showIncomingCall(
+              invite.room_id,
+              invite.caller_id,
+              callerName,
+              invite.type as 'voice' | 'video',
+              invite.id
+            );
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'call_invites',
+            filter: `receiver_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const invite = payload.new as { id: string; status: string };
+            // If the active invite was ended/missed by the caller, dismiss UI
+            if (
+              invite.id === currentInviteIdRef.current &&
+              ['ended', 'missed'].includes(invite.status)
+            ) {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('[GlobalCallListener] Invite updated, dismissing', invite);
+              }
+              dismissCall();
+            }
+          }
+        )
+        .subscribe();
+
+      channelsRef.current.push(dbChannel);
+
+      // ─── Broadcast-based signaling (fallback, best-effort) ────────────────
+      // Subscribes to the room broadcast channels so calls still work even if
+      // the postgres_changes event is slightly delayed.
       supabase
         .from('chat_rooms')
         .select('id')
@@ -68,43 +227,32 @@ export default function GlobalCallListener() {
         .then(({ data: rooms }) => {
           if (!rooms) return;
 
-          // Subscribe to each room's broadcast for call-invite
           rooms.forEach((room: { id: string }) => {
             const channel = supabaseRealtime.channel(`room-${room.id}`);
+
             channel.on('broadcast', { event: 'call-invite' }, async ({ payload }) => {
-              // Ignore if already on that chat page or if we are the caller
-              const isOnChatPage = pathname === `/chat/${room.id}`;
+              // Skip if we are the caller
               const isCaller = payload.callerId === userRef.current?.id;
-              if (isOnChatPage || isCaller) return;
+              if (isCaller) return;
 
-              // Fetch caller profile for display
-              let callerAvatar: string | undefined;
-              try {
-                const { data: profile } = await supabase
-                  .from('profiles')
-                  .select('avatar_url')
-                  .eq('id', payload.callerId)
-                  .single();
-                callerAvatar = profile?.avatar_url;
-              } catch { }
+              if (process.env.NODE_ENV === 'development') {
+                console.log('[GlobalCallListener] Broadcast invite received', payload);
+              }
 
-              Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
-
-              setIncomingCall({
-                roomId: room.id,
-                callerId: payload.callerId,
-                callerName: payload.callerName || 'Scholar',
-                callerAvatar,
-                type: payload.type || 'voice',
-              });
-
-              // Auto-dismiss after 45 seconds
-              callTimeoutRef.current = setTimeout(() => {
-                setIncomingCall(null);
-              }, 45000);
+              // DB subscription may have already shown the overlay; skip if so
+              await showIncomingCall(
+                room.id,
+                payload.callerId,
+                payload.callerName || 'Scholar',
+                payload.type || 'voice',
+                null // invite id not available from broadcast
+              );
             });
 
             channel.on('broadcast', { event: 'call-ended' }, () => {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('[GlobalCallListener] call-ended broadcast received');
+              }
               dismissCall();
             });
 
@@ -115,12 +263,12 @@ export default function GlobalCallListener() {
     });
 
     return () => {
-      // Cleanup all channels on unmount
       channelsRef.current.forEach(ch => supabaseRealtime.removeChannel(ch));
       channelsRef.current = [];
       if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
     };
-  }, []); // Run once on mount — intentionally no pathname dep
+  }, []); // Subscriptions are set up once on mount. `router` is a stable Next.js ref
+         // and all other captures (userRef, channelsRef, etc.) are refs — safe to omit.
 
   return (
     <AnimatePresence>
