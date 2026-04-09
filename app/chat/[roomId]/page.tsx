@@ -85,7 +85,6 @@ function ChatRoomContent() {
   const { roomId } = useParams() as { roomId: string };
   const searchParams = useSearchParams();
   const initialName = searchParams.get('name');
-  const isIncomingCallFromNav = searchParams.get('incoming') === '1';
 
   const [user, setUser] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -294,28 +293,6 @@ function ChatRoomContent() {
     initChat();
   }, [roomId, router, initialName]);
 
-  // Auto-accept call if navigated from GlobalCallListener with ?incoming=1
-  useEffect(() => {
-    if (!isIncomingCallFromNav || !user) return;
-
-    // Show the ringing UI immediately
-    setIsCalling(true);
-    setIsIncomingCall(true);
-    updateCallStatus('ringing');
-
-    // Wait briefly for realtime channel to be ready, then auto-accept
-    const timer = setTimeout(() => {
-      acceptCall();
-      // Clean up the URL so refresh doesn't re-trigger
-      const url = new URL(window.location.href);
-      url.searchParams.delete('incoming');
-      window.history.replaceState({}, '', url.toString());
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isIncomingCallFromNav, user]);
-
   // --- Agora Calling Logic ---
   const AGORA_APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID || '';
 
@@ -473,9 +450,8 @@ function ChatRoomContent() {
       }
     }, 45000);
 
-    } catch (e: any) {
+    } catch (e) {
       console.error("Call start failed", e);
-      alert("Connection failed: Could not access Microphone or Camera. Please ensure permissions are enabled.");
       endCall();
     }
   };
@@ -500,9 +476,8 @@ function ChatRoomContent() {
         localVideoRef.current = videoTrack;
         await client.publish(videoTrack);
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error("Call accept failed", e);
-      alert("Connection failed: Could not access Microphone or Camera. Please ensure permissions are enabled.");
       endCall();
     }
   };
