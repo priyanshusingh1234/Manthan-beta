@@ -53,7 +53,7 @@ export default function GlobalCallListener() {
     }
 
     dismissCall();
-    router.push(`/chat/${roomId}?incoming=1`);
+    router.push(`/chat/${roomId}?incoming=1&autoAccept=1`);
   };
 
   const declineCall = () => {

@@ -484,10 +484,6 @@ export default function PostCard({
                                                     <MessageCircle className="w-4 h-4" />
                                                     <span className="text-xs font-semibold">Reply</span>
                                                 </button>
-                                                <button className="group flex items-center gap-1.5 hover:text-rose-500 transition-colors">
-                                                    <Heart className="w-4 h-4" />
-                                                    <span className="text-xs font-semibold">Like</span>
-                                                </button>
                                             </div>
                                         </div>
                                     </div>

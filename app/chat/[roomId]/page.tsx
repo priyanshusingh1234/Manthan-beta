@@ -24,6 +24,7 @@ import {
   MicOff,
   VideoOff,
   PhoneOff,
+  RefreshCw,
 } from 'lucide-react';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -86,6 +87,7 @@ function ChatRoomContent() {
   const searchParams = useSearchParams();
   const initialName = searchParams.get('name');
   const isIncomingFromNav = searchParams.get('incoming') === '1';
+  const autoAcceptFromNav = searchParams.get('autoAccept') === '1';
 
   const [user, setUser] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -119,6 +121,9 @@ function ChatRoomContent() {
   const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCamOn, setIsCamOn] = useState(true);
+  const [cameraDevices, setCameraDevices] = useState<any[]>([]);
+  const [activeCameraIndex, setActiveCameraIndex] = useState(0);
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
 
   // --- FIX 2: Refs for guaranteed cleanup regardless of React State ---
   const localAudioRef = useRef<any>(null);
@@ -127,6 +132,7 @@ function ChatRoomContent() {
   const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const callStatusRef = useRef<'ringing' | 'connected' | 'ended'>('ringing');
   const roomChannelRef = useRef<any>(null);
+  const hasAutoAcceptedRef = useRef(false);
 
   const updateCallStatus = (status: 'ringing' | 'connected' | 'ended') => {
     setCallStatus(status);
@@ -305,6 +311,7 @@ function ChatRoomContent() {
     // Clean up URL so refresh doesn't retrigger
     const url = new URL(window.location.href);
     url.searchParams.delete('incoming');
+    url.searchParams.delete('autoAccept');
     window.history.replaceState({}, '', url.toString());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isIncomingFromNav]);
@@ -364,6 +371,9 @@ function ChatRoomContent() {
     setRemoteUsers([]);
     setIsMicOn(true);
     setIsCamOn(true);
+    setCameraDevices([]);
+    setActiveCameraIndex(0);
+    setIsSwitchingCamera(false);
 
     // Also reset any ringing vibrations or sounds if any
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
@@ -380,6 +390,55 @@ function ChatRoomContent() {
       });
     } catch (e) {
       console.error("Missed call log failed", e);
+    }
+  };
+
+  const getCamerasAndDefaultIndex = async () => {
+    const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+    const cameras = await AgoraRTC.getCameras();
+    const safeCameras = cameras || [];
+    const preferredFrontIndex = safeCameras.findIndex((c: any) => /front|user/i.test(c.label || ''));
+    const defaultIndex = preferredFrontIndex >= 0 ? preferredFrontIndex : 0;
+    setCameraDevices(safeCameras);
+    setActiveCameraIndex(defaultIndex);
+    return { AgoraRTC, cameras: safeCameras, defaultIndex };
+  };
+
+  const switchCamera = async () => {
+    if (callType !== 'video' || !localVideoRef.current || isSwitchingCamera) return;
+
+    try {
+      setIsSwitchingCamera(true);
+      const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+      const latestCameras = await AgoraRTC.getCameras();
+      const cameras = latestCameras || [];
+      if (cameras.length < 2) return;
+
+      setCameraDevices(cameras);
+
+      const safeIndex = activeCameraIndex >= 0 && activeCameraIndex < cameras.length ? activeCameraIndex : 0;
+      const nextIndex = (safeIndex + 1) % cameras.length;
+      const nextCamera = cameras[nextIndex];
+      if (!nextCamera?.deviceId) return;
+
+      if (typeof localVideoRef.current.setDevice === 'function') {
+        await localVideoRef.current.setDevice(nextCamera.deviceId);
+      } else if (rtcClientRef.current) {
+        const newTrack = await AgoraRTC.createCameraVideoTrack({ cameraId: nextCamera.deviceId });
+        await rtcClientRef.current.unpublish(localVideoRef.current);
+        localVideoRef.current.stop();
+        localVideoRef.current.close();
+        localVideoRef.current = newTrack;
+        setLocalVideoTrack(newTrack);
+        await rtcClientRef.current.publish(newTrack);
+      }
+
+      setActiveCameraIndex(nextIndex);
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
+    } catch (e) {
+      console.error('Switch camera failed', e);
+    } finally {
+      setIsSwitchingCamera(false);
     }
   };
 
@@ -446,10 +505,17 @@ function ChatRoomContent() {
       await client.publish(audioTrack);
 
       if (type === 'video') {
-        const videoTrack = await AgoraRTC.createCameraVideoTrack();
+        const { cameras, defaultIndex } = await getCamerasAndDefaultIndex();
+        const selectedCamera = cameras[defaultIndex];
+        const videoTrack = selectedCamera?.deviceId
+          ? await AgoraRTC.createCameraVideoTrack({ cameraId: selectedCamera.deviceId })
+          : await AgoraRTC.createCameraVideoTrack();
         setLocalVideoTrack(videoTrack);
         localVideoRef.current = videoTrack;
         await client.publish(videoTrack);
+      } else {
+        setCameraDevices([]);
+        setActiveCameraIndex(0);
       }
 
       await sendCallBroadcast('call-invite', {
@@ -471,13 +537,13 @@ function ChatRoomContent() {
         }).catch(() => { });
       }
 
-    // Timeout: extended to 90s to allow for cross-country navigation + mic permission grant
+    // Timeout: extended to 150s to allow for cross-country navigation + permission and network delay
     callTimeoutRef.current = setTimeout(() => {
       if (callStatusRef.current === 'ringing') {
         sendMissedCallMessage();
         endCall();
       }
-    }, 90000);
+    }, 150000);
 
     } catch (e) {
       console.error("Call start failed", e);
@@ -501,16 +567,36 @@ function ChatRoomContent() {
       await client.publish(audioTrack);
 
       if (callType === 'video') {
-        const videoTrack = await AgoraRTC.createCameraVideoTrack();
+        const { cameras, defaultIndex } = await getCamerasAndDefaultIndex();
+        const selectedCamera = cameras[defaultIndex];
+        const videoTrack = selectedCamera?.deviceId
+          ? await AgoraRTC.createCameraVideoTrack({ cameraId: selectedCamera.deviceId })
+          : await AgoraRTC.createCameraVideoTrack();
         setLocalVideoTrack(videoTrack);
         localVideoRef.current = videoTrack;
         await client.publish(videoTrack);
+      } else {
+        setCameraDevices([]);
+        setActiveCameraIndex(0);
       }
     } catch (e) {
       console.error("Call accept failed", e);
       endCall();
     }
   };
+
+  useEffect(() => {
+    if (!isIncomingFromNav || !autoAcceptFromNav) return;
+    if (!isCalling || !isIncomingCall || callStatus !== 'ringing') return;
+    if (hasAutoAcceptedRef.current) return;
+
+    hasAutoAcceptedRef.current = true;
+    const timer = setTimeout(() => {
+      acceptCall();
+    }, 180);
+
+    return () => clearTimeout(timer);
+  }, [isIncomingFromNav, autoAcceptFromNav, isCalling, isIncomingCall, callStatus]);
 
   // FIX 4: Cleanup on component unmount
   useEffect(() => {
@@ -1555,6 +1641,19 @@ function ChatRoomContent() {
                         className={`flex h-16 w-16 items-center justify-center rounded-full transition-all ${isCamOn ? 'bg-slate-800/80 text-white' : 'bg-red-500 text-white'}`}
                       >
                         {isCamOn ? <Video className="h-7 w-7" /> : <VideoOff className="h-7 w-7" />}
+                      </button>
+                    )}
+                    {callType === 'video' && (
+                      <button
+                        onClick={switchCamera}
+                        disabled={isSwitchingCamera || cameraDevices.length < 2}
+                        className={`flex h-16 w-16 items-center justify-center rounded-full transition-all ${isSwitchingCamera || cameraDevices.length < 2
+                            ? 'bg-slate-700/50 text-slate-400'
+                            : 'bg-slate-800/80 text-white active:scale-95'
+                          }`}
+                        aria-label="Switch camera"
+                      >
+                        <RefreshCw className={`h-7 w-7 ${isSwitchingCamera ? 'animate-spin' : ''}`} />
                       </button>
                     )}
                     <button
