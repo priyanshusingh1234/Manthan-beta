@@ -910,6 +910,19 @@ function ChatRoomContent() {
       content = `> Replying to **${replyingTo.sender_id === user.id ? 'You' : participant?.full_name || 'User'}**: "${replyPreview.replace(/\n/g, ' ')}"\n\n${content}`;
       setReplyingTo(null);
     }
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      room_id: roomId,
+      sender_id: user.id,
+      content,
+      created_at: new Date().toISOString(),
+      is_read: true,
+      message_type: 'text',
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+    setTimeout(() => scrollToBottom(), 0);
     setNewMessage('');
     setSending(true);
 
@@ -924,8 +937,9 @@ function ChatRoomContent() {
 
       if (insertedMessage) {
         setMessages(prev => {
-          if (prev.some(m => m.id === insertedMessage.id)) return prev;
-          return [...prev, insertedMessage as Message];
+          const withoutTemp = prev.filter(m => m.id !== tempId);
+          if (withoutTemp.some(m => m.id === insertedMessage.id)) return withoutTemp;
+          return [...withoutTemp, insertedMessage as Message];
         });
 
         if (participant?.user_id) {
@@ -949,6 +963,8 @@ function ChatRoomContent() {
       scrollToBottom();
     } catch (err) {
       console.error('Send error:', err);
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setNewMessage(content);
     } finally {
       setSending(false);
     }
