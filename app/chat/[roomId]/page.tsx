@@ -473,8 +473,9 @@ function ChatRoomContent() {
       }
     }, 45000);
 
-    } catch (e) {
+    } catch (e: any) {
       console.error("Call start failed", e);
+      alert("Connection failed: Could not access Microphone or Camera. Please ensure permissions are enabled.");
       endCall();
     }
   };
@@ -499,8 +500,9 @@ function ChatRoomContent() {
         localVideoRef.current = videoTrack;
         await client.publish(videoTrack);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Call accept failed", e);
+      alert("Connection failed: Could not access Microphone or Camera. Please ensure permissions are enabled.");
       endCall();
     }
   };
