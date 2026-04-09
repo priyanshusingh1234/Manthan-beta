@@ -114,6 +114,7 @@ function ChatRoomContent() {
   const [callType, setCallType] = useState<'voice' | 'video'>('voice');
   const [callStatus, setCallStatus] = useState<'ringing' | 'connected' | 'ended'>('ringing');
   const [isIncomingCall, setIsIncomingCall] = useState(false);
+  const [isAcceptingIncoming, setIsAcceptingIncoming] = useState(false);
 
   // UI States for Tracks
   const [localAudioTrack, setLocalAudioTrack] = useState<any>(null);
@@ -133,6 +134,7 @@ function ChatRoomContent() {
   const callStatusRef = useRef<'ringing' | 'connected' | 'ended'>('ringing');
   const roomChannelRef = useRef<any>(null);
   const hasAutoAcceptedRef = useRef(false);
+  const isAcceptingIncomingRef = useRef(false);
 
   const updateCallStatus = (status: 'ringing' | 'connected' | 'ended') => {
     setCallStatus(status);
@@ -374,6 +376,8 @@ function ChatRoomContent() {
     setCameraDevices([]);
     setActiveCameraIndex(0);
     setIsSwitchingCamera(false);
+    isAcceptingIncomingRef.current = false;
+    setIsAcceptingIncoming(false);
 
     // Also reset any ringing vibrations or sounds if any
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
@@ -552,6 +556,9 @@ function ChatRoomContent() {
   };
 
   const acceptCall = async () => {
+    if (isAcceptingIncomingRef.current) return;
+    isAcceptingIncomingRef.current = true;
+    setIsAcceptingIncoming(true);
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
     // Don't mark connected yet — wait until Agora join succeeds
     updateCallStatus('ringing');
@@ -581,7 +588,11 @@ function ChatRoomContent() {
       }
     } catch (e) {
       console.error("Call accept failed", e);
-      endCall();
+      // Local accept errors should not look like user-decline to the caller.
+      endCall(false);
+    } finally {
+      isAcceptingIncomingRef.current = false;
+      setIsAcceptingIncoming(false);
     }
   };
 
@@ -1621,9 +1632,10 @@ function ChatRoomContent() {
                   </button>
                   <button
                     onClick={acceptCall}
-                    className="flex h-20 w-20 flex-col items-center justify-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95"
+                    disabled={isAcceptingIncoming}
+                    className={`flex h-20 w-20 flex-col items-center justify-center rounded-full shadow-lg shadow-emerald-500/30 transition-all active:scale-95 ${isAcceptingIncoming ? 'bg-emerald-500/70' : 'bg-emerald-500 hover:scale-105'}`}
                   >
-                    <Phone className="h-8 w-8 text-white" />
+                    {isAcceptingIncoming ? <Loader2 className="h-8 w-8 text-white animate-spin" /> : <Phone className="h-8 w-8 text-white" />}
                   </button>
                 </div>
               ) : (
