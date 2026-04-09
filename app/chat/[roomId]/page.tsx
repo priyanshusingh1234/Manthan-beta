@@ -1045,7 +1045,6 @@ function ChatRoomContent() {
 
                       if (deleteError) {
                         console.error('Delete for everyone failed:', deleteError);
-                        alert('Delete failed due to network/proxy error. Please try again.');
                         return;
                       }
 
