@@ -85,6 +85,7 @@ function ChatRoomContent() {
   const { roomId } = useParams() as { roomId: string };
   const searchParams = useSearchParams();
   const initialName = searchParams.get('name');
+  const isIncomingFromNav = searchParams.get('incoming') === '1';
 
   const [user, setUser] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -292,6 +293,20 @@ function ChatRoomContent() {
 
     initChat();
   }, [roomId, router, initialName]);
+
+  // When navigated from GlobalCallListener, pre-show incoming call screen
+  useEffect(() => {
+    if (!isIncomingFromNav) return;
+    // Show the incoming call UI — user still taps Accept themselves (required for mic permission)
+    setIsCalling(true);
+    setIsIncomingCall(true);
+    updateCallStatus('ringing');
+    // Clean up URL so refresh doesn't retrigger
+    const url = new URL(window.location.href);
+    url.searchParams.delete('incoming');
+    window.history.replaceState({}, '', url.toString());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isIncomingFromNav]);
 
   // --- Agora Calling Logic ---
   const AGORA_APP_ID = process.env.NEXT_PUBLIC_AGORA_APP_ID || '';
