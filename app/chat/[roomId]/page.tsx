@@ -58,6 +58,8 @@ function ChatRoomContent() {
   const [sending, setSending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [deletedForMe, setDeletedForMe] = useState<string[]>([]);
   const [isOnline, setIsOnline] = useState(false);
@@ -67,6 +69,47 @@ function ChatRoomContent() {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+
+  const toggleSelection = (id: string) => {
+    Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
+    setSelectedIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      if (next.length === 0) setIsSelectionMode(false);
+      return next;
+    });
+  };
+
+  const exitSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedIds([]);
+  };
+
+  const handleMultiDelete = async (type: 'me' | 'everyone') => {
+    if (selectedIds.length === 0) return;
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+
+    try {
+      if (type === 'everyone') {
+        // Only delete MY messages from DB
+        const mySelectedIds = messages.filter(m => selectedIds.includes(m.id) && m.sender_id === user.id).map(m => m.id);
+        if (mySelectedIds.length > 0) {
+          await supabase.from('chat_messages').delete().in('id', mySelectedIds);
+        }
+      }
+
+      // In both cases, hide them locally
+      const newDeleted = [...new Set([...deletedForMe, ...selectedIds])];
+      setDeletedForMe(newDeleted);
+      localStorage.setItem(`deleted_${roomId}`, JSON.stringify(newDeleted));
+      
+      // Update local state for instant feedback
+      setMessages(prev => prev.filter(m => !selectedIds.includes(m.id)));
+    } catch (e) {
+      console.error("Delete error", e);
+    } finally {
+      exitSelectionMode();
+    }
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -469,7 +512,9 @@ function ChatRoomContent() {
 
     let content = newMessage.trim();
     if (replyingTo) {
-      const replyPreview = replyingTo.content.length > 50 ? replyingTo.content.substring(0, 50) + '...' : replyingTo.content;
+      const isImage = replyingTo.message_type === 'image';
+      const isFile = replyingTo.message_type === 'file';
+      const replyPreview = isImage ? '📸 Photo' : isFile ? '📁 File' : (replyingTo.content.length > 50 ? replyingTo.content.substring(0, 50) + '...' : replyingTo.content);
       content = `> Replying to **${replyingTo.sender_id === user.id ? 'You' : participant?.full_name || 'User'}**: "${replyPreview.replace(/\n/g, ' ')}"\n\n${content}`;
       setReplyingTo(null);
     }
@@ -526,7 +571,7 @@ function ChatRoomContent() {
   };
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#0b0f14] dark:text-white pb-36">
+    <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#0b0f14] dark:text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,153,240,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_24%),linear-gradient(to_bottom,rgba(255,255,255,0.9),rgba(241,245,249,0.86))] dark:bg-[radial-gradient(circle_at_top_left,rgba(56,153,240,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.08),transparent_24%),linear-gradient(to_bottom,rgba(2,6,23,0.96),rgba(9,14,20,0.96))]" />
 
       {/* Action Sheet */}
@@ -602,6 +647,18 @@ function ChatRoomContent() {
                     <Trash2 className="h-5 w-5 text-red-500" />
                   </button>
                 )}
+                <button
+                  onClick={() => {
+                    Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
+                    setIsSelectionMode(true);
+                    setSelectedIds([selectedMessage.id]);
+                    setSelectedMessage(null);
+                  }}
+                  className="flex w-full items-center justify-between rounded-[20px] bg-slate-100 p-4 font-bold text-slate-800 transition-colors hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Select
+                  <Check className="h-5 w-5 text-slate-500" />
+                </button>
                 <button
                   onClick={() => setSelectedMessage(null)}
                   className="mt-2 w-full p-4 font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -700,100 +757,139 @@ function ChatRoomContent() {
         )}
       </AnimatePresence>
 
-      <header className="fixed top-0 inset-x-0 z-40 px-4 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-6 lg:px-8">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between rounded-[28px] border border-white/60 bg-white/85 px-3 py-3 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-950/85">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              onClick={() => {
-                Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
-                if (router && typeof router.push === 'function') {
-                  router.push('/chat');
-                } else {
-                  window.location.href = '/chat';
-                }
-              }}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition-all active:scale-95 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-800"
-              aria-label="Back to chats"
+      <header className="fixed top-0 inset-x-0 z-[100] px-4 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-6 lg:px-8">
+        <AnimatePresence mode="wait">
+          {isSelectionMode ? (
+            <motion.div
+              key="selection-header"
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              className="mx-auto flex w-full max-w-4xl items-center justify-between rounded-[28px] border border-blue-200/50 bg-blue-600 px-4 py-3 shadow-xl backdrop-blur-2xl dark:border-blue-500/30 dark:bg-blue-600/90"
             >
-              <ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
-            </button>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={exitSelectionMode}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <span className="text-lg font-bold text-white">
+                  {selectedIds.length} selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const allMine = messages.filter(m => selectedIds.includes(m.id)).every(m => m.sender_id === user.id);
+                    if (allMine) {
+                      if (confirm(`Delete ${selectedIds.length} messages for everyone?`)) handleMultiDelete('everyone');
+                    } else {
+                      if (confirm(`Delete ${selectedIds.length} messages for me?`)) handleMultiDelete('me');
+                    }
+                  }}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="normal-header"
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              className="mx-auto flex w-full max-w-4xl items-center justify-between rounded-[28px] border border-white/60 bg-white/85 px-3 py-3 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-2xl dark:border-slate-800/80 dark:bg-slate-950/85"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <button
+                  onClick={() => {
+                    Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
+                    if (router && typeof router.push === 'function') {
+                      router.push('/chat');
+                    } else {
+                      window.location.href = '/chat';
+                    }
+                  }}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-700 transition-all active:scale-95 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-800"
+                  aria-label="Back to chats"
+                >
+                  <ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
+                </button>
 
-            <button
-              type="button"
-              onClick={openProfileModal}
-              className="flex min-w-0 items-center gap-3 rounded-[22px] px-2 py-1 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/70"
-            >
-              <div className="relative shrink-0">
-                <div className="h-11 w-11 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
-                  {participant?.avatar_url ? (
-                    <Image src={participant.avatar_url} alt="User" fill className="object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500 dark:text-slate-400">
-                      {participant?.full_name?.[0]?.toUpperCase() || 'U'}
+                <button
+                  type="button"
+                  onClick={openProfileModal}
+                  className="flex min-w-0 items-center gap-3 rounded-[22px] px-2 py-1 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/70"
+                >
+                  <div className="relative shrink-0">
+                    <div className="h-11 w-11 overflow-hidden rounded-full border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
+                      {participant?.avatar_url ? (
+                        <Image src={participant.avatar_url} alt="User" fill className="object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500 dark:text-slate-400">
+                          {participant?.full_name?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-950" />
+                    {isOnline && <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-950" />}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h2 className="truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-white sm:text-[16px]">
+                        {participant?.full_name || 'Scholar'}
+                      </h2>
+                    </div>
+                    <p className="truncate text-[12px] font-medium text-slate-500 dark:text-slate-400">
+                      {isOnline ? 'Active now' : 'Tap for info'}
+                    </p>
+                  </div>
+                </button>
               </div>
 
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-white sm:text-[16px]">
-                    {participant?.full_name || 'Scholar'}
-                  </h2>
-                  <span className={`hidden rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.22em] sm:inline-flex transition-colors ${isOnline
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
-                    : "border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"
-                    }`}>
-                    {isOnline ? 'Online' : 'Offline'}
-                  </span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="relative">
+                  <button onClick={() => setShowMenu(!showMenu)} className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
+                    <MoreVertical className="h-5 w-5" />
+                  </button>
+                  <AnimatePresence>
+                    {showMenu && (
+                      <>
+                        <motion.div
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                          className="fixed inset-0 z-40"
+                          onClick={() => setShowMenu(false)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-800 dark:bg-slate-900"
+                        >
+                          <button onClick={handleClearChat} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+                            <Trash2 className="h-4 w-4" /> Clear Chat
+                          </button>
+                          <button onClick={toggleMute} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+                            <VolumeX className={`h-4 w-4 ${isMuted ? 'text-emerald-500' : ''}`} /> {isMuted ? 'Unmute' : 'Mute'}
+                          </button>
+                          <button onClick={toggleBlock} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10">
+                            <Ban className="h-4 w-4" /> {isBlocked ? 'Unblock' : 'Block'}
+                          </button>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <p className="truncate text-[12px] font-medium text-slate-500 dark:text-slate-400">
-                  Tap for more info
-                </p>
               </div>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="relative">
-              <button onClick={() => setShowMenu(!showMenu)} className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white">
-                <MoreVertical className="h-5 w-5" />
-              </button>
-              <AnimatePresence>
-                {showMenu && (
-                  <>
-                    <motion.div
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowMenu(false)}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-800 dark:bg-slate-900"
-                    >
-                      <button onClick={handleClearChat} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
-                        <Trash2 className="h-4 w-4" /> Clear Chat
-                      </button>
-                      <button onClick={toggleMute} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
-                        <VolumeX className={`h-4 w-4 ${isMuted ? 'text-emerald-500' : ''}`} /> {isMuted ? 'Unmute' : 'Mute'}
-                      </button>
-                      <button onClick={toggleBlock} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10">
-                        <Ban className="h-4 w-4" /> {isBlocked ? 'Unblock' : 'Block'}
-                      </button>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
-      <div className="relative z-10 flex-1 pt-[calc(env(safe-area-inset-top)+100px)]">
+      <div className="relative z-10 flex-1 overflow-y-auto pt-[calc(env(safe-area-inset-top)+100px)] scroll-smooth">
         <div className="mx-auto flex w-full max-w-4xl flex-col px-4 py-5 sm:px-6 sm:py-8">
           {loading ? (
             <div className="flex justify-center items-center h-full">
@@ -835,17 +931,36 @@ function ChatRoomContent() {
                       </div>
                     )}
 
-                    <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isNextSame ? 'mb-0.5' : 'mb-3'}`}>
+                    <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isNextSame ? 'mb-0.5' : 'mb-3'} items-center gap-3`}>
+                      {isSelectionMode && (
+                        <div 
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all ${selectedIds.includes(msg.id) ? 'border-blue-500 bg-blue-500' : 'border-slate-300 dark:border-slate-700'}`}
+                          onClick={() => toggleSelection(msg.id)}
+                        >
+                          {selectedIds.includes(msg.id) && <Check className="h-4 w-4 text-white" strokeWidth={4} />}
+                        </div>
+                      )}
                       <motion.div
+                        onClick={() => {
+                          if (isSelectionMode) toggleSelection(msg.id);
+                        }}
                         onContextMenu={(e) => {
                           e.preventDefault();
-                          Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
-                          setSelectedMessage(msg);
+                          if (isSelectionMode) {
+                            toggleSelection(msg.id);
+                          } else {
+                            Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+                            setSelectedMessage(msg);
+                          }
                         }}
                         onTouchStart={() => {
                           touchTimer.current = setTimeout(() => {
-                            Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
-                            setSelectedMessage(msg);
+                            if (isSelectionMode) {
+                              toggleSelection(msg.id);
+                            } else {
+                              Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+                              setSelectedMessage(msg);
+                            }
                           }, 500);
                         }}
                         onTouchEnd={() => {
@@ -855,8 +970,12 @@ function ChatRoomContent() {
                           if (touchTimer.current) clearTimeout(touchTimer.current);
                         }}
                         initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        drag="x"
+                        animate={{ 
+                          opacity: 1, 
+                          scale: 1,
+                          backgroundColor: selectedIds.includes(msg.id) ? (isMe ? '#1d4ed8' : 'rgba(59, 130, 246, 0.1)') : undefined
+                        }}
+                        drag={!isSelectionMode ? "x" : false}
                         dragConstraints={{ left: 0, right: 0 }}
                         dragElastic={{ left: 0, right: 0.3 }}
                         onDragEnd={(_e, info) => {
@@ -867,11 +986,12 @@ function ChatRoomContent() {
                           }
                         }}
                         className={`
-                        relative max-w-[85%] sm:max-w-[72%] px-4 py-3 group
+                        relative max-w-[85%] sm:max-w-[72%] px-4 py-3 group transition-colors duration-200
                         ${isMe
                             ? 'bg-gradient-to-br from-[#3897f0] to-[#1d4ed8] text-white shadow-[0_16px_35px_rgba(59,130,246,0.28)]'
                             : 'bg-white/95 dark:bg-slate-950/80 text-slate-800 dark:text-slate-100 shadow-[0_10px_30px_rgba(15,23,42,0.08)] border border-slate-200/80 dark:border-slate-800/80'
                           }
+                        ${selectedIds.includes(msg.id) ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-900' : ''}
                         ${isMe
                             ? `rounded-l-[20px] ${!isPrevSame ? 'rounded-tr-[20px]' : 'rounded-tr-[8px]'} ${!isNextSame ? 'rounded-br-[20px]' : 'rounded-br-[8px]'}`
                             : `rounded-r-[20px] ${!isPrevSame ? 'rounded-tl-[20px]' : 'rounded-tl-[8px]'} ${!isNextSame ? 'rounded-bl-[20px]' : 'rounded-bl-[8px]'}`
@@ -887,7 +1007,12 @@ function ChatRoomContent() {
                             <>
                               <div className={`mb-2 rounded-xl border-l-4 p-2 text-sm ${isMe ? 'border-blue-200 bg-blue-500/20 text-blue-50' : 'border-blue-500 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
                                 <span className="font-bold opacity-80">{msg.content.split('**: "')[0].replace('> Replying to **', '')}</span>
-                                <p className="mt-0.5 truncate opacity-90">{msg.content.split('**: "')[1]?.split('"\n\n')[0]}</p>
+                                <p className="mt-0.5 truncate opacity-90">
+                                  {(() => {
+                                    const raw = msg.content.split('**: "')[1]?.split('"\n\n')[0] || '';
+                                    return (raw.startsWith('http') && raw.includes('/avatars/')) ? '📸 Photo' : raw;
+                                  })()}
+                                </p>
                               </div>
                               <p>{msg.content.split('"\n\n').slice(1).join('"\n\n')}</p>
                             </>
@@ -915,7 +1040,7 @@ function ChatRoomContent() {
                   </div>
                 );
               })}
-              <div ref={messagesEndRef} className="h-2" />
+              <div ref={messagesEndRef} className="h-32" />
             </div>
           )}
         </div>
@@ -934,79 +1059,109 @@ function ChatRoomContent() {
           </div>
         ) : (
           <div className="mx-auto flex w-full max-w-4xl items-end gap-2 rounded-[30px] border border-white/70 bg-white/90 px-3 py-3 shadow-[0_18px_50px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-slate-800 dark:bg-slate-950/90">
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingImage}
-              className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white disabled:opacity-50"
-            >
-              {uploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5 sm:h-5 sm:w-5" strokeWidth={2.2} />}
-            </button>
-
-            <div className="flex-1 rounded-[24px] border border-slate-200 bg-slate-50/90 min-h-[48px] flex flex-col justify-center shadow-inner dark:border-slate-800 dark:bg-slate-900/80 overflow-hidden">
-              <AnimatePresence>
-                {replyingTo && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="relative flex items-center justify-between border-b border-slate-200/60 bg-slate-100/50 px-4 py-2 dark:border-slate-800/60 dark:bg-slate-800/50"
+            {isSelectionMode ? (
+              <div className="flex w-full items-center justify-around py-2">
+                <button
+                  onClick={() => handleMultiDelete('me')}
+                  className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                >
+                  <Trash2 className="h-6 w-6" />
+                  <span className="text-[10px] font-bold">Delete for me</span>
+                </button>
+                {messages.filter(m => selectedIds.includes(m.id)).every(m => m.sender_id === user?.id) && (
+                  <button
+                    onClick={() => handleMultiDelete('everyone')}
+                    className="flex flex-col items-center gap-1 text-red-500 hover:text-red-600"
                   >
-                    <div className="flex flex-1 flex-col overflow-hidden border-l-4 border-blue-500 pl-3">
-                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                        {replyingTo.sender_id === user?.id ? 'You' : participant?.full_name || 'User'}
-                      </span>
-                      <span className="truncate text-sm text-slate-600 dark:text-slate-300">
-                        {replyingTo.content.replace(/\n/g, ' ')}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setReplyingTo(null)}
-                      className="ml-2 rounded-full p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </motion.div>
+                    <Trash2 className="h-6 w-6" />
+                    <span className="text-[10px] font-bold">Delete for everyone</span>
+                  </button>
                 )}
-              </AnimatePresence>
-              <textarea
-                ref={inputRef}
-                rows={1}
-                placeholder="Write a message..."
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  e.target.style.height = 'auto';
-                  e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                className="w-full resize-none border-none bg-transparent px-4 py-3 text-[15px] text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
-              />
-            </div>
+                <button
+                  onClick={exitSelectionMode}
+                  className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                >
+                  <X className="h-6 w-6" />
+                  <span className="text-[10px] font-bold">Cancel</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white disabled:opacity-50"
+                >
+                  {uploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Paperclip className="h-5 w-5 sm:h-5 sm:w-5" strokeWidth={2.2} />}
+                </button>
 
-            <button
-              onClick={handleSend}
-              disabled={!newMessage.trim() || sending}
-              className={`
-                mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all active:scale-95
-                ${newMessage.trim()
-                  ? 'bg-gradient-to-br from-[#3897f0] to-[#1d4ed8] text-white shadow-[0_12px_28px_rgba(59,130,246,0.28)]'
-                  : 'border border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-600'}
-              `}
-            >
-              {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 translate-x-[1px] -translate-y-[1px]" />}
-            </button>
+                <div className="flex-1 rounded-[24px] border border-slate-200 bg-slate-50/90 min-h-[48px] flex flex-col justify-center shadow-inner dark:border-slate-800 dark:bg-slate-900/80 overflow-hidden">
+                  <AnimatePresence>
+                    {replyingTo && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="relative flex items-center justify-between border-b border-slate-200/60 bg-slate-100/50 px-4 py-2 dark:border-slate-800/60 dark:bg-slate-800/50"
+                      >
+                        <div className="flex flex-1 flex-col overflow-hidden border-l-4 border-blue-500 pl-3">
+                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                            {replyingTo.sender_id === user?.id ? 'You' : participant?.full_name || 'User'}
+                          </span>
+                          <span className="truncate text-sm text-slate-600 dark:text-slate-300">
+                            {replyingTo.message_type === 'image' ? '📸 Photo' : replyingTo.message_type === 'file' ? '📁 File' : replyingTo.content.replace(/\n/g, ' ')}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setReplyingTo(null)}
+                          className="ml-2 rounded-full p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200 transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <textarea
+                    ref={inputRef}
+                    rows={1}
+                    placeholder="Write a message..."
+                    value={newMessage}
+                    onChange={(e) => {
+                      setNewMessage(e.target.value);
+                      e.target.style.height = 'auto';
+                      e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    className="w-full resize-none border-none bg-transparent px-4 py-3 text-[15px] text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+                  />
+                </div>
+
+                <button
+                  onClick={handleSend}
+                  disabled={!newMessage.trim() || sending}
+                  className={`
+                    mb-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all active:scale-95
+                    ${newMessage.trim()
+                      ? 'bg-gradient-to-br from-[#3897f0] to-[#1d4ed8] text-white shadow-[0_12px_28px_rgba(59,130,246,0.28)]'
+                      : 'border border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-600'}
+                  `}
+                >
+                  {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5 translate-x-[1px] -translate-y-[1px]" />}
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
