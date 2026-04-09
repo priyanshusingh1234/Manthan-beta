@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, PhoneOff, Video } from 'lucide-react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -60,8 +60,7 @@ export default function GlobalCallListener() {
 
           // Subscribe to each room's broadcast for call-invite
           rooms.forEach((room: { id: string }) => {
-            // Skip if we're already inside this chat page (page-level listener handles it)
-            const channel = supabase.channel(`room-${room.id}`);
+            const channel = supabaseRealtime.channel(`room-${room.id}`);
             channel.on('broadcast', { event: 'call-invite' }, async ({ payload }) => {
               // Ignore if already on that chat page or if we are the caller
               const isOnChatPage = pathname === `/chat/${room.id}`;
@@ -107,7 +106,7 @@ export default function GlobalCallListener() {
 
     return () => {
       // Cleanup all channels on unmount
-      channelsRef.current.forEach(ch => supabase.removeChannel(ch));
+      channelsRef.current.forEach(ch => supabaseRealtime.removeChannel(ch));
       channelsRef.current = [];
       if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
     };
