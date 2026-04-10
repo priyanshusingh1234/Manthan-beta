@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 220" width="100" height="220">
+  <style>
+    .character { transform-origin: center; }
+    .limb { transition: transform 0.3s ease-in-out; }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+    .bouncing { animation: bounce 2s infinite ease-in-out; }
+  </style>
+  <g id="aarav" class="character">
+    <g class="bouncing" style="animation-delay: -1s;">
+      <g id="b2-arm-l" class="limb" style="transform-origin: 5px 115px;">
+        <rect x="-10" y="105" width="22" height="60" rx="11" fill="#38B09D" />
+      </g>
+      <g id="b2-leg-l" class="limb" style="transform-origin: 25px 170px;">
+        <rect x="15" y="160" width="16" height="40" rx="4" fill="#2C3E50" />
+        <path d="M 10 200 L 35 200 C 35 190, 10 190, 10 200 Z" fill="#ECF0F1" /> 
+      </g>
+      <g id="b2-leg-r" class="limb" style="transform-origin: 55px 170px;">
+        <rect x="45" y="160" width="16" height="40" rx="4" fill="#34495E" />
+        <path d="M 40 200 L 65 200 C 65 190, 40 190, 40 200 Z" fill="#FFF" /> 
+      </g>
+      <g id="b2-torso" class="limb" style="transform-origin: 40px 160px;">
+        <rect x="10" y="100" width="60" height="65" rx="25" fill="#48C9B0" />
+        <rect x="25" y="95" width="30" height="15" rx="7" fill="#38B09D" />
+      </g>
+      <g id="b2-head" class="limb" style="transform-origin: 40px 95px;">
+        <rect x="33" y="85" width="14" height="15" fill="#E8B89C" />
+        <rect x="0" y="15" width="80" height="75" rx="35" fill="#E8B89C" />
+        <path d="M 18 52 Q 24 48 30 52" stroke="#333" stroke-width="3" stroke-linecap="round" fill="none" />
+        <path d="M 50 52 Q 56 48 62 52" stroke="#333" stroke-width="3" stroke-linecap="round" fill="none" />
+        <path d="M 38 65 L 42 65" stroke="#333" stroke-width="2" stroke-linecap="round" />
+        <path d="M -5 30 C 5 60, 20 60, 25 30 Z" fill="#2C3E50" />
+        <path d="M 85 30 C 75 60, 60 60, 55 30 Z" fill="#2C3E50" />
+        <path d="M -5 35 Q 40 -30 85 35 Z" fill="#F39C12" />
+        <rect x="-8" y="30" width="96" height="12" rx="6" fill="#E67E22" />
+      </g>
+      <g id="b2-arm-r" class="limb" style="transform-origin: 75px 115px;">
+        <rect x="68" y="105" width="22" height="60" rx="11" fill="#48C9B0" />
+      </g>
+    </g>
+  </g>
+</svg>
