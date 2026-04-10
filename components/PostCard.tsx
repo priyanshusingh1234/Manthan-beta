@@ -7,7 +7,6 @@ import dynamic from 'next/dynamic';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import { useRouter } from 'next/navigation';
 
 const TeacherBadge = dynamic(() => import('@/ticks/teacher'), { ssr: false });
 const TopperBadge = dynamic(() => import('@/ticks/topper'), { ssr: false });
@@ -38,9 +37,7 @@ export default function PostCard({
     const [showMenu, setShowMenu] = useState(false);
     const [deletingPost, setDeletingPost] = useState(false);
     const [likingPost, setLikingPost] = useState(false);
-    const [isGhostPost, setIsGhostPost] = useState(false);
-    const hasCheckedExistenceRef = useRef(false);
-    const router = useRouter();
+    const [isHidden, setIsHidden] = useState(false);
 
     // MENTION LOGIC
     const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -60,46 +57,8 @@ export default function PostCard({
         setLikesCount(typeof post.likes_count === 'number' ? post.likes_count : 0);
         setCommentsCount(typeof post.comments_count === 'number' ? post.comments_count : 0);
         setComments(post.recent_comments || []);
-        setIsGhostPost(false);
-        hasCheckedExistenceRef.current = false;
+        setIsHidden(false);
     }, [post.id, post.is_liked_by_me, post.likes_count, post.comments_count, post.recent_comments]);
-
-    useEffect(() => {
-        if (isSinglePost) return;
-        if (!post?.id) return;
-        if (hasCheckedExistenceRef.current) return;
-        hasCheckedExistenceRef.current = true;
-
-        let cancelled = false;
-        (async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                const res = await fetch(`/api/posts/${post.id}`, {
-                    headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
-                    cache: 'no-store'
-                });
-
-                if (cancelled) return;
-                if (res.status === 404) {
-                    setIsGhostPost(true);
-                    onUpdate?.();
-                }
-            } catch {
-                // Skip local hide on transient network errors.
-            }
-        })();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [post?.id, isSinglePost, onUpdate]);
-
-    const openPost = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!post?.id) return;
-        router.push(`/posts/${post.id}`);
-    };
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -270,12 +229,14 @@ export default function PostCard({
             if (!res.ok) {
                 const message = await res.text();
                 if (res.status === 404) {
+                    setIsHidden(true);
                     onUpdate?.();
                     setShowMenu(false);
                     return;
                 }
                 throw new Error(message || 'Failed to delete post');
             }
+            setIsHidden(true);
             onUpdate?.();
             setShowMenu(false);
         } catch (err: any) {
@@ -333,7 +294,7 @@ export default function PostCard({
         } finally { setIsSubmitting(false); }
     };
 
-    if (isGhostPost) return null;
+    if (isHidden) return null;
 
     return (
         <div className={`group/card relative bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 transition-colors duration-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 ${isSinglePost ? 'border-none' : 'last:border-0'}`}>
@@ -423,12 +384,12 @@ export default function PostCard({
                     </div>
 
                     {/* Mobile Time (only on mobile, if name header overflows) */}
-                    <Link href={`/posts/${post.id}`} onClick={openPost} className="sm:hidden text-[13px] text-slate-500 font-medium mb-1 block">
+                    <Link href={`/posts/${post.id}`} className="sm:hidden text-[13px] text-slate-500 font-medium mb-1 block">
                         {timeAgo}
                     </Link>
 
                     {/* Post Text */}
-                    <Link href={`/posts/${post.id}`} onClick={openPost}>
+                    <Link href={`/posts/${post.id}`}>
                         <div className="text-slate-800 dark:text-slate-200 text-[15px] sm:text-[16px] leading-[1.6] whitespace-pre-wrap font-normal mb-3 sm:mb-4">
                             {formatMentions(post.content)}
                         </div>
@@ -440,7 +401,7 @@ export default function PostCard({
                             {isSinglePost ? (
                                 <img src={post.image_url} alt="Post content" className="w-full h-auto max-h-[800px] object-contain" />
                             ) : (
-                                <Link href={`/posts/${post.id}`} onClick={openPost} className="block">
+                                <Link href={`/posts/${post.id}`} className="block">
                                     <img src={post.image_url} alt="Post content" className="w-full h-auto max-h-[512px] object-contain hover:opacity-95 transition-opacity" />
                                 </Link>
                             )}
