@@ -50,6 +50,13 @@ export default function PostCard({
     const [isPinning, setIsPinning] = useState(false);
 
     useEffect(() => {
+        setIsLiked(post.is_liked_by_me || false);
+        setLikesCount(typeof post.likes_count === 'number' ? post.likes_count : 0);
+        setCommentsCount(typeof post.comments_count === 'number' ? post.comments_count : 0);
+        setComments(post.recent_comments || []);
+    }, [post.id, post.is_liked_by_me, post.likes_count, post.comments_count, post.recent_comments]);
+
+    useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
                 setSuggestions([]);

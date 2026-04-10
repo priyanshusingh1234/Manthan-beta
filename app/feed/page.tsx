@@ -19,6 +19,7 @@ export default function FeedPage() {
     const [questions, setQuestions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [feedMeta, setFeedMeta] = useState<any>(null);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     // Filters
     const [selectedSubject, setSelectedSubject] = useState('');
@@ -36,6 +37,7 @@ export default function FeedPage() {
         setLoading(true);
 
         supabase.auth.getSession().then(async ({ data: { session } }) => {
+            setCurrentUserId(session?.user?.id || null);
             const params = new URLSearchParams({ limit: '40' });
             if (selectedSubject) params.set('subject', selectedSubject);
             // Also pass class to API so server pre-filters when possible
@@ -267,7 +269,7 @@ export default function FeedPage() {
                                         </div>
                                     )}
                                     {q.type === 'post' ? (
-                                        <PostCard post={q} showTags={true} />
+                                        <PostCard post={q} currentUserId={currentUserId} showTags={true} />
                                     ) : (
                                         <QuestionCard q={q} />
                                     )}

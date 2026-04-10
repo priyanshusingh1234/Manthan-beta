@@ -56,12 +56,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             finalContent = finalContent.substring(8).trim();
         }
 
+        const likesCount = Array.isArray(post.post_likes) ? post.post_likes.length : (post.likes_count || 0);
+
         const enriched = {
             id: post.id,
             content: finalContent,
             is_pinned: isPinned,
             image_url: post.image_url,
-            likes_count: post.likes_count || 0,
+            likes_count: likesCount,
             comments_count: post.comments_count || 0,
             created_at: post.created_at,
             is_liked_by_me: currentUserId ? (post.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,

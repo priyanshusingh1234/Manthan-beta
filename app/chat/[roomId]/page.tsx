@@ -115,6 +115,7 @@ function ChatRoomContent() {
   const [callStatus, setCallStatus] = useState<'ringing' | 'connected' | 'ended'>('ringing');
   const [isIncomingCall, setIsIncomingCall] = useState(false);
   const [isAcceptingIncoming, setIsAcceptingIncoming] = useState(false);
+  const [callError, setCallError] = useState<string | null>(null);
 
   // UI States for Tracks
   const [localAudioTrack, setLocalAudioTrack] = useState<any>(null);
@@ -139,6 +140,27 @@ function ChatRoomContent() {
   const updateCallStatus = (status: 'ringing' | 'connected' | 'ended') => {
     setCallStatus(status);
     callStatusRef.current = status;
+  };
+
+  const cleanupRtcResources = async () => {
+    if (localAudioRef.current) {
+      try {
+        localAudioRef.current.stop();
+        localAudioRef.current.close();
+      } catch { }
+      localAudioRef.current = null;
+    }
+    if (localVideoRef.current) {
+      try {
+        localVideoRef.current.stop();
+        localVideoRef.current.close();
+      } catch { }
+      localVideoRef.current = null;
+    }
+    if (rtcClientRef.current) {
+      try { await rtcClientRef.current.leave(); } catch { }
+      rtcClientRef.current = null;
+    }
   };
 
   const toggleSelection = (id: string) => {
@@ -344,21 +366,7 @@ function ChatRoomContent() {
       await sendCallBroadcast('call-ended');
     }
 
-    // Stop tracks using refs (guaranteed, immune to React stale state)
-    if (localAudioRef.current) {
-      localAudioRef.current.stop();
-      localAudioRef.current.close();
-      localAudioRef.current = null;
-    }
-    if (localVideoRef.current) {
-      localVideoRef.current.stop();
-      localVideoRef.current.close();
-      localVideoRef.current = null;
-    }
-    if (rtcClientRef.current) {
-      try { await rtcClientRef.current.leave(); } catch { }
-      rtcClientRef.current = null;
-    }
+    await cleanupRtcResources();
 
     if (callTimeoutRef.current) {
       clearTimeout(callTimeoutRef.current);
@@ -378,6 +386,7 @@ function ChatRoomContent() {
     setIsSwitchingCamera(false);
     isAcceptingIncomingRef.current = false;
     setIsAcceptingIncoming(false);
+    setCallError(null);
 
     // Also reset any ringing vibrations or sounds if any
     Haptics.impact({ style: ImpactStyle.Light }).catch(() => { });
@@ -491,6 +500,7 @@ function ChatRoomContent() {
 
   const startCall = async (type: 'voice' | 'video') => {
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+    setCallError(null);
     setCallType(type);
     setIsCalling(true);
     setIsIncomingCall(false);
@@ -551,6 +561,7 @@ function ChatRoomContent() {
 
     } catch (e) {
       console.error("Call start failed", e);
+      setCallError(e instanceof Error ? e.message : 'Unable to start the call. Please check your connection and permissions.');
       endCall();
     }
   };
@@ -559,6 +570,7 @@ function ChatRoomContent() {
     if (isAcceptingIncomingRef.current) return;
     isAcceptingIncomingRef.current = true;
     setIsAcceptingIncoming(true);
+    setCallError(null);
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
     // Don't mark connected yet — wait until Agora join succeeds
     updateCallStatus('ringing');
@@ -588,8 +600,9 @@ function ChatRoomContent() {
       }
     } catch (e) {
       console.error("Call accept failed", e);
-      // Local accept errors should not look like user-decline to the caller.
-      endCall(false);
+      await cleanupRtcResources();
+      setCallError(e instanceof Error ? e.message : 'Could not join the call. Check permissions, internet access, and retry.');
+      updateCallStatus('ringing');
     } finally {
       isAcceptingIncomingRef.current = false;
       setIsAcceptingIncoming(false);
@@ -1625,6 +1638,11 @@ function ChatRoomContent() {
                     ? `Ringing...`
                     : `Connected`}
               </p>
+              {callError && (
+                <div className="mt-5 max-w-sm rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-100">
+                  {callError}
+                </div>
+              )}
             </div>
 
             {/* Video Canvas for Video Calls */}

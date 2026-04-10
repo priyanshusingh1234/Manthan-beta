@@ -62,6 +62,7 @@ function normalizePost(p: any, profilesMap: Map<string, any>, currentUserId: str
     const profile = profilesMap.get(p.author_id);
     let finalContent = p.content || '';
     let isPinned = false;
+    const likesCount = Array.isArray(p.post_likes) ? p.post_likes.length : (p.likes_count || 0);
 
     if (finalContent.startsWith('[PINNED]')) {
         isPinned = true;
@@ -73,7 +74,7 @@ function normalizePost(p: any, profilesMap: Map<string, any>, currentUserId: str
         type: 'post',
         content: finalContent,
         image_url: p.image_url,
-        likes_count: p.likes_count || 0,
+        likes_count: likesCount,
         comments_count: p.comments_count || 0,
         created_at: p.created_at,
         is_pinned: isPinned,
@@ -467,7 +468,8 @@ export async function GET(req: NextRequest) {
                     const isFollowed = followingIds.includes(p.author_id);
                     const isSchoolmate = userSchoolName && profilesMap.get(p.author_id)?.school === userSchoolName;
                     
-                    if (norm.is_pinned || isFollowed || isSchoolmate || (p.likes_count || 0) > 5) {
+                    const likesCount = Array.isArray(p.post_likes) ? p.post_likes.length : (p.likes_count || 0);
+                    if (norm.is_pinned || isFollowed || isSchoolmate || likesCount > 5) {
                         if (isFollowed && !norm.is_pinned) { 
                             norm._feedLabel = '👤 Post from Peer You Follow'; 
                             norm._feedScore = 95; 

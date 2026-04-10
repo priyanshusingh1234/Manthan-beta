@@ -35,12 +35,13 @@ export async function GET(req: NextRequest) {
             .map(p => {
                 const profile = profilesMap.get(p.author_id);
                 const isGhost = profile?.is_ghost === true;
+                const likesCount = Array.isArray(p.post_likes) ? p.post_likes.length : (p.likes_count || 0);
 
                 return {
                     id: p.id,
                     content: p.content,
                     image_url: p.image_url,
-                    likes_count: p.likes_count || 0,
+                    likes_count: likesCount,
                     comments_count: p.comments_count || 0,
                     created_at: p.created_at,
                     is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,

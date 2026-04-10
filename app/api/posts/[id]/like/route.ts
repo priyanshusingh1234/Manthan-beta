@@ -34,12 +34,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         if (existingLike) {
             // Unlike it
             await supabaseAdmin.from('post_likes').delete().eq('id', existingLike.id);
-            currentCount = Math.max(0, currentCount - 1);
         } else {
             // Like it
             await supabaseAdmin.from('post_likes').insert({ post_id: postId, user_id: user.id });
-            currentCount += 1;
         }
+
+        const { count: freshCount } = await supabaseAdmin
+            .from('post_likes')
+            .select('id', { count: 'exact', head: true })
+            .eq('post_id', postId);
+
+        currentCount = freshCount ?? currentCount;
 
         await supabaseAdmin.from('posts').update({ likes_count: currentCount }).eq('id', postId);
 

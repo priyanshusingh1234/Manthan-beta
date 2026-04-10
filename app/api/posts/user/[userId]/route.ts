@@ -39,11 +39,13 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
                 isPinned = true;
                 finalContent = finalContent.substring(8).trim();
             }
+            const likesCount = Array.isArray(p.post_likes) ? p.post_likes.length : (p.likes_count || 0);
 
             return {
                 ...p,
                 content: finalContent,
                 is_pinned: isPinned,
+                likes_count: likesCount,
                 is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
                 author: {
                     id: userId,
