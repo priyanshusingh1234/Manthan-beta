@@ -44,7 +44,8 @@ export default function PostCard({
 
     const suggestionsRef = useRef<HTMLDivElement>(null);
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true }).replace('about ', '').replace('less than ', '');
-    const isOwner = Boolean(currentUserId && post.author?.id === currentUserId);
+    const ownerId = post.author?.id || post.author_id || null;
+    const isOwner = Boolean(currentUserId && ownerId === currentUserId);
 
     const [isAdmin, setIsAdmin] = useState(false);
     const [isPinning, setIsPinning] = useState(false);
@@ -214,7 +215,12 @@ export default function PostCard({
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${session?.access_token}` },
             });
-            if (res.ok) onUpdate?.();
+            if (!res.ok) {
+                const message = await res.text();
+                throw new Error(message || 'Failed to delete post');
+            }
+            onUpdate?.();
+            setShowMenu(false);
         } finally { setDeletingPost(false); }
     };
 
@@ -293,7 +299,7 @@ export default function PostCard({
                     {/* Admin Pinned Ribbon */}
                     {post.is_pinned && !isSinglePost && (
                         <div className="flex items-center gap-1.5 text-slate-500 font-bold text-xs uppercase tracking-widest mb-2">
-                            <span className="text-[10px]">📌</span> Pinned by Admin
+                            <span className="text-[10px]">📌</span> Pinned
                         </div>
                     )}
                     
