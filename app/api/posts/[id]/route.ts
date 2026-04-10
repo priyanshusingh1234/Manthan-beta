@@ -109,7 +109,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
             .maybeSingle();
 
         if (postError) throw postError;
-        if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+        if (!post) return NextResponse.json({ ok: true, alreadyDeleted: true });
         if (post.author_id !== user.id) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }

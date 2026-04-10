@@ -56,7 +56,8 @@ export default function PublicProfileTabs({
     try {
         const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch(`/api/posts/user/${userId}`, {
-            headers: session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}
+          headers: session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {},
+          cache: 'no-store'
         });
         if (res.ok) {
             const data = await res.json();

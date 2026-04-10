@@ -16,7 +16,8 @@ export default function SocialFeedPage() {
         setLoading(true);
         try {
             const res = await fetch('/api/posts', {
-                headers: userId ? { Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}` } : {}
+                headers: userId ? { Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}` } : {},
+                cache: 'no-store'
             });
             const data = await res.json();
             if (res.ok) setPosts(data);

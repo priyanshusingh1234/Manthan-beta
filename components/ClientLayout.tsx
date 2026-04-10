@@ -360,7 +360,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <>
       {!hideMainSidebar && <DesktopSidebar />}
-      <div className={`${hideMainSidebar ? 'lg:pl-0' : 'lg:pl-64'} ${showBottomNav && !hideBottomNav ? 'pb-20' : ''}`}>
+      <div
+        className={`${hideMainSidebar ? 'lg:pl-0' : 'lg:pl-64'} ${showBottomNav && !hideBottomNav ? 'pb-20' : ''}`}
+        style={showBottomNav && !hideBottomNav ? { paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' } : undefined}
+      >
         {!hideMainSidebar && !isIndividualTest && !isChatPage && <Header isMobile={isMobile} />}
         {children}
         {showBottomNav && !hideBottomNav && <BottomNav />}

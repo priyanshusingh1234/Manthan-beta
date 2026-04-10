@@ -376,7 +376,7 @@ html, body {
   padding-left: env(safe-area-inset-left);
 }
 .pb-nav {
-  padding-bottom: 5rem;
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
 }
 
 /* Native-feel button press */

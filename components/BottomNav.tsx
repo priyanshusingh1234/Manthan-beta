@@ -31,7 +31,10 @@ const BottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 w-full z-[100] transform-gpu bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl border-t border-white/60 dark:border-slate-800/80 shadow-[0_-6px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-6px_20px_rgba(0,0,0,0.4)]">
+    <nav
+      className="fixed bottom-0 left-0 right-0 w-full z-[100] transform-gpu bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl border-t border-white/60 dark:border-slate-800/80 shadow-[0_-6px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-6px_20px_rgba(0,0,0,0.4)]"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}
+    >
 
       {/* Glass gradient overlay for extra shine */}
       <div className="absolute inset-0 bg-gradient-to-b from-white/40 dark:from-slate-800/20 to-white/10 dark:to-transparent pointer-events-none" />
