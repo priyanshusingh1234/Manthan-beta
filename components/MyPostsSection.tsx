@@ -44,6 +44,19 @@ export default function MyPostsSection() {
     loadPosts();
   }, []);
 
+  useEffect(() => {
+    const onFocus = () => {
+      loadPosts();
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, []);
+
   return (
     <div className="mt-8 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-6 sm:p-10 border border-slate-100 dark:border-slate-800 relative overflow-hidden">
       <div className="flex items-center justify-between mb-8">

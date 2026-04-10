@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
                     }
                 };
             })
-            .filter(p => !p.author.isGhost);
+            .filter(p => !p.author.isGhost || (currentUserId ? p.author.id === currentUserId : false));
 
         return NextResponse.json(enriched);
     } catch (err: any) {
