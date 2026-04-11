@@ -46,34 +46,16 @@ let notifAudioUnlocked = false;
 let notifAudioContext: AudioContext | null = null;
 function unlockNotifAudio() {
   if (notifAudioUnlocked) return;
-  try {
-    const audio = document.getElementById('chat-notif-audio') as HTMLAudioElement;
-    if (!audio) return;
-    if (!notifAudioContext && typeof window !== 'undefined') {
-      notifAudioContext = new AudioContext();
-    }
-    if (notifAudioContext?.state === 'suspended') {
-      notifAudioContext.resume().catch(() => {});
-    }
-    const playPromise = audio.play();
-    if (playPromise) {
-      playPromise
-        .then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-          notifAudioUnlocked = true;
-        })
-        .catch(() => {});
-    }
-  } catch {}
+  notifAudioUnlocked = true;
 }
 function playNotifSound() {
   try {
-    const audio = document.getElementById('chat-notif-audio') as HTMLAudioElement;
-    if (audio) {
-      audio.currentTime = 0;
-      audio.volume = 0.5;
-      audio.play().catch(() => {});
+    if (typeof window !== 'undefined' && (window as any).playGlobalNotifSound) {
+      (window as any).playGlobalNotifSound();
+    } else {
+        const fallback = new Audio('/universfield-new-notification-040-493469.mp3');
+        fallback.volume = 1.0;
+        fallback.play().catch(() => {});
     }
   } catch {}
 }
@@ -653,6 +635,13 @@ function ChatRoomContent() {
       const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
       const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
       rtcClientRef.current = client;
+      
+      client.on('user-published', async (remoteUser: any, mediaType: 'video' | 'audio') => {
+        await client.subscribe(remoteUser, mediaType as any);
+        if (mediaType === 'video') setRemoteVideoTrack(remoteUser.videoTrack);
+        if (mediaType === 'audio') remoteUser.audioTrack?.play();
+      });
+      
       const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '';
       const uid = Math.floor(Math.random() * 100000);
       let token: string | null = null;
@@ -672,16 +661,24 @@ function ChatRoomContent() {
         throw new Error('Calling is not configured. Missing Agora App ID or token.');
       }
       await client.join(appId, roomId, token, uid);
-      const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+      
+      let audioTrack, videoTrack;
+      if (type === 'video') {
+          const tracks = await AgoraRTC.createMicrophoneAndCameraTracks();
+          audioTrack = tracks[0];
+          videoTrack = tracks[1];
+      } else {
+          audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+      }
+      
       localAudioTrackRef.current = audioTrack;
-      localVideoTrackRef.current = videoTrack;
-      if (type === 'video') setLocalVideoTrack(videoTrack);
-      await client.publish([audioTrack, ...(type === 'video' ? [videoTrack] : [])]);
-      client.on('user-published', async (remoteUser: any, mediaType: 'video' | 'audio') => {
-        await client.subscribe(remoteUser, mediaType as any);
-        if (mediaType === 'video') setRemoteVideoTrack(remoteUser.videoTrack);
-        if (mediaType === 'audio') remoteUser.audioTrack?.play();
-      });
+      if (videoTrack) {
+          localVideoTrackRef.current = videoTrack;
+          setLocalVideoTrack(videoTrack);
+      }
+      
+      await client.publish([audioTrack, ...(videoTrack ? [videoTrack] : [])]);
+      
       setCallState('active');
       // Notify other party only if we are starting a NEW call, not answering an existing one
       if (!isAnswering) {
@@ -722,7 +719,10 @@ function ChatRoomContent() {
     setCallState('idle');
     setRemoteVideoTrack(null);
     setLocalVideoTrack(null);
+    
+    // Only insert CALL_ENDED if it was an active call or if we are outright terminating it
     await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_ENDED__: ${callType} call ended`, message_type: 'text' });
+    
     channelRef.current?.send({
       type: 'broadcast',
       event: 'call-ended',
@@ -778,7 +778,7 @@ function ChatRoomContent() {
 
         {callState === 'incoming' ? (
           <div className="relative z-10 flex items-center justify-center gap-12 mb-8 scale-110">
-            <button onClick={() => setCallState('idle')} className="w-16 h-16 rounded-full bg-rose-600 flex items-center justify-center shadow-xl shadow-rose-900/40 active:scale-90 transition-transform">
+            <button onClick={endCall} className="w-16 h-16 rounded-full bg-rose-600 flex items-center justify-center shadow-xl shadow-rose-900/40 active:scale-90 transition-transform">
               <PhoneOff className="w-7 h-7 text-white" />
             </button>
             <button onClick={() => startCall(callType, true)} className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center shadow-xl shadow-green-900/40 active:scale-90 transition-transform animate-bounce">

@@ -24,31 +24,46 @@ export default function GlobalChatListener() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   useEffect(() => {
-    let audioContext: AudioContext | null = null;
+    let audioCtx: AudioContext | null = null;
+    let audioBuffer: AudioBuffer | null = null;
+
+    // Preload audio securely via fetch
+    fetch('/universfield-new-notification-040-493469.mp3')
+      .then(res => res.arrayBuffer())
+      .then(buffer => {
+        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        return audioCtx.decodeAudioData(buffer);
+      })
+      .then(decoded => {
+        audioBuffer = decoded;
+      })
+      .catch(() => {});
+
     const unlockAudio = () => {
-      const audio = audioRef.current;
-      if (!audio) return;
-      if (!audioContext && typeof window !== 'undefined') {
-        audioContext = new AudioContext();
-      }
-      if (audioContext?.state === 'suspended') {
-        audioContext.resume().catch(() => {});
-      }
-      // Instead of muted play/pause, just ensure it's loaded
-      const playPromise = audio.play();
-      if (playPromise) {
-        playPromise
-          .then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-          })
-          .catch(() => {});
+      if (audioCtx?.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
       }
     };
 
     window.addEventListener('pointerdown', unlockAudio, { once: true });
     window.addEventListener('keydown', unlockAudio, { once: true });
     
+    // Attach to window so we can trigger it anywhere if needed
+    (window as any).playGlobalNotifSound = () => {
+      if (!audioCtx || !audioBuffer) {
+        // Fallback to HTML Audio
+        const fallback = new Audio('/universfield-new-notification-040-493469.mp3');
+        fallback.volume = 1.0;
+        fallback.play().catch(() => {});
+        return;
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      const source = audioCtx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioCtx.destination);
+      source.start(0);
+    };
+
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setUser(user);
     });
@@ -56,6 +71,7 @@ export default function GlobalChatListener() {
     return () => {
       window.removeEventListener('pointerdown', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
+      delete (window as any).playGlobalNotifSound;
     };
   }, []);
 
@@ -77,10 +93,9 @@ export default function GlobalChatListener() {
           // Don't notify if user is already in this chat room
           if (pathname === `/chat/${msg.room_id}`) return;
 
-          // Play Sound
-          if (audioRef.current) {
-            audioRef.current.currentTime = 0;
-            audioRef.current.play().catch(() => {});
+          // Play Sound via Web Audio API (Highly reliable on mobile)
+          if (typeof window !== 'undefined' && (window as any).playGlobalNotifSound) {
+            (window as any).playGlobalNotifSound();
           }
 
           // Fetch sender profile for the notification
