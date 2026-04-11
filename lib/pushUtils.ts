@@ -33,11 +33,38 @@ export async function subscribeToPushNotifications() {
             }
 
             // 2. Register for push (this generates the device token)
-            await PushNotifications.register();
+            const token = await new Promise<string>((resolve, reject) => {
+                let resolved = false;
+                PushNotifications.addListener('registration', (token) => {
+                    if (resolved) return;
+                    resolved = true;
+                    resolve(token.value);
+                });
+                PushNotifications.addListener('registrationError', (err) => {
+                    if (resolved) return;
+                    resolved = true;
+                    reject(err);
+                });
+                PushNotifications.register();
+            });
 
-            // Note: Registration listeners should ideally be in a central place (e.g., ClientLayout or a hook).
-            // But here we can wait for the token once if possible, or assume it's being handled.
-            // For now, we'll return true to indicate the process started.
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) throw new Error('No auth session for push registration');
+
+            const res = await fetch('/api/push/native-subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ token })
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Failed to save native push token');
+            }
+
             return true;
 
         } catch (err: any) {

@@ -43,6 +43,25 @@ async function vibrate(style: 'light' | 'medium' = 'light') {
 
 // ─── Sound ──────────────────────────────────────────────────────────────────
 let notifAudio: HTMLAudioElement | null = null;
+let notifAudioUnlocked = false;
+function unlockNotifAudio() {
+  if (notifAudioUnlocked) return;
+  try {
+    if (!notifAudio) notifAudio = new Audio('/universfield-new-notification-040-493469.mp3');
+    notifAudio.muted = true;
+    const playPromise = notifAudio.play();
+    if (playPromise) {
+      playPromise
+        .then(() => {
+          notifAudio?.pause();
+          if (notifAudio) notifAudio.currentTime = 0;
+          if (notifAudio) notifAudio.muted = false;
+          notifAudioUnlocked = true;
+        })
+        .catch(() => {});
+    }
+  } catch {}
+}
 function playNotifSound() {
   try {
     if (!notifAudio) notifAudio = new Audio('/universfield-new-notification-040-493469.mp3');
@@ -386,11 +405,21 @@ function ChatRoomContent() {
   }, [roomId, router, scrollToBottom, syncBlockStatus]);
 
   useEffect(() => {
+    const unlock = () => unlockNotifAudio();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!user?.id) return;
     const interval = setInterval(() => {
       void syncMessages(user.id);
       void syncBlockStatus();
-    }, 7000);
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [user?.id, syncMessages, syncBlockStatus]);
@@ -512,6 +541,16 @@ function ChatRoomContent() {
     setSelectedIds([]);
   };
 
+  const deleteForMe = (ids: string[]) => {
+    const roomDeletedKey = `deleted_for_me_${roomId}`;
+    const existing = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
+    const updated = [...new Set([...existing, ...ids])];
+    localStorage.setItem(roomDeletedKey, JSON.stringify(updated));
+    setMessages(p => p.filter(m => !ids.includes(m.id)));
+    setIsSelectionMode(false);
+    setSelectedIds([]);
+  };
+
   // ─── Image upload ─────────────────────────────────────────────────────────
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -538,8 +577,23 @@ function ChatRoomContent() {
       const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
       rtcClientRef.current = client;
       const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '';
-      const token = null;
       const uid = Math.floor(Math.random() * 100000);
+      let token: string | null = null;
+      try {
+        const tokenRes = await fetch(`/api/agora/token?channel=${encodeURIComponent(roomId)}&uid=${uid}`, { cache: 'no-store' });
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          token = tokenData?.token || null;
+        } else {
+          const tokenErr = await tokenRes.json().catch(() => ({}));
+          throw new Error(tokenErr.error || 'Failed to fetch Agora token');
+        }
+      } catch (tokenError: any) {
+        throw new Error(tokenError?.message || 'Failed to fetch Agora token');
+      }
+      if (!appId || !token) {
+        throw new Error('Calling is not configured. Missing Agora App ID or token.');
+      }
       await client.join(appId, roomId, token, uid);
       const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
       localAudioTrackRef.current = audioTrack;
@@ -670,9 +724,22 @@ function ChatRoomContent() {
             </button>
             <button
               onClick={() => {
+                if (!selectedIds.length) return;
+
                 const mine = selectedIds.filter(id => messages.find(m => m.id === id)?.sender_id === user?.id);
-                if (!mine.length) return alert('Can only delete your own messages');
-                if (confirm(`Delete ${mine.length} message(s)?`)) deleteMessages(mine);
+                const deleteEverywhere = confirm('Delete for everyone? Click Cancel to delete only for you.');
+
+                if (deleteEverywhere) {
+                  if (mine.length !== selectedIds.length) {
+                    return alert('You can delete for everyone only your own messages.');
+                  }
+                  if (confirm(`Delete ${mine.length} message(s) for everyone?`)) {
+                    deleteMessages(mine);
+                  }
+                  return;
+                }
+
+                deleteForMe(selectedIds);
               }}
               className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-rose-500"
             >

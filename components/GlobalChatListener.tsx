@@ -25,10 +25,34 @@ export default function GlobalChatListener() {
   
   useEffect(() => {
     audioRef.current = new Audio('/universfield-new-notification-040-493469.mp3');
+
+    const unlockAudio = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      audio.muted = true;
+      const playPromise = audio.play();
+      if (playPromise) {
+        playPromise
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.muted = false;
+          })
+          .catch(() => {});
+      }
+    };
+
+    window.addEventListener('pointerdown', unlockAudio, { once: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
     
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setUser(user);
     });
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
   }, []);
 
   // Performance Fix: Replaced global poll interval with Realtime subscription
@@ -115,9 +139,7 @@ export default function GlobalChatListener() {
                 <span className="text-[10px] text-gray-500 font-medium">Just now</span>
               </div>
               <p className="text-[13px] text-gray-600 dark:text-gray-400 truncate">
-                {toastMessage.content.startsWith('http') && toastMessage.content.includes('/avatars/') 
-                  ? '📷 Photo' 
-                  : toastMessage.content}
+                New message
               </p>
             </div>
           </div>

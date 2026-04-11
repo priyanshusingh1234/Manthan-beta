@@ -6,7 +6,7 @@ export async function POST(req: Request) {
   try {
     const { receiverId, senderId, content, roomId } = await req.json();
 
-    if (!receiverId || !roomId || !content || !senderId) {
+    if (!receiverId || !roomId || !senderId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       userId: receiverId,
       type: 'chat_message',
       title: `New message from ${realSenderName}`,
-      body: content,
+      body: 'New message',
       href: `/chat/${roomId}`
     });
 
