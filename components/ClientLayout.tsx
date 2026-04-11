@@ -13,6 +13,7 @@ import { StatusBar } from '@capacitor/status-bar';
 import { ActivityTracker } from '@/lib/activityTracker';
 import CongratsBadgeModal from '@/components/CongratsBadgeModal';
 import GlobalCallListener from '@/components/GlobalCallListener';
+import GlobalPrefetcher from '@/components/GlobalPrefetcher';
 
 
 let nativePushInitialized = false;
@@ -372,6 +373,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {isAuthenticated && <CongratsBadgeModal />}
       {isAuthenticated && <GlobalChatListener />}
       {isAuthenticated && <GlobalCallListener />}
+      <GlobalPrefetcher isAuthenticated={isAuthenticated} />
     </>
   );
 }
