@@ -82,23 +82,46 @@ const MessageItem = memo(function MessageItem({
 
   // Swipe state
   const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
   const [swipeX, setSwipeX] = useState(0);
   const swiping = useRef(false);
+  const isScrolling = useRef(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
     swiping.current = true;
+    isScrolling.current = false;
   };
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!swiping.current) return;
-    const delta = e.touches[0].clientX - touchStartX.current;
-    if (!isMe && delta > 0) setSwipeX(Math.min(delta, 72));
-    if (isMe && delta < 0) setSwipeX(Math.max(delta, -72));
+    if (!swiping.current || isScrolling.current) return;
+    
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+
+    // Detect if user is scrolling vertically
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+      isScrolling.current = true;
+      setSwipeX(0);
+      return;
+    }
+
+    // Apply resistance (logarithmic-like)
+    const resistance = covers(Math.abs(dx));
+    function covers(x: number) {
+      if (x < 30) return x;
+      return 30 + (x - 30) * 0.4;
+    }
+
+    const val = dx > 0 ? resistance : -resistance;
+
+    if (!isMe && dx > 0) setSwipeX(Math.min(val, 80));
+    if (isMe && dx < 0) setSwipeX(Math.max(val, -80));
   };
   const handleTouchEnd = () => {
     swiping.current = false;
-    const threshold = isMe ? -55 : 55;
-    if ((!isMe && swipeX >= threshold) || (isMe && swipeX <= threshold)) {
+    const triggerThreshold = 65;
+    if ((!isMe && swipeX >= triggerThreshold) || (isMe && swipeX <= -triggerThreshold)) {
       vibrate('light');
       onReply(msg);
     }
@@ -297,10 +320,14 @@ function ChatRoomContent() {
       }
 
       if (mRes.data) {
-        setMessages(mRes.data);
+        const roomDeletedKey = `deleted_for_me_${roomId}`;
+        const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
+        const filtered = mRes.data.filter(m => !deletedIds.includes(m.id));
+        
+        setMessages(filtered);
         setLoading(false);
-        localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(mRes.data));
-        const unread = mRes.data.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id);
+        localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filtered));
+        const unread = filtered.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id);
         if (unread.length) supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
       }
       setTimeout(() => scrollToBottom('auto'), 120);
@@ -686,10 +713,22 @@ function ChatRoomContent() {
                   setShowContextSheet(false);
                 }
               },
-              ...(contextMsg.sender_id === user?.id ? [{
-                icon: Trash2, label: 'Delete', color: 'text-rose-500', action: () => {
+              {
+                icon: Trash2, label: 'Delete for Me', color: 'text-rose-500', action: () => {
                   setShowContextSheet(false);
-                  if (confirm('Delete this message?')) deleteMessages([contextMsg.id]);
+                  if (confirm('Delete this message for you?')) {
+                    const roomDeletedKey = `deleted_for_me_${roomId}`;
+                    const existing = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
+                    const updated = [...new Set([...existing, contextMsg.id])];
+                    localStorage.setItem(roomDeletedKey, JSON.stringify(updated));
+                    setMessages(p => p.filter(m => m.id !== contextMsg.id));
+                  }
+                }
+              },
+              ...(contextMsg.sender_id === user?.id ? [{
+                icon: Trash2, label: 'Delete for Everyone', color: 'text-rose-600', action: () => {
+                  setShowContextSheet(false);
+                  if (confirm('Delete this message for everyone?')) deleteMessages([contextMsg.id]);
                 }
               }] : []),
             ].map(({ icon: Icon, label, color, action }) => (
