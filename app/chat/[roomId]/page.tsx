@@ -734,36 +734,38 @@ function ChatRoomContent() {
                   </button>
                   <button
                     onClick={async () => {
-                      setShowHeaderMenu(false);
-                      const partId = participant?.user_id;
-                      if (!partId || !user?.id) return;
-                      const { data: { session } } = await supabase.auth.getSession();
-                      if (!session?.access_token) return alert('Please sign in again to update block settings.');
+                      try {
+                        setShowHeaderMenu(false);
+                        const partId = participant?.user_id;
+                        if (!partId || !user?.id) return;
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session?.access_token) return alert('Please sign in again to update block settings.');
 
-                      const res = await fetch('/api/chat/block', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          Authorization: `Bearer ${session.access_token}`,
-                        },
-                        body: JSON.stringify({
-                          targetUserId: partId,
-                          action: isBlocked ? 'unblock' : 'block',
-                        }),
-                      });
+                        const res = await fetch('/api/chat/block', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${session.access_token}`,
+                          },
+                          body: JSON.stringify({
+                            targetUserId: partId,
+                            action: isBlocked ? 'unblock' : 'block',
+                          }),
+                        });
 
-                      const payload = await res.json().catch(() => ({}));
-                      if (!res.ok) {
-                        throw new Error(payload.error || 'Unable to update block settings');
+                        const payload = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                          throw new Error(payload.error || 'Unable to update block settings');
+                        }
+
+                        alert(isBlocked ? `${participant?.full_name} has been unblocked.` : `${participant?.full_name} has been blocked.`);
+                        setIsBlocked(!isBlocked);
+                        if (!isBlocked) {
+                          router.push('/chat');
+                        }
+                      } catch (err: any) {
+                        alert(err.message || 'Unable to update block settings');
                       }
-
-                      alert(isBlocked ? `${participant?.full_name} has been unblocked.` : `${participant?.full_name} has been blocked.`);
-                      setIsBlocked(!isBlocked);
-                      if (!isBlocked) {
-                        router.push('/chat');
-                      }
-                    } catch (err: any) {
-                      alert(err.message || 'Unable to update block settings');
                     }}
                     className={`w-full text-left px-4 py-3.5 text-sm font-semibold hover:bg-red-50 dark:hover:bg-rose-900/10 flex items-center gap-3 active:bg-red-50 border-t border-slate-100 dark:border-slate-800 ${isBlocked ? 'text-indigo-500' : 'text-rose-500'}`}
                   >
