@@ -533,7 +533,22 @@ function ChatRoomContent() {
     try {
       const { data, error } = await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content, message_type: 'text' }).select('*').single();
       if (error) throw error;
-      if (data) setMessages(p => p.map(m => m.id === tempId ? data : m));
+      if (data) {
+        setMessages(p => p.map(m => m.id === tempId ? data : m));
+        // Send Push Notification
+        if (participant?.user_id) {
+          fetch('/api/chat/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              receiverId: participant.user_id,
+              senderId: user.id,
+              roomId: roomId,
+              content: content.substring(0, 50)
+            })
+          }).catch(() => {});
+        }
+      }
     } catch {
       setMessages(p => p.filter(m => m.id !== tempId));
       setNewMessage(content);
@@ -570,6 +585,29 @@ function ChatRoomContent() {
       formData.append('roomId', roomId);
       const res = await fetch('/api/chat/upload', { method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}` }, body: formData });
       if (!res.ok) throw new Error('Upload failed');
+      const uploadData = await res.json();
+      
+      const { data, error } = await supabase.from('chat_messages').insert({ 
+        room_id: roomId, 
+        sender_id: user.id, 
+        content: uploadData.publicUrl, 
+        message_type: 'image' 
+      }).select('*').single();
+      
+      if (error) throw error;
+      
+      if (participant?.user_id) {
+        fetch('/api/chat/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            receiverId: participant.user_id,
+            senderId: user.id,
+            roomId: roomId,
+            content: '📸 Image'
+          })
+        }).catch(() => {});
+      }
     } catch (err: any) { alert(err.message); }
     finally { setUploadingImage(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
   };
@@ -625,6 +663,20 @@ function ChatRoomContent() {
             type,
           }
         }).catch(() => {});
+        
+        // Push notification for incoming call
+        if (participant?.user_id) {
+            fetch('/api/chat/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    receiverId: participant.user_id,
+                    senderId: user.id,
+                    roomId: roomId,
+                    content: `📞 Incoming ${type} call`
+                })
+            }).catch(() => {});
+        }
       }
     } catch (err) { console.error('[Agora]', err); setCallState('idle'); }
   };
