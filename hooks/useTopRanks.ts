@@ -22,7 +22,7 @@ export function useTopRanks() {
             }
 
             try {
-                const res = await fetch('/api/leaderboard', { cache: 'no-store' });
+                const res = await fetch(`/api/leaderboard?t=${Date.now()}`, { cache: 'no-store' });
                 if (res.ok) {
                     const data = await res.json();
                     const newRanks: Record<string, number> = {};

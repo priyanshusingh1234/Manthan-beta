@@ -681,7 +681,7 @@ const StudentProfile: React.FC = () => {
                     <div className="text-3xl font-black mb-2 tracking-tighter">Genius</div>
                     <div className="text-[10px] flex items-center justify-center gap-1.5 font-bold text-slate-400 bg-black/20 py-1 px-4 rounded-full border border-white/5">
                       <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                      Rank #{userData.rankNumber || '?'}
+                      Rank #{profileRank || '?'}
                     </div>
                   </div>
                 </div>
@@ -711,7 +711,7 @@ const StudentProfile: React.FC = () => {
                 <div className="text-2xl font-black tracking-tighter">Genius</div>
                 <div className="text-[9px] flex items-center justify-center gap-1 font-bold text-slate-400 mt-1">
                   <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                  #{userData.rankNumber || '?'}
+                  #{profileRank || '?'}
                 </div>
               </div>
             </div>

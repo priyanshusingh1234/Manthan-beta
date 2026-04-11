@@ -53,16 +53,13 @@ export default function TopStudents() {
 
     const load = useCallback(async () => {
         try {
-            // Always bypass cache with timestamp — never serve stale leaderboard data
-            const res = await fetch(`/api/leaderboard?t=${Date.now()}`, {
-                cache: 'no-store',
-                headers: { 'Cache-Control': 'no-cache, no-store' },
-            });
-            if (!res.ok) return;
-            const data = await res.json();
-            if (data.topBrains) {
-                setStudents(data.topBrains);
-                setLastUpdated(new Date());
+            const res = await fetch(`/api/leaderboard?t=${Date.now()}`, { cache: 'no-store' });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.topBrains) {
+                    setStudents(data.topBrains);
+                    setLastUpdated(new Date());
+                }
             }
         } catch {
             // silent — polling will retry
@@ -103,8 +100,11 @@ export default function TopStudents() {
 
     const topScore = students.length > 0 ? students[0].points : 1;
 
-    // Reorder for podium: [2nd, 1st, 3rd]
-    const podiumStudents = [students[1], students[0], students[2]].filter(Boolean);
+    // Explicit podium mapping to ensure rank 1 is always in the middle slot
+    const podiumStudents = [];
+    if (students[1]) podiumStudents.push({ ...students[1], slotIndex: 0 }); // 2nd
+    if (students[0]) podiumStudents.push({ ...students[0], slotIndex: 1 }); // 1st
+    if (students[2]) podiumStudents.push({ ...students[2], slotIndex: 2 }); // 3rd
 
     return (
         <aside className="rounded-3xl bg-white dark:bg-slate-900 shadow-xl ring-1 ring-black/[0.06] dark:ring-white/[0.05] overflow-hidden">
@@ -150,9 +150,9 @@ export default function TopStudents() {
                     {/* ── Podium (top 3) ─────────────────────────────────── */}
                     {podiumStudents.length >= 1 && (
                         <div className="flex items-end justify-center gap-3 px-4 -mt-6 mb-4">
-                            {podiumStudents.map((student, i) => {
-                                const p = PODIUM[i];
-                                const isFirst = i === 1;
+                            {podiumStudents.map((student) => {
+                                const p = PODIUM[student.slotIndex];
+                                const isFirst = student.slotIndex === 1;
                                 return (
                                     <Link
                                         href={`/user/${student.username}`}
