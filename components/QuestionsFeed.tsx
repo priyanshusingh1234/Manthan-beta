@@ -56,9 +56,32 @@ export default function QuestionsFeed() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center gap-3 py-12 text-slate-400 dark:text-slate-500">
-        <Loader2 className="w-8 h-8 animate-spin" />
-        <span className="text-sm font-medium">Building your personalised feed…</span>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between pb-1">
+          <div className="h-3 w-32 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse" />
+          <div className="h-8 w-28 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse" />
+        </div>
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 animate-pulse space-y-1">
+            <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded-full mb-3" />
+            
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                <div className="h-2 w-1/4 bg-slate-200 dark:bg-slate-800 rounded-full delay-75" />
+              </div>
+            </div>
+            
+            <div className="space-y-3 mb-5 pl-13">
+              <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-800 rounded-full delay-100" />
+              <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded-full delay-150" />
+              <div className="h-4 w-5/6 bg-slate-200 dark:bg-slate-800 rounded-full delay-200" />
+            </div>
+            
+            <div className="h-12 w-full bg-slate-50 dark:bg-slate-800/50 rounded-xl mt-4" />
+          </div>
+        ))}
       </div>
     );
   }
