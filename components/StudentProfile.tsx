@@ -181,10 +181,11 @@ const StudentProfile: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!mounted) return;
       setCurrentUser(user || null);
       if (user) {
+        // First set from metadata (fast)
         const meta = user.user_metadata || {};
         const metaFullName = typeof meta.fullName === 'string' ? meta.fullName : undefined;
         const metaUsername = typeof meta.username === 'string' ? meta.username : '';
@@ -197,7 +198,7 @@ const StudentProfile: React.FC = () => {
           username: metaUsername,
           school: meta.school || '',
           grade: meta.classGrade || '',
-          bio: meta.bio || ''
+          bio: metaBio || ''
         });
 
         setUserData((s) => ({
@@ -205,7 +206,7 @@ const StudentProfile: React.FC = () => {
           name: metaFullName || user.email || 'User',
           school: meta.school || s.school,
           grade: meta.classGrade || s.grade,
-          bio: meta.bio || s.bio,
+          bio: metaBio || s.bio,
           avatar: metaAvatar || s.avatar,
           username: metaUsername,
           usernameUpdates: Array.isArray(meta.username_updates) ? meta.username_updates : [],
@@ -214,6 +215,34 @@ const StudentProfile: React.FC = () => {
           battlesWon: Number(meta.battlesWon) || 0,
         }));
         setEquippedBadges(metaEquippedBadges);
+
+        // Then fetch from DB (fresh)
+        const { data: dbProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (dbProfile && mounted) {
+           setUserData((s) => ({
+             ...s,
+             name: dbProfile.full_name || s.name,
+             school: dbProfile.school || s.school,
+             bio: dbProfile.bio || s.bio,
+             avatar: dbProfile.avatar_url || s.avatar,
+             username: dbProfile.username || s.username,
+             totalPoints: Number(dbProfile.total_points) ?? s.totalPoints,
+             battlesAttempted: Number(dbProfile.battles_attempted) || 0,
+             battlesWon: Number(dbProfile.battles_won) || 0,
+           }));
+           setEditForm({
+             name: dbProfile.full_name || '',
+             username: dbProfile.username || '',
+             school: dbProfile.school || '',
+             grade: dbProfile.class_grade || '',
+             bio: dbProfile.bio || ''
+           });
+        }
       }
     });
     // Fetch real solved questions
