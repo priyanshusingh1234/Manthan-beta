@@ -42,30 +42,25 @@ async function vibrate(style: 'light' | 'medium' = 'light') {
 }
 
 // ─── Sound ──────────────────────────────────────────────────────────────────
-let notifAudio: HTMLAudioElement | null = null;
 let notifAudioUnlocked = false;
 let notifAudioContext: AudioContext | null = null;
 function unlockNotifAudio() {
   if (notifAudioUnlocked) return;
   try {
-    if (!notifAudio) {
-      notifAudio = new Audio('/universfield-new-notification-040-493469.mp3');
-      notifAudio.preload = 'auto';
-    }
+    const audio = document.getElementById('chat-notif-audio') as HTMLAudioElement;
+    if (!audio) return;
     if (!notifAudioContext && typeof window !== 'undefined') {
       notifAudioContext = new AudioContext();
     }
     if (notifAudioContext?.state === 'suspended') {
       notifAudioContext.resume().catch(() => {});
     }
-    notifAudio.muted = true;
-    const playPromise = notifAudio.play();
+    const playPromise = audio.play();
     if (playPromise) {
       playPromise
         .then(() => {
-          notifAudio?.pause();
-          if (notifAudio) notifAudio.currentTime = 0;
-          if (notifAudio) notifAudio.muted = false;
+          audio.pause();
+          audio.currentTime = 0;
           notifAudioUnlocked = true;
         })
         .catch(() => {});
@@ -74,10 +69,12 @@ function unlockNotifAudio() {
 }
 function playNotifSound() {
   try {
-    if (!notifAudio) notifAudio = new Audio('/universfield-new-notification-040-493469.mp3');
-    notifAudio.currentTime = 0;
-    notifAudio.volume = 0.5;
-    notifAudio.play().catch(() => {});
+    const audio = document.getElementById('chat-notif-audio') as HTMLAudioElement;
+    if (audio) {
+      audio.currentTime = 0;
+      audio.volume = 0.5;
+      audio.play().catch(() => {});
+    }
   } catch {}
 }
 
@@ -610,8 +607,8 @@ function ChatRoomContent() {
       localVideoTrackRef.current = videoTrack;
       if (type === 'video') setLocalVideoTrack(videoTrack);
       await client.publish([audioTrack, ...(type === 'video' ? [videoTrack] : [])]);
-      client.on('user-published', async (remoteUser: any, mediaType: string) => {
-        await client.subscribe(remoteUser, mediaType);
+      client.on('user-published', async (remoteUser: any, mediaType: 'video' | 'audio') => {
+        await client.subscribe(remoteUser, mediaType as any);
         if (mediaType === 'video') setRemoteVideoTrack(remoteUser.videoTrack);
         if (mediaType === 'audio') remoteUser.audioTrack?.play();
       });
@@ -619,7 +616,7 @@ function ChatRoomContent() {
       // Notify other party only if we are starting a NEW call, not answering an existing one
       if (!isAnswering) {
         await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_STARTED__:${type}`, message_type: 'text' });
-        supabaseRealtime.channel(`room-${roomId}`).send({
+        channelRef.current?.send({
           type: 'broadcast',
           event: 'call-invite',
           payload: {
@@ -642,7 +639,7 @@ function ChatRoomContent() {
     setRemoteVideoTrack(null);
     setLocalVideoTrack(null);
     await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_ENDED__: ${callType} call ended`, message_type: 'text' });
-    supabaseRealtime.channel(`room-${roomId}`).send({
+    channelRef.current?.send({
       type: 'broadcast',
       event: 'call-ended',
       payload: { roomId }
@@ -1029,6 +1026,7 @@ function ChatRoomContent() {
           </button>
         </div>
       </div>
+      <audio id="chat-notif-audio" src="/universfield-new-notification-040-493469.mp3" preload="auto" />
     </div>
   );
 }

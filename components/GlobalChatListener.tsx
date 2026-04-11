@@ -24,10 +24,7 @@ export default function GlobalChatListener() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   useEffect(() => {
-    audioRef.current = new Audio('/universfield-new-notification-040-493469.mp3');
-    audioRef.current.preload = 'auto';
     let audioContext: AudioContext | null = null;
-
     const unlockAudio = () => {
       const audio = audioRef.current;
       if (!audio) return;
@@ -37,14 +34,13 @@ export default function GlobalChatListener() {
       if (audioContext?.state === 'suspended') {
         audioContext.resume().catch(() => {});
       }
-      audio.muted = true;
+      // Instead of muted play/pause, just ensure it's loaded
       const playPromise = audio.play();
       if (playPromise) {
         playPromise
           .then(() => {
             audio.pause();
             audio.currentTime = 0;
-            audio.muted = false;
           })
           .catch(() => {});
       }
@@ -153,6 +149,7 @@ export default function GlobalChatListener() {
           </div>
         </motion.div>
       )}
+      <audio ref={audioRef} src="/universfield-new-notification-040-493469.mp3" preload="auto" />
     </AnimatePresence>
   );
 }
