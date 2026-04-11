@@ -162,12 +162,16 @@ const MessageItem = memo(function MessageItem({
   const handlePressEnd = () => { clearTimeout(timerRef.current); };
 
   // Call message
-  if (msg.content.startsWith('__CALL_ENDED__')) {
+  if (msg.content.startsWith('__CALL_ENDED__') || msg.content.startsWith('__CALL_STARTED__')) {
+    const isStarted = msg.content.startsWith('__CALL_STARTED__');
+    const type = msg.content.split(':')[1] || 'voice';
+    const text = isStarted ? `${type} call started` : (msg.content.replace('__CALL_ENDED__:', '').trim() || 'Call ended');
+    
     return (
       <div className="flex justify-center my-2 px-4">
         <div className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-semibold px-4 py-1.5 rounded-full flex items-center gap-1.5">
-          <Phone className="w-3 h-3" />
-          {msg.content.replace('__CALL_ENDED__:', '').trim() || 'Call ended'}
+          {type === 'video' ? <Video className="w-3 h-3" /> : <Phone className="w-3 h-3" />}
+          <span className="capitalize">{text}</span>
         </div>
       </div>
     );
@@ -313,6 +317,7 @@ function ChatRoomContent() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const channelRef = useRef<any>(null);
+  const processedCallIdRef = useRef<string | null>(null);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -342,6 +347,20 @@ function ChatRoomContent() {
     const unread = filtered.filter(m => !m.is_read && m.sender_id !== activeUserId).map(m => m.id);
     if (unread.length) {
       supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
+    }
+
+    // Smart sync for call state - run dynamically during sync polling
+    const lastMsg = filtered[filtered.length - 1];
+    if (lastMsg && lastMsg.content.startsWith('__CALL_STARTED__') && lastMsg.sender_id !== activeUserId) {
+      if (processedCallIdRef.current !== lastMsg.id) {
+        const createdAt = new Date(lastMsg.created_at).getTime();
+        if (Date.now() - createdAt < 45000) { // Active call timeframe
+          processedCallIdRef.current = lastMsg.id;
+          const type = lastMsg.content.split(':')[1] as 'voice' | 'video';
+          setCallType(type);
+          setCallState('incoming');
+        }
+      }
     }
   }, [roomId, user?.id]);
 
@@ -402,6 +421,18 @@ function ChatRoomContent() {
         localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filtered.slice(-80)));
         const unread = filtered.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id);
         if (unread.length) supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
+
+        // Resume incoming call state if the last message is a recent CALL_STARTED
+        const lastMsg = filtered[filtered.length - 1];
+        if (lastMsg && lastMsg.content.startsWith('__CALL_STARTED__') && lastMsg.sender_id !== u.id) {
+          const createdAt = new Date(lastMsg.created_at).getTime();
+          if (Date.now() - createdAt < 45000) { // Call active within last 45s
+            processedCallIdRef.current = lastMsg.id;
+            const type = lastMsg.content.split(':')[1] as 'voice' | 'video';
+            setCallType(type);
+            setCallState('incoming');
+          }
+        }
       }
       
       await syncBlockStatus();
@@ -443,6 +474,7 @@ function ChatRoomContent() {
         // Handle Call Signals
         if (msg.content.startsWith('__CALL_STARTED__')) {
           if (msg.sender_id !== user.id) {
+            processedCallIdRef.current = msg.id;
             const type = msg.content.split(':')[1] as 'voice' | 'video';
             setCallType(type);
             setCallState('incoming');
