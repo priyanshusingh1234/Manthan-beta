@@ -1,99 +1,119 @@
 'use client';
 
-import React, {
-  useState, useEffect, useRef, useCallback, useMemo, memo
-} from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import {
-  ArrowLeft, Send, Image as ImageIcon, X, Check, CheckCheck,
-  MoreVertical, Trash2, Copy, Reply as ReplyIcon, Phone, Video,
-  Loader2, Smile,
+  ArrowLeft, MoreVertical, Send, Image as ImageIcon, CheckCheck, Check,
+  Loader2, Trash2, Reply, X, Ban, Phone, Video, PhoneOff, Mic, MicOff,
+  VideoOff, Copy, MessageSquare,
 } from 'lucide-react';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
-import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────
 interface Message {
   id: string;
-  content: string;
+  room_id: string;
   sender_id: string;
+  content: string;
   created_at: string;
   is_read: boolean;
-  message_type?: string;
-  reply_to_id?: string | null;
-  reply_to?: { content: string; sender_id: string } | null;
-  local?: boolean;
+  message_type: 'text' | 'image' | 'file';
 }
-interface Participant { id: string; full_name: string; avatar_url?: string | null; username?: string; }
+interface Participant {
+  user_id: string;
+  full_name: string;
+  avatar_url: string | null;
+  username: string;
+}
+
+const MESSAGES_CACHE_KEY = (r: string) => `chat_msgs_${r}`;
+const PARTICIPANT_CACHE_KEY = (r: string) => `chat_part_${r}`;
+
+// ─── Haptics (graceful) ─────────────────────────────────────────────────────
+async function vibrate(style: 'light' | 'medium' = 'light') {
+  try {
+    const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
+    await Haptics.impact({ style: style === 'light' ? ImpactStyle.Light : ImpactStyle.Medium });
+  } catch {
+    if (navigator.vibrate) navigator.vibrate(style === 'light' ? 30 : 60);
+  }
+}
 
 // ─── Sound ──────────────────────────────────────────────────────────────────
-let msgAudio: HTMLAudioElement | null = null;
-function playMsgSound() {
+let notifAudio: HTMLAudioElement | null = null;
+function playNotifSound() {
   try {
-    if (!msgAudio) msgAudio = new Audio('/universfield-new-notification-040-493469.mp3');
-    msgAudio.currentTime = 0;
-    msgAudio.volume = 0.55;
-    msgAudio.play().catch(() => {});
+    if (!notifAudio) notifAudio = new Audio('/universfield-new-notification-040-493469.mp3');
+    notifAudio.currentTime = 0;
+    notifAudio.volume = 0.5;
+    notifAudio.play().catch(() => {});
   } catch {}
 }
 
-// ─── Date separator ─────────────────────────────────────────────────────────
-function dateSeparator(dateStr: string) {
-  const d = new Date(dateStr);
-  if (isToday(d)) return 'Today';
-  if (isYesterday(d)) return 'Yesterday';
-  return format(d, 'MMMM d, yyyy');
-}
+// ─── Agora Video Players ─────────────────────────────────────────────────────
+const RemoteVideoPlayer = memo(({ track }: { track: any }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (track && ref.current) track.play(ref.current); return () => { if (track) track.stop(); }; }, [track]);
+  return <div ref={ref} className="h-full w-full object-cover" />;
+});
+const LocalVideoPlayer = memo(({ track }: { track: any }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (track && ref.current) track.play(ref.current); }, [track]);
+  return <div ref={ref} className="h-full w-full scale-x-[-1] object-cover" />;
+});
 
-// ─── Message preview (strip reply block) ─────────────────────────────────────
-function previewContent(content: string) {
-  if (content.startsWith('> Replying to **')) {
-    const parts = content.split('\n\n');
-    return parts.slice(1).join(' ').trim() || 'Replied to a message';
-  }
-  return content;
-}
-
-// ─── Memo message bubble ─────────────────────────────────────────────────────
-const MessageBubble = memo(function MessageBubble({
-  msg, isMine, otherAvatar, otherName, selected, selectionMode,
-  onLongPress, onTap, myId,
+// ─── Message item (memoized) ─────────────────────────────────────────────────
+const MessageItem = memo(function MessageItem({
+  msg, user, participant, isSelectionMode, isSelected,
+  onToggleSelection, onLongPress, onReply, prevMsg,
 }: {
-  msg: Message; isMine: boolean; otherAvatar?: string | null; otherName: string;
-  selected: boolean; selectionMode: boolean;
-  onLongPress: (id: string) => void; onTap: (id: string) => void; myId: string;
+  msg: Message; user: any; participant: Participant | null;
+  isSelectionMode: boolean; isSelected: boolean;
+  onToggleSelection: (id: string) => void;
+  onLongPress: (msg: Message) => void;
+  onReply: (msg: Message) => void;
+  prevMsg?: Message;
 }) {
-  const longPressTimer = useRef<any>(null);
-  const [pressing, setPressing] = useState(false);
-
-  const isImageMsg = msg.message_type === 'image' || (msg.content.match(/\.(jpg|jpeg|png|webp|gif|avif)($|\?)/i));
-  const isCallMsg = msg.content.startsWith('__CALL_ENDED__');
-
-  // Extract reply context
-  let replyBlock: { author: string; text: string } | null = null;
-  let mainContent = msg.content;
-  if (mainContent.startsWith('> Replying to **')) {
-    const lines = mainContent.split('\n\n');
-    const header = lines[0];
-    const authorMatch = header.match(/\*\*(.+?)\*\*/);
-    const textMatch = header.match(/> Replying to \*\*.+?\*\*:\s*(.+)/);
-    replyBlock = { author: authorMatch?.[1] || 'Someone', text: textMatch?.[1] || '' };
-    mainContent = lines.slice(1).join('\n\n').trim();
-  }
-
+  const isMe = msg.sender_id === user?.id;
+  const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
   const timeStr = format(new Date(msg.created_at), 'h:mm a');
 
-  const handleTouchStart = () => {
-    setPressing(true);
-    longPressTimer.current = setTimeout(() => { playMsgSound(); onLongPress(msg.id); setPressing(false); }, 430);
+  // Swipe state
+  const touchStartX = useRef(0);
+  const [swipeX, setSwipeX] = useState(0);
+  const swiping = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    swiping.current = true;
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!swiping.current) return;
+    const delta = e.touches[0].clientX - touchStartX.current;
+    if (!isMe && delta > 0) setSwipeX(Math.min(delta, 72));
+    if (isMe && delta < 0) setSwipeX(Math.max(delta, -72));
   };
   const handleTouchEnd = () => {
-    clearTimeout(longPressTimer.current);
-    setPressing(false);
+    swiping.current = false;
+    const threshold = isMe ? -55 : 55;
+    if ((!isMe && swipeX >= threshold) || (isMe && swipeX <= threshold)) {
+      vibrate('light');
+      onReply(msg);
+    }
+    setSwipeX(0);
   };
 
-  if (isCallMsg) {
+  // Long press
+  const timerRef = useRef<any>(null);
+  const handlePressStart = (e: React.TouchEvent | React.MouseEvent) => {
+    timerRef.current = setTimeout(() => { vibrate('medium'); onLongPress(msg); }, 420);
+  };
+  const handlePressEnd = () => { clearTimeout(timerRef.current); };
+
+  // Call message
+  if (msg.content.startsWith('__CALL_ENDED__')) {
     return (
       <div className="flex justify-center my-2 px-4">
         <div className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-semibold px-4 py-1.5 rounded-full flex items-center gap-1.5">
@@ -104,259 +124,286 @@ const MessageBubble = memo(function MessageBubble({
     );
   }
 
+  // Parse reply
+  let replyAuthor = '', replyPreview = '', mainContent = msg.content;
+  if (mainContent.startsWith('> Replying to **')) {
+    const firstLine = mainContent.split('\n\n')[0];
+    const rest = mainContent.split('\n\n').slice(1).join('\n\n');
+    const match = firstLine.match(/\*\*(.+?)\*\*:\s*"?(.*)\"?$/);
+    replyAuthor = match?.[1] || '';
+    replyPreview = match?.[2]?.replace(/"$/, '') || '';
+    mainContent = rest;
+  }
+
   return (
-    <div
-      className={`flex items-end gap-2 px-3 my-0.5 ${isMine ? 'flex-row-reverse' : 'flex-row'} ${pressing ? 'opacity-70 scale-[0.99]' : ''} transition-all duration-75`}
-      onClick={() => selectionMode && onTap(msg.id)}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-    >
-      {/* Selection checkbox */}
-      {selectionMode && (
-        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${selected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 dark:border-slate-600'} ${isMine ? 'order-last ml-1' : 'order-first mr-1'}`}>
-          {selected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+    <div className="w-full flex flex-col">
+      {showDate && (
+        <div className="flex justify-center my-3">
+          <span className="px-3 py-1 bg-slate-200/80 dark:bg-slate-800 rounded-lg text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            {isToday(new Date(msg.created_at)) ? 'Today' : isYesterday(new Date(msg.created_at)) ? 'Yesterday' : format(new Date(msg.created_at), 'MMMM d, yyyy')}
+          </span>
         </div>
       )}
+      <div
+        className={`flex items-center gap-2 mb-0.5 px-3 ${isMe ? 'justify-end' : 'justify-start'}`}
+        style={{ transform: `translateX(${swipeX}px)`, transition: swiping.current ? 'none' : 'transform 0.2s ease' }}
+        onTouchStart={(e) => { handleTouchStart(e); handlePressStart(e); }}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={() => { handleTouchEnd(); handlePressEnd(); }}
+        onTouchCancel={handlePressEnd}
+        onContextMenu={(e) => { e.preventDefault(); onLongPress(msg); }}
+      >
+        {/* Swipe reply hint */}
+        {!isMe && swipeX > 20 && (
+          <div className="absolute left-2 opacity-70">
+            <Reply className="w-5 h-5 text-indigo-500" />
+          </div>
+        )}
+        {isMe && swipeX < -20 && (
+          <div className="absolute right-2 opacity-70">
+            <Reply className="w-5 h-5 text-indigo-500 scale-x-[-1]" />
+          </div>
+        )}
 
-      {/* Avatar for others */}
-      {!isMine && (
-        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 mb-1">
-          {otherAvatar
-            ? <Image src={otherAvatar} alt={otherName} width={32} height={32} className="object-cover w-full h-full" />
-            : <div className="w-full h-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-sm">{otherName?.[0]?.toUpperCase()}</div>
-          }
-        </div>
-      )}
+        {isSelectionMode && (
+          <div
+            onClick={() => onToggleSelection(msg.id)}
+            className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all shrink-0 ${isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 dark:border-slate-600'}`}
+          >
+            {isSelected && <Check className="h-3 w-3 text-white" strokeWidth={3.5} />}
+          </div>
+        )}
 
-      <div className={`max-w-[72%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
-        {/* Reply block */}
-        {replyBlock && (
-          <div className={`mb-1 px-3 py-1.5 rounded-xl border-l-[3px] text-[12px] max-w-full truncate ${isMine ? 'bg-indigo-500/10 border-indigo-400 text-indigo-700 dark:text-indigo-300' : 'bg-slate-100 dark:bg-slate-800 border-slate-400 text-slate-600 dark:text-slate-300'}`}>
-            <p className="font-bold truncate">{replyBlock.author}</p>
-            <p className="truncate opacity-80">{replyBlock.text}</p>
+        {/* Avatar for others */}
+        {!isMe && (
+          <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 self-end mb-0.5">
+            {participant?.avatar_url
+              ? <Image src={participant.avatar_url} alt="" width={28} height={28} className="object-cover w-full h-full" />
+              : <div className="w-full h-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-xs font-bold">{participant?.full_name?.[0]?.toUpperCase()}</div>
+            }
           </div>
         )}
 
         {/* Bubble */}
         <div
-          className={`relative rounded-2xl overflow-hidden shadow-sm ${selected ? 'ring-2 ring-indigo-500' : ''} ${isMine
-            ? 'bg-indigo-600 text-white rounded-br-sm'
-            : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-sm border border-slate-100 dark:border-slate-700/50'}`}
+          className={`max-w-[76%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+          onMouseDown={handlePressStart}
+          onMouseUp={handlePressEnd}
         >
-          {isImageMsg ? (
-            <div className="w-52 h-52 relative">
-              <Image src={msg.content} alt="sent image" fill className="object-cover" />
+          {replyAuthor && (
+            <div className={`mb-1 px-3 py-1.5 rounded-xl text-[12px] border-l-[3px] max-w-full ${isMe ? 'bg-indigo-500/10 border-indigo-400' : 'bg-slate-100 dark:bg-slate-700 border-slate-400'}`}>
+              <p className={`font-bold truncate ${isMe ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>{replyAuthor}</p>
+              <p className="truncate text-slate-500 dark:text-slate-400">{replyPreview}</p>
             </div>
-          ) : (
-            <p className="px-3.5 py-2 text-[14.5px] leading-[1.45] whitespace-pre-wrap break-words">{mainContent}</p>
           )}
-        </div>
-
-        {/* Time + read receipt */}
-        <div className={`flex items-center gap-1 mt-0.5 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
-          <span className="text-[10.5px] text-slate-400 dark:text-slate-500 font-medium">{timeStr}</span>
-          {isMine && (
-            msg.local
-              ? <Check className="w-3 h-3 text-slate-300 dark:text-slate-600" />
-              : msg.is_read
-                ? <CheckCheck className="w-3 h-3 text-indigo-500" />
-                : <Check className="w-3 h-3 text-slate-400" />
-          )}
+          <div
+            className={`rounded-2xl overflow-hidden shadow-sm ${isSelected ? 'ring-2 ring-indigo-500' : ''} ${
+              isMe
+                ? 'bg-indigo-600 text-white rounded-br-sm'
+                : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-sm border border-slate-100 dark:border-slate-700/50'
+            }`}
+          >
+            {msg.message_type === 'image' || msg.content.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
+              <div className="relative w-[200px] h-[200px]">
+                <Image src={msg.content} alt="Image" fill className="object-cover" unoptimized />
+              </div>
+            ) : (
+              <p className="px-3.5 py-2 text-[14.5px] leading-[1.5] whitespace-pre-wrap break-words">{mainContent}</p>
+            )}
+          </div>
+          <div className={`flex items-center gap-1 mt-0.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{timeStr}</span>
+            {isMe && (msg.is_read
+              ? <CheckCheck className="w-3.5 h-3.5 text-indigo-500" strokeWidth={2.5} />
+              : <Check className="w-3.5 h-3.5 text-slate-400" strokeWidth={2.5} />
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 });
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
-export default function ChatRoomPage({ params }: { params: { roomId: string } }) {
+// ═══════════════════════════════════════════════════════════════════
+// Main content component
+// ═══════════════════════════════════════════════════════════════════
+function ChatRoomContent() {
   const router = useRouter();
+  const { roomId } = useParams() as { roomId: string };
   const searchParams = useSearchParams();
-  const roomId = params.roomId;
+  const initialName = searchParams.get('name') || '';
 
   const [user, setUser] = useState<any>(null);
-  const [other, setOther] = useState<Participant | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inputText, setInputText] = useState('');
+  const [newMessage, setNewMessage] = useState('');
+  const [participant, setParticipant] = useState<Participant | null>(null);
   const [sending, setSending] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  // Selection mode
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showContextMenu, setShowContextMenu] = useState(false);
-  const [contextMsg, setContextMsg] = useState<Message | null>(null);
-
-  // Reply
-  const [replyTo, setReplyTo] = useState<Message | null>(null);
-
-  // Image upload
   const [uploadingImage, setUploadingImage] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // 3-dot menu
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [contextMsg, setContextMsg] = useState<Message | null>(null);
+  const [showContextSheet, setShowContextSheet] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  // Agora call state
+  const [callState, setCallState] = useState<'idle' | 'calling' | 'active'>('idle');
+  const [callType, setCallType] = useState<'voice' | 'video'>('voice');
+  const [isMuted, setIsMuted] = useState(false);
+  const [isCamOff, setIsCamOff] = useState(false);
+  const [remoteVideoTrack, setRemoteVideoTrack] = useState<any>(null);
+  const [localVideoTrack, setLocalVideoTrack] = useState<any>(null);
+  const rtcClientRef = useRef<any>(null);
+  const localAudioTrackRef = useRef<any>(null);
+  const localVideoTrackRef = useRef<any>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const sessionRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const channelRef = useRef<any>(null);
 
-  const scrollToBottom = useCallback((smooth = true) => {
-    if (!scrollRef.current) return;
-    scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
 
   // ─── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
-      setUser(user);
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (!u) { router.push('/login'); return; }
+      setUser(u);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      sessionRef.current = session;
-
-      // Load other participant
-      const { data: pars } = await supabase.from('chat_participants').select('user_id').eq('room_id', roomId).neq('user_id', user.id);
-      if (pars?.length) {
-        const otherId = pars[0].user_id;
-        const { data: prof } = await supabase.from('profiles').select('id, full_name, avatar_url, username').eq('id', otherId).single();
-        if (prof) setOther(prof);
-      }
-
-      // Load messages (cache first)
       try {
-        const cached = localStorage.getItem(`chat_msgs_${roomId}`);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          setMessages(parsed);
-          setLoading(false);
-          setTimeout(() => scrollToBottom(false), 0);
-        }
+        const cm = localStorage.getItem(MESSAGES_CACHE_KEY(roomId));
+        const cp = localStorage.getItem(PARTICIPANT_CACHE_KEY(roomId));
+        if (cm) { setMessages(JSON.parse(cm)); setLoading(false); setTimeout(() => scrollToBottom('auto'), 50); }
+        if (cp) setParticipant(JSON.parse(cp));
       } catch {}
 
-      // Fresh fetch
-      const { data: msgs } = await supabase.from('chat_messages')
-        .select('id, content, sender_id, created_at, is_read, message_type, reply_to_id')
-        .eq('room_id', roomId)
-        .order('created_at', { ascending: true })
-        .limit(80);
+      const [pRes, mRes] = await Promise.all([
+        supabase.from('chat_participants').select('user_id').eq('room_id', roomId).neq('user_id', u.id),
+        supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: true }).limit(80),
+      ]);
 
-      if (msgs) {
-        // Enrich with reply data
-        const replyIds = msgs.filter(m => m.reply_to_id).map(m => m.reply_to_id!);
-        let replyMap = new Map<string, any>();
-        if (replyIds.length) {
-          const { data: replyMsgs } = await supabase.from('chat_messages').select('id, content, sender_id').in('id', replyIds);
-          replyMap = new Map((replyMsgs || []).map(r => [r.id, r]));
+      if (pRes.data?.[0]?.user_id) {
+        const { data: prof } = await supabase.from('profiles').select('full_name, avatar_url, username').eq('id', pRes.data[0].user_id).single();
+        if (prof) {
+          const p = { user_id: pRes.data[0].user_id, ...prof } as Participant;
+          setParticipant(p);
+          localStorage.setItem(PARTICIPANT_CACHE_KEY(roomId), JSON.stringify(p));
         }
-        const enriched = msgs.map(m => ({ ...m, reply_to: m.reply_to_id ? replyMap.get(m.reply_to_id) || null : null }));
-        setMessages(enriched);
-        try { localStorage.setItem(`chat_msgs_${roomId}`, JSON.stringify(enriched)); } catch {}
       }
-      setLoading(false);
-      setTimeout(() => scrollToBottom(false), 60);
 
-      // Mark as read
-      await supabase.from('chat_messages').update({ is_read: true }).eq('room_id', roomId).neq('sender_id', user.id).eq('is_read', false);
+      if (mRes.data) {
+        setMessages(mRes.data);
+        setLoading(false);
+        localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(mRes.data));
+        const unread = mRes.data.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id);
+        if (unread.length) supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
+      }
+      setTimeout(() => scrollToBottom('auto'), 120);
     };
     init();
   }, [roomId, router, scrollToBottom]);
-
-  // ─── Keyboard ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const handler = (e: any) => {
-      const h = e.keyboardHeight || 0;
-      setKeyboardHeight(h);
-      if (h > 0) setTimeout(() => scrollToBottom(true), 150);
-    };
-    window.addEventListener('keyboardWillShow', handler);
-    window.addEventListener('keyboardDidShow', handler);
-    window.addEventListener('keyboardWillHide', () => setKeyboardHeight(0));
-    window.addEventListener('keyboardDidHide', () => setKeyboardHeight(0));
-    return () => {
-      window.removeEventListener('keyboardWillShow', handler);
-      window.removeEventListener('keyboardDidShow', handler);
-      window.removeEventListener('keyboardWillHide', handler);
-      window.removeEventListener('keyboardDidHide', handler);
-    };
-  }, [scrollToBottom]);
 
   // ─── Realtime ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user?.id) return;
     const channel = supabaseRealtime
       .channel(`room-${roomId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, async (payload) => {
-        const nm = payload.new as Message;
-        // Enrich reply
-        let replyData = null;
-        if (nm.reply_to_id) {
-          const { data: rd } = await supabase.from('chat_messages').select('id, content, sender_id').eq('id', nm.reply_to_id).single();
-          replyData = rd;
-        }
-        const full = { ...nm, reply_to: replyData };
+      .on('presence', { event: 'sync' }, () => setIsOnline(Object.keys(channel.presenceState()).length > 1))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
+        const msg = payload.new as Message;
         setMessages(prev => {
-          // Deduplicate by id
-          if (prev.find(m => m.id === nm.id)) return prev;
-          const next = [...prev.filter(m => !m.local || m.content !== nm.content), full];
-          try { localStorage.setItem(`chat_msgs_${roomId}`, JSON.stringify(next)); } catch {}
-          return next;
+          if (prev.some(m => m.id === msg.id)) return prev;
+          const updated = [...prev, msg];
+          localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(updated.slice(-80)));
+          return updated;
         });
-        if (nm.sender_id !== user.id) playMsgSound();
-        setTimeout(() => scrollToBottom(true), 80);
-        if (nm.sender_id !== user.id) {
-          await supabase.from('chat_messages').update({ is_read: true }).eq('id', nm.id);
+        if (msg.sender_id !== user.id) {
+          playNotifSound();
+          vibrate('light');
+          supabase.from('chat_messages').update({ is_read: true }).eq('id', msg.id);
         }
+        setTimeout(() => scrollToBottom(), 60);
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
-        const updated = payload.new as Message;
-        setMessages(prev => prev.map(m => m.id === updated.id ? { ...m, is_read: updated.is_read } : m));
+        const upd = payload.new as Message;
+        setMessages(prev => prev.map(m => m.id === upd.id ? { ...m, is_read: upd.is_read } : m));
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
-        const deletedId = (payload.old as any)?.id;
-        if (deletedId) setMessages(prev => prev.filter(m => m.id !== deletedId));
+        const delId = (payload.old as any)?.id;
+        if (delId) setMessages(prev => prev.filter(m => m.id !== delId));
       })
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') await channel.track({ online_at: new Date().toISOString() });
+      });
+    channelRef.current = channel;
     return () => { supabaseRealtime.removeChannel(channel); };
-  }, [user?.id, roomId, scrollToBottom]);
+  }, [roomId, user?.id, scrollToBottom]);
 
-  // ─── Send ────────────────────────────────────────────────────────────────
-  const send = useCallback(async () => {
-    if (!inputText.trim() || sending || !user) return;
-    const text = inputText.trim();
-    const replyRef = replyTo;
+  // ─── Keyboard height ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const keyboardUp = (e: any) => {
+      if (e.keyboardHeight) {
+        document.documentElement.style.setProperty('--kb-height', `${e.keyboardHeight}px`);
+        setTimeout(() => scrollToBottom(), 100);
+      }
+    };
+    const keyboardDown = () => document.documentElement.style.setProperty('--kb-height', '0px');
+    window.addEventListener('keyboardWillShow', keyboardUp);
+    window.addEventListener('keyboardDidShow', keyboardUp);
+    window.addEventListener('keyboardWillHide', keyboardDown);
+    window.addEventListener('keyboardDidHide', keyboardDown);
+    return () => {
+      window.removeEventListener('keyboardWillShow', keyboardUp);
+      window.removeEventListener('keyboardDidShow', keyboardUp);
+      window.removeEventListener('keyboardWillHide', keyboardDown);
+      window.removeEventListener('keyboardDidHide', keyboardDown);
+    };
+  }, [scrollToBottom]);
 
-    let finalContent = text;
-    if (replyRef) {
-      const replyAuthor = replyRef.sender_id === user.id ? 'You' : (other?.full_name || 'Scholar');
-      const replyPreview = previewContent(replyRef.content).slice(0, 80);
-      finalContent = `> Replying to **${replyAuthor}**: ${replyPreview}\n\n${text}`;
+  // ─── Send message ────────────────────────────────────────────────────────
+  const handleSend = useCallback(async () => {
+    if (!newMessage.trim() || !user || sending) return;
+
+    let content = newMessage.trim();
+    if (replyingTo) {
+      const isImage = replyingTo.message_type === 'image';
+      const preview = isImage ? 'Photo 📷' : replyingTo.content.slice(0, 40);
+      const who = replyingTo.sender_id === user.id ? 'You' : (participant?.full_name || 'Scholar');
+      content = `> Replying to **${who}**: "${preview}"\n\n${content}`;
+      setReplyingTo(null);
     }
 
-    setInputText('');
-    setReplyTo(null);
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: Message = { id: tempId, room_id: roomId, sender_id: user.id, content, created_at: new Date().toISOString(), is_read: false, message_type: 'text' };
+    setMessages(p => [...p, optimistic]);
+    setNewMessage('');
     setSending(true);
-
-    const localMsg: Message = { id: `local_${Date.now()}`, content: finalContent, sender_id: user.id, created_at: new Date().toISOString(), is_read: false, message_type: 'text', reply_to_id: replyRef?.id || null, local: true };
-    setMessages(prev => [...prev, localMsg]);
-    setTimeout(() => scrollToBottom(true), 50);
+    setTimeout(() => scrollToBottom(), 50);
+    // Reset textarea height
+    if (inputRef.current) { inputRef.current.style.height = 'auto'; }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/chat/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ roomId, content: finalContent, reply_to_id: replyRef?.id || null }),
-      });
-      if (!res.ok) throw new Error('Send failed');
+      const { data, error } = await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content, message_type: 'text' }).select('*').single();
+      if (error) throw error;
+      if (data) setMessages(p => p.map(m => m.id === tempId ? data : m));
     } catch {
-      setMessages(prev => prev.filter(m => m.id !== localMsg.id));
-      setInputText(text);
+      setMessages(p => p.filter(m => m.id !== tempId));
+      setNewMessage(content);
     } finally { setSending(false); }
-  }, [inputText, sending, user, replyTo, other, roomId, scrollToBottom]);
+  }, [newMessage, user, sending, replyingTo, participant, roomId, scrollToBottom]);
+
+  // ─── Delete messages ──────────────────────────────────────────────────────
+  const deleteMessages = async (ids: string[]) => {
+    await supabase.from('chat_messages').delete().in('id', ids);
+    setMessages(p => p.filter(m => !ids.includes(m.id)));
+    setIsSelectionMode(false);
+    setSelectedIds([]);
+  };
 
   // ─── Image upload ─────────────────────────────────────────────────────────
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -374,87 +421,140 @@ export default function ChatRoomPage({ params }: { params: { roomId: string } })
     finally { setUploadingImage(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
   };
 
-  // ─── Delete messages ──────────────────────────────────────────────────────
-  const deleteMessages = async (ids: string[]) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    await Promise.all(ids.map(id =>
-      fetch(`/api/chat/messages/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${session?.access_token}` } })
-    ));
-    setMessages(prev => prev.filter(m => !ids.includes(m.id)));
-    setSelectionMode(false);
-    setSelectedIds(new Set());
+  // ─── Agora call ───────────────────────────────────────────────────────────
+  const startCall = async (type: 'voice' | 'video') => {
+    setCallType(type);
+    setCallState('calling');
+    try {
+      const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+      const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+      rtcClientRef.current = client;
+      const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '';
+      const token = null;
+      const uid = Math.floor(Math.random() * 100000);
+      await client.join(appId, roomId, token, uid);
+      const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+      localAudioTrackRef.current = audioTrack;
+      localVideoTrackRef.current = videoTrack;
+      if (type === 'video') setLocalVideoTrack(videoTrack);
+      await client.publish([audioTrack, ...(type === 'video' ? [videoTrack] : [])]);
+      client.on('user-published', async (remoteUser: any, mediaType: string) => {
+        await client.subscribe(remoteUser, mediaType);
+        if (mediaType === 'video') setRemoteVideoTrack(remoteUser.videoTrack);
+        if (mediaType === 'audio') remoteUser.audioTrack?.play();
+      });
+      setCallState('active');
+      // Notify other party
+      await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_STARTED__:${type}`, message_type: 'text' });
+    } catch (err) { console.error('[Agora]', err); setCallState('idle'); }
   };
 
-  // ─── Selection ────────────────────────────────────────────────────────────
-  const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
+  const endCall = async () => {
+    try {
+      localAudioTrackRef.current?.stop(); localAudioTrackRef.current?.close();
+      localVideoTrackRef.current?.stop(); localVideoTrackRef.current?.close();
+      await rtcClientRef.current?.leave();
+    } catch {}
+    setCallState('idle');
+    setRemoteVideoTrack(null);
+    setLocalVideoTrack(null);
+    await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_ENDED__: ${callType} call ended`, message_type: 'text' });
   };
 
-  const handleLongPress = (id: string) => {
-    const msg = messages.find(m => m.id === id);
-    if (selectionMode) { toggleSelect(id); return; }
-    setContextMsg(msg || null);
-    setShowContextMenu(true);
+  const toggleMute = () => {
+    localAudioTrackRef.current?.setEnabled(isMuted);
+    setIsMuted(v => !v);
+  };
+  const toggleCamera = () => {
+    localVideoTrackRef.current?.setEnabled(isCamOff);
+    setIsCamOff(v => !v);
   };
 
-  // ─── Message groups (for date separators) ─────────────────────────────────
-  const grouped = useMemo(() => {
-    const result: Array<Message | { type: 'divider'; label: string; key: string }> = [];
-    let lastDate = '';
-    for (const msg of messages) {
-      const dateKey = format(new Date(msg.created_at), 'yyyy-MM-dd');
-      if (dateKey !== lastDate) {
-        lastDate = dateKey;
-        result.push({ type: 'divider', label: dateSeparator(msg.created_at), key: `div_${dateKey}` });
-      }
-      result.push(msg);
-    }
-    return result;
-  }, [messages]);
+  // ─── Long press handler ───────────────────────────────────────────────────
+  const handleLongPress = (msg: Message) => {
+    vibrate('medium');
+    setContextMsg(msg);
+    setShowContextSheet(true);
+  };
 
-  const otherName = searchParams.get('name') || other?.full_name || 'Chat';
+  const displayName = participant?.full_name || initialName || 'Chat';
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── Agora Call Overlay ───────────────────────────────────────────────────
+  if (callState !== 'idle') {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-between py-16" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        {callType === 'video' && remoteVideoTrack ? (
+          <div className="absolute inset-0"><RemoteVideoPlayer track={remoteVideoTrack} /></div>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-800 to-slate-950 flex items-center justify-center">
+            <div className="w-28 h-28 rounded-full bg-indigo-600/20 border-4 border-indigo-500/40 flex items-center justify-center text-5xl font-black text-indigo-300">
+              {displayName[0]?.toUpperCase()}
+            </div>
+          </div>
+        )}
+        {/* Local PiP */}
+        {callType === 'video' && localVideoTrack && !isCamOff && (
+          <div className="absolute top-16 right-4 w-28 h-40 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl z-10">
+            <LocalVideoPlayer track={localVideoTrack} />
+          </div>
+        )}
+        <div className="relative z-10 text-center">
+          <h2 className="text-white text-2xl font-black">{displayName}</h2>
+          <p className="text-slate-400 text-sm font-medium mt-1">{callState === 'calling' ? 'Calling...' : `${callType === 'video' ? 'Video' : 'Voice'} call`}</p>
+        </div>
+        <div className="relative z-10 flex items-center justify-center gap-6">
+          <button onClick={toggleMute} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg ${isMuted ? 'bg-rose-500 text-white' : 'bg-white/20 text-white'}`}>
+            {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+          </button>
+          {callType === 'video' && (
+            <button onClick={toggleCamera} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg ${isCamOff ? 'bg-rose-500 text-white' : 'bg-white/20 text-white'}`}>
+              {isCamOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+            </button>
+          )}
+          <button onClick={endCall} className="w-16 h-16 rounded-full bg-rose-600 flex items-center justify-center shadow-xl">
+            <PhoneOff className="w-7 h-7 text-white" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex flex-col bg-slate-50 dark:bg-slate-950"
-      style={{ height: '100dvh', paddingBottom: keyboardHeight > 0 ? keyboardHeight : 'env(safe-area-inset-bottom)' }}
+      style={{ height: '100dvh' }}
+      onClick={() => { if (showHeaderMenu) setShowHeaderMenu(false); }}
     >
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div
+      <header
         className="shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 z-30"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        {selectionMode ? (
-          /* Selection mode header */
-          <div className="flex items-center gap-3 px-3 h-14">
-            <button onClick={() => { setSelectionMode(false); setSelectedIds(new Set()); }} className="p-2 -ml-1 rounded-full active:bg-slate-100 dark:active:bg-slate-800">
+        {isSelectionMode ? (
+          <div className="flex items-center gap-2 px-3 h-14">
+            <button onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }} className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800">
               <X className="w-5 h-5 text-slate-700 dark:text-slate-200" />
             </button>
-            <span className="flex-1 font-bold text-[16px] text-slate-900 dark:text-white">{selectedIds.size} selected</span>
+            <span className="flex-1 font-bold text-[16px] text-slate-900 dark:text-white">{selectedIds.length} selected</span>
             <button
-              onClick={() => { if (contextMsg) setReplyTo(contextMsg); setSelectionMode(false); setSelectedIds(new Set()); }}
+              onClick={() => { if (contextMsg) { setReplyingTo(contextMsg); setIsSelectionMode(false); setSelectedIds([]); setTimeout(() => inputRef.current?.focus(), 100); } }}
               className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300"
             >
-              <ReplyIcon className="w-5 h-5" />
+              <Reply className="w-5 h-5" />
             </button>
             <button
               onClick={() => {
-                const mine = [...selectedIds].filter(id => messages.find(m => m.id === id)?.sender_id === user?.id);
-                if (!mine.length) { alert('You can only delete your own messages'); return; }
+                const mine = selectedIds.filter(id => messages.find(m => m.id === id)?.sender_id === user?.id);
+                if (!mine.length) return alert('Can only delete your own messages');
                 if (confirm(`Delete ${mine.length} message(s)?`)) deleteMessages(mine);
               }}
-              className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-red-500"
+              className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-rose-500"
             >
               <Trash2 className="w-5 h-5" />
             </button>
             <button
               onClick={() => {
-                const texts = [...selectedIds].map(id => previewContent(messages.find(m => m.id === id)?.content || '')).join('\n');
+                const texts = selectedIds.map(id => messages.find(m => m.id === id)?.content || '').join('\n');
                 navigator.clipboard.writeText(texts).catch(() => {});
               }}
               className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300"
@@ -463,42 +563,30 @@ export default function ChatRoomPage({ params }: { params: { roomId: string } })
             </button>
           </div>
         ) : (
-          /* Normal header */
           <div className="flex items-center gap-2 px-3 h-14">
-            <button onClick={() => router.back()} className="p-2 -ml-1 rounded-full active:bg-slate-100 dark:active:bg-slate-800 shrink-0">
+            <button onClick={() => router.push('/chat')} className="p-2 -ml-1 rounded-full active:bg-slate-100 dark:active:bg-slate-800 shrink-0">
               <ArrowLeft className="w-5 h-5 text-slate-700 dark:text-slate-200" />
             </button>
-            {/* Avatar — fixed small size to never overflow header */}
+            {/* Fixed small avatar — never overflows */}
             <div
-              className="w-9 h-9 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 cursor-pointer active:opacity-80"
-              onClick={() => other?.username && router.push(`/user/${other.username}`)}
+              className="w-9 h-9 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 cursor-pointer"
+              onClick={() => participant?.username && router.push(`/user/${participant.username}`)}
             >
-              {other?.avatar_url
-                ? <Image src={other.avatar_url} alt={other.full_name} width={36} height={36} className="object-cover w-full h-full" />
-                : <div className="w-full h-full flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-400 text-base">{otherName?.[0]?.toUpperCase()}</div>
+              {participant?.avatar_url
+                ? <Image src={participant.avatar_url} alt="" width={36} height={36} className="object-cover w-full h-full" />
+                : <div className="w-full h-full flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-400 text-base">{displayName[0]?.toUpperCase()}</div>
               }
             </div>
-            <div
-              className="flex-1 min-w-0 cursor-pointer"
-              onClick={() => other?.username && router.push(`/user/${other.username}`)}
-            >
-              <p className="font-bold text-[15px] text-slate-900 dark:text-white truncate leading-tight">{otherName}</p>
-              <p className="text-[11px] text-slate-400 font-medium">Tap for info</p>
+            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => participant?.username && router.push(`/user/${participant.username}`)}>
+              <p className="font-bold text-[15px] text-slate-900 dark:text-white truncate leading-tight">{displayName}</p>
+              <p className="text-[11px] text-slate-400 font-medium">{isOnline ? '🟢 Online' : 'Tap for info'}</p>
             </div>
-            {/* Call buttons */}
-            <button
-              onClick={() => router.push(`/chat/${roomId}/call?type=voice&otherId=${other?.id}`)}
-              className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0"
-            >
+            <button onClick={() => startCall('voice')} className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
               <Phone className="w-5 h-5" />
             </button>
-            <button
-              onClick={() => router.push(`/chat/${roomId}/call?type=video&otherId=${other?.id}`)}
-              className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0"
-            >
+            <button onClick={() => startCall('video')} className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
               <Video className="w-5 h-5" />
             </button>
-            {/* 3-dot menu */}
             <div className="relative shrink-0">
               <button
                 onClick={(e) => { e.stopPropagation(); setShowHeaderMenu(v => !v); }}
@@ -507,150 +595,136 @@ export default function ChatRoomPage({ params }: { params: { roomId: string } })
                 <MoreVertical className="w-5 h-5" />
               </button>
               {showHeaderMenu && (
-                <div className="absolute right-0 top-10 w-52 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                  {other?.username && (
-                    <button onClick={() => { setShowHeaderMenu(false); router.push(`/user/${other.username}`); }} className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3">
+                <div className="absolute right-0 top-11 w-56 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                  {participant?.username && (
+                    <button onClick={() => { setShowHeaderMenu(false); router.push(`/user/${participant.username}`); }}
+                      className="w-full text-left px-4 py-3.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 active:bg-slate-100">
                       View Profile
                     </button>
                   )}
-                  <button onClick={() => { setShowHeaderMenu(false); setSelectionMode(true); }} className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3">
+                  <button onClick={() => { setShowHeaderMenu(false); setIsSelectionMode(true); }}
+                    className="w-full text-left px-4 py-3.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 active:bg-slate-100">
                     Select Messages
                   </button>
-                  <button className="w-full text-left px-4 py-3 text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-3 border-t border-slate-100 dark:border-slate-800">
-                    Clear Chat
+                  <button
+                    onClick={async () => {
+                      setShowHeaderMenu(false);
+                      const partId = participant?.user_id;
+                      if (!partId || !user?.id) return;
+                      const { error } = await supabase.from('blocked_users').upsert({ blocker_id: user.id, blocked_id: partId });
+                      if (!error) { alert(`${participant?.full_name} has been blocked.`); router.push('/chat'); }
+                    }}
+                    className="w-full text-left px-4 py-3.5 text-sm font-semibold text-rose-500 hover:bg-red-50 dark:hover:bg-rose-900/10 flex items-center gap-3 active:bg-red-50 border-t border-slate-100 dark:border-slate-800"
+                  >
+                    <Ban className="w-4 h-4" /> Block User
                   </button>
                 </div>
               )}
             </div>
           </div>
         )}
-      </div>
-
-      {/* Backdrop for header menu */}
-      {showHeaderMenu && <div className="fixed inset-0 z-20" onClick={() => setShowHeaderMenu(false)} />}
+      </header>
 
       {/* ── Messages ───────────────────────────────────────────────────────── */}
       <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto py-2"
+        className="flex-1 overflow-y-auto py-2 space-y-0.5"
         style={{ WebkitOverflowScrolling: 'touch' }}
-        onClick={() => { if (showContextMenu) setShowContextMenu(false); if (showHeaderMenu) setShowHeaderMenu(false); }}
+        onClick={() => { if (showContextSheet) setShowContextSheet(false); if (showHeaderMenu) setShowHeaderMenu(false); }}
       >
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
-            <Loader2 className="w-7 h-7 text-indigo-500 animate-spin" />
-            <p className="text-sm font-semibold text-slate-400">Loading messages...</p>
+          <div className="flex justify-center items-center h-full">
+            <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full px-8 text-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
-              <Smile className="w-8 h-8 text-indigo-500" />
+          <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">
+            <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl flex items-center justify-center">
+              <MessageSquare className="w-8 h-8 text-indigo-500" />
             </div>
-            <div>
-              <p className="font-bold text-slate-800 dark:text-slate-200">Start the conversation!</p>
-              <p className="text-sm text-slate-400 mt-0.5">Say hi to {otherName} 👋</p>
-            </div>
+            <p className="font-bold text-slate-700 dark:text-slate-300">Say hi to {displayName}! 👋</p>
           </div>
         ) : (
-          <div className="pb-2">
-            {grouped.map(item => {
-              if ('type' in item && item.type === 'divider') {
-                return (
-                  <div key={item.key} className="flex items-center gap-3 px-6 my-3">
-                    <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-                    <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{item.label}</span>
-                    <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-                  </div>
-                );
-              }
-              const msg = item as Message;
-              const isMine = msg.sender_id === user?.id;
-              return (
-                <MessageBubble
-                  key={msg.id}
-                  msg={msg}
-                  isMine={isMine}
-                  otherAvatar={other?.avatar_url}
-                  otherName={other?.full_name || 'Scholar'}
-                  selected={selectedIds.has(msg.id)}
-                  selectionMode={selectionMode}
-                  onLongPress={handleLongPress}
-                  onTap={toggleSelect}
-                  myId={user?.id || ''}
-                />
-              );
-            })}
-          </div>
+          messages.map((msg, idx) => (
+            <MessageItem
+              key={msg.id}
+              msg={msg}
+              user={user}
+              participant={participant}
+              isSelectionMode={isSelectionMode}
+              isSelected={selectedIds.includes(msg.id)}
+              onToggleSelection={(id) => setSelectedIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])}
+              onLongPress={handleLongPress}
+              onReply={(m) => { setReplyingTo(m); setTimeout(() => inputRef.current?.focus(), 100); }}
+              prevMsg={messages[idx - 1]}
+            />
+          ))
         )}
+        <div ref={messagesEndRef} className="h-2" />
       </div>
 
-      {/* ── Context Menu (long press) ─────────────────────────────────────── */}
-      {showContextMenu && contextMsg && (
+      {/* ── Context sheet (long press) ────────────────────────────────────── */}
+      {showContextSheet && contextMsg && (
         <>
-          <div className="fixed inset-0 bg-black/20 dark:bg-black/40 z-40 backdrop-blur-sm" onClick={() => setShowContextMenu(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
-            <div className="w-10 h-1 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mt-3 mb-4" />
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-5 mb-2">Message Actions</p>
-            <button
-              onClick={() => { setReplyTo(contextMsg); setShowContextMenu(false); setTimeout(() => inputRef.current?.focus(), 100); }}
-              className="w-full flex items-center gap-4 px-5 py-4 active:bg-slate-50 dark:active:bg-slate-800"
-            >
-              <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
-                <ReplyIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">Reply</span>
-            </button>
-            <button
-              onClick={() => { navigator.clipboard.writeText(previewContent(contextMsg.content)).catch(() => {}); setShowContextMenu(false); }}
-              className="w-full flex items-center gap-4 px-5 py-4 active:bg-slate-50 dark:active:bg-slate-800"
-            >
-              <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <Copy className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-              </div>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">Copy</span>
-            </button>
-            <button
-              onClick={() => { setSelectionMode(true); setSelectedIds(new Set([contextMsg.id])); setShowContextMenu(false); }}
-              className="w-full flex items-center gap-4 px-5 py-4 active:bg-slate-50 dark:active:bg-slate-800"
-            >
-              <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <Check className="w-5 h-5 text-slate-600 dark:text-slate-300" strokeWidth={2.5} />
-              </div>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">Select</span>
-            </button>
-            {contextMsg.sender_id === user?.id && (
-              <button
-                onClick={() => { if (confirm('Delete this message?')) deleteMessages([contextMsg.id]); setShowContextMenu(false); }}
-                className="w-full flex items-center gap-4 px-5 py-4 active:bg-red-50 dark:active:bg-red-900/10 border-t border-slate-100 dark:border-slate-800"
-              >
-                <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-                  <Trash2 className="w-5 h-5 text-red-500" />
+          <div className="fixed inset-0 bg-black/20 dark:bg-black/50 z-40 backdrop-blur-sm" onClick={() => setShowContextSheet(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-200 overflow-hidden">
+            <div className="w-10 h-1 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mt-3 mb-3" />
+            {/* Message preview */}
+            <div className="px-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <p className="text-[13px] text-slate-500 dark:text-slate-400 truncate">{contextMsg.content.slice(0, 60)}</p>
+            </div>
+            {[
+              { icon: Reply, label: 'Reply', color: 'text-indigo-600', action: () => { setReplyingTo(contextMsg); setShowContextSheet(false); setTimeout(() => inputRef.current?.focus(), 100); } },
+              {
+                icon: Copy, label: 'Copy', color: 'text-slate-700 dark:text-slate-200', action: () => {
+                  navigator.clipboard.writeText(contextMsg.content).catch(() => {});
+                  setShowContextSheet(false);
+                }
+              },
+              {
+                icon: Check, label: 'Select', color: 'text-slate-700 dark:text-slate-200', action: () => {
+                  setIsSelectionMode(true);
+                  setSelectedIds([contextMsg.id]);
+                  setShowContextSheet(false);
+                }
+              },
+              ...(contextMsg.sender_id === user?.id ? [{
+                icon: Trash2, label: 'Delete', color: 'text-rose-500', action: () => {
+                  setShowContextSheet(false);
+                  if (confirm('Delete this message?')) deleteMessages([contextMsg.id]);
+                }
+              }] : []),
+            ].map(({ icon: Icon, label, color, action }) => (
+              <button key={label} onClick={action} className={`w-full flex items-center gap-4 px-5 py-4 active:bg-slate-50 dark:active:bg-slate-800 ${label === 'Delete' ? 'border-t border-slate-100 dark:border-slate-800' : ''}`}>
+                <div className={`w-10 h-10 rounded-full ${label === 'Delete' ? 'bg-rose-50 dark:bg-rose-900/20' : label === 'Reply' ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'bg-slate-100 dark:bg-slate-800'} flex items-center justify-center`}>
+                  <Icon className={`w-5 h-5 ${color}`} />
                 </div>
-                <span className="font-semibold text-red-500">Delete</span>
+                <span className={`font-semibold ${color}`}>{label}</span>
               </button>
-            )}
-            <div className="pb-safe" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
+            ))}
+            <div style={{ height: 'env(safe-area-inset-bottom)' }} />
           </div>
         </>
       )}
 
       {/* ── Input area ─────────────────────────────────────────────────────── */}
-      <div className="shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/60 dark:border-slate-800/60">
+      <div
+        className="shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/60 dark:border-slate-800/60"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 4px)' }}
+      >
         {/* Reply preview */}
-        {replyTo && (
-          <div className="flex items-center gap-3 px-4 pt-3 pb-1">
+        {replyingTo && (
+          <div className="flex items-center gap-3 px-4 pt-2.5 pb-0">
             <div className="flex-1 border-l-[3px] border-indigo-500 pl-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 rounded-r-xl min-w-0">
               <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mb-0.5">
-                Replying to {replyTo.sender_id === user?.id ? 'yourself' : other?.full_name}
+                Replying to {replyingTo.sender_id === user?.id ? 'yourself' : participant?.full_name}
               </p>
-              <p className="text-[12px] text-slate-600 dark:text-slate-400 truncate">{previewContent(replyTo.content)}</p>
+              <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate">{replyingTo.content.slice(0, 50)}</p>
             </div>
-            <button onClick={() => setReplyTo(null)} className="shrink-0 w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <button onClick={() => setReplyingTo(null)} className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
               <X className="w-4 h-4 text-slate-500" />
             </button>
           </div>
         )}
-        <div className="flex items-end gap-2 px-3 py-2.5">
+        <div className="flex items-end gap-2 px-3 py-2">
           {/* Image button */}
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -660,29 +734,50 @@ export default function ChatRoomPage({ params }: { params: { roomId: string } })
             {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> : <ImageIcon className="w-5 h-5" />}
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-          {/* Textarea */}
-          <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-2.5 min-h-[40px] max-h-28 overflow-y-auto">
+
+          {/* Auto-growing textarea */}
+          <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-2.5 min-h-[40px]">
             <textarea
               ref={inputRef}
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder="Message..."
               rows={1}
+              value={newMessage}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+              }}
+              onKeyDown={(e) => {
+                // Desktop: Enter = send, Shift+Enter = newline
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+              }}
+              placeholder="Message..."
               className="w-full bg-transparent text-[15px] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none resize-none leading-[1.4]"
-              style={{ lineHeight: '1.4' }}
+              style={{ overflowY: 'hidden' }}
             />
           </div>
-          {/* Send button */}
+
+          {/* Send */}
           <button
-            onClick={send}
-            disabled={!inputText.trim() || sending}
-            className="w-10 h-10 bg-indigo-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-full flex items-center justify-center shadow-md shadow-indigo-600/30 disabled:shadow-none active:scale-95 transition-all shrink-0 mb-0.5"
+            onClick={handleSend}
+            disabled={!newMessage.trim() || sending}
+            className="w-10 h-10 bg-indigo-600 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white disabled:text-slate-400 rounded-full flex items-center justify-center shadow-md shadow-indigo-600/20 disabled:shadow-none active:scale-90 transition-all shrink-0 mb-0.5"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ChatRoomPage() {
+  return (
+    <React.Suspense fallback={
+      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+      </div>
+    }>
+      <ChatRoomContent />
+    </React.Suspense>
   );
 }
