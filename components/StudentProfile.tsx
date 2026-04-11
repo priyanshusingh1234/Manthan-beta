@@ -181,68 +181,78 @@ const StudentProfile: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!mounted) return;
-      setCurrentUser(user || null);
-      if (user) {
-        // First set from metadata (fast)
-        const meta = user.user_metadata || {};
-        const metaFullName = typeof meta.fullName === 'string' ? meta.fullName : undefined;
-        const metaUsername = typeof meta.username === 'string' ? meta.username : '';
-        const metaAvatar = typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined;
-        const metaBio = typeof meta.bio === 'string' ? meta.bio : undefined;
-        const metaEquippedBadges = sanitizeBadgeList(meta.equipped_badges || meta.equippedBadges);
+      if (!session?.user) return;
+      const user = session.user;
+      setCurrentUser(user);
 
-        setEditForm({
-          name: metaFullName || user.email || '',
-          username: metaUsername,
-          school: meta.school || '',
-          grade: meta.classGrade || '',
-          bio: metaBio || ''
+      // ── Step 1: Render immediately from metadata (instant) ──
+      const meta = user.user_metadata || {};
+      const metaFullName = typeof meta.fullName === 'string' ? meta.fullName : undefined;
+      const metaUsername = typeof meta.username === 'string' ? meta.username : '';
+      const metaAvatar = typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined;
+      const metaBio = typeof meta.bio === 'string' ? meta.bio : undefined;
+      const metaEquippedBadges = sanitizeBadgeList(meta.equipped_badges || meta.equippedBadges);
+
+      setEditForm({
+        name: metaFullName || user.email || '',
+        username: metaUsername,
+        school: meta.school || '',
+        grade: meta.classGrade || '',
+        bio: metaBio || ''
+      });
+      setUserData((s) => ({
+        ...s,
+        name: metaFullName || user.email || 'User',
+        school: meta.school || s.school,
+        grade: meta.classGrade || s.grade,
+        bio: metaBio || s.bio,
+        avatar: metaAvatar || s.avatar,
+        username: metaUsername,
+        usernameUpdates: Array.isArray(meta.username_updates) ? meta.username_updates : [],
+        totalPoints: Number(meta.totalPoints) || 0,
+        battlesAttempted: Number(meta.battlesAttempted) || 0,
+        battlesWon: Number(meta.battlesWon) || 0,
+      }));
+      setEquippedBadges(metaEquippedBadges);
+
+      // ── Step 2: Force-sync auth metadata → DB (ensures DB has latest points) ──
+      try {
+        await fetch('/api/profile/sync', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` }
         });
+      } catch { /* non-blocking */ }
 
+      // ── Step 3: Read fresh from DB (guaranteed current after sync) ──
+      const { data: dbProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (dbProfile && mounted) {
+        // Use the MAX of meta vs DB points — never show a lower number
+        const freshPoints = Math.max(Number(meta.totalPoints) || 0, Number(dbProfile.total_points) || 0);
         setUserData((s) => ({
           ...s,
-          name: metaFullName || user.email || 'User',
-          school: meta.school || s.school,
-          grade: meta.classGrade || s.grade,
-          bio: metaBio || s.bio,
-          avatar: metaAvatar || s.avatar,
-          username: metaUsername,
-          usernameUpdates: Array.isArray(meta.username_updates) ? meta.username_updates : [],
-          totalPoints: Number(meta.totalPoints) || 0,
-          battlesAttempted: Number(meta.battlesAttempted) || 0,
-          battlesWon: Number(meta.battlesWon) || 0,
+          name: dbProfile.full_name || s.name,
+          school: dbProfile.school || s.school,
+          bio: dbProfile.bio || s.bio,
+          avatar: dbProfile.avatar_url || s.avatar,
+          username: dbProfile.username || s.username,
+          totalPoints: freshPoints,
+          battlesAttempted: Number(dbProfile.battles_attempted) || Number(meta.battlesAttempted) || 0,
+          battlesWon: Number(dbProfile.battles_won) || Number(meta.battlesWon) || 0,
         }));
-        setEquippedBadges(metaEquippedBadges);
-
-        // Then fetch from DB (fresh)
-        const { data: dbProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (dbProfile && mounted) {
-           setUserData((s) => ({
-             ...s,
-             name: dbProfile.full_name || s.name,
-             school: dbProfile.school || s.school,
-             bio: dbProfile.bio || s.bio,
-             avatar: dbProfile.avatar_url || s.avatar,
-             username: dbProfile.username || s.username,
-             totalPoints: Number(dbProfile.total_points) ?? s.totalPoints,
-             battlesAttempted: Number(dbProfile.battles_attempted) || 0,
-             battlesWon: Number(dbProfile.battles_won) || 0,
-           }));
-           setEditForm({
-             name: dbProfile.full_name || '',
-             username: dbProfile.username || '',
-             school: dbProfile.school || '',
-             grade: dbProfile.class_grade || '',
-             bio: dbProfile.bio || ''
-           });
-        }
+        setEditForm({
+          name: dbProfile.full_name || metaFullName || '',
+          username: dbProfile.username || metaUsername || '',
+          school: dbProfile.school || meta.school || '',
+          grade: dbProfile.class_grade || meta.classGrade || '',
+          bio: dbProfile.bio || metaBio || ''
+        });
       }
     });
     // Fetch real solved questions

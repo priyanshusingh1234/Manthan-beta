@@ -292,6 +292,51 @@ function ChatRoomContent() {
     messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
 
+  const syncMessages = useCallback(async (currentUserId?: string) => {
+    const activeUserId = currentUserId || user?.id;
+    if (!activeUserId) return;
+
+    const { data: latestMessages, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('room_id', roomId)
+      .order('created_at', { ascending: true })
+      .limit(80);
+
+    if (error || !latestMessages) return;
+
+    const roomDeletedKey = `deleted_for_me_${roomId}`;
+    const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
+    const filtered = latestMessages.filter(m => !deletedIds.includes(m.id));
+
+    setMessages(filtered);
+    setLoading(false);
+    localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filtered.slice(-80)));
+
+    const unread = filtered.filter(m => !m.is_read && m.sender_id !== activeUserId).map(m => m.id);
+    if (unread.length) {
+      supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
+    }
+  }, [roomId, user?.id]);
+
+  const syncBlockStatus = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const res = await fetch(`/api/chat/block-status?roomId=${encodeURIComponent(roomId)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: 'no-store',
+      });
+
+      if (!res.ok) return;
+      const data = await res.json();
+      setIsBlocked(Boolean(data.isBlocked));
+    } catch (err) {
+      console.warn('[ChatRoom] Failed to load block status:', err);
+    }
+  }, [roomId]);
+
   // ─── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
@@ -323,10 +368,9 @@ function ChatRoomContent() {
       if (mRes.data) {
         const roomDeletedKey = `deleted_for_me_${roomId}`;
         const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
-        
-        // Filter out deleted and blocked if necessary
+
         const filtered = mRes.data.filter(m => !deletedIds.includes(m.id));
-        
+
         setMessages(filtered);
         setLoading(false);
         localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filtered.slice(-80)));
@@ -334,18 +378,22 @@ function ChatRoomContent() {
         if (unread.length) supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
       }
       
-      // Check block status
-      if (pRes.data?.[0]?.user_id) {
-        const otherId = pRes.data[0].user_id;
-        const { data: b1 } = await supabase.from('blocked_users').select('id').eq('blocker_id', u.id).eq('blocked_id', otherId).maybeSingle();
-        const { data: b2 } = await supabase.from('blocked_users').select('id').eq('blocker_id', otherId).eq('blocked_id', u.id).maybeSingle();
-        if (b1 || b2) setIsBlocked(true);
-      }
+      await syncBlockStatus();
 
       setTimeout(() => scrollToBottom('auto'), 120);
     };
     init();
-  }, [roomId, router, scrollToBottom]);
+  }, [roomId, router, scrollToBottom, syncBlockStatus]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const interval = setInterval(() => {
+      void syncMessages(user.id);
+      void syncBlockStatus();
+    }, 7000);
+
+    return () => clearInterval(interval);
+  }, [user?.id, syncMessages, syncBlockStatus]);
 
   // ─── Realtime ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -689,15 +737,33 @@ function ChatRoomContent() {
                       setShowHeaderMenu(false);
                       const partId = participant?.user_id;
                       if (!partId || !user?.id) return;
-                      const { error } = isBlocked 
-                        ? await supabase.from('blocked_users').delete().eq('blocker_id', user.id).eq('blocked_id', partId)
-                        : await supabase.from('blocked_users').upsert({ blocker_id: user.id, blocked_id: partId });
-                      
-                      if (!error) { 
-                        alert(isBlocked ? `${participant?.full_name} has been unblocked.` : `${participant?.full_name} has been blocked.`); 
-                        setIsBlocked(!isBlocked);
-                        if (!isBlocked) router.push('/chat'); 
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session?.access_token) return alert('Please sign in again to update block settings.');
+
+                      const res = await fetch('/api/chat/block', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${session.access_token}`,
+                        },
+                        body: JSON.stringify({
+                          targetUserId: partId,
+                          action: isBlocked ? 'unblock' : 'block',
+                        }),
+                      });
+
+                      const payload = await res.json().catch(() => ({}));
+                      if (!res.ok) {
+                        throw new Error(payload.error || 'Unable to update block settings');
                       }
+
+                      alert(isBlocked ? `${participant?.full_name} has been unblocked.` : `${participant?.full_name} has been blocked.`);
+                      setIsBlocked(!isBlocked);
+                      if (!isBlocked) {
+                        router.push('/chat');
+                      }
+                    } catch (err: any) {
+                      alert(err.message || 'Unable to update block settings');
                     }}
                     className={`w-full text-left px-4 py-3.5 text-sm font-semibold hover:bg-red-50 dark:hover:bg-rose-900/10 flex items-center gap-3 active:bg-red-50 border-t border-slate-100 dark:border-slate-800 ${isBlocked ? 'text-indigo-500' : 'text-rose-500'}`}
                   >

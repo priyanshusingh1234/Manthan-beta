@@ -72,8 +72,22 @@ export default function ChatListPage() {
       const lastMsgMap = new Map<string, any>();
       lastMsgResponses.forEach((r, i) => { if (r.data) lastMsgMap.set(validRooms[i].room_id, r.data); });
 
-      const { data: blocks } = await supabase.from('blocked_users').select('blocked_id').eq('blocker_id', userId);
-      const blockedIds = new Set((blocks || []).map(b => b.blocked_id));
+      let blockedIds = new Set<string>();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          const blockedRes = await fetch('/api/chat/blocked-ids', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+            cache: 'no-store',
+          });
+          if (blockedRes.ok) {
+            const blockedData = await blockedRes.json();
+            blockedIds = new Set<string>(Array.isArray(blockedData.blockedIds) ? blockedData.blockedIds.map(String) : []);
+          }
+        }
+      } catch (blockedErr) {
+        console.warn('[Chat] Failed to load blocked users:', blockedErr);
+      }
 
       const roomData: ChatRoom[] = validRooms.map(p => {
         const room = p.chat_rooms as any;
