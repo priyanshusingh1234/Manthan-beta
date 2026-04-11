@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Trophy, Flame, Loader2, ChevronRight, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 
 interface Student {
     rank: number;
@@ -53,10 +53,10 @@ export default function TopStudents() {
 
     const load = useCallback(async () => {
         try {
-            // Cache buster — ensures browser never serves stale response
+            // Always bypass cache with timestamp — never serve stale leaderboard data
             const res = await fetch(`/api/leaderboard?t=${Date.now()}`, {
                 cache: 'no-store',
-                headers: { 'Cache-Control': 'no-cache' },
+                headers: { 'Cache-Control': 'no-cache, no-store' },
             });
             if (!res.ok) return;
             const data = await res.json();
@@ -72,23 +72,31 @@ export default function TopStudents() {
     }, []);
 
     useEffect(() => {
+        // Always load fresh on mount
         load();
 
-        // ── Listen for ANY profile update (points, avatar, etc.) ────────
-        const profileChannel = supabase
+        // Listen for profile point changes via Realtime  
+        const profileChannel = supabaseRealtime
             .channel('topstudents-profiles')
             .on('postgres_changes', {
-                event: '*',
+                event: 'UPDATE',
                 schema: 'public',
                 table: 'profiles',
-            }, () => setTimeout(load, 800))
+            }, () => setTimeout(load, 600))
             .subscribe();
 
-        // ── Fallback poll every 15s ─────────────────────────────────────
-        const interval = setInterval(load, 15_000);
+        // Refresh when user returns to this tab (e.g. after doing a quiz)
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') load();
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        // Fallback poll every 30s
+        const interval = setInterval(load, 30_000);
 
         return () => {
-            supabase.removeChannel(profileChannel);
+            supabaseRealtime.removeChannel(profileChannel);
+            document.removeEventListener('visibilitychange', handleVisibility);
             clearInterval(interval);
         };
     }, [load]);

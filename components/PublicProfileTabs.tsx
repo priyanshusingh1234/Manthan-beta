@@ -42,6 +42,7 @@ export default function PublicProfileTabs({
   const [activeTab, setActiveTab] = useState<'stats' | 'badges' | 'solved' | 'posts'>('stats');
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
+  const [hasFetchedPosts, setHasFetchedPosts] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,18 +51,22 @@ export default function PublicProfileTabs({
     });
   }, []);
 
-  const fetchUserPosts = async () => {
-    if (userPosts.length > 0 || loadingPosts) return;
+  const fetchUserPosts = async (force = false) => {
+    if (loadingPosts) return;
+    if (!force && hasFetchedPosts) return;
     setLoadingPosts(true);
     try {
         const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch(`/api/posts/user/${userId}`, {
-          headers: session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {},
-          cache: 'no-store'
+        const res = await fetch(`/api/posts/user/${userId}?t=${Date.now()}`, {
+          headers: { 
+            ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+            'Cache-Control': 'no-cache'
+          }
         });
         if (res.ok) {
             const data = await res.json();
             setUserPosts(data || []);
+            setHasFetchedPosts(true);
         }
     } catch (err) {
         console.error("Failed to fetch user posts:", err);
@@ -72,7 +77,8 @@ export default function PublicProfileTabs({
 
   useEffect(() => {
     if (activeTab === 'posts') {
-        fetchUserPosts();
+        // Always fetch fresh when tab is opened
+        fetchUserPosts(true);
     }
   }, [activeTab]);
 
@@ -209,9 +215,14 @@ export default function PublicProfileTabs({
                             key={post.id} 
                             post={post} 
                             currentUserId={currentUserId}
-                            onUpdate={() => {
-                                // Simple update: just refresh the whole list if needed
-                                // (Deletion normally triggers this)
+                            onUpdate={(updatedPost?: any) => {
+                                if (!updatedPost) {
+                                    // Post was deleted — remove it from local state immediately (no ghost)
+                                    setUserPosts(prev => prev.filter(p => p.id !== post.id));
+                                } else {
+                                    // Post was updated — replace in place
+                                    setUserPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p));
+                                }
                             }}
                         />
                     ))}

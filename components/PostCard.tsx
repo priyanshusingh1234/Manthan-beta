@@ -22,7 +22,7 @@ export default function PostCard({
 }: {
     post: any;
     currentUserId: string | null;
-    onUpdate?: () => void;
+    onUpdate?: (updated?: any | null) => void;
     isSinglePost?: boolean;
 }) {
     const [isLiked, setIsLiked] = useState(post.is_liked_by_me || false);
@@ -230,14 +230,14 @@ export default function PostCard({
                 const message = await res.text();
                 if (res.status === 404) {
                     setIsHidden(true);
-                    onUpdate?.();
+                    onUpdate?.(null);
                     setShowMenu(false);
                     return;
                 }
                 throw new Error(message || 'Failed to delete post');
             }
             setIsHidden(true);
-            onUpdate?.();
+            onUpdate?.(null); // null = deleted — parent removes card immediately
             setShowMenu(false);
         } catch (err: any) {
             alert(err?.message || 'Failed to delete post');
