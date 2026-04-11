@@ -270,9 +270,10 @@ function ChatRoomContent() {
   const [isOnline, setIsOnline] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   // Agora call state
-  const [callState, setCallState] = useState<'idle' | 'calling' | 'active'>('idle');
+  const [callState, setCallState] = useState<'idle' | 'calling' | 'active' | 'incoming'>('idle');
   const [callType, setCallType] = useState<'voice' | 'video'>('voice');
   const [isMuted, setIsMuted] = useState(false);
   const [isCamOff, setIsCamOff] = useState(false);
@@ -322,14 +323,25 @@ function ChatRoomContent() {
       if (mRes.data) {
         const roomDeletedKey = `deleted_for_me_${roomId}`;
         const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
+        
+        // Filter out deleted and blocked if necessary
         const filtered = mRes.data.filter(m => !deletedIds.includes(m.id));
         
         setMessages(filtered);
         setLoading(false);
-        localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filtered));
+        localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filtered.slice(-80)));
         const unread = filtered.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id);
         if (unread.length) supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
       }
+      
+      // Check block status
+      if (pRes.data?.[0]?.user_id) {
+        const otherId = pRes.data[0].user_id;
+        const { data: b1 } = await supabase.from('blocked_users').select('id').eq('blocker_id', u.id).eq('blocked_id', otherId).maybeSingle();
+        const { data: b2 } = await supabase.from('blocked_users').select('id').eq('blocker_id', otherId).eq('blocked_id', u.id).maybeSingle();
+        if (b1 || b2) setIsBlocked(true);
+      }
+
       setTimeout(() => scrollToBottom('auto'), 120);
     };
     init();
@@ -339,10 +351,27 @@ function ChatRoomContent() {
   useEffect(() => {
     if (!user?.id) return;
     const channel = supabaseRealtime
-      .channel(`room-${roomId}`)
+      .channel(`room-${roomId}`, { config: { presence: { key: user.id } } })
       .on('presence', { event: 'sync' }, () => setIsOnline(Object.keys(channel.presenceState()).length > 1))
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
         const msg = payload.new as Message;
+        
+        // Handle Call Signals
+        if (msg.content.startsWith('__CALL_STARTED__')) {
+          if (msg.sender_id !== user.id) {
+            const type = msg.content.split(':')[1] as 'voice' | 'video';
+            setCallType(type);
+            setCallState('incoming');
+            playNotifSound();
+            vibrate('medium');
+          }
+          return;
+        }
+        if (msg.content.startsWith('__CALL_ENDED__')) {
+          if (msg.sender_id !== user.id) setCallState('idle');
+          return;
+        }
+
         setMessages(prev => {
           if (prev.some(m => m.id === msg.id)) return prev;
           const updated = [...prev, msg];
@@ -358,14 +387,17 @@ function ChatRoomContent() {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
         const upd = payload.new as Message;
-        setMessages(prev => prev.map(m => m.id === upd.id ? { ...m, is_read: upd.is_read } : m));
+        setMessages(prev => prev.map(m => m.id === upd.id ? { ...m, ...upd } : m));
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
         const delId = (payload.old as any)?.id;
         if (delId) setMessages(prev => prev.filter(m => m.id !== delId));
       })
       .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') await channel.track({ online_at: new Date().toISOString() });
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] Subscribed to room:', roomId);
+          await channel.track({ online_at: new Date().toISOString() });
+        }
       });
     channelRef.current = channel;
     return () => { supabaseRealtime.removeChannel(channel); };
@@ -449,7 +481,8 @@ function ChatRoomContent() {
   };
 
   // ─── Agora call ───────────────────────────────────────────────────────────
-  const startCall = async (type: 'voice' | 'video') => {
+  const startCall = async (type: 'voice' | 'video', isAnswering = false) => {
+    if (isBlocked) return alert('You cannot call a blocked user.');
     setCallType(type);
     setCallState('calling');
     try {
@@ -471,8 +504,10 @@ function ChatRoomContent() {
         if (mediaType === 'audio') remoteUser.audioTrack?.play();
       });
       setCallState('active');
-      // Notify other party
-      await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_STARTED__:${type}`, message_type: 'text' });
+      // Notify other party only if we are starting a NEW call, not answering an existing one
+      if (!isAnswering) {
+        await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_STARTED__:${type}`, message_type: 'text' });
+      }
     } catch (err) { console.error('[Agora]', err); setCallState('idle'); }
   };
 
@@ -509,7 +544,7 @@ function ChatRoomContent() {
   // ─── Agora Call Overlay ───────────────────────────────────────────────────
   if (callState !== 'idle') {
     return (
-      <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-between py-16" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="fixed inset-0 z-[60] bg-slate-900 flex flex-col items-center justify-between py-16" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {callType === 'video' && remoteVideoTrack ? (
           <div className="absolute inset-0"><RemoteVideoPlayer track={remoteVideoTrack} /></div>
         ) : (
@@ -519,29 +554,45 @@ function ChatRoomContent() {
             </div>
           </div>
         )}
+        
         {/* Local PiP */}
         {callType === 'video' && localVideoTrack && !isCamOff && (
-          <div className="absolute top-16 right-4 w-28 h-40 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl z-10">
+          <div className="absolute top-16 right-4 w-28 h-40 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl z-10 transition-all">
             <LocalVideoPlayer track={localVideoTrack} />
           </div>
         )}
-        <div className="relative z-10 text-center">
-          <h2 className="text-white text-2xl font-black">{displayName}</h2>
-          <p className="text-slate-400 text-sm font-medium mt-1">{callState === 'calling' ? 'Calling...' : `${callType === 'video' ? 'Video' : 'Voice'} call`}</p>
+
+        <div className="relative z-10 text-center animate-in fade-in duration-500">
+          <h2 className="text-white text-3xl font-black tracking-tight">{displayName}</h2>
+          <p className="text-slate-400 text-sm font-medium mt-2">
+            {callState === 'calling' ? 'Calling...' : callState === 'incoming' ? `Incoming ${callType} call` : `${callType === 'video' ? 'Video' : 'Voice'} active`}
+          </p>
         </div>
-        <div className="relative z-10 flex items-center justify-center gap-6">
-          <button onClick={toggleMute} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg ${isMuted ? 'bg-rose-500 text-white' : 'bg-white/20 text-white'}`}>
-            {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-          </button>
-          {callType === 'video' && (
-            <button onClick={toggleCamera} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg ${isCamOff ? 'bg-rose-500 text-white' : 'bg-white/20 text-white'}`}>
-              {isCamOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+
+        {callState === 'incoming' ? (
+          <div className="relative z-10 flex items-center justify-center gap-12 mb-8 scale-110">
+            <button onClick={() => setCallState('idle')} className="w-16 h-16 rounded-full bg-rose-600 flex items-center justify-center shadow-xl shadow-rose-900/40 active:scale-90 transition-transform">
+              <PhoneOff className="w-7 h-7 text-white" />
             </button>
-          )}
-          <button onClick={endCall} className="w-16 h-16 rounded-full bg-rose-600 flex items-center justify-center shadow-xl">
-            <PhoneOff className="w-7 h-7 text-white" />
-          </button>
-        </div>
+            <button onClick={() => startCall(callType, true)} className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center shadow-xl shadow-green-900/40 active:scale-90 transition-transform animate-bounce">
+              <Phone className="w-7 h-7 text-white" />
+            </button>
+          </div>
+        ) : (
+          <div className="relative z-10 flex items-center justify-center gap-6 mb-8">
+            <button onClick={toggleMute} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${isMuted ? 'bg-rose-500 text-white' : 'bg-white/10 backdrop-blur-md text-white border border-white/10'}`}>
+              {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+            </button>
+            {callType === 'video' && (
+              <button onClick={toggleCamera} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${isCamOff ? 'bg-rose-500 text-white' : 'bg-white/10 backdrop-blur-md text-white border border-white/10'}`}>
+                {isCamOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+              </button>
+            )}
+            <button onClick={endCall} className="w-16 h-16 rounded-full bg-rose-600 flex items-center justify-center shadow-xl shadow-rose-900/40 active:scale-95 transition-transform">
+              <PhoneOff className="w-7 h-7 text-white" />
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -638,12 +689,19 @@ function ChatRoomContent() {
                       setShowHeaderMenu(false);
                       const partId = participant?.user_id;
                       if (!partId || !user?.id) return;
-                      const { error } = await supabase.from('blocked_users').upsert({ blocker_id: user.id, blocked_id: partId });
-                      if (!error) { alert(`${participant?.full_name} has been blocked.`); router.push('/chat'); }
+                      const { error } = isBlocked 
+                        ? await supabase.from('blocked_users').delete().eq('blocker_id', user.id).eq('blocked_id', partId)
+                        : await supabase.from('blocked_users').upsert({ blocker_id: user.id, blocked_id: partId });
+                      
+                      if (!error) { 
+                        alert(isBlocked ? `${participant?.full_name} has been unblocked.` : `${participant?.full_name} has been blocked.`); 
+                        setIsBlocked(!isBlocked);
+                        if (!isBlocked) router.push('/chat'); 
+                      }
                     }}
-                    className="w-full text-left px-4 py-3.5 text-sm font-semibold text-rose-500 hover:bg-red-50 dark:hover:bg-rose-900/10 flex items-center gap-3 active:bg-red-50 border-t border-slate-100 dark:border-slate-800"
+                    className={`w-full text-left px-4 py-3.5 text-sm font-semibold hover:bg-red-50 dark:hover:bg-rose-900/10 flex items-center gap-3 active:bg-red-50 border-t border-slate-100 dark:border-slate-800 ${isBlocked ? 'text-indigo-500' : 'text-rose-500'}`}
                   >
-                    <Ban className="w-4 h-4" /> Block User
+                    <Ban className="w-4 h-4" /> {isBlocked ? 'Unblock User' : 'Block User'}
                   </button>
                 </div>
               )}
@@ -651,6 +709,13 @@ function ChatRoomContent() {
           </div>
         )}
       </header>
+      
+      {isBlocked && (
+        <div className="bg-rose-50 dark:bg-rose-950/30 px-4 py-2 flex items-center justify-center gap-2 border-b border-rose-100 dark:border-rose-900/50">
+          <Ban className="w-3.5 h-3.5 text-rose-500" />
+          <p className="text-[11px] font-bold text-rose-500 uppercase tracking-tight">You have blocked this scholar</p>
+        </div>
+      )}
 
       {/* ── Messages ───────────────────────────────────────────────────────── */}
       <div
@@ -798,7 +863,7 @@ function ChatRoomContent() {
           {/* Send */}
           <button
             onClick={handleSend}
-            disabled={!newMessage.trim() || sending}
+            disabled={!newMessage.trim() || sending || isBlocked}
             className="w-10 h-10 bg-indigo-600 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white disabled:text-slate-400 rounded-full flex items-center justify-center shadow-md shadow-indigo-600/20 disabled:shadow-none active:scale-90 transition-all shrink-0 mb-0.5"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}

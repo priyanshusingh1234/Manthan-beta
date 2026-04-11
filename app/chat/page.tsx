@@ -72,12 +72,21 @@ export default function ChatListPage() {
       const lastMsgMap = new Map<string, any>();
       lastMsgResponses.forEach((r, i) => { if (r.data) lastMsgMap.set(validRooms[i].room_id, r.data); });
 
+      const { data: blocks } = await supabase.from('blocked_users').select('blocked_id').eq('blocker_id', userId);
+      const blockedIds = new Set((blocks || []).map(b => b.blocked_id));
+
       const roomData: ChatRoom[] = validRooms.map(p => {
         const room = p.chat_rooms as any;
         const otherUid = otherPs?.find(op => op.room_id === room.id)?.user_id;
         const prof = otherUid ? profileMap.get(otherUid) : null;
-        return { id: room.id, name: room.name, is_group: room.is_group, participant: { user_id: otherUid || '', full_name: prof?.full_name || 'Scholar', avatar_url: prof?.avatar_url || null }, last_message: lastMsgMap.get(room.id) };
-      });
+        return { 
+          id: room.id, 
+          name: room.name, 
+          is_group: room.is_group, 
+          participant: { user_id: otherUid || '', full_name: prof?.full_name || 'Scholar', avatar_url: prof?.avatar_url || null }, 
+          last_message: lastMsgMap.get(room.id) 
+        };
+      }).filter(r => !blockedIds.has(r.participant.user_id));
 
       roomData.sort((a, b) => (b.last_message ? new Date(b.last_message.created_at).getTime() : 0) - (a.last_message ? new Date(a.last_message.created_at).getTime() : 0));
       setRooms(roomData);
