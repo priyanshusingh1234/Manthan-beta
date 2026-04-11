@@ -68,18 +68,18 @@ export default function GlobalCallListener() {
 
       // Fetch all room IDs this user is part of
       supabase
-        .from('chat_rooms')
-        .select('id')
-        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .from('chat_participants')
+        .select('room_id')
+        .eq('user_id', user.id)
         .then(({ data: rooms }) => {
-          if (!rooms) return;
+          if (!rooms || rooms.length === 0) return;
 
           // Subscribe to each room's broadcast for call-invite
-          rooms.forEach((room: { id: string }) => {
-            const channel = supabaseRealtime.channel(`room-${room.id}`);
+          rooms.forEach((room: { room_id: string }) => {
+            const channel = supabaseRealtime.channel(`room-${room.room_id}`);
             channel.on('broadcast', { event: 'call-invite' }, async ({ payload }) => {
               // Ignore if already on that chat page or if we are the caller
-              const isOnChatPage = pathnameRef.current === `/chat/${room.id}`;
+              const isOnChatPage = pathnameRef.current === `/chat/${room.room_id}`;
               const isCaller = payload.callerId === userRef.current?.id;
               if (isOnChatPage || isCaller) return;
 
@@ -102,7 +102,7 @@ export default function GlobalCallListener() {
               }
 
               setIncomingCall({
-                roomId: room.id,
+                roomId: room.room_id,
                 callerId: payload.callerId,
                 callerName: payload.callerName || 'Scholar',
                 callerAvatar,

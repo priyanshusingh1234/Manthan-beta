@@ -25,10 +25,18 @@ export default function GlobalChatListener() {
   
   useEffect(() => {
     audioRef.current = new Audio('/universfield-new-notification-040-493469.mp3');
+    audioRef.current.preload = 'auto';
+    let audioContext: AudioContext | null = null;
 
     const unlockAudio = () => {
       const audio = audioRef.current;
       if (!audio) return;
+      if (!audioContext && typeof window !== 'undefined') {
+        audioContext = new AudioContext();
+      }
+      if (audioContext?.state === 'suspended') {
+        audioContext.resume().catch(() => {});
+      }
       audio.muted = true;
       const playPromise = audio.play();
       if (playPromise) {

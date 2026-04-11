@@ -44,10 +44,20 @@ async function vibrate(style: 'light' | 'medium' = 'light') {
 // ─── Sound ──────────────────────────────────────────────────────────────────
 let notifAudio: HTMLAudioElement | null = null;
 let notifAudioUnlocked = false;
+let notifAudioContext: AudioContext | null = null;
 function unlockNotifAudio() {
   if (notifAudioUnlocked) return;
   try {
-    if (!notifAudio) notifAudio = new Audio('/universfield-new-notification-040-493469.mp3');
+    if (!notifAudio) {
+      notifAudio = new Audio('/universfield-new-notification-040-493469.mp3');
+      notifAudio.preload = 'auto';
+    }
+    if (!notifAudioContext && typeof window !== 'undefined') {
+      notifAudioContext = new AudioContext();
+    }
+    if (notifAudioContext?.state === 'suspended') {
+      notifAudioContext.resume().catch(() => {});
+    }
     notifAudio.muted = true;
     const playPromise = notifAudio.play();
     if (playPromise) {
@@ -609,6 +619,15 @@ function ChatRoomContent() {
       // Notify other party only if we are starting a NEW call, not answering an existing one
       if (!isAnswering) {
         await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_STARTED__:${type}`, message_type: 'text' });
+        supabaseRealtime.channel(`room-${roomId}`).send({
+          type: 'broadcast',
+          event: 'call-invite',
+          payload: {
+            callerId: user.id,
+            callerName: participant?.full_name || 'Scholar',
+            type,
+          }
+        }).catch(() => {});
       }
     } catch (err) { console.error('[Agora]', err); setCallState('idle'); }
   };
@@ -623,6 +642,11 @@ function ChatRoomContent() {
     setRemoteVideoTrack(null);
     setLocalVideoTrack(null);
     await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_ENDED__: ${callType} call ended`, message_type: 'text' });
+    supabaseRealtime.channel(`room-${roomId}`).send({
+      type: 'broadcast',
+      event: 'call-ended',
+      payload: { roomId }
+    }).catch(() => {});
   };
 
   const toggleMute = () => {
