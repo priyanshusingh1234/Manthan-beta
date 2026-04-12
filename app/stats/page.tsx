@@ -80,7 +80,10 @@ function StatsContent() {
     return (
         <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white pb-32">
             {/* Header */}
-            <div className="sticky top-0 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-4 py-4">
+            <div 
+                className="sticky top-0 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-4 py-4"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
+            >
                 <div className="max-w-2xl mx-auto flex items-center gap-4">
                     <button onClick={() => router.back()} className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                         <ArrowLeft className="w-4 h-4" />

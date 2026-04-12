@@ -371,7 +371,10 @@ export default function TestsHubPage() {
             {/* Mesh background effects */}
             <div className="absolute top-0 left-0 w-full h-[800px] bg-gradient-to-b from-indigo-500/5 via-transparent to-transparent pointer-events-none" />
             
-            <main className="max-w-[1400px] px-6 mx-auto relative z-10 pt-16 md:pt-24">
+            <main 
+                className="max-w-[1400px] px-6 mx-auto relative z-10 pt-16 md:pt-24"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 4rem)' }}
+            >
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
                     <div className="max-w-2xl">
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm mb-6">

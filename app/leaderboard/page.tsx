@@ -29,7 +29,10 @@ export default async function LeaderboardPage() {
       {/* Dynamic Background Blur effects */}
       <div className="absolute top-0 right-0 w-full h-[400px] bg-gradient-to-b from-indigo-50/50 to-transparent dark:from-indigo-950/20 dark:to-transparent pointer-events-none" />
 
-      <main className="w-full max-w-2xl px-4 relative z-20 pt-6">
+      <main 
+        className="w-full max-w-2xl px-4 relative z-20"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1.5rem)' }}
+      >
 
         {/* Podium Display (Top 3) */}
         {students.length >= 3 && (
