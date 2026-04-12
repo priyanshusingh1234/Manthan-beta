@@ -307,9 +307,15 @@ export default function TestsHubPage() {
 
     const fetchGauntlets = async () => {
         try {
-            const res = await fetch(`/api/gauntlet/list?t=${Date.now()}`, { cache: 'no-store' });
-            const data = await res.json();
-            setGauntlets(data.gauntlets || []);
+            const { supabase } = await import('@/lib/supabaseClient');
+            const { data, error } = await supabase
+                .from('gauntlets')
+                .select('*')
+                .eq('is_active', true)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setGauntlets(data || []);
         } catch (e) {
             console.error(e);
         } finally {

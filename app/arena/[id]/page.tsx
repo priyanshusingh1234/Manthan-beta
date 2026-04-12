@@ -149,9 +149,9 @@ function ArenaPage({ params }: { params: { id: string } }) {
     useEffect(() => {
         async function init() {
             try {
-                const listRes = await fetch('/api/gauntlet/list');
-                const listData = await listRes.json();
-                const found = (listData.gauntlets || []).find((g: Gauntlet) => g.slug === params.id);
+                const { supabase: listSupa } = await import('@/lib/supabaseClient');
+                const { data: listData } = await listSupa.from('gauntlets').select('*').eq('slug', params.id).eq('is_active', true).single();
+                const found = listData;
                 if (!found) throw new Error('Gauntlet not found.');
                 setGauntlet(found);
                 setTimeLeft(found.time_minutes * 60);
