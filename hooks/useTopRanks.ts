@@ -11,19 +11,21 @@ export function useTopRanks() {
 
     const fetchRanks = useCallback(async () => {
         try {
-            // Always fetch fresh — no module-level cache so badges update immediately
-            const res = await fetch(`/api/leaderboard?t=${Date.now()}`, {
-                cache: 'no-store',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
+            const { supabase } = await import('@/lib/supabaseClient');
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, total_points')
+                .eq('is_teacher', false)
+                .not('username', 'is', null)
+                .neq('username', '')
+                .order('total_points', { ascending: false })
+                .order('id', { ascending: true })
+                .limit(20);
+
+            if (!error && data) {
                 const newRanks: Record<string, number> = {};
-                (data.topBrains || []).forEach((u: any) => {
-                    newRanks[u.id] = u.rank;
+                data.forEach((u, i) => {
+                    newRanks[u.id] = i + 1;
                 });
                 setRanks(newRanks);
             }
