@@ -344,6 +344,20 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                                         </div>
                                     ))}
                                 </div>
+                            ) : modalUsers.length > 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full py-20 px-10 text-center">
+                                    <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-6">
+                                        <Search className="w-10 h-10 text-slate-200 dark:text-slate-700" />
+                                    </div>
+                                    <h4 className="text-lg font-black text-slate-800 dark:text-white mb-1">No results for &quot;{modalSearchQuery}&quot;</h4>
+                                    <p className="text-sm font-bold text-slate-400">Try searching for a different name or username.</p>
+                                    <button 
+                                        onClick={() => setModalSearchQuery('')}
+                                        className="mt-4 text-indigo-600 dark:text-indigo-400 font-bold text-sm hover:underline"
+                                    >
+                                        Clear search
+                                    </button>
+                                </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full py-20 px-10 text-center">
                                     <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mb-6">
