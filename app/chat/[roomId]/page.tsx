@@ -283,6 +283,10 @@ function ChatRoomContent() {
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [showMultiDeleteSheet, setShowMultiDeleteSheet] = useState(false);
+  const isBlockedRef = useRef(isBlocked);
+
+  useEffect(() => { isBlockedRef.current = isBlocked; }, [isBlocked]);
 
   // Agora call state
   const [callState, setCallState] = useState<'idle' | 'calling' | 'active' | 'incoming'>('idle');
@@ -454,6 +458,7 @@ function ChatRoomContent() {
         const msg = payload.new as Message;
         
         // Handle Call Signals
+        if (isBlockedRef.current) return;
         if (msg.content.startsWith('__CALL_STARTED__')) {
           if (msg.sender_id !== user.id) {
             processedCallIdRef.current = msg.id;
@@ -806,8 +811,7 @@ function ChatRoomContent() {
 
   return (
     <div
-      className="flex flex-col bg-slate-50 dark:bg-slate-950"
-      style={{ height: '100dvh' }}
+      className="fixed inset-0 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden"
       onClick={() => { if (showHeaderMenu) setShowHeaderMenu(false); }}
     >
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -828,24 +832,7 @@ function ChatRoomContent() {
               <Reply className="w-5 h-5" />
             </button>
             <button
-              onClick={() => {
-                if (!selectedIds.length) return;
-
-                const mine = selectedIds.filter(id => messages.find(m => m.id === id)?.sender_id === user?.id);
-                const deleteEverywhere = confirm('Delete for everyone? Click Cancel to delete only for you.');
-
-                if (deleteEverywhere) {
-                  if (mine.length !== selectedIds.length) {
-                    return alert('You can delete for everyone only your own messages.');
-                  }
-                  if (confirm(`Delete ${mine.length} message(s) for everyone?`)) {
-                    deleteMessages(mine);
-                  }
-                  return;
-                }
-
-                deleteForMe(selectedIds);
-              }}
+              onClick={() => setShowMultiDeleteSheet(true)}
               className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-rose-500"
             >
               <Trash2 className="w-5 h-5" />
@@ -1044,6 +1031,49 @@ function ChatRoomContent() {
                 <span className={`font-semibold ${color}`}>{label}</span>
               </button>
             ))}
+            <div style={{ height: 'env(safe-area-inset-bottom)' }} />
+          </div>
+        </>
+      )}
+
+      {/* ── Multi-Delete Action Sheet ────────────────────────────────────── */}
+      {showMultiDeleteSheet && (
+        <>
+          <div className="fixed inset-0 bg-black/20 dark:bg-black/50 z-40 backdrop-blur-sm" onClick={() => setShowMultiDeleteSheet(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-200 overflow-hidden">
+            <div className="w-10 h-1 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mt-3 mb-3" />
+            <div className="px-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <p className="text-[13px] font-bold text-slate-700 dark:text-slate-300 text-center">Delete {selectedIds.length} Option{selectedIds.length > 1 ? 's' : ''}</p>
+            </div>
+            
+            <button 
+              onClick={() => {
+                setShowMultiDeleteSheet(false);
+                deleteForMe(selectedIds);
+              }} 
+              className="w-full flex items-center gap-4 px-5 py-4 active:bg-slate-50 dark:active:bg-slate-800"
+            >
+              <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-slate-700 dark:text-slate-300" />
+              </div>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Delete for Me</span>
+            </button>
+
+            {selectedIds.filter(id => messages.find(m => m.id === id)?.sender_id === user?.id).length === selectedIds.length && (
+              <button 
+                onClick={() => {
+                  setShowMultiDeleteSheet(false);
+                  deleteMessages(selectedIds);
+                }} 
+                className="w-full flex items-center gap-4 px-5 py-4 active:bg-slate-50 dark:active:bg-slate-800 border-t border-slate-100 dark:border-slate-800"
+              >
+                <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-rose-500" />
+                </div>
+                <span className="font-semibold text-rose-500">Delete for Everyone</span>
+              </button>
+            )}
+            
             <div style={{ height: 'env(safe-area-inset-bottom)' }} />
           </div>
         </>
