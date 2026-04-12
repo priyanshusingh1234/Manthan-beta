@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { UserPlus, UserCheck, Loader2, Users, X, Check, CheckCircle2, Search } from 'lucide-react';
 import Link from 'next/link';
@@ -19,6 +19,7 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
     const [modalType, setModalType] = useState<'followers' | 'following'>('followers'); // 'followers' or 'following'
     const [modalUsers, setModalUsers] = useState<any[]>([]);
     const [modalLoading, setModalLoading] = useState(false);
+    const [modalSearchQuery, setModalSearchQuery] = useState('');
 
     useEffect(() => {
         async function checkFollowStatus() {
@@ -147,6 +148,7 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
         setModalOpen(true);
         setModalLoading(true);
         setModalUsers([]);
+        setModalSearchQuery('');
 
         try {
             const res = await fetch(`/api/follows?userId=${profileUserId}&type=${type}`);
@@ -160,6 +162,15 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
             setModalLoading(false);
         }
     };
+
+    const filteredModalUsers = useMemo(() => {
+        if (!modalSearchQuery.trim()) return modalUsers;
+        const q = modalSearchQuery.toLowerCase();
+        return modalUsers.filter(u =>
+            (u.name?.toLowerCase().includes(q)) ||
+            (u.username?.toLowerCase().includes(q))
+        );
+    }, [modalUsers, modalSearchQuery]);
 
     if (compact) {
         if (loading || (currentUser && currentUser.id === profileUserId)) return null;
@@ -270,15 +281,24 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                             </button>
                         </div>
 
-                        {/* Search Bar */}
                         <div className="px-5 py-3 border-b border-slate-50 dark:border-slate-800/50 bg-white dark:bg-slate-900">
                             <div className="relative group">
                                 <input 
                                     type="text" 
                                     placeholder="Search users..."
-                                    className="w-full bg-slate-100 dark:bg-slate-800/50 border-none rounded-xl py-2.5 pl-10 pr-4 text-sm font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                                    value={modalSearchQuery}
+                                    onChange={(e) => setModalSearchQuery(e.target.value)}
+                                    className="w-full bg-slate-100 dark:bg-slate-800/50 border-none rounded-xl py-2.5 pl-10 pr-9 text-sm font-bold placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-900 dark:text-white"
                                 />
                                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                {modalSearchQuery && (
+                                    <button 
+                                        onClick={() => setModalSearchQuery('')}
+                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -289,9 +309,9 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                                     <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-3" />
                                     <p className="text-sm font-bold text-slate-500 tracking-tight">Syncing community...</p>
                                 </div>
-                            ) : modalUsers.length > 0 ? (
+                            ) : filteredModalUsers.length > 0 ? (
                                 <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                                    {modalUsers.map((u) => (
+                                    {filteredModalUsers.map((u) => (
                                         <div key={u.id} className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group">
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <div className="relative shrink-0">
