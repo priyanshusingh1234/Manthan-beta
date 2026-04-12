@@ -66,11 +66,17 @@ export default function ChatListPage() {
         profileMap = new Map((profiles || []).map(p => [p.id, p]));
       }
 
-      const lastMsgResponses = await Promise.all(
-        validRooms.map(p => supabase.from('chat_messages').select('content, created_at, sender_id, is_read, message_type').eq('room_id', p.room_id).order('created_at', { ascending: false }).limit(1).single())
-      );
+      const { data: allMessages } = await supabase
+        .from('chat_messages')
+        .select('content, created_at, sender_id, is_read, message_type, room_id')
+        .in('room_id', roomIds)
+        .order('created_at', { ascending: false })
+        .limit(300);
+        
       const lastMsgMap = new Map<string, any>();
-      lastMsgResponses.forEach((r, i) => { if (r.data) lastMsgMap.set(validRooms[i].room_id, r.data); });
+      (allMessages || []).forEach(m => {
+        if (!lastMsgMap.has(m.room_id)) lastMsgMap.set(m.room_id, m);
+      });
 
       let blockedIds = new Set<string>();
       try {

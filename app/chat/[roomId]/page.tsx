@@ -951,8 +951,29 @@ function ChatRoomContent() {
         onClick={() => { if (showContextSheet) setShowContextSheet(false); if (showHeaderMenu) setShowHeaderMenu(false); }}
       >
         {loading ? (
-          <div className="flex justify-center items-center h-full">
-            <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+          <div className="flex flex-col gap-3 px-4 py-4 w-full">
+            {/* Incoming skeleton */}
+            <div className="flex gap-2">
+              <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 animate-pulse shrink-0 self-end" />
+              <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-bl-sm p-4 w-[60%] animate-pulse" />
+            </div>
+            {/* Outgoing skeleton */}
+            <div className="flex flex-row-reverse gap-2 mt-2">
+              <div className="bg-indigo-100 dark:bg-indigo-900/40 rounded-2xl rounded-br-sm p-4 w-[50%] animate-pulse" />
+            </div>
+            {/* Short Outgoing skeleton */}
+            <div className="flex flex-row-reverse gap-2 mt-1">
+              <div className="bg-indigo-100 dark:bg-indigo-900/40 rounded-2xl rounded-br-sm p-3 w-[30%] animate-pulse" />
+            </div>
+            {/* Incoming skeleton */}
+            <div className="flex gap-2 mt-4">
+              <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 animate-pulse shrink-0 self-end" />
+              <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-bl-sm p-5 w-[75%] animate-pulse" />
+            </div>
+            {/* Outgoing skeleton */}
+            <div className="flex flex-row-reverse gap-2 mt-2">
+              <div className="bg-indigo-100 dark:bg-indigo-900/40 rounded-2xl rounded-br-sm p-3 w-[45%] animate-pulse" />
+            </div>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 px-8 text-center">
