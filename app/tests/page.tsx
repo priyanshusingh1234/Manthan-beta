@@ -307,7 +307,7 @@ export default function TestsHubPage() {
 
     const fetchGauntlets = async () => {
         try {
-            const res = await fetch('/api/gauntlet/list');
+            const res = await fetch(`/api/gauntlet/list?t=${Date.now()}`, { cache: 'no-store' });
             const data = await res.json();
             setGauntlets(data.gauntlets || []);
         } catch (e) {

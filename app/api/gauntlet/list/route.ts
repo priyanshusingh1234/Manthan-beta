@@ -13,7 +13,13 @@ export async function GET() {
 
         if (error) throw error;
 
-        return NextResponse.json({ gauntlets: data || [] });
+        return NextResponse.json({ gauntlets: data || [] }, {
+            headers: {
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+            }
+        });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
