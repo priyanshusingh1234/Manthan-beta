@@ -4,6 +4,9 @@ import Link from "next/link";
 import { MapPin, Award } from "lucide-react";
 import { unstable_noStore as noStore } from 'next/cache';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function LeaderboardPage() {
   noStore();
   const allProfiles = await getAllProfiles();

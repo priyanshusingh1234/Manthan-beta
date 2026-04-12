@@ -53,19 +53,30 @@ export default function TopStudents() {
 
     const load = useCallback(async () => {
         try {
-            const res = await fetch(`/api/leaderboard?t=${Date.now()}`, {
-                cache: 'no-store',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.topBrains) {
-                    setStudents(data.topBrains);
-                    setLastUpdated(new Date());
-                }
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, username, school, avatar_url, total_points')
+                .eq('is_teacher', false)
+                .not('username', 'is', null)
+                .neq('username', '')
+                .order('total_points', { ascending: false })
+                .order('id', { ascending: true })
+                .limit(10);
+
+            if (!error && data) {
+                const fetched = data.map((p, i) => ({
+                    id: p.id,
+                    rank: i + 1,
+                    name: p.full_name || p.username || 'Student',
+                    username: p.username,
+                    school: p.school || 'Unknown',
+                    avatar: p.avatar_url || null,
+                    points: Number(p.total_points) || 0,
+                    streak: 0,
+                    schoolColor: 'bg-blue-500',
+                }));
+                setStudents(fetched);
+                setLastUpdated(new Date());
             }
         } catch {
             // silent — polling will retry
