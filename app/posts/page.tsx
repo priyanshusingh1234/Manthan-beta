@@ -1,24 +1,50 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
-import { PlusCircle, Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import { ImageIcon, X, Sparkles, User, Send } from 'lucide-react';
+import Image from 'next/image';
+import { compressImage } from '@/utils/compressImage';
+
+const MAX_CHARS = 500;
 
 export default function SocialFeedPage() {
     const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [session, setSession] = useState<any>(null);
 
-    // Fetch posts from /api/feed so the weighted suggestion algorithm applies.
-    // Filter to post-type items only — questions are shown in the home feed.
-    const fetchFeed = useCallback(async (uid: string | null) => {
+    // Composer state
+    const [content, setContent] = useState('');
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [postError, setPostError] = useState('');
+    const [focused, setFocused] = useState(false);
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [mentionSearch, setMentionSearch] = useState<string | null>(null);
+    const [mentionIndex, setMentionIndex] = useState<number | null>(null);
+
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const suggestionsRef = useRef<HTMLDivElement>(null);
+
+    // ── Auto-grow textarea ──────────────────────────────────────────────────
+    const autoGrow = () => {
+        const el = textareaRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+    };
+
+    // ── Fetch feed ──────────────────────────────────────────────────────────
+    const fetchFeed = useCallback(async () => {
         setLoading(true);
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token || null;
+            const { data: { session: s } } = await supabase.auth.getSession();
+            const token = s?.access_token || null;
             const res = await fetch(`/api/feed?limit=60&t=${Date.now()}`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                 cache: 'no-store',
@@ -28,9 +54,6 @@ export default function SocialFeedPage() {
             const allItems = Array.isArray(rawData) ? rawData : (rawData?.questions || []);
             const postItems = allItems.filter((item: any) => item.type === 'post');
 
-            // Smart fallback: if the algorithmic feed returned too few posts
-            // (happens for brand-new users with no followers or school matches),
-            // call /api/posts directly to guarantee 30+ posts are shown.
             if (postItems.length < 5) {
                 const fbRes = await fetch('/api/posts', {
                     headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -38,7 +61,6 @@ export default function SocialFeedPage() {
                 });
                 if (fbRes.ok) {
                     const fbData = await fbRes.json();
-                    // Merge, dedupe, and label fallback posts
                     const existingIds = new Set(postItems.map((p: any) => p.id));
                     const fallbackPosts = (Array.isArray(fbData) ? fbData : [])
                         .filter((p: any) => !existingIds.has(p.id))
@@ -47,7 +69,6 @@ export default function SocialFeedPage() {
                     return;
                 }
             }
-
             setPosts(postItems);
         } catch (err) {
             console.error(err);
@@ -58,15 +79,136 @@ export default function SocialFeedPage() {
 
     useEffect(() => {
         let mounted = true;
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session: s } }) => {
             if (mounted) {
-                const uid = session?.user?.id || null;
-                setCurrentUserId(uid);
-                fetchFeed(uid);
+                setCurrentUserId(s?.user?.id || null);
+                setSession(s);
+                fetchFeed();
             }
         });
         return () => { mounted = false; };
     }, [fetchFeed]);
+
+    // ── Mention logic ───────────────────────────────────────────────────────
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
+                setSuggestions([]);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const handleContentChange = async (val: string) => {
+        if (val.length > MAX_CHARS) return;
+        setContent(val);
+        autoGrow();
+
+        const el = textareaRef.current;
+        const cursor = el?.selectionStart || val.length;
+        const before = val.slice(0, cursor);
+        const lastAt = before.lastIndexOf('@');
+        if (lastAt !== -1) {
+            const mention = before.slice(lastAt + 1);
+            const charBefore = lastAt > 0 ? before[lastAt - 1] : ' ';
+            if ((lastAt === 0 || /[^a-zA-Z0-9_]/.test(charBefore)) && !/\s/.test(mention)) {
+                setMentionSearch(mention);
+                setMentionIndex(lastAt);
+                if (mention.length > 0) {
+                    try {
+                        const res = await fetch(`/api/search?q=${mention}`);
+                        if (res.ok) setSuggestions((await res.json()).users || []);
+                    } catch { /* silent */ }
+                } else setSuggestions([]);
+                return;
+            }
+        }
+        setMentionSearch(null);
+        setSuggestions([]);
+    };
+
+    const applySuggestion = (user: any) => {
+        if (mentionIndex === null) return;
+        const before = content.slice(0, mentionIndex);
+        const after = content.slice(mentionIndex + (mentionSearch?.length || 0) + 1);
+        setContent(`${before}@${user.username} ${after}`);
+        setSuggestions([]);
+        setMentionSearch(null);
+        textareaRef.current?.focus();
+    };
+
+    // ── Image handling ──────────────────────────────────────────────────────
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 20 * 1024 * 1024) { setPostError('Image exceeds 20MB.'); return; }
+        setPostError('');
+        try {
+            const compressed = await compressImage(file, 'banner');
+            setImageFile(compressed);
+            setImagePreview(URL.createObjectURL(compressed));
+        } catch { setPostError('Failed to process image.'); }
+    };
+
+    const removeImage = () => {
+        setImageFile(null);
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
+        setImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    // ── Submit ──────────────────────────────────────────────────────────────
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!content.trim() && !imageFile) return;
+        if (!session) return;
+        setSubmitting(true);
+        setPostError('');
+        try {
+            let imageUrl = null;
+            if (imageFile) {
+                const isRealBlob = imageFile instanceof Blob || typeof (imageFile as any).slice === 'function';
+                let uploadBlob: Blob = isRealBlob ? (imageFile as unknown as Blob) : await (await fetch(imagePreview!)).blob();
+                const ext = (imageFile as any)?.name?.split('.').pop() || 'jpg';
+                const form = new FormData();
+                form.append('file', uploadBlob, `post-${Date.now()}.${ext}`);
+                const up = await fetch('/api/posts/upload', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${session.access_token}` },
+                    body: form,
+                });
+                const upData = await up.json();
+                if (!up.ok) throw new Error(upData.error || 'Upload failed');
+                imageUrl = upData.url;
+            }
+
+            const res = await fetch('/api/posts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ content: content.trim(), imageUrl }),
+            });
+            if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+
+            // Reset composer and refresh feed
+            setContent('');
+            removeImage();
+            setFocused(false);
+            if (textareaRef.current) textareaRef.current.style.height = 'auto';
+            fetchFeed();
+        } catch (err: any) {
+            setPostError(err.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const charsLeft = MAX_CHARS - content.length;
+    const canPost = (content.trim() || imageFile) && !submitting;
+    const avatarUrl = session?.user?.user_metadata?.avatar_url || null;
 
     return (
         <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 pb-24 pt-4 sm:pt-8 md:pt-12 relative overflow-hidden">
@@ -74,34 +216,149 @@ export default function SocialFeedPage() {
             <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-400/10 dark:bg-indigo-600/10 rounded-full mix-blend-overlay filter blur-3xl" />
 
             <main className="max-w-[1240px] px-4 sm:px-6 mx-auto relative z-10 w-full lg:flex lg:gap-8 justify-center">
-
                 <div className="w-full lg:max-w-2xl flex-shrink overflow-x-hidden">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100/50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-bold mb-3 border border-purple-200/50 dark:border-purple-800/50">
-                                <Sparkles className="w-3.5 h-3.5" /> Community Discussion
-                            </div>
-                            <h1 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
-                                Social Fire
-                            </h1>
+
+                    {/* Page title */}
+                    <div className="mb-6">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100/50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-bold mb-3 border border-purple-200/50 dark:border-purple-800/50">
+                            <Sparkles className="w-3.5 h-3.5" /> Community Discussion
                         </div>
-                        {currentUserId && (
-                            <Link href="/posts/create" className="hidden sm:flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl shadow-lg transition-colors">
-                                <PlusCircle className="w-5 h-5" /> Let&apos;s Post
-                            </Link>
-                        )}
+                        <h1 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
+                            Social Fire
+                        </h1>
                     </div>
 
+                    {/* ── Twitter-style Inline Composer ── */}
                     {currentUserId && (
-                        <Link href="/posts/create" className="sm:hidden fixed bottom-20 right-6 z-50 flex items-center justify-center w-14 h-14 bg-indigo-600 text-white rounded-full shadow-[0_8px_30px_rgb(79,70,229,0.5)] hover:bg-indigo-500 active:scale-90 transition-all">
-                            <PlusCircle className="w-6 h-6" />
-                        </Link>
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl mb-4 shadow-sm overflow-hidden">
+                            <form onSubmit={handleSubmit}>
+                                <div className="flex gap-3 px-4 pt-4 pb-3">
+                                    {/* Avatar */}
+                                    <div className="w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700">
+                                        {avatarUrl ? (
+                                            <Image src={avatarUrl} alt="You" width={44} height={44} className="object-cover w-full h-full" />
+                                        ) : (
+                                            <User className="w-5 h-5 m-auto text-slate-400 mt-3" />
+                                        )}
+                                    </div>
+
+                                    {/* Textarea */}
+                                    <div className="flex-1 relative">
+                                        {/* Mention suggestions */}
+                                        {suggestions.length > 0 && (
+                                            <div
+                                                ref={suggestionsRef}
+                                                className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl overflow-hidden z-50"
+                                            >
+                                                {suggestions.map(u => (
+                                                    <button
+                                                        key={u.id}
+                                                        type="button"
+                                                        onClick={() => applySuggestion(u)}
+                                                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+                                                    >
+                                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
+                                                            {u.avatar_url
+                                                                ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                : <User className="w-4 h-4 m-auto text-slate-400 mt-2" />
+                                                            }
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-bold truncate text-slate-900 dark:text-white">@{u.username}</p>
+                                                            <p className="text-xs text-slate-500 truncate">{u.full_name}</p>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <textarea
+                                            ref={textareaRef}
+                                            value={content}
+                                            onChange={e => handleContentChange(e.target.value)}
+                                            onFocus={() => setFocused(true)}
+                                            placeholder="What's happening in the academy?"
+                                            rows={focused ? 3 : 1}
+                                            className="w-full bg-transparent text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 text-[16px] leading-relaxed resize-none outline-none py-2 overflow-hidden"
+                                            style={{ minHeight: '40px' }}
+                                            disabled={submitting}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Image Preview */}
+                                {imagePreview && (
+                                    <div className="mx-4 mb-3 relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 group max-h-80">
+                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-contain max-h-80" />
+                                        <button
+                                            type="button"
+                                            onClick={removeImage}
+                                            className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full backdrop-blur transition-colors"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Error */}
+                                {postError && (
+                                    <p className="mx-4 mb-2 text-xs font-bold text-red-500">{postError}</p>
+                                )}
+
+                                {/* Action bar — only visible when focused or has content */}
+                                {(focused || content || imagePreview) && (
+                                    <div className="flex items-center justify-between px-4 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800">
+                                        <div className="flex items-center gap-1">
+                                            {/* Image attach */}
+                                            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                                            <button
+                                                type="button"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={submitting}
+                                                className="p-2 rounded-full text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+                                                title="Add image"
+                                            >
+                                                <ImageIcon className="w-5 h-5" />
+                                            </button>
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                            {/* Char counter */}
+                                            {content.length > 0 && (
+                                                <span className={`text-xs font-bold tabular-nums ${charsLeft < 50 ? charsLeft < 20 ? 'text-red-500' : 'text-amber-500' : 'text-slate-400'}`}>
+                                                    {charsLeft}
+                                                </span>
+                                            )}
+
+                                            {/* Post button */}
+                                            <button
+                                                type="submit"
+                                                disabled={!canPost}
+                                                className={`flex items-center gap-1.5 px-5 py-2 rounded-full font-black text-sm transition-all ${
+                                                    canPost
+                                                        ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md hover:shadow-indigo-500/30 hover:scale-[1.03] active:scale-95'
+                                                        : 'bg-indigo-200 dark:bg-indigo-900/40 text-indigo-400 dark:text-indigo-600 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                {submitting ? (
+                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                ) : (
+                                                    <Send className="w-3.5 h-3.5" />
+                                                )}
+                                                {submitting ? 'Posting…' : 'Post'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </form>
+                        </div>
                     )}
 
+                    {/* ── Feed ── */}
                     {loading ? (
                         <div className="space-y-4">
                             {[1, 2, 3].map(i => (
-                                <div key={i} className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 animate-pulse space-y-3">
+                                <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 animate-pulse space-y-3">
                                     <div className="h-2.5 w-28 bg-slate-200 dark:bg-slate-800 rounded-full" />
                                     <div className="flex items-center gap-3">
                                         <div className="w-11 h-11 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
@@ -116,9 +373,9 @@ export default function SocialFeedPage() {
                             ))}
                         </div>
                     ) : posts.length === 0 ? (
-                        <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center">
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-slate-100 dark:border-slate-800 shadow-sm">
                             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">No posts yet</h3>
-                            <p className="text-slate-500 dark:text-slate-400 font-medium">Be the first to share an insight, question, or achievement with the community!</p>
+                            <p className="text-slate-500 dark:text-slate-400 font-medium">Be the first to share something with the academy!</p>
                         </div>
                     ) : (
                         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
@@ -128,7 +385,7 @@ export default function SocialFeedPage() {
                                     post={p}
                                     currentUserId={currentUserId}
                                     feedLabel={p._feedLabel}
-                                    onUpdate={() => fetchFeed(currentUserId)}
+                                    onUpdate={fetchFeed}
                                 />
                             ))}
                         </div>
@@ -140,7 +397,6 @@ export default function SocialFeedPage() {
                         <SuggestedUsersCard />
                     </div>
                 </div>
-
             </main>
         </div>
     );
