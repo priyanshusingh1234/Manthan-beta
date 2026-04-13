@@ -19,11 +19,13 @@ export default function PostCard({
     currentUserId,
     onUpdate,
     isSinglePost = false,
+    feedLabel,
 }: {
     post: any;
     currentUserId: string | null;
     onUpdate?: (updated?: any | null) => void;
     isSinglePost?: boolean;
+    feedLabel?: string;
 }) {
     const [isLiked, setIsLiked] = useState(post.is_liked_by_me || false);
     const [likesCount, setLikesCount] = useState(post.likes_count || 0);
@@ -318,6 +320,23 @@ export default function PostCard({
 
                 {/* Right: Content Column */}
                 <div className="flex-1 min-w-0 pb-1">
+                    {/* Feed Context Tag — Recommendation reason pill */}
+                    {feedLabel && !isSinglePost && (
+                        <div className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full mb-2 ${
+                            feedLabel.includes('Follow')
+                                ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                                : feedLabel.includes('School') || feedLabel.includes('school')
+                                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : feedLabel.includes('Trending') || feedLabel.includes('trending')
+                                ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                                : feedLabel.includes('Pinned')
+                                ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                : 'bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                        }`}>
+                            {feedLabel}
+                        </div>
+                    )}
+
                     {/* Admin Pinned Ribbon */}
                     {post.is_pinned && !isSinglePost && (
                         <div className="flex items-center gap-1.5 text-slate-500 font-bold text-xs uppercase tracking-widest mb-2">

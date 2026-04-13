@@ -110,14 +110,19 @@ export default function QuestionsFeed() {
       ) : (
         items.map((item: FeedItem) => (
           <div key={item.id} className="space-y-1">
-            {/* Feed context label — e.g. "✨ For You", "📣 Community Post" */}
-            {item._feedLabel && (
+            {/* Feed context label — only shown for questions; posts show a chip inside the card */}
+            {item._feedLabel && item.type !== 'post' && (
               <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 px-1 tracking-wide">
                 {item._feedLabel}
               </p>
             )}
             {item.type === 'post' ? (
-              <PostCard post={item} currentUserId={userId} onUpdate={() => loadData(true)} />
+              <PostCard
+                post={item}
+                currentUserId={userId}
+                onUpdate={() => loadData(true)}
+                feedLabel={item._feedLabel}
+              />
             ) : (
               <QuestionCard q={item} />
             )}
