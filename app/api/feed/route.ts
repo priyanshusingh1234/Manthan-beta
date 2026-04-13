@@ -86,11 +86,48 @@ function normalizePost(p: any, profilesMap: Map<string, any>, currentUserId: str
             avatar_url: profile?.avatar_url || null,
             school: profile?.school || null,
             isTeacher: profile?.is_teacher || false,
+            totalPoints: Number(profile?.total_points) || 0,
         },
         _feedLabel: isPinned ? '📌 Pinned by Admin' : '📣 Community Update',
         _feedScore: isPinned ? 200 : 75,
         _layer: isPinned ? 10 : 7
     };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Weighted Post Scorer
+// Signals: recency decay, engagement, follow/school/grade proximity, authority
+// ─────────────────────────────────────────────────────────────────────────────
+function calculatePostScore(
+    post: any,
+    followingIds: string[],
+    userSchool: string | null,
+    userGrade: string | null
+): number {
+    // Absolute override: pinned posts always float to the top
+    if (post.is_pinned) return 1_000_000;
+
+    let score = 100; // Base score
+
+    // 1. Recency decay — score decays exponentially with age
+    const ageHours = (Date.now() - new Date(post.created_at).getTime()) / (1000 * 60 * 60);
+    score = score / Math.pow(ageHours + 2, 1.2);
+
+    // 2. Engagement — comments signal deeper interest than likes
+    score += (post.likes_count || 0) * 10;
+    score += (post.comments_count || 0) * 25;
+
+    // 3. Social graph boost — posts from people you follow are highest priority
+    if (followingIds.includes(post.author.id)) score *= 2.5;
+
+    // 4. Proximity boosts — schoolmates and grademates
+    if (userSchool && post.author.school === userSchool) score += 50;
+    if (userGrade && post.author.grade === userGrade) score += 30;
+
+    // 5. Author authority — small bonus for high-ranking students
+    score += Math.floor((post.author.totalPoints || 0) / 100);
+
+    return score;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -436,11 +473,12 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        // LAYER 7 (Community Posts): ONLY if no subject filter is active
+        // ── LAYER 7: Community Posts with Weighted Suggestion Algorithm ────────
+        // Only injected into the feed when no subject filter is active.
+        // Posts are scored with a multi-signal weighting function and injected
+        // into three stratified buckets: Peer Circle > Trending > Discovery.
         if (!subject) {
-            let postPool: any[] = [];
-            
-            // 1. Explicitly fetch globally Pinned posts first to ensure they don't fall off the 30 post limit
+            // 1. Fetch pinned posts separately so they are never dropped by the LIMIT
             const { data: globalPinnedRaw } = await supabaseAdmin
                 .from('posts')
                 .select('*, post_likes(user_id)')
@@ -448,40 +486,83 @@ export async function GET(req: NextRequest) {
                 .order('created_at', { ascending: false })
                 .limit(3);
 
-            // 2. Fetch standard recent posts
+            // 2. Fetch a wider window of recent posts to enable diversity scoring
+            //    (7-day window, 60 posts — enough candidates for all 3 buckets)
             const { data: rawPosts } = await supabaseAdmin
                 .from('posts')
                 .select('*, post_likes(user_id)')
+                .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
                 .order('created_at', { ascending: false })
-                .limit(30);
+                .limit(60);
 
-            // Combine and dedupe
+            // De-duplicate (pinned posts may appear in both queries)
             const allRawPosts = [...(globalPinnedRaw || []), ...(rawPosts || [])];
-            const uniqueRawPostsResult = Array.from(new Map(allRawPosts.map(item => [item.id, item])).values());
+            const uniqueRawPosts = Array.from(new Map(allRawPosts.map(item => [item.id, item])).values());
 
-            if (uniqueRawPostsResult && uniqueRawPostsResult.length > 0) {
-                const postAuthorIds = [...new Set(uniqueRawPostsResult.map(p => p.author_id))];
-                const profilesMap = await getProfilesMap(postAuthorIds);
-                
-                uniqueRawPostsResult.forEach(p => {
-                    const norm = normalizePost(p, profilesMap, userId);
-                    const isFollowed = followingIds.includes(p.author_id);
-                    const isSchoolmate = userSchoolName && profilesMap.get(p.author_id)?.school === userSchoolName;
-                    
-                    const likesCount = Array.isArray(p.post_likes) ? p.post_likes.length : (p.likes_count || 0);
-                    if (norm.is_pinned || isFollowed || isSchoolmate || likesCount > 5) {
-                        if (isFollowed && !norm.is_pinned) { 
-                            norm._feedLabel = '👤 Post from Peer You Follow'; 
-                            norm._feedScore = 95; 
-                        } else if (isSchoolmate && !norm.is_pinned) { 
-                            norm._feedLabel = '🏫 Trending at Your School'; 
-                            norm._feedScore = 85; 
-                        }
-                        postPool.push(norm);
-                    }
+            if (uniqueRawPosts.length > 0) {
+                const postAuthorIds = [...new Set(uniqueRawPosts.map(p => p.author_id))];
+                const postProfilesMap = await getProfilesMap(postAuthorIds);
+
+                // Normalize all posts and calculate their weighted score
+                const scoredPosts = uniqueRawPosts.map(p => {
+                    const norm = normalizePost(p, postProfilesMap, userId);
+                    norm._postScore = calculatePostScore(norm, followingIds, userSchoolName, userGrade);
+                    return norm;
                 });
+
+                // Sort by weighted score descending
+                scoredPosts.sort((a, b) => b._postScore - a._postScore);
+
+                // ── Stratified Bucket Injection (50 / 30 / 20 split) ──
+                // Bucket A: Peer Circle (follow + schoolmate) — highest priority
+                // Bucket B: Trending  (high engagement/score but not in circle)
+                // Bucket C: Discovery (newest/recent posts from wider community)
+                const bucketA: any[] = []; // Peer Circle
+                const bucketB: any[] = []; // Trending
+                const bucketC: any[] = []; // Discovery
+
+                const seenAuthors = new Set<string>(); // Diversity guard — max 2 slots per author
+                const authorSlots: Record<string, number> = {};
+
+                for (const post of scoredPosts) {
+                    const authorId = post.author.id;
+                    const slots = authorSlots[authorId] || 0;
+                    if (slots >= 2) continue; // Diversity guard
+                    authorSlots[authorId] = slots + 1;
+
+                    const isFollowed = followingIds.includes(authorId);
+                    const isSchoolmate = userSchoolName && post.author.school === userSchoolName;
+
+                    if (post.is_pinned) {
+                        // Pinned posts go straight to the feed pool with max score
+                        pool.push(post);
+                    } else if (isFollowed || isSchoolmate) {
+                        post._feedLabel = isFollowed ? '👤 Post from Peer You Follow' : '🏫 Trending at Your School';
+                        post._feedScore = isFollowed ? 95 : 85;
+                        bucketA.push(post);
+                    } else if (post._postScore > 20) {
+                        // Posts with meaningful engagement score → Trending bucket
+                        post._feedLabel = '🔥 Trending in Community';
+                        post._feedScore = 78;
+                        bucketB.push(post);
+                    } else {
+                        // Remaining recent posts → Discovery bucket
+                        post._feedLabel = '💡 Discover Something New';
+                        post._feedScore = 65;
+                        bucketC.push(post);
+                    }
+                }
+
+                // Fill pool slots according to bucket quotas (5 max per cycle)
+                const maxPosts = Math.min(8, Math.ceil(limit * 0.20));
+                const peerSlots  = Math.ceil(maxPosts * 0.50);
+                const trendSlots = Math.ceil(maxPosts * 0.30);
+                const discSlots  = Math.ceil(maxPosts * 0.20);
+
+                pool.push(...bucketA.slice(0, peerSlots));
+                pool.push(...bucketB.slice(0, trendSlots));
+                pool.push(...bucketC.slice(0, discSlots));
             }
-            pool.push(...postPool);
         }
 
         // ── Fallback ─────
