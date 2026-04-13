@@ -478,22 +478,24 @@ export async function GET(req: NextRequest) {
         // Posts are scored with a multi-signal weighting function and injected
         // into three stratified buckets: Peer Circle > Trending > Discovery.
         if (!subject) {
-            // 1. Fetch pinned posts separately so they are never dropped by the LIMIT
+            // 1. Fetch pinned posts — but only if created within the last 14 days
+            //    (older pinned posts are stale noise and should not float forever)
+            const pinnedCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
             const { data: globalPinnedRaw } = await supabaseAdmin
                 .from('posts')
                 .select('*, post_likes(user_id)')
                 .ilike('content', '[PINNED]%')
+                .gte('created_at', pinnedCutoff)
                 .order('created_at', { ascending: false })
-                .limit(3);
+                .limit(2);
 
-            // 2. Fetch a wider window of recent posts to enable diversity scoring
-            //    (7-day window, 60 posts — enough candidates for all 3 buckets)
+            // 2. Fetch a wide window of recent posts (30 days, 80 posts) as candidates
             const { data: rawPosts } = await supabaseAdmin
                 .from('posts')
                 .select('*, post_likes(user_id)')
-                .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+                .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
                 .order('created_at', { ascending: false })
-                .limit(60);
+                .limit(80);
 
             // De-duplicate (pinned posts may appear in both queries)
             const allRawPosts = [...(globalPinnedRaw || []), ...(rawPosts || [])];
@@ -540,8 +542,9 @@ export async function GET(req: NextRequest) {
                         post._feedLabel = isFollowed ? '👤 Post from Peer You Follow' : '🏫 Trending at Your School';
                         post._feedScore = isFollowed ? 95 : 85;
                         bucketA.push(post);
-                    } else if (post._postScore > 20) {
-                        // Posts with meaningful engagement score → Trending bucket
+                    } else if (post._postScore > 5) {
+                        // Nearly any post with recency score > 5 counts as "Trending"
+                        // (threshold lowered — base score decays quickly for older posts)
                         post._feedLabel = '🔥 Trending in Community';
                         post._feedScore = 78;
                         bucketB.push(post);
@@ -553,15 +556,37 @@ export async function GET(req: NextRequest) {
                     }
                 }
 
-                // Fill pool slots according to bucket quotas (5 max per cycle)
-                const maxPosts = Math.min(8, Math.ceil(limit * 0.20));
-                const peerSlots  = Math.ceil(maxPosts * 0.50);
-                const trendSlots = Math.ceil(maxPosts * 0.30);
-                const discSlots  = Math.ceil(maxPosts * 0.20);
+                // ── Bucket quota: up to 30 posts max from community layer ──
+                // Split: 50% Peer Circle, 30% Trending, 20% Discovery
+                // Smart fallback: if a bucket is empty, give its slots to the next one.
+                const maxPostsToShow = Math.min(30, scoredPosts.length);
+                const peerSlots  = Math.ceil(maxPostsToShow * 0.50);
+                const trendSlots = Math.ceil(maxPostsToShow * 0.30);
+                const discSlots  = maxPostsToShow; // fallback fills remaining slots
 
                 pool.push(...bucketA.slice(0, peerSlots));
                 pool.push(...bucketB.slice(0, trendSlots));
-                pool.push(...bucketC.slice(0, discSlots));
+
+                // Smart fallback: if peer + trending didn't fill enough posts,
+                // pull from discovery to ensure 30 posts minimum
+                const soFar = bucketA.slice(0, peerSlots).length + bucketB.slice(0, trendSlots).length;
+                const remaining = Math.max(maxPostsToShow - soFar, discSlots);
+                pool.push(...bucketC.slice(0, remaining));
+
+                // Additional fallback: if we still have very few posts after buckets,
+                // dump ALL scored posts into pool (removes all filters) so the page
+                // is never empty for new users with no follows/school matches.
+                const totalPostsAdded = pool.filter(p => p.type === 'post').length;
+                if (totalPostsAdded < 5 && scoredPosts.length > 0) {
+                    const alreadyInPool = new Set(pool.filter(p => p.type === 'post').map(p => p.id));
+                    for (const post of scoredPosts) {
+                        if (!alreadyInPool.has(post.id) && !post.is_pinned) {
+                            post._feedLabel = '💡 Community Post';
+                            post._feedScore = 60;
+                            pool.push(post);
+                        }
+                    }
+                }
             }
         }
 

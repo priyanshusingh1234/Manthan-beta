@@ -19,14 +19,36 @@ export default function SocialFeedPage() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
             const token = session?.access_token || null;
-            const res = await fetch(`/api/feed?t=${Date.now()}`, {
+            const res = await fetch(`/api/feed?limit=60&t=${Date.now()}`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                 cache: 'no-store',
             });
             if (!res.ok) throw new Error(await res.text());
             const rawData = await res.json();
             const allItems = Array.isArray(rawData) ? rawData : (rawData?.questions || []);
-            setPosts(allItems.filter((item: any) => item.type === 'post'));
+            const postItems = allItems.filter((item: any) => item.type === 'post');
+
+            // Smart fallback: if the algorithmic feed returned too few posts
+            // (happens for brand-new users with no followers or school matches),
+            // call /api/posts directly to guarantee 30+ posts are shown.
+            if (postItems.length < 5) {
+                const fbRes = await fetch('/api/posts', {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    cache: 'no-store',
+                });
+                if (fbRes.ok) {
+                    const fbData = await fbRes.json();
+                    // Merge, dedupe, and label fallback posts
+                    const existingIds = new Set(postItems.map((p: any) => p.id));
+                    const fallbackPosts = (Array.isArray(fbData) ? fbData : [])
+                        .filter((p: any) => !existingIds.has(p.id))
+                        .map((p: any) => ({ ...p, type: 'post', _feedLabel: '💡 Community Post' }));
+                    setPosts([...postItems, ...fallbackPosts]);
+                    return;
+                }
+            }
+
+            setPosts(postItems);
         } catch (err) {
             console.error(err);
         } finally {
