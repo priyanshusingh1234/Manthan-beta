@@ -1,80 +1,127 @@
 "use client";
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import QuestionCard from './QuestionCard';
 import PostCard from './PostCard';
 import { supabase } from '@/lib/supabaseClient';
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw, Loader2, X, ChevronDown } from 'lucide-react';
 
 type FeedItem = any;
+const PAGE_SIZE = 10;
 
-const PAGE_SIZE = 10; // items to reveal per scroll trigger
+// ── Filter constants ──────────────────────────────────────────────────────────
+const SUBJECTS = [
+  { label: 'All',     value: '',                  emoji: '⚡' },
+  { label: 'Maths',   value: 'Maths',              emoji: '📐' },
+  { label: 'Science', value: 'Science',             emoji: '🔬' },
+  { label: 'English', value: 'English',             emoji: '📖' },
+  { label: 'Eng Lit', value: 'English Literature',  emoji: '📚' },
+  { label: 'SST',     value: 'SST',                 emoji: '🌍' },
+  { label: 'G.K',     value: 'G.K',                 emoji: '🧠' },
+];
+
+const CLASSES = [
+  { label: 'All Classes', value: '' },
+  ...Array.from({ length: 12 }, (_, i) => ({ label: `Class ${i + 1}`, value: String(i + 1) })),
+];
+
+// ── Smart matchers ────────────────────────────────────────────────────────────
+function matchSubject(qSubject: string | null | undefined, filterValue: string): boolean {
+  if (!filterValue) return true;
+  if (!qSubject) return false;
+  const q = qSubject.trim().toLowerCase();
+  const f = filterValue.trim().toLowerCase();
+  switch (f) {
+    case 'maths':           return q.includes('math');
+    case 'science':         return q.includes('science') || q.includes('physics') || q.includes('chemistry') || q.includes('biology');
+    case 'english':         return q.includes('english') && !q.includes('literature') && !q.includes('lit');
+    case 'english literature': return q.includes('english literature') || q.includes('eng lit') || q.includes('english lit');
+    case 'sst':             return q.includes('sst') || q.includes('social') || q.includes('history') || q.includes('geography') || q.includes('civics');
+    case 'g.k':             return q.includes('g.k') || q === 'gk' || q.includes('general knowledge') || q.includes('gk');
+    default:                return q.startsWith(f) || q.includes(f);
+  }
+}
+
+function matchClass(qClass: string | null | undefined, filterClass: string): boolean {
+  if (!filterClass) return true;
+  if (!qClass) return true;
+  const cls = qClass.toString().trim().toLowerCase();
+  if (cls === 'all' || cls === 'any' || cls === '') return true;
+  const digits = cls.replace(/[^0-9]/g, '');
+  return digits === filterClass;
+}
 
 export default function QuestionsFeed() {
-  const [allItems, setAllItems]   = useState<FeedItem[]>([]);
+  // Filter state
+  const [subject, setSubject]   = useState('');
+  const [classGrade, setClass]  = useState('');
+
+  // Feed data
+  const [allData, setAllData]     = useState<FeedItem[]>([]);   // raw from API (algorithmic or questions)
+  const [userId, setUserId]       = useState<string | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setMore]    = useState(false);
+  const [exhausted, setExhausted] = useState(false);
+  const [err, setErr]             = useState<string | null>(null);
   const [visibleCount, setVisible] = useState(PAGE_SIZE);
-  const [userId, setUserId]        = useState<string | null>(null);
-  const [loading, setLoading]      = useState(true);
-  const [refreshing, setRefreshing]= useState(false);
-  const [loadingMore, setMore]     = useState(false);
-  const [err, setErr]              = useState<string | null>(null);
-  const [exhausted, setExhausted]  = useState(false); // true when no more items in API
 
-  const sentinelRef   = useRef<HTMLDivElement>(null);
-  const observerRef   = useRef<IntersectionObserver | null>(null);
-  const offsetRef     = useRef(0); // tracks how many items were loaded from the API
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const offsetRef   = useRef(0);
+  const filterModeRef = useRef(false); // true = browsing specific filter
 
-  // ── Load next page from API ───────────────────────────────────────────────
-  const loadPage = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-      offsetRef.current = 0;
-    } else if (offsetRef.current === 0) {
-      setLoading(true);
-    } else {
-      setMore(true);
-    }
+  // ── Fetch logic: algorithmic feed OR all questions for filter ─────────────
+  const load = useCallback(async ({ refresh = false, subject: sub = '', classGrade: cls = '' } = {}) => {
+    if (refresh) { setRefreshing(true); offsetRef.current = 0; }
+    else if (offsetRef.current === 0) setLoading(true);
+    else setMore(true);
     setErr(null);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const currentId = session?.user?.id || null;
-      if (isRefresh || offsetRef.current === 0) setUserId(currentId);
+      if (refresh || offsetRef.current === 0) setUserId(currentId);
 
       const headers: HeadersInit = {};
-      if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
+      if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
 
-      const localClass = typeof window !== 'undefined'
-        ? localStorage.getItem('dheeyudhha_recent_class') || '' : '';
+      let items: FeedItem[] = [];
 
-      const qs = new URLSearchParams({ t: Date.now().toString(), limit: '30' });
-      if (localClass) qs.set('class', localClass);
-
-      const res = await fetch(`/api/feed?${qs.toString()}`, { headers, cache: 'no-store' });
-      if (!res.ok) throw new Error(await res.text());
-      const rawData = await res.json();
-      const newItems: FeedItem[] = Array.isArray(rawData) ? rawData : (rawData?.questions || []);
-
-      if (isRefresh) {
-        setAllItems(newItems);
-        setVisible(PAGE_SIZE);
-        setExhausted(newItems.length < 10);
-      } else if (offsetRef.current === 0) {
-        setAllItems(newItems);
-        setVisible(PAGE_SIZE);
-        setExhausted(newItems.length < 10);
+      if (sub || cls) {
+        // Filter mode — fetch all questions, client-side filter handles the rest
+        filterModeRef.current = true;
+        const qs = new URLSearchParams({ limit: '300' });
+        const res = await fetch(`/api/questions?${qs.toString()}`, { headers, cache: 'no-store' });
+        if (!res.ok) throw new Error(await res.text());
+        const raw = await res.json();
+        items = Array.isArray(raw) ? raw : (raw?.questions || []);
       } else {
-        // Deduplicate by id when appending subsequent pages
-        setAllItems(prev => {
-          const existingIds = new Set(prev.map(i => i.id));
-          const fresh = newItems.filter(i => !existingIds.has(i.id));
+        // Algorithmic feed (no filter)
+        filterModeRef.current = false;
+        const localClass = typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_recent_class') || '' : '';
+        const qs = new URLSearchParams({ t: Date.now().toString(), limit: '40' });
+        if (localClass) qs.set('class', localClass);
+        const res = await fetch(`/api/feed?${qs.toString()}`, { headers, cache: 'no-store' });
+        if (!res.ok) throw new Error(await res.text());
+        const raw = await res.json();
+        items = Array.isArray(raw) ? raw : (raw?.questions || []);
+      }
+
+      if (refresh || offsetRef.current === 0) {
+        setAllData(items);
+        setVisible(PAGE_SIZE);
+        setExhausted(items.length < 10);
+      } else {
+        setAllData(prev => {
+          const ids = new Set(prev.map(i => i.id));
+          const fresh = items.filter(i => !ids.has(i.id));
           if (fresh.length === 0) setExhausted(true);
           return [...prev, ...fresh];
         });
       }
-      offsetRef.current += newItems.length;
-    } catch (error: any) {
-      console.error(error);
-      setErr(error?.message || String(error));
+      offsetRef.current += items.length;
+
+    } catch (e: any) {
+      setErr(e?.message || String(e));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -83,86 +130,170 @@ export default function QuestionsFeed() {
   }, []);
 
   // Initial load
-  useEffect(() => { loadPage(); }, [loadPage]);
+  useEffect(() => { load(); }, [load]);
 
-  // ── IntersectionObserver for infinite scroll ──────────────────────────────
+  // Re-fetch when filters change
+  const prevFiltersRef = useRef({ subject: '', classGrade: '' });
   useEffect(() => {
-    if (observerRef.current) observerRef.current.disconnect();
+    const prev = prevFiltersRef.current;
+    if (prev.subject === subject && prev.classGrade === classGrade) return;
+    prevFiltersRef.current = { subject, classGrade };
+    offsetRef.current = 0;
+    setAllData([]);
+    setVisible(PAGE_SIZE);
+    setExhausted(false);
+    load({ subject, classGrade });
+  }, [subject, classGrade, load]);
 
-    observerRef.current = new IntersectionObserver(entries => {
-      if (!entries[0].isIntersecting) return;
+  // ── Client-side smart filter (applied on top of fetched data) ────────────
+  const filtered = useMemo(() => {
+    return allData.filter(item => {
+      if (!matchSubject(item.subject, subject)) return false;
+      if (!matchClass(item.classGrade, classGrade)) return false;
+      return true;
+    });
+  }, [allData, subject, classGrade]);
 
-      setVisible(prev => {
-        const next = prev + PAGE_SIZE;
-        // If we've revealed all locally loaded items, fetch a fresh batch
-        if (next >= allItems.length && !exhausted) {
-          loadPage(false);
+  // ── IntersectionObserver ──────────────────────────────────────────────────
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setVisible(v => {
+        const next = v + PAGE_SIZE;
+        if (next >= filtered.length && !exhausted && !filterModeRef.current) {
+          load({ subject, classGrade });
         }
         return next;
       });
-    }, { rootMargin: '200px' });
+    }, { rootMargin: '250px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [filtered.length, exhausted, load, subject, classGrade]);
 
-    if (sentinelRef.current) observerRef.current.observe(sentinelRef.current);
-    return () => observerRef.current?.disconnect();
-  }, [allItems.length, exhausted, loadPage]);
+  const visible = filtered.slice(0, visibleCount);
+  const hasFilter = !!(subject || classGrade);
 
-  const visibleItems = allItems.slice(0, visibleCount);
-
-  // ── Loading skeleton ──────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between pb-1">
-          <div className="h-3 w-32 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse" />
-          <div className="h-8 w-28 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse" />
-        </div>
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 animate-pulse space-y-1">
-            <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded-full mb-3" />
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div className="h-3 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-full" />
-                <div className="h-2 w-1/4 bg-slate-200 dark:bg-slate-800 rounded-full delay-75" />
-              </div>
+  // ── Skeleton ──────────────────────────────────────────────────────────────
+  const skeleton = (
+    <div className="space-y-4">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800/60 animate-pulse space-y-1">
+          <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded-full mb-3" />
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-full" />
+              <div className="h-2 w-1/4 bg-slate-200 dark:bg-slate-800 rounded-full" />
             </div>
-            <div className="space-y-3 mb-5">
-              <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-800 rounded-full delay-100" />
-              <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded-full delay-150" />
-              <div className="h-4 w-5/6 bg-slate-200 dark:bg-slate-800 rounded-full delay-200" />
-            </div>
-            <div className="h-12 w-full bg-slate-50 dark:bg-slate-800/50 rounded-xl mt-4" />
           </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (err) return <div className="py-6 text-sm text-red-600">Error loading feed — {err}</div>;
+          <div className="space-y-3 mb-5">
+            <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-800 rounded-full" />
+            <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded-full" />
+          </div>
+          <div className="h-10 w-full bg-slate-50 dark:bg-slate-800/50 rounded-xl mt-4" />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="space-y-4">
-      {/* Header row */}
-      <div className="flex items-center justify-between pb-1">
-        <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-          {visibleItems.length} of {allItems.length} updates for you
-        </p>
-        <button
-          onClick={() => loadPage(true)}
-          disabled={refreshing}
-          className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-100 dark:border-indigo-900/60 px-3 py-1.5 rounded-full transition-all active:scale-95 disabled:opacity-60"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Shuffling…' : 'Shuffle Feed'}
-        </button>
+    <div className="space-y-3">
+
+      {/* ── Filter bar ──────────────────────────────────────────────── */}
+      <div className="space-y-2">
+        {/* Subject pills */}
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+          {SUBJECTS.map(s => {
+            const active = subject === s.value;
+            return (
+              <button
+                key={s.value}
+                onClick={() => setSubject(active ? '' : s.value)}
+                className={`shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black transition-all active:scale-95 ${
+                  active
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                <span>{s.emoji}</span> {s.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Class + controls row */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Class select */}
+          <div className="relative">
+            <select
+              value={classGrade}
+              onChange={e => setClass(e.target.value)}
+              className={`appearance-none pl-3 pr-7 py-1.5 rounded-xl text-xs font-black outline-none transition-all cursor-pointer ${
+                classGrade
+                  ? 'bg-violet-600 text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+              }`}
+            >
+              {CLASSES.map(c => (
+                <option key={c.value} value={c.value} className="bg-white dark:bg-slate-900 text-slate-900">
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none ${classGrade ? 'text-violet-200' : 'text-slate-400'}`} />
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto">
+            {hasFilter && (
+              <button
+                onClick={() => { setSubject(''); setClass(''); }}
+                className="flex items-center gap-1 text-[11px] font-black text-red-500 active:scale-95 transition-transform"
+              >
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
+            <button
+              onClick={() => { offsetRef.current = 0; load({ refresh: true, subject, classGrade }); }}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900/60 px-3 py-1.5 rounded-full transition-all active:scale-95 disabled:opacity-60"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Loading…' : hasFilter ? 'Refresh' : 'Shuffle'}
+            </button>
+          </div>
+        </div>
+
+        {/* Status line */}
+        {!loading && (
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+            {hasFilter
+              ? `${filtered.length} questions • ${subject || 'All subjects'}${classGrade ? ` · Class ${classGrade}` : ''}`
+              : `${visible.length} of ${filtered.length} personalized picks`}
+          </p>
+        )}
       </div>
 
-      {/* Feed items */}
-      {(!visibleItems || visibleItems.length === 0) ? (
-        <div className="py-6 text-sm text-slate-500">Nothing to show yet.</div>
+      {/* ── Feed content ────────────────────────────────────────────── */}
+      {loading ? skeleton : err ? (
+        <div className="py-6 text-sm text-red-500">Error: {err}</div>
+      ) : filtered.length === 0 ? (
+        <div className="py-10 text-center space-y-2">
+          <div className="text-4xl">🔍</div>
+          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No questions found</p>
+          <p className="text-xs text-slate-400">
+            {hasFilter ? 'Try a different subject or class.' : 'Nothing in your feed yet.'}
+          </p>
+          {hasFilter && (
+            <button onClick={() => { setSubject(''); setClass(''); }} className="mt-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-black active:scale-95">
+              Clear filters
+            </button>
+          )}
+        </div>
       ) : (
         <>
-          {visibleItems.map((item: FeedItem) => (
+          {visible.map((item: FeedItem) => (
             <div key={item.id} className="space-y-1">
               {item._feedLabel && item.type !== 'post' && (
                 <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 px-1 tracking-wide">
@@ -170,12 +301,7 @@ export default function QuestionsFeed() {
                 </p>
               )}
               {item.type === 'post' ? (
-                <PostCard
-                  post={item}
-                  currentUserId={userId}
-                  onUpdate={() => loadPage(true)}
-                  feedLabel={item._feedLabel}
-                />
+                <PostCard post={item} currentUserId={userId} onUpdate={() => load({ refresh: true, subject, classGrade })} feedLabel={item._feedLabel} />
               ) : (
                 <QuestionCard q={item} />
               )}
@@ -183,16 +309,16 @@ export default function QuestionsFeed() {
           ))}
 
           {/* Infinite scroll sentinel */}
-          <div ref={sentinelRef} className="py-2 flex justify-center">
-            {loadingMore && (
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Loading more…
+          <div ref={sentinelRef} className="py-3 flex justify-center">
+            {loadingMore ? (
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading more…
               </div>
-            )}
-            {!loadingMore && exhausted && allItems.length > 0 && (
-              <p className="text-xs text-slate-400 font-medium">You're all caught up 🎉</p>
-            )}
+            ) : exhausted || filterModeRef.current ? (
+              visibleCount >= filtered.length && (
+                <p className="text-xs text-slate-400">All {filtered.length} questions shown ✓</p>
+              )
+            ) : null}
           </div>
         </>
       )}
