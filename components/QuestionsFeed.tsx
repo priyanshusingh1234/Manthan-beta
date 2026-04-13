@@ -10,13 +10,12 @@ const PAGE_SIZE = 10;
 
 // ── Filter constants ──────────────────────────────────────────────────────────
 const SUBJECTS = [
-  { label: 'All',     value: '',                  emoji: '⚡' },
-  { label: 'Maths',   value: 'Maths',              emoji: '📐' },
-  { label: 'Science', value: 'Science',             emoji: '🔬' },
-  { label: 'English', value: 'English',             emoji: '📖' },
-  { label: 'Eng Lit', value: 'English Literature',  emoji: '📚' },
-  { label: 'SST',     value: 'SST',                 emoji: '🌍' },
-  { label: 'G.K',     value: 'G.K',                 emoji: '🧠' },
+  { label: 'All',     value: '',         emoji: '⚡' },
+  { label: 'Maths',   value: 'Maths',    emoji: '📐' },
+  { label: 'Science', value: 'Science',  emoji: '🔬' },
+  { label: 'English', value: 'English',  emoji: '📖' },
+  { label: 'SST',     value: 'SST',      emoji: '🌍' },
+  { label: 'G.K',     value: 'G.K',      emoji: '🧠' },
 ];
 
 const CLASSES = [
