@@ -243,17 +243,33 @@ export default function QuestionCard({ q }: { q: Question }) {
               </Link>
               <TeacherBadge />
             </div>
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              <span className="font-medium whitespace-nowrap">{q.subject || "General"}</span>
-              <span className="hidden sm:inline">•</span>
-              <span className="whitespace-nowrap">{q.classGrade ? `Class ${q.classGrade}` : ""}</span>
-              {formattedDate && (
-                <>
-                  <span className="hidden sm:inline">•</span>
-                  <span className="whitespace-nowrap">{formattedDate}</span>
-                </>
-              )}
-            </div>
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs mt-0.5">
+                <Link
+                  href={`/browse${q.subject ? `?subject=${encodeURIComponent(q.subject)}` : ''}`}
+                  onClick={e => e.stopPropagation()}
+                  className="font-bold whitespace-nowrap px-1.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                >
+                  {q.subject || 'General'}
+                </Link>
+                {q.classGrade && (
+                  <>
+                    <span className="text-slate-300 dark:text-slate-600">·</span>
+                    <Link
+                      href={`/browse?class=${encodeURIComponent(q.classGrade)}`}
+                      onClick={e => e.stopPropagation()}
+                      className="whitespace-nowrap px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 font-medium transition-colors"
+                    >
+                      Class {q.classGrade}
+                    </Link>
+                  </>
+                )}
+                {formattedDate && (
+                  <>
+                    <span className="hidden sm:inline text-slate-300 dark:text-slate-600">·</span>
+                    <span className="hidden sm:inline whitespace-nowrap text-slate-400">{formattedDate}</span>
+                  </>
+                )}
+              </div>
           </div>
         </div>
 
