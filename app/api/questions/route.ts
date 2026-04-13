@@ -44,12 +44,15 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const subject = url.searchParams.get('subject');
-    const limit = Number(url.searchParams.get('limit') || '20');
+    const limit = Math.min(Number(url.searchParams.get('limit') || '50'), 500);
 
     // Prefer DB when service role configured
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
       let builder: any = supabaseAdmin.from('questions').select('*').order('created_at', { ascending: false }).limit(limit);
-      if (subject) builder = builder.eq('subject', subject);
+      // Only apply server-side subject filter when explicitly requested AND it's an exact known value
+      // (browse page sends no subject filter and does fuzzy matching client-side)
+      if (subject) builder = builder.ilike('subject', `${subject}%`);
+
       const { data, error } = await builder;
       if (error) return NextResponse.json({ error: (error && (error.message || JSON.stringify(error))) || String(error) }, { status: 500 });
 

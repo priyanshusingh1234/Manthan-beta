@@ -1,60 +1,90 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import QuestionCard from '@/components/QuestionCard';
-import { BookOpen, GraduationCap, Search, X, SlidersHorizontal } from 'lucide-react';
+import { Search, X, ChevronDown } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const SUBJECTS = [
-  { label: 'All', value: '', emoji: '🌐' },
-  { label: 'Maths', value: 'Maths', emoji: '📐' },
-  { label: 'Science', value: 'Science', emoji: '🔬' },
-  { label: 'English', value: 'English', emoji: '📖' },
-  { label: 'Eng Lit', value: 'English Literature', emoji: '📚' },
-  { label: 'SST', value: 'SST', emoji: '🌍' },
-  { label: 'G.K', value: 'G.K', emoji: '🧠' },
+  { label: 'All',     value: '',                   emoji: '⚡', match: null },
+  { label: 'Maths',   value: 'Maths',               emoji: '📐', match: 'math' },
+  { label: 'Science', value: 'Science',              emoji: '🔬', match: 'science' },
+  { label: 'English', value: 'English',              emoji: '📖', match: 'english' },
+  { label: 'Eng Lit', value: 'English Literature',   emoji: '📚', match: 'english literature' },
+  { label: 'SST',     value: 'SST',                  emoji: '🌍', match: 'sst' },
+  { label: 'G.K',     value: 'G.K',                  emoji: '🧠', match: 'g.k' },
 ];
 
 const CLASSES = [
-  { label: 'All Classes', value: '' },
-  ...Array.from({ length: 12 }, (_, i) => ({ label: `Class ${i + 1}`, value: String(i + 1) })),
+  { label: 'All', value: '' },
+  ...Array.from({ length: 12 }, (_, i) => ({ label: `${i + 1}`, value: String(i + 1) })),
 ];
 
 const DIFFICULTIES = [
-  { label: 'All', value: '' },
-  { label: 'Easy', value: 'Easy' },
-  { label: 'Medium', value: 'Medium' },
-  { label: 'Hard', value: 'Hard' },
+  { label: 'All',    value: '',       color: '' },
+  { label: 'Easy',   value: 'Easy',   color: 'emerald' },
+  { label: 'Medium', value: 'Medium', color: 'amber' },
+  { label: 'Hard',   value: 'Hard',   color: 'red' },
 ];
 
-// ── Subject color map ─────────────────────────────────────────────────────────
-const subjectColors: Record<string, string> = {
-  'Maths':               'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 data-[active=true]:bg-blue-600 data-[active=true]:text-white data-[active=true]:border-blue-600',
-  'Science':             'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 data-[active=true]:bg-emerald-600 data-[active=true]:text-white data-[active=true]:border-emerald-600',
-  'English':             'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800 data-[active=true]:bg-violet-600 data-[active=true]:text-white data-[active=true]:border-violet-600',
-  'English Literature':  'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 data-[active=true]:bg-purple-600 data-[active=true]:text-white data-[active=true]:border-purple-600',
-  'SST':                 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 data-[active=true]:bg-amber-600 data-[active=true]:text-white data-[active=true]:border-amber-600',
-  'G.K':                 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 data-[active=true]:bg-rose-600 data-[active=true]:text-white data-[active=true]:border-rose-600',
-  '':                    'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 data-[active=true]:bg-slate-800 data-[active=true]:text-white data-[active=true]:border-slate-800 dark:data-[active=true]:bg-white dark:data-[active=true]:text-slate-900',
-};
+// ── Fuzzy match helpers ───────────────────────────────────────────────────────
+function matchSubject(qSubject: string | null, filterMatch: string | null): boolean {
+  if (!filterMatch) return true;
+  if (!qSubject) return false;
+  const s = qSubject.toLowerCase();
+  return s.startsWith(filterMatch) || s.includes(filterMatch);
+}
 
-// ── Inner component (uses useSearchParams, must be wrapped in Suspense) ────────
+function matchClass(qClass: string | null, filterClass: string): boolean {
+  if (!filterClass) return true;
+  if (!qClass || qClass === 'All' || qClass === 'Any') return true; // "All" grade questions show everywhere
+  const normalized = qClass.toLowerCase().replace(/[^0-9]/g, '');
+  return normalized === filterClass;
+}
+
+function matchDifficulty(qDiff: string | null, filter: string): boolean {
+  if (!filter) return true;
+  if (!qDiff) return false;
+  return qDiff.toLowerCase().startsWith(filter.toLowerCase()) ||
+         (filter.toLowerCase() === 'medium' && qDiff.toLowerCase() === 'moderate');
+}
+
+// ── Inner page ────────────────────────────────────────────────────────────────
 function BrowseInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [subject, setSubject] = useState(searchParams.get('subject') || '');
-  const [classGrade, setClassGrade] = useState(searchParams.get('class') || '');
-  const [difficulty, setDifficulty] = useState(searchParams.get('difficulty') || '');
-  const [search, setSearch] = useState('');
+  const [subject, setSubject]   = useState(searchParams.get('subject') || '');
+  const [classGrade, setClass]  = useState(searchParams.get('class') || '');
+  const [difficulty, setDiff]   = useState(searchParams.get('difficulty') || '');
+  const [search, setSearch]     = useState('');
+  const [allQuestions, setAll]  = useState<any[]>([]);
+  const [loading, setLoading]   = useState(true);
 
-  const [questions, setQuestions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  // ── Sync filters → URL ───────────────────────────────────────────────────
+  // ── Load ALL questions ONCE ───────────────────────────────────────────────
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: HeadersInit = {};
+        if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
+        const res = await fetch('/api/questions?limit=200', { headers, cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (mounted) setAll(Array.isArray(data) ? data : (data?.questions || []));
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // ── Sync URL params (no re-fetch, just cosmetic) ──────────────────────────
   useEffect(() => {
     const params = new URLSearchParams();
     if (subject) params.set('subject', subject);
@@ -63,191 +93,173 @@ function BrowseInner() {
     router.replace(`/browse${params.toString() ? '?' + params.toString() : ''}`, { scroll: false });
   }, [subject, classGrade, difficulty, router]);
 
-  // ── Fetch questions ──────────────────────────────────────────────────────
-  const fetchQuestions = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUserId(session?.user?.id || null);
+  // ── Client-side filter (instantaneous) ───────────────────────────────────
+  const activeSubject = SUBJECTS.find(s => s.value === subject);
 
-      const params = new URLSearchParams({ limit: '80' });
-      if (subject) params.set('subject', subject);
-      if (classGrade) params.set('classGrade', classGrade);
-      if (difficulty) params.set('difficulty', difficulty);
+  const filtered = useMemo(() => {
+    return allQuestions.filter(q => {
+      if (!matchSubject(q.subject, activeSubject?.match ?? null)) return false;
+      if (!matchClass(q.classGrade, classGrade)) return false;
+      if (!matchDifficulty(q.difficulty, difficulty)) return false;
+      if (search.trim()) {
+        const s = search.toLowerCase();
+        if (!(q.title?.toLowerCase().includes(s) || q.subject?.toLowerCase().includes(s))) return false;
+      }
+      return true;
+    });
+  }, [allQuestions, activeSubject, classGrade, difficulty, search]);
 
-      const headers: HeadersInit = {};
-      if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
-
-      const res = await fetch(`/api/questions?${params.toString()}`, { headers, cache: 'no-store' });
-      if (!res.ok) throw new Error('Failed to fetch');
-      const data = await res.json();
-      setQuestions(Array.isArray(data) ? data : (data?.questions || []));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [subject, classGrade, difficulty]);
-
-  useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
-
-  // ── Client-side search filter ────────────────────────────────────────────
-  const filtered = search.trim()
-    ? questions.filter(q =>
-        q.title?.toLowerCase().includes(search.toLowerCase()) ||
-        q.subject?.toLowerCase().includes(search.toLowerCase())
-      )
-    : questions;
-
-  const activeFiltersCount = [subject, classGrade, difficulty].filter(Boolean).length;
+  const hasFilters = !!(subject || classGrade || difficulty || search.trim());
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 pb-28 pt-4 sm:pt-8">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 pb-28">
 
-        {/* Header */}
-        <div className="mb-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-100/60 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold mb-3 border border-indigo-200/50 dark:border-indigo-800/50">
-            <BookOpen className="w-3.5 h-3.5" /> Question Library
+      {/* ── Sticky Header ─────────────────────────────────────────── */}
+      <div className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm">
+
+        {/* Title row */}
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <div>
+            <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white leading-none">Browse</h1>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+              {loading ? 'Loading…' : `${filtered.length} of ${allQuestions.length} questions`}
+            </p>
           </div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">Browse Questions</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm font-medium">Filter by subject, class, or difficulty</p>
-        </div>
-
-        {/* Search bar */}
-        <div className="relative mb-5">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search questions..."
-            className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all shadow-sm"
-          />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-              <X className="w-4 h-4" />
+          {hasFilters && (
+            <button
+              onClick={() => { setSubject(''); setClass(''); setDiff(''); setSearch(''); }}
+              className="flex items-center gap-1 text-[11px] font-black text-red-500 active:scale-95 transition-transform"
+            >
+              <X className="w-3.5 h-3.5" /> Clear
             </button>
           )}
         </div>
 
-        {/* Subject tags */}
-        <div className="mb-3">
-          <div className="flex items-center gap-2 mb-2">
-            <BookOpen className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Subject</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {SUBJECTS.map(s => (
+        {/* Search bar */}
+        <div className="relative px-4 pb-2">
+          <Search className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <input
+            ref={searchRef}
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search questions..."
+            className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-7 top-1/2 -translate-y-1/2 text-slate-400">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Subject pills — horizontal scroll */}
+        <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-none">
+          {SUBJECTS.map(s => {
+            const active = subject === s.value;
+            return (
               <button
                 key={s.value}
-                data-active={subject === s.value}
-                onClick={() => setSubject(subject === s.value ? '' : s.value)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${subjectColors[s.value] || subjectColors['']}`}
-              >
-                <span>{s.emoji}</span> {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Class tags */}
-        <div className="mb-3">
-          <div className="flex items-center gap-2 mb-2">
-            <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Class</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {CLASSES.map(c => (
-              <button
-                key={c.value}
-                onClick={() => setClassGrade(classGrade === c.value ? '' : c.value)}
-                className={`px-3 py-1 rounded-full text-xs font-bold border transition-all active:scale-95 ${
-                  classGrade === c.value
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600'
+                onClick={() => setSubject(active ? '' : s.value)}
+                className={`shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black border transition-all active:scale-95 ${
+                  active
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/30'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent'
                 }`}
               >
-                {c.label}
+                <span className="text-[13px] leading-none">{s.emoji}</span> {s.label}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
-        {/* Difficulty tags */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Difficulty</span>
+        {/* Class + Difficulty row */}
+        <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-none items-center">
+          {/* Class dropdown */}
+          <div className="relative shrink-0">
+            <select
+              value={classGrade}
+              onChange={e => setClass(e.target.value)}
+              className={`appearance-none pl-3 pr-6 py-1.5 rounded-xl text-xs font-black border outline-none transition-all cursor-pointer ${
+                classGrade
+                  ? 'bg-violet-600 text-white border-violet-600'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent'
+              }`}
+            >
+              {CLASSES.map(c => (
+                <option key={c.value} value={c.value} className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">
+                  {c.value ? `Class ${c.label}` : 'All Classes'}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none ${classGrade ? 'text-white' : 'text-slate-400'}`} />
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {DIFFICULTIES.map(d => (
+
+          {/* Divider */}
+          <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 shrink-0" />
+
+          {/* Difficulty pills */}
+          {DIFFICULTIES.map(d => {
+            const active = difficulty === d.value;
+            const colorMap: Record<string, string> = {
+              emerald: 'bg-emerald-500 text-white border-emerald-500',
+              amber:   'bg-amber-500 text-white border-amber-500',
+              red:     'bg-red-500 text-white border-red-500',
+            };
+            return (
               <button
                 key={d.value}
-                onClick={() => setDifficulty(difficulty === d.value ? '' : d.value)}
-                className={`px-3 py-1 rounded-full text-xs font-bold border transition-all active:scale-95 ${
-                  difficulty === d.value
-                    ? d.value === 'Easy' ? 'bg-emerald-600 text-white border-emerald-600'
-                    : d.value === 'Medium' ? 'bg-amber-500 text-white border-amber-500'
-                    : d.value === 'Hard' ? 'bg-red-600 text-white border-red-600'
-                    : 'bg-slate-800 text-white border-slate-800 dark:bg-white dark:text-slate-900'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400'
+                onClick={() => setDiff(active ? '' : d.value)}
+                className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-black border transition-all active:scale-95 ${
+                  active
+                    ? (colorMap[d.color] || 'bg-slate-800 text-white border-slate-800 dark:bg-white dark:text-slate-900')
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent'
                 }`}
               >
                 {d.label}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
+      </div>
 
-        {/* Active filter count + clear */}
-        {activeFiltersCount > 0 && (
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
-              {activeFiltersCount} filter{activeFiltersCount > 1 ? 's' : ''} active
-            </p>
-            <button
-              onClick={() => { setSubject(''); setClassGrade(''); setDifficulty(''); }}
-              className="text-xs font-bold text-slate-500 hover:text-red-500 transition-colors flex items-center gap-1"
-            >
-              <X className="w-3 h-3" /> Clear all
-            </button>
-          </div>
-        )}
-
-        {/* Results */}
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs text-slate-400 font-medium">
-            {loading ? 'Loading…' : `${filtered.length} question${filtered.length !== 1 ? 's' : ''} found`}
-          </p>
-        </div>
-
+      {/* ── Feed ──────────────────────────────────────────────────── */}
+      <div className="px-4 pt-4 space-y-3 max-w-2xl mx-auto">
         {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => (
+          <>
+            {[1, 2, 3, 4].map(i => (
               <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 animate-pulse space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800" />
+                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
                   <div className="space-y-2 flex-1">
-                    <div className="h-3 w-1/4 bg-slate-200 dark:bg-slate-800 rounded-full" />
-                    <div className="h-2 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                    <div className="h-3 w-1/3 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                    <div className="h-2 w-1/4 bg-slate-200 dark:bg-slate-800 rounded-full" />
                   </div>
                 </div>
-                <div className="h-5 w-3/4 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                <div className="h-5 w-4/5 bg-slate-200 dark:bg-slate-800 rounded-full" />
                 <div className="h-4 w-full bg-slate-200 dark:bg-slate-800 rounded-full" />
+                <div className="h-4 w-2/3 bg-slate-200 dark:bg-slate-800 rounded-full" />
               </div>
             ))}
-          </div>
+          </>
         ) : filtered.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-slate-100 dark:border-slate-800">
-            <div className="text-4xl mb-3">🔍</div>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">No questions found</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">Try different filters or clear them to see all questions.</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="text-5xl mb-4">🔍</div>
+            <h3 className="text-lg font-black text-slate-800 dark:text-slate-200 mb-1">No questions found</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
+              {hasFilters ? 'Try different filters.' : 'No questions available yet.'}
+            </p>
+            {hasFilters && (
+              <button
+                onClick={() => { setSubject(''); setClass(''); setDiff(''); setSearch(''); }}
+                className="mt-4 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-black active:scale-95 transition-transform"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
-          <div className="space-y-4">
-            {filtered.map(q => <QuestionCard key={q.id} q={q} />)}
-          </div>
+          filtered.map(q => <QuestionCard key={q.id} q={q} />)
         )}
       </div>
     </div>
