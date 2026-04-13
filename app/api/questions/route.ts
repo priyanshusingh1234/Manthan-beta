@@ -43,17 +43,33 @@ async function writeLocal(items: any[]) {
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const subject = url.searchParams.get('subject');
-    const limit = Math.min(Number(url.searchParams.get('limit') || '50'), 500);
+    const subject    = url.searchParams.get('subject');
+    const classParam = url.searchParams.get('class');
+    // Allow up to 1000 so a full subject filter is never truncated
+    const limit = Math.min(Number(url.searchParams.get('limit') || '50'), 1000);
 
     // Prefer DB when service role configured
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
       let builder: any = supabaseAdmin.from('questions').select('*').order('created_at', { ascending: false }).limit(limit);
-      // Only apply server-side subject filter when explicitly requested AND it's an exact known value
-      // (browse page sends no subject filter and does fuzzy matching client-side)
-      if (subject) builder = builder.ilike('subject', `${subject}%`);
+
+      if (subject) {
+        const sLower = subject.toLowerCase();
+        if (sLower.startsWith('math') || sLower === 'maths') {
+          builder = builder.ilike('subject', '%math%');
+        } else if (sLower === 'sst' || sLower === 'social studies' || sLower === 'social science') {
+          builder = builder.or('subject.ilike.%SST%,subject.ilike.%social%,subject.ilike.%history%,subject.ilike.%geography%,subject.ilike.%civics%');
+        } else {
+          builder = builder.ilike('subject', `${subject}%`);
+        }
+      }
+
+      // Class grade filter — also passes through 'All'/'Any' class_grade rows
+      if (classParam) {
+        builder = builder.or(`class_grade.eq.${classParam},class_grade.ilike.All,class_grade.ilike.Any,class_grade.is.null`);
+      }
 
       const { data, error } = await builder;
+
       if (error) return NextResponse.json({ error: (error && (error.message || JSON.stringify(error))) || String(error) }, { status: 500 });
 
       // fetch poster names + avatars for each unique creator id (best-effort using admin.getUserById)

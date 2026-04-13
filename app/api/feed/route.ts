@@ -136,8 +136,13 @@ function calculatePostScore(
 function applyCommonFilters(query: any, subject: string, difficulty: string) {
     let q = query;
     if (subject) {
-        if (subject.toLowerCase().startsWith('math')) {
+        const sLower = subject.toLowerCase();
+        if (sLower.startsWith('math') || sLower === 'maths') {
+            // Match 'Mathematics', 'Maths', 'Math', etc.
             q = q.ilike('subject', '%math%');
+        } else if (sLower === 'sst' || sLower === 'social studies' || sLower === 'social science') {
+            // Match 'SST', 'Social Studies', 'Social Science', etc.
+            q = q.or('subject.ilike.%SST%,subject.ilike.%social%,subject.ilike.%history%,subject.ilike.%geography%,subject.ilike.%civics%');
         } else {
             q = q.eq('subject', subject);
         }
@@ -238,7 +243,7 @@ export async function GET(req: NextRequest) {
             return applyCommonFilters(q, subject, difficulty);
         };
 
-        const CORE_SUBJECTS = ['Maths', 'Science', 'English', 'SST', 'English Literature', 'G.K'];
+        const CORE_SUBJECTS = ['Mathematics', 'Science', 'English', 'SST', 'English Literature', 'G.K'];
         const now = new Date();
         const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 60 * 60 * 1000).toISOString();
         const shuffle = (arr: any[]) => arr.sort(() => 0.5 - Math.random());

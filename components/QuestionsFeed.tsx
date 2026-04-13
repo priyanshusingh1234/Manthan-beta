@@ -30,13 +30,26 @@ function matchSubject(qSubject: string | null | undefined, filterValue: string):
   const q = qSubject.trim().toLowerCase();
   const f = filterValue.trim().toLowerCase();
   switch (f) {
-    case 'maths':           return q.includes('math');
-    case 'science':         return q.includes('science') || q.includes('physics') || q.includes('chemistry') || q.includes('biology');
-    case 'english':         return q.includes('english') && !q.includes('literature') && !q.includes('lit');
-    case 'english literature': return q.includes('english literature') || q.includes('eng lit') || q.includes('english lit');
-    case 'sst':             return q.includes('sst') || q.includes('social') || q.includes('history') || q.includes('geography') || q.includes('civics');
-    case 'g.k':             return q.includes('g.k') || q === 'gk' || q.includes('general knowledge') || q.includes('gk');
-    default:                return q.startsWith(f) || q.includes(f);
+    case 'maths':              return q.includes('math') || q === 'maths';
+    case 'science':            return q.includes('science') || q.includes('physics') || q.includes('chemistry') || q.includes('biology');
+    case 'english':            return (q.includes('english') || q === 'eng') && !q.includes('literature') && !q.includes('lit');
+    case 'english literature': return q.includes('english literature') || q.includes('eng lit') || q.includes('english lit') || q.includes('lit');
+    case 'sst': {
+      // Match all stored variations: 'SST', 'Social Studies', 'Social Science',
+      // 'History', 'Geography', 'Civics', 'S.St', 'SS', etc.
+      return (
+        q === 'sst' ||
+        q.includes('sst') ||
+        q.includes('social') ||
+        q.includes('history') ||
+        q.includes('geography') ||
+        q.includes('civics') ||
+        q.includes('s.st') ||
+        q === 'ss'
+      );
+    }
+    case 'g.k':               return q === 'g.k' || q === 'gk' || q.includes('g.k') || q.includes('general knowledge') || q.includes('general k');
+    default:                   return q.startsWith(f) || q === f || q.includes(f);
   }
 }
 
@@ -86,9 +99,12 @@ export default function QuestionsFeed() {
       let items: FeedItem[] = [];
 
       if (sub || cls) {
-        // Filter mode — fetch all questions, client-side filter handles the rest
+        // Filter mode — pass subject/class to server so DB filtering returns ALL matching
+        // questions (not just the newest 300 across all subjects).
         filterModeRef.current = true;
-        const qs = new URLSearchParams({ limit: '300' });
+        const qs = new URLSearchParams({ limit: '1000' });
+        if (sub)  qs.set('subject', sub);
+        if (cls)  qs.set('class',   cls);
         const res = await fetch(`/api/questions?${qs.toString()}`, { headers, cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const raw = await res.json();
