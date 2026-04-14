@@ -33,6 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
                     avatar_url: profile?.avatar_url || null,
                     isTeacher: profile?.is_teacher || false,
                     totalPoints: Number(profile?.total_points) || 0,
+                    cosmetics: profile?.cosmetics || [],
                 }
             };
         });

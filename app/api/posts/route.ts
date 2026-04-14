@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
                         isTeacher: profile?.is_teacher || false,
                         totalPoints: Number(profile?.total_points) || 0,
                         isGhost: isGhost,
+                        cosmetics: profile?.cosmetics || [],
                     }
                 };
             })

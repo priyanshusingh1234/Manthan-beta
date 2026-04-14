@@ -57,7 +57,10 @@ export async function POST(req: NextRequest) {
         // 2. Update Profile Table
         await supabaseAdmin
             .from('profiles')
-            .update({ total_points: newPoints })
+            .update({ 
+                total_points: newPoints,
+                cosmetics: newCosmetics 
+            })
             .eq('id', user.id);
 
         return NextResponse.json({ success: true, newPoints, cosmetics: newCosmetics });

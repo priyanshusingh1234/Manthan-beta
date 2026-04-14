@@ -39,9 +39,12 @@ export default async function LeaderboardPage() {
           <div className="flex justify-center items-end gap-2 sm:gap-6 mb-8 h-48 sm:h-60 mt-4 sm:mt-0">
             {/* 2nd Place */}
             <div className="relative flex flex-col items-center w-[30%] animate-slideUp" style={{ animationDelay: '100ms' }}>
-              <div className="relative mb-2 group">
-                <Link href={`/user/${students[1].username}`}>
-                  <img src={students[1].avatar || `https://ui-avatars.com/api/?name=${students[1].name}&background=e2e8f0&color=475569`} alt={students[1].name} className="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-md relative z-10 bg-white" />
+              <div className="relative mb-2 group flex justify-center items-center">
+                <Link href={`/user/${students[1].username}`} className="relative">
+                  {students[1].cosmetics?.includes('avatar_glow') && (
+                     <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-md opacity-70 animate-pulse"></div>
+                  )}
+                  <img src={students[1].avatar || `https://ui-avatars.com/api/?name=${students[1].name}&background=e2e8f0&color=475569`} alt={students[1].name} className={`w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 relative z-10 bg-white ${students[1].cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-white dark:border-slate-800 shadow-md'}`} />
                 </Link>
                 <div className="absolute -bottom-1.5 right-0 bg-slate-200 text-slate-700 w-5 h-5 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-[10px] z-20">2</div>
               </div>
@@ -62,10 +65,13 @@ export default async function LeaderboardPage() {
 
             {/* 1st Place */}
             <div className="relative flex flex-col items-center w-[35%] z-10 -translate-y-4 sm:-translate-y-6 animate-slideUp">
-              <div className="relative mb-2 group">
+              <div className="relative mb-2 group flex justify-center items-center">
                 <div className="absolute -inset-2 rounded-full bg-amber-400/20 animate-pulse blur-md"></div>
-                <Link href={`/user/${students[0].username}`}>
-                  <img src={students[0].avatar || `https://ui-avatars.com/api/?name=${students[0].name}&background=fef3c7&color=d97706`} alt={students[0].name} className="w-18 h-18 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.2)] relative z-10 bg-white" />
+                <Link href={`/user/${students[0].username}`} className="relative">
+                  {students[0].cosmetics?.includes('avatar_glow') && (
+                     <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-lg opacity-80 animate-pulse"></div>
+                  )}
+                  <img src={students[0].avatar || `https://ui-avatars.com/api/?name=${students[0].name}&background=fef3c7&color=d97706`} alt={students[0].name} className={`w-18 h-18 sm:w-24 sm:h-24 rounded-full object-cover border-4 shadow-[0_0_20px_rgba(251,191,36,0.2)] relative z-10 bg-white ${students[0].cosmetics?.includes('avatar_glow') ? 'border-transparent' : 'border-amber-400'}`} />
                 </Link>
                 <div className="absolute -bottom-1.5 right-1 bg-gradient-to-br from-amber-400 to-amber-600 text-white w-6 h-6 sm:w-8 sm:h-8 rounded-full border-[2px] border-white flex items-center justify-center font-black shadow-md text-xs z-20">1</div>
               </div>
@@ -86,9 +92,12 @@ export default async function LeaderboardPage() {
 
             {/* 3rd Place */}
             <div className="relative flex flex-col items-center w-[30%] animate-slideUp" style={{ animationDelay: '200ms' }}>
-              <div className="relative mb-2 group">
-                <Link href={`/user/${students[2].username}`}>
-                  <img src={students[2].avatar || `https://ui-avatars.com/api/?name=${students[2].name}&background=ffedd5&color=ea580c`} alt={students[2].name} className="w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-md relative z-10 bg-white" />
+              <div className="relative mb-2 group flex justify-center items-center">
+                <Link href={`/user/${students[2].username}`} className="relative">
+                  {students[2].cosmetics?.includes('avatar_glow') && (
+                     <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-md opacity-70 animate-pulse"></div>
+                  )}
+                  <img src={students[2].avatar || `https://ui-avatars.com/api/?name=${students[2].name}&background=ffedd5&color=ea580c`} alt={students[2].name} className={`w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 relative z-10 bg-white ${students[2].cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-white dark:border-slate-800 shadow-md'}`} />
                 </Link>
                 <div className="absolute -bottom-1.5 right-0 bg-orange-200 text-orange-800 w-5 h-5 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-[10px] z-20">3</div>
               </div>
@@ -135,10 +144,13 @@ export default async function LeaderboardPage() {
                     </div>
 
                     <Link href={`/user/${student.username}`} className="relative shrink-0 ml-1">
+                      {student.cosmetics?.includes('avatar_glow') && (
+                          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-sm opacity-70 animate-pulse"></div>
+                      )}
                       {student.avatar ? (
-                        <img src={student.avatar} alt={student.name} className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-800 bg-slate-100" />
+                        <img src={student.avatar} alt={student.name} className={`relative z-10 w-10 h-10 rounded-full object-cover border bg-slate-100 ${student.cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'border-slate-200 dark:border-slate-800'}`} />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-100 dark:border-indigo-800">
+                        <div className={`relative z-10 w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border ${student.cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'border-indigo-100 dark:border-indigo-800'}`}>
                           {String(student.name[0]).toUpperCase()}
                         </div>
                       )}

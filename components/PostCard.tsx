@@ -304,12 +304,17 @@ export default function PostCard({
                 {/* Left: Avatar Column */}
                 <div className="flex flex-col items-center flex-shrink-0">
                     <Link href={getProfileUrl(post.author) || '#'}>
-                        <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 transition-opacity hover:opacity-80">
-                            {post.author?.avatar_url ? (
-                                <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
-                            ) : (
-                                <User className="w-6 h-6 absolute inset-0 m-auto text-slate-400" />
+                        <div className="relative w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 group-hover:scale-105 transition-transform duration-300 z-10">
+                            {post.author?.cosmetics?.includes('avatar_glow') && (
+                                <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-md opacity-70 animate-pulse transition-opacity"></div>
                             )}
+                            <div className={`relative w-full h-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 transition-opacity hover:opacity-80 ${post.author?.cosmetics?.includes('avatar_glow') ? 'shadow-[0_0_15px_rgba(99,102,241,0.5)] border-2 border-transparent' : ''}`}>
+                                {post.author?.avatar_url ? (
+                                    <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
+                                ) : (
+                                    <User className="w-6 h-6 absolute inset-0 m-auto text-slate-400" />
+                                )}
+                            </div>
                         </div>
                     </Link>
                     {/* Thread Line - strictly decorative for 'X' look */}
@@ -500,12 +505,17 @@ export default function PostCard({
                                         <div className="absolute left-[38px] sm:left-[48px] top-0 bottom-0 w-[2px] bg-slate-100 dark:bg-slate-800 group-last:bottom-auto group-last:h-4" />
                                         
                                         <div className="relative z-10 flex-shrink-0">
-                                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 border-2 border-white dark:border-slate-900">
-                                                {comment.author?.avatar_url ? (
-                                                    <Image src={comment.author.avatar_url} alt="avatar" width={40} height={40} className="object-cover w-full h-full" />
-                                                ) : (
-                                                    <User className="w-5 h-5 m-auto text-slate-400 mt-2" />
+                                            <div className="relative w-9 h-9 sm:w-10 sm:h-10 z-10">
+                                                {comment.author?.cosmetics?.includes('avatar_glow') && (
+                                                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-sm opacity-70 animate-pulse"></div>
                                                 )}
+                                                <div className={`relative w-full h-full rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 border-2 ${comment.author?.cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'border-white dark:border-slate-900'}`}>
+                                                    {comment.author?.avatar_url ? (
+                                                        <Image src={comment.author.avatar_url} alt="avatar" width={40} height={40} className="object-cover w-full h-full" />
+                                                    ) : (
+                                                        <User className="w-5 h-5 m-auto text-slate-400 mt-2" />
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex-1 min-w-0">
