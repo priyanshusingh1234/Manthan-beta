@@ -9,9 +9,15 @@ export default function ProfilePage() {
   const [isTeacher, setIsTeacher] = useState<boolean | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (user) {
-        setIsTeacher(!!user.user_metadata?.isTeacher);
+        // First check DB to ensure manual role changes take effect
+        const { data: profile } = await supabase.from('profiles').select('is_teacher').eq('id', user.id).single();
+        if (profile?.is_teacher !== undefined) {
+             setIsTeacher(profile.is_teacher);
+        } else {
+             setIsTeacher(!!user.user_metadata?.isTeacher);
+        }
       } else {
         // Not logged in, redirect or treat as student
         setIsTeacher(false);

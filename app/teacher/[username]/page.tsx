@@ -21,7 +21,7 @@ export default async function TeacherProfilePage({ params }: Props) {
     // Fast, case-insensitive ID lookup from profiles table
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('id')
+      .select('id, is_teacher')
       .ilike('username', targetUsername)
       .single();
 
@@ -59,6 +59,12 @@ export default async function TeacherProfilePage({ params }: Props) {
     }
 
     const meta = (fetchedUser as any)?.user_metadata ?? (fetchedUser as any)?.user?.user_metadata ?? {};
+    const isTeacher = !!profile?.is_teacher || !!meta?.isTeacher || !!meta?.is_teacher;
+    if (!isTeacher) {
+        const { redirect } = await import('next/navigation');
+        redirect(`/user/${targetUsername}`);
+    }
+
     const name = meta?.fullName || meta?.full_name || meta?.name || (fetchedUser as any)?.email || 'Teacher';
     const avatar = meta?.avatar_url || meta?.avatar || null;
     const bio = meta?.bio || null;

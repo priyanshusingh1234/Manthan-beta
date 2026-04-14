@@ -138,7 +138,12 @@ export default async function StudentProfilePage({ params }: Props) {
         const bio = (fetchedUser as any).bio || meta.bio || null;
         const school = fetchedUser.school || meta.school || null;
         const grade = (fetchedUser as any).classGrade || (fetchedUser as any).grade || meta.classGrade || meta.grade || null;
-        const isTeacher = !!fetchedUser.is_teacher || !!meta.isTeacher;
+        const isTeacher = !!profile?.is_teacher || !!meta?.isTeacher || !!meta?.is_teacher;
+
+        if (isTeacher) {
+             const { redirect } = await import('next/navigation');
+             redirect(`/teacher/${username}`);
+        }
 
         let initialFollowers = 0;
         let initialFollowing = 0;

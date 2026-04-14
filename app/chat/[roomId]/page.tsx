@@ -26,6 +26,7 @@ interface Participant {
   full_name: string;
   avatar_url: string | null;
   username: string;
+  is_teacher?: boolean;
 }
 
 const MESSAGES_CACHE_KEY = (r: string) => `chat_msgs_${r}`;
@@ -388,7 +389,7 @@ function ChatRoomContent() {
       ]);
 
       if (pRes.data?.[0]?.user_id) {
-        const { data: prof } = await supabase.from('profiles').select('full_name, avatar_url, username').eq('id', pRes.data[0].user_id).single();
+        const { data: prof } = await supabase.from('profiles').select('full_name, avatar_url, username, is_teacher').eq('id', pRes.data[0].user_id).single();
         if (prof) {
           const p = { user_id: pRes.data[0].user_id, ...prof } as Participant;
           setParticipant(p);
