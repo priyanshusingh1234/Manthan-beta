@@ -9,6 +9,7 @@ import HomeSignPrompt from '@/components/HomeSignPrompt'
 import QuestionsFeed from '@/components/QuestionsFeed'
 import LandingPage from '@/components/LandingPage';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -64,7 +65,16 @@ export default function Home() {
 
           {/* Questions feed placed on the home screen */}
           <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200">Your Feed</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Your Feed</h2>
+              <Link
+                href="/store"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-sm font-bold rounded-xl shadow-md transition-transform active:scale-95"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
+                Points Store
+              </Link>
+            </div>
             <QuestionsFeed />
           </div>
         </div>

@@ -306,12 +306,18 @@ export default async function StudentProfilePage({ params }: Props) {
                 <div className="max-w-5xl mx-auto sm:px-6 lg:px-8 -mt-16 sm:-mt-28 relative z-10 w-full">
                     {/* Profile Card - Native Look on Mobile */}
                     <div className="bg-white dark:bg-slate-900 rounded-t-[3rem] sm:rounded-3xl shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.1)] sm:shadow-xl p-5 sm:p-10 border-t sm:border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-6 sm:gap-8 items-center sm:items-start text-center sm:text-left w-full">
-                        {avatar ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={avatar} alt={name} className="w-28 h-28 sm:w-40 sm:h-40 rounded-full object-cover shadow-2xl ring-4 ring-white dark:ring-slate-900 relative -mt-16 sm:-mt-20 bg-white dark:bg-slate-900 transition-transform hover:scale-105 duration-300" />
-                        ) : (
-                            <div className="w-28 h-28 sm:w-40 sm:h-40 rounded-full bg-gradient-to-tr from-indigo-100 to-blue-50 dark:from-indigo-900/40 dark:to-blue-900/20 flex items-center justify-center text-5xl font-bold text-indigo-500 dark:text-indigo-400 shadow-2xl ring-4 ring-white dark:ring-slate-900 relative -mt-16 sm:-mt-20">{String(name[0] || 'S').toUpperCase()}</div>
-                        )}
+                        
+                        <div className="relative shrink-0">
+                            {meta.cosmetics?.includes('avatar_glow') && (
+                                <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-xl opacity-70 animate-pulse transition-opacity -mt-16 sm:-mt-20"></div>
+                            )}
+                            {avatar ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={avatar} alt={name} className={`w-28 h-28 sm:w-40 sm:h-40 rounded-full object-cover shadow-2xl relative -mt-16 sm:-mt-20 bg-white dark:bg-slate-900 transition-transform hover:scale-105 duration-300 ${meta.cosmetics?.includes('avatar_glow') ? 'ring-4 ring-transparent shadow-indigo-500/50' : 'ring-4 ring-white dark:ring-slate-900'}`} />
+                            ) : (
+                                <div className={`w-28 h-28 sm:w-40 sm:h-40 rounded-full bg-gradient-to-tr from-indigo-100 to-blue-50 dark:from-indigo-900/40 dark:to-blue-900/20 flex items-center justify-center text-5xl font-bold text-indigo-500 dark:text-indigo-400 shadow-2xl relative -mt-16 sm:-mt-20 ${meta.cosmetics?.includes('avatar_glow') ? 'ring-4 ring-transparent shadow-indigo-500/50' : 'ring-4 ring-white dark:ring-slate-900'}`}>{String(name[0] || 'S').toUpperCase()}</div>
+                            )}
+                        </div>
  
                         <div className="flex-1 w-full">
                             <BadgedName 

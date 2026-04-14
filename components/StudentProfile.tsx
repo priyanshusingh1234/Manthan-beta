@@ -639,7 +639,14 @@ const StudentProfile: React.FC = () => {
               {/* Avatar Section */}
               <div className="flex items-center sm:items-start gap-6 sm:gap-0 w-full sm:w-auto -mt-10 sm:-mt-20">
                 <div className="relative group shrink-0 z-10">
-                  <div className="w-24 h-24 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 sm:border-[5px] border-white dark:border-slate-900 shadow-2xl bg-white dark:bg-slate-800 transition-transform duration-300">
+                  {currentUser?.user_metadata?.cosmetics?.includes('avatar_glow') && (
+                    <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-xl opacity-70 animate-pulse transition-opacity"></div>
+                  )}
+                  <div className={`relative w-24 h-24 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 sm:border-[5px] shadow-2xl bg-white dark:bg-slate-800 transition-transform duration-300 ${
+                    currentUser?.user_metadata?.cosmetics?.includes('avatar_glow') 
+                      ? 'border-transparent shadow-indigo-500/50' 
+                      : 'border-white dark:border-slate-900'
+                  }`}>
                     {typeof userData.avatar === 'string' && userData.avatar.startsWith('http') ? (
                       <Image src={userData.avatar} alt="avatar" width={144} height={144} className="object-cover w-full h-full" />
                     ) : (
