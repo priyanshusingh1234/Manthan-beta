@@ -20,12 +20,14 @@ export default function PostCard({
     onUpdate,
     isSinglePost = false,
     feedLabel,
+    suppliedCurrentUserData,
 }: {
     post: any;
     currentUserId: string | null;
     onUpdate?: (updated?: any | null) => void;
     isSinglePost?: boolean;
     feedLabel?: string;
+    suppliedCurrentUserData?: any;
 }) {
     const [isLiked, setIsLiked] = useState(post.is_liked_by_me || false);
     const [likesCount, setLikesCount] = useState(post.likes_count || 0);
@@ -72,19 +74,23 @@ export default function PostCard({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const [currentUserData, setCurrentUserData] = useState<any>(null);
+    const [localCurrentUserData, setLocalCurrentUserData] = useState<any>(null);
+
+    const currentUserData = suppliedCurrentUserData !== undefined ? suppliedCurrentUserData : localCurrentUserData;
 
     useEffect(() => {
+        if (suppliedCurrentUserData !== undefined) return;
+        
         supabase.auth.getUser().then(({ data }) => {
             const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim());
             if (data?.user?.email && adminEmails.includes(data.user.email)) {
                 setIsAdmin(true);
             }
             if (data?.user) {
-                setCurrentUserData(data.user.user_metadata || {});
+                setLocalCurrentUserData(data.user.user_metadata || {});
             }
         });
-    }, []);
+    }, [suppliedCurrentUserData]);
 
     const effectiveAuthor = isOwner && currentUserData ? {
         ...post.author,

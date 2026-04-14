@@ -70,6 +70,7 @@ export default function QuestionsFeed() {
   // Feed data
   const [allData, setAllData]     = useState<FeedItem[]>([]);   // raw from API (algorithmic or questions)
   const [userId, setUserId]       = useState<string | null>(null);
+  const [currentUserData, setCurrentUserData] = useState<any>(null);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setMore]    = useState(false);
@@ -91,7 +92,20 @@ export default function QuestionsFeed() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const currentId = session?.user?.id || null;
-      if (refresh || offsetRef.current === 0) setUserId(currentId);
+      if (refresh || offsetRef.current === 0) {
+        setUserId(currentId);
+        if (currentId) {
+            supabase.auth.getUser().then(({ data }) => {
+                const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim());
+                setCurrentUserData({
+                    ...(data?.user?.user_metadata || {}),
+                    _isAdmin: adminEmails.includes(data?.user?.email || '')
+                });
+            });
+        } else {
+            setCurrentUserData(null);
+        }
+      }
 
       const headers: HeadersInit = {};
       if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
@@ -316,7 +330,7 @@ export default function QuestionsFeed() {
                 </p>
               )}
               {item.type === 'post' ? (
-                <PostCard post={item} currentUserId={userId} onUpdate={() => load({ refresh: true, subject, classGrade })} feedLabel={item._feedLabel} />
+                <PostCard post={item} currentUserId={userId} onUpdate={() => load({ refresh: true, subject, classGrade })} feedLabel={item._feedLabel} suppliedCurrentUserData={currentUserData} />
               ) : (
                 <QuestionCard q={item} />
               )}
