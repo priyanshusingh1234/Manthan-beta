@@ -36,16 +36,16 @@ export async function GET(req: Request) {
     const { data: attempts } = await supabaseAdmin
       .from('question_attempts')
       .select('user_id, is_correct, created_at')
-      .gte('created_at', currentWeekStart.toISOString())
-      .lt('created_at', now.toISOString());
+      .gte('created_at', previousWeekStart.toISOString())
+      .lt('created_at', currentWeekStart.toISOString());
 
     let activities: any[] = [];
     try {
       const res = await supabaseAdmin
         .from('activity_logs')
         .select('user_id, created_at')
-        .gte('created_at', currentWeekStart.toISOString())
-        .lt('created_at', now.toISOString());
+        .gte('created_at', previousWeekStart.toISOString())
+        .lt('created_at', currentWeekStart.toISOString());
       if (!res.error) activities = res.data || [];
     } catch {
       activities = [];

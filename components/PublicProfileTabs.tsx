@@ -27,6 +27,7 @@ interface PublicProfileTabsProps {
   stats: any[];
   recentSolvedQs: any[];
   isTeacher: boolean;
+  weeklyReport?: any;
 }
 
 export default function PublicProfileTabs({ 
@@ -36,7 +37,8 @@ export default function PublicProfileTabs({
   totalPoints, 
   stats, 
   recentSolvedQs,
-  isTeacher
+  isTeacher,
+  weeklyReport
 }: PublicProfileTabsProps) {
   const { getRank } = useTopRanks();
   const [activeTab, setActiveTab] = useState<'stats' | 'badges' | 'solved' | 'posts'>('stats');
@@ -156,6 +158,57 @@ export default function PublicProfileTabs({
                 </div>
             )}
             
+            {/* PUBLIC WEEKLY REPORT */}
+            {weeklyReport && !isTeacher && (
+              <div className="mt-8 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 sm:p-10 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-colors pointer-events-none"></div>
+
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="p-3.5 bg-indigo-50 dark:bg-indigo-900/40 rounded-2xl border border-indigo-100 dark:border-indigo-800 shadow-inner group-hover:scale-110 transition-transform">
+                    <Star className="w-6 h-6 text-indigo-600 dark:text-indigo-400 drop-shadow-sm" />
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Weekly Report</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/40 dark:shadow-none hover:-translate-y-1 transition-transform group/card">
+                    <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-6 border border-blue-100 dark:border-blue-800 group-hover/card:scale-110 transition-transform">
+                      <Target className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Accuracy</h3>
+                    <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">{weeklyReport.stats.accuracy}<span className="text-3xl text-slate-400">%</span></div>
+                    <div className="text-sm font-semibold mt-4 text-slate-500">
+                      {weeklyReport.stats.correctAttempts} / {weeklyReport.stats.totalAttempts} questions
+                    </div>
+                    <div className="mt-4 bg-slate-100 dark:bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                      <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full" style={{ width: `${weeklyReport.stats.accuracy}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="p-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl border border-indigo-400 shadow-xl shadow-indigo-500/30 hover:-translate-y-1 transition-transform group/card text-white relative overflow-hidden">
+                    <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
+                    <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6 border border-white/30 group-hover/card:scale-110 transition-transform backdrop-blur-sm">
+                      <Star className="w-7 h-7 text-white drop-shadow-sm" />
+                    </div>
+                    <h3 className="font-bold text-indigo-100 uppercase tracking-widest text-xs mb-2">Weekly Rating</h3>
+                    <div className="text-4xl font-black text-white tracking-tight leading-tight">{weeklyReport.rating.label}</div>
+                    <p className="text-sm font-medium text-emerald-50 mt-4 bg-black/20 px-4 py-3 rounded-xl inline-block border border-white/10 backdrop-blur-md leading-relaxed">{weeklyReport.rating.message}</p>
+                  </div>
+
+                  <div className="p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/40 dark:shadow-none hover:-translate-y-1 transition-transform group/card">
+                    <div className="w-14 h-14 bg-orange-50 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center mb-6 border border-orange-100 dark:border-orange-800 group-hover/card:scale-110 transition-transform">
+                        <Zap className="w-7 h-7 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Active Days</h3>
+                    <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">{weeklyReport.stats.activeDays}<span className="text-2xl text-slate-400">/7</span></div>
+                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-4 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-2 rounded-xl inline-block border border-emerald-100 dark:border-emerald-800">
+                      Active this week
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {!isTeacher && (
               <div className="mt-8 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>

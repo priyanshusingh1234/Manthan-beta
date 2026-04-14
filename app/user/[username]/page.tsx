@@ -231,7 +231,61 @@ export default async function StudentProfilePage({ params }: Props) {
             { icon: Zap, label: 'Attempts', value: (qAttempts?.length || 0).toString(), color: 'text-orange-500', bgColor: 'bg-orange-50' },
             { icon: Star, label: 'Points', value: totalPoints.toLocaleString(), color: 'text-blue-500', bgColor: 'bg-blue-50' },
         ];
+        
+        // --- WEEKLY REPORT (PUBLIC IF ALLOWED) ---
+        const showWeeklyReport = meta.showWeeklyReport !== false;
+        let weeklyReportObj = null;
+
+        if (showWeeklyReport && !isTeacher) {
+            const nowTime = new Date();
+            const pastWeekTime = new Date(nowTime.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+            const { data: recentAttempts } = await supabaseAdmin
+                .from('question_attempts')
+                .select('is_correct, created_at')
+                .eq('user_id', fetchedUser.id)
+                .gte('created_at', pastWeekTime);
+
+            let recentActivities: any[] = [];
+            try {
+                const res = await supabaseAdmin
+                    .from('activity_logs')
+                    .select('created_at')
+                    .eq('user_id', fetchedUser.id)
+                    .gte('created_at', pastWeekTime);
+                if (!res.error) recentActivities = res.data || [];
+            } catch (e) {}
+
+            const allTimestamps = [
+                ...(recentAttempts || []).map(a => a.created_at),
+                ...recentActivities.map(a => a.created_at)
+            ];
+
+            const activeDays = new Set(allTimestamps.map(ts => new Date(ts).toISOString().split('T')[0])).size;
+            const rep_totalAttempts = (recentAttempts || []).length;
+            const rep_correctAttempts = (recentAttempts || []).filter((a: any) => a.is_correct).length;
+            const rep_accuracy = rep_totalAttempts > 0 ? (rep_correctAttempts / rep_totalAttempts) * 100 : 0;
+
+            const accuracyScore = rep_totalAttempts > 0 ? (rep_accuracy / 100) * 40 : 0;
+            const volumeScore = Math.min(rep_totalAttempts * 2, 40);
+            const consistencyScore = Math.min(activeDays * 4, 20);
+            const rep_totalScore = accuracyScore + volumeScore + consistencyScore;
+
+            let rating = 'Not Rated';
+            let ratingMessage = 'Play more to get rated!';
+            if (rep_totalScore >= 80) { rating = 'Excellent'; ratingMessage = 'Incredible work this week! They completely dominated.'; }
+            else if (rep_totalScore >= 60) { rating = 'Very Good'; ratingMessage = 'Solid effort! Just a few more questions to hit Excellent.'; }
+            else if (rep_totalScore >= 40) { rating = 'Good'; ratingMessage = 'Decent week. Answering more questions next time will boost this.'; }
+            else if (rep_totalScore >= 20) { rating = 'Not Bad'; ratingMessage = 'They started, but there is so much more they can do!'; }
+            else if (rep_totalScore >= 0 && rep_totalAttempts > 0) { rating = 'Poor'; ratingMessage = 'A bit inactive. Time to dust off and try again!'; }
+
+            weeklyReportObj = {
+                stats: { totalAttempts: rep_totalAttempts, correctAttempts: rep_correctAttempts, accuracy: Math.round(rep_accuracy), activeDays },
+                rating: { label: rating, message: ratingMessage }
+            };
+        }
         // -----------------------
+
 
         const recentSolvedQs = allSolvedWithMeta.slice(0, 3);
 
@@ -356,6 +410,7 @@ export default async function StudentProfilePage({ params }: Props) {
                                 ]}
                                 recentSolvedQs={recentSolvedQs}
                                 isTeacher={isTeacher}
+                                weeklyReport={weeklyReportObj}
                             />
                         </div>
                     )}
