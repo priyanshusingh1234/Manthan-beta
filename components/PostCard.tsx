@@ -72,14 +72,26 @@ export default function PostCard({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const [currentUserData, setCurrentUserData] = useState<any>(null);
+
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => {
             const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim());
             if (data?.user?.email && adminEmails.includes(data.user.email)) {
                 setIsAdmin(true);
             }
+            if (data?.user) {
+                setCurrentUserData(data.user.user_metadata || {});
+            }
         });
     }, []);
+
+    const effectiveAuthor = isOwner && currentUserData ? {
+        ...post.author,
+        avatar_url: currentUserData.avatar_url || post.author.avatar_url,
+        name: currentUserData.fullName || post.author.name,
+        cosmetics: currentUserData.cosmetics || post.author.cosmetics,
+    } : post.author;
 
     useEffect(() => {
         if (isSinglePost && comments.length === 0) {
@@ -303,14 +315,14 @@ export default function PostCard({
             <div className="flex gap-3 px-4 py-3 sm:px-6 sm:py-4">
                 {/* Left: Avatar Column */}
                 <div className="flex flex-col items-center flex-shrink-0">
-                    <Link href={getProfileUrl(post.author) || '#'}>
+                    <Link href={getProfileUrl(effectiveAuthor) || '#'}>
                         <div className="relative w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 group-hover:scale-105 transition-transform duration-300 z-10">
-                            {post.author?.cosmetics?.includes('avatar_glow') && (
+                            {effectiveAuthor?.cosmetics?.includes('avatar_glow') && (
                                 <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-md opacity-70 animate-pulse transition-opacity"></div>
                             )}
-                            <div className={`relative w-full h-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 transition-opacity hover:opacity-80 ${post.author?.cosmetics?.includes('avatar_glow') ? 'shadow-[0_0_15px_rgba(99,102,241,0.5)] border-2 border-transparent' : ''}`}>
-                                {post.author?.avatar_url ? (
-                                    <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
+                            <div className={`relative w-full h-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 transition-opacity hover:opacity-80 ${effectiveAuthor?.cosmetics?.includes('avatar_glow') ? 'shadow-[0_0_15px_rgba(99,102,241,0.5)] border-2 border-transparent' : ''}`}>
+                                {effectiveAuthor?.avatar_url ? (
+                                    <Image src={effectiveAuthor.avatar_url} alt="avatar" fill className="object-cover" />
                                 ) : (
                                     <User className="w-6 h-6 absolute inset-0 m-auto text-slate-400" />
                                 )}
@@ -352,18 +364,18 @@ export default function PostCard({
                     {/* Post Header */}
                     <div className="flex items-center justify-between gap-1 mb-0.5">
                         <div className="flex items-center gap-1 min-w-0 flex-nowrap">
-                            <Link href={getProfileUrl(post.author) || '#'} className="group/name block truncate">
+                            <Link href={getProfileUrl(effectiveAuthor) || '#'} className="group/name block truncate">
                                 <BadgedName
-                                    name={post.author?.name || 'Scholar'}
-                                    userId={post.author?.id}
-                                    isTeacher={isTeacherUser(post.author)}
-                                    totalPoints={Number(post.author?.totalPoints)}
+                                    name={effectiveAuthor?.name || 'Scholar'}
+                                    userId={effectiveAuthor?.id}
+                                    isTeacher={isTeacherUser(effectiveAuthor)}
+                                    totalPoints={Number(effectiveAuthor?.totalPoints)}
                                     nameClassName="font-bold text-[15px] sm:text-[16px] text-slate-900 dark:text-white group-hover/name:underline decoration-1"
                                     className="flex items-center gap-1 min-w-0"
                                 />
                             </Link>
                             <span className="text-[14px] sm:text-[15px] text-slate-500 truncate font-medium ml-0.5">
-                                @{getUsername(post.author) || 'scholar'}
+                                @{getUsername(effectiveAuthor) || 'scholar'}
                             </span>
                             <span className="text-slate-400 dark:text-slate-600 hidden sm:inline">·</span>
                             <Link href={`/posts/${post.id}`} className="text-[14px] sm:text-[15px] text-slate-500 font-medium hover:underline hidden sm:inline">
@@ -497,7 +509,15 @@ export default function PostCard({
                     ) : (
                         <div className="mt-2">
                             {comments.map((comment: any) => {
-                                const commentUsername = getUsername(comment.author);
+                                const isCommentOwner = currentUserId && comment.author?.id === currentUserId;
+                                const effectiveCommentAuthor = isCommentOwner && currentUserData ? {
+                                    ...comment.author,
+                                    avatar_url: currentUserData.avatar_url || comment.author.avatar_url,
+                                    name: currentUserData.fullName || comment.author.name,
+                                    cosmetics: currentUserData.cosmetics || comment.author.cosmetics,
+                                } : comment.author;
+
+                                const commentUsername = getUsername(effectiveCommentAuthor);
                                 const safeReplyHandle = commentUsername || 'scholar';
                                 return (
                                     <div key={comment.id} className="relative flex gap-3 px-4 py-3 sm:px-6 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
@@ -506,12 +526,12 @@ export default function PostCard({
                                         
                                         <div className="relative z-10 flex-shrink-0">
                                             <div className="relative w-9 h-9 sm:w-10 sm:h-10 z-10">
-                                                {comment.author?.cosmetics?.includes('avatar_glow') && (
+                                                {effectiveCommentAuthor?.cosmetics?.includes('avatar_glow') && (
                                                     <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-sm opacity-70 animate-pulse"></div>
                                                 )}
-                                                <div className={`relative w-full h-full rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 border-2 ${comment.author?.cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'border-white dark:border-slate-900'}`}>
-                                                    {comment.author?.avatar_url ? (
-                                                        <Image src={comment.author.avatar_url} alt="avatar" width={40} height={40} className="object-cover w-full h-full" />
+                                                <div className={`relative w-full h-full rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 border-2 ${effectiveCommentAuthor?.cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'border-white dark:border-slate-900'}`}>
+                                                    {effectiveCommentAuthor?.avatar_url ? (
+                                                        <Image src={effectiveCommentAuthor.avatar_url} alt="avatar" width={40} height={40} className="object-cover w-full h-full" />
                                                     ) : (
                                                         <User className="w-5 h-5 m-auto text-slate-400 mt-2" />
                                                     )}
@@ -521,10 +541,10 @@ export default function PostCard({
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                                                 <BadgedName
-                                                    name={comment.author.name}
-                                                    userId={comment.author.id}
-                                                    isTeacher={isTeacherUser(comment.author)}
-                                                    totalPoints={Number(comment.author.totalPoints)}
+                                                    name={effectiveCommentAuthor.name}
+                                                    userId={effectiveCommentAuthor.id}
+                                                    isTeacher={isTeacherUser(effectiveCommentAuthor)}
+                                                    totalPoints={Number(effectiveCommentAuthor.totalPoints)}
                                                     nameClassName="font-bold text-[14px] text-slate-900 dark:text-white"
                                                 />
                                                 <span className="text-[13px] text-slate-500 font-medium">@{commentUsername || 'scholar'}</span>
@@ -534,7 +554,7 @@ export default function PostCard({
                                                 </span>
                                             </div>
                                             <div className="text-[14px] sm:text-[15px] text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                                                <span className="text-sky-500 mr-1 font-medium">@{getUsername(post.author)}</span>
+                                                <span className="text-sky-500 mr-1 font-medium">@{getUsername(effectiveAuthor)}</span>
                                                 {formatMentions(comment.content)}
                                             </div>
                                             
