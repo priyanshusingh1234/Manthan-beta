@@ -126,26 +126,48 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
     router.push('/');
   };
 
-  const UserAvatar: React.FC = () => (
-    <span className="inline-block h-10 w-10 sm:h-11 sm:w-11 rounded-full overflow-hidden border-[3px] border-white/40 hover:border-white transition-all shadow-lg hover:shadow-white/20">
-      {user && user.user_metadata?.avatar_url ? (
-        <Image
-          src={user.user_metadata.avatar_url}
-          alt="avatar"
-          width={44}
-          height={44}
-          className="object-cover w-full h-full"
-          referrerPolicy="no-referrer"
-        />
-      ) : (
-        <span className="flex items-center justify-center h-full w-full text-xl font-bold text-indigo-700 bg-white shadow-inner">
-          {user?.user_metadata?.fullName?.[0]?.toUpperCase() ||
-            user?.email?.[0]?.toUpperCase() ||
-            'U'}
+  const UserAvatar: React.FC = () => {
+    const [cachedMeta, setCachedMeta] = useState<any>(() => {
+        if (typeof window !== 'undefined') {
+            const c = localStorage.getItem('dheeyudha_user_meta_cache');
+            return c ? JSON.parse(c) : null;
+        }
+        return null;
+    });
+
+    useEffect(() => {
+        const h = () => {
+            const c = localStorage.getItem('dheeyudha_user_meta_cache');
+            if (c) setCachedMeta(JSON.parse(c));
+        };
+        window.addEventListener('user_metadata_updated', h);
+        return () => window.removeEventListener('user_metadata_updated', h);
+    }, []);
+
+    const avatarUrl = cachedMeta?.avatar_url || user?.user_metadata?.avatar_url;
+    const fullName = cachedMeta?.fullName || user?.user_metadata?.fullName;
+
+    return (
+        <span className="inline-block h-10 w-10 sm:h-11 sm:w-11 rounded-full overflow-hidden border-[3px] border-white/40 hover:border-white transition-all shadow-lg hover:shadow-white/20">
+            {avatarUrl ? (
+                <Image
+                    src={avatarUrl}
+                    alt="avatar"
+                    width={44}
+                    height={44}
+                    className="object-cover w-full h-full"
+                    referrerPolicy="no-referrer"
+                />
+            ) : (
+                <span className="flex items-center justify-center h-full w-full text-xl font-bold text-indigo-700 bg-white shadow-inner">
+                    {fullName?.[0]?.toUpperCase() ||
+                        user?.email?.[0]?.toUpperCase() ||
+                        'U'}
+                </span>
+            )}
         </span>
-      )}
-    </span>
-  );
+    );
+  };
 
   const getPageInfo = (): PageInfo | null => {
     if (!pathname || pathname === '/') return null;

@@ -70,7 +70,23 @@ export default function QuestionsFeed() {
   // Feed data
   const [allData, setAllData]     = useState<FeedItem[]>([]);   // raw from API (algorithmic or questions)
   const [userId, setUserId]       = useState<string | null>(null);
-  const [currentUserData, setCurrentUserData] = useState<any>(null);
+  const [currentUserData, setCurrentUserData] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+        return cached ? JSON.parse(cached) : null;
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+        const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+        if (cached) setCurrentUserData(JSON.parse(cached));
+    };
+    window.addEventListener('user_metadata_updated', handleUpdate);
+    return () => window.removeEventListener('user_metadata_updated', handleUpdate);
+  }, []);
+
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setMore]    = useState(false);

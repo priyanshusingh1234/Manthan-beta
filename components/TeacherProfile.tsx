@@ -214,6 +214,15 @@ const TeacherProfile: React.FC = () => {
       else setUserData((s) => ({ ...s }));
       setMessage(`${type[0].toUpperCase() + type.slice(1)} updated`);
 
+      // Proactively update local cache to prevent flickering/stale views in Feed
+      if (typeof window !== 'undefined') {
+          const currentMeta = currentUser.user_metadata || {};
+          const newMeta = { ...currentMeta, ...updateData };
+          localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(newMeta));
+          // Dispatch a custom event so other components (like QuestionsFeed) can update instantly
+          window.dispatchEvent(new Event('user_metadata_updated'));
+      }
+
       if (oldPath) {
         const token = session?.access_token;
         const delRes = await fetch('/api/profile/delete', {
