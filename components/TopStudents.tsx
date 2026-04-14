@@ -15,6 +15,7 @@ interface Student {
     streak: number;
     school: string;
     schoolColor: string;
+    cosmetics?: string[];
 }
 
 const PODIUM = [
@@ -24,24 +25,31 @@ const PODIUM = [
 ];
 
 function Avatar({ student, size = 40 }: { student: Student; size?: number }) {
-    if (student.avatar) {
-        return (
-            <Image
-                src={student.avatar}
-                alt={student.name}
-                width={size}
-                height={size}
-                className="rounded-full object-cover bg-slate-100 dark:bg-slate-800"
-                style={{ width: size, height: size }}
-            />
-        );
-    }
+    const hasGlow = student.cosmetics?.includes('avatar_glow');
+    
     return (
-        <div
-            className="rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center font-black text-indigo-600 dark:text-indigo-400"
-            style={{ width: size, height: size, fontSize: size * 0.4 }}
-        >
-            {String(student.name[0] || '?').toUpperCase()}
+        <div className="relative shrink-0" style={{ width: size, height: size }}>
+            {hasGlow && (
+                <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-md opacity-70 animate-pulse transition-opacity"></div>
+            )}
+            <div className={`relative w-full h-full rounded-full overflow-hidden ${hasGlow ? 'shadow-[0_0_15px_rgba(99,102,241,0.5)] bg-white' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                {student.avatar ? (
+                    <Image
+                        src={student.avatar}
+                        alt={student.name}
+                        width={size}
+                        height={size}
+                        className="rounded-full object-cover w-full h-full"
+                    />
+                ) : (
+                    <div
+                        className="w-full h-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center font-black text-indigo-600 dark:text-indigo-400"
+                        style={{ fontSize: size * 0.4 }}
+                    >
+                        {String(student.name[0] || '?').toUpperCase()}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
@@ -53,29 +61,10 @@ export default function TopStudents() {
 
     const load = useCallback(async () => {
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, full_name, username, school, avatar_url, total_points')
-                .eq('is_teacher', false)
-                .not('username', 'is', null)
-                .neq('username', '')
-                .order('total_points', { ascending: false })
-                .order('id', { ascending: true })
-                .limit(10);
-
-            if (!error && data) {
-                const fetched = data.map((p, i) => ({
-                    id: p.id,
-                    rank: i + 1,
-                    name: p.full_name || p.username || 'Student',
-                    username: p.username,
-                    school: p.school || 'Unknown',
-                    avatar: p.avatar_url || null,
-                    points: Number(p.total_points) || 0,
-                    streak: 0,
-                    schoolColor: 'bg-blue-500',
-                }));
-                setStudents(fetched);
+            const res = await fetch('/api/leaderboard?t=' + Date.now());
+            if (res.ok) {
+                const data = await res.json();
+                setStudents(data.topBrains || []);
                 setLastUpdated(new Date());
             }
         } catch {
@@ -178,8 +167,8 @@ export default function TopStudents() {
                                     >
                                         {/* Crown emoji */}
                                         <span className="text-xl leading-none">{p.crown}</span>
-                                        {/* Avatar with ring */}
-                                        <div className={`rounded-full ring-4 ${p.ring} shadow-lg group-hover:scale-105 transition-transform`}>
+                                        {/* Avatar with ring (Glow comes from within Avatar component now) */}
+                                        <div className={`rounded-full ring-4 ${p.ring} shadow-lg group-hover:scale-105 transition-transform ${student.cosmetics?.includes('avatar_glow') ? 'ring-transparent' : ''}`}>
                                             <Avatar student={student} size={isFirst ? 52 : 42} />
                                         </div>
                                         {/* Name */}

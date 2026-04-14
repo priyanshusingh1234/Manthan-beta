@@ -22,7 +22,27 @@ export async function GET() {
 
         if (error) throw new Error(error.message);
 
-        const students: LeaderboardUser[] = (data || []).map((p: any, i: number) => ({
+        // Fetch cosmetics securely for the top 10 leaderboard users
+        const studentsData = data || [];
+        const topUserIds = studentsData.map(u => u.id);
+        
+        // Parallel fetch auth users to extract cosmetics from user_metadata
+        let cosmeticsMap: Record<string, string[]> = {};
+        if (topUserIds.length > 0) {
+            try {
+                const fetchUserPromises = topUserIds.map(id => supabaseAdmin.auth.admin.getUserById(id));
+                const userResponses = await Promise.all(fetchUserPromises);
+                userResponses.forEach(res => {
+                    if (res.data?.user) {
+                        cosmeticsMap[res.data.user.id] = res.data.user.user_metadata?.cosmetics || [];
+                    }
+                });
+            } catch (e) {
+                console.error("Failed to fetch leaderboard cosmetics:", e);
+            }
+        }
+
+        const students: LeaderboardUser[] = studentsData.map((p: any, i: number) => ({
             id: p.id,
             rank: i + 1,
             name: p.full_name || p.username || 'Student',
@@ -32,6 +52,7 @@ export async function GET() {
             points: Number(p.total_points) || 0,
             streak: 0,
             schoolColor: 'bg-blue-500',
+            cosmetics: cosmeticsMap[p.id] || [],
         }));
 
         const response = { topBrains: students };

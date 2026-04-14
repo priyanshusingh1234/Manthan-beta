@@ -191,6 +191,11 @@ const StudentProfile: React.FC = () => {
       const user = session.user;
       setCurrentUser(user);
 
+      // Async fetch fresh user to catch newly bought cosmetics without blocking initial render
+      supabase.auth.getUser().then(({ data: fUser }) => {
+          if (fUser?.user && mounted) setCurrentUser(fUser.user);
+      });
+
       // ── Step 1: Render immediately from metadata (instant) ──
       const meta = user.user_metadata || {};
       const metaFullName = typeof meta.fullName === 'string' ? meta.fullName : undefined;

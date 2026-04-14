@@ -15,6 +15,7 @@ export interface LeaderboardUser {
     rank: number;
     streak: number;
     schoolColor: string;
+    cosmetics?: string[];
 }
 
 export const leaderboardCache = {

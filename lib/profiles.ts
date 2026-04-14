@@ -23,6 +23,7 @@ export interface Profile {
     total_points: number;
     username: string | null;
     updated_at: string;
+    cosmetics?: string[] | null;
 }
 
 /**
@@ -43,6 +44,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
         total_points: Number(meta.totalPoints) || 0,
         username: meta.username || null,
         updated_at: new Date().toISOString(),
+        cosmetics: meta.cosmetics || [],
     }, { onConflict: 'id' });
 
     if (error) {
