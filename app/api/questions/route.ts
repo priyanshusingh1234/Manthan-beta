@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import supabaseAdmin from '@/lib/supabaseAdmin';
+import { getProfilesMap } from '@/lib/profiles';
 
 const DATA_PATH = path.join(process.cwd(), 'data');
 const FILE = path.join(DATA_PATH, 'questions.json');
@@ -72,78 +73,47 @@ export async function GET(req: Request) {
 
       if (error) return NextResponse.json({ error: (error && (error.message || JSON.stringify(error))) || String(error) }, { status: 500 });
 
-      // fetch poster names + avatars for each unique creator id (best-effort using admin.getUserById)
+      // ── Batch-fetch creator profiles + attempt counts in parallel ──────────
       const rows = (data || []);
       const userIds = Array.from(new Set(rows.map((r: any) => r.created_by).filter(Boolean))) as string[];
-
-      const userInfoMap: Record<string, { name: string; avatar?: string | null; username?: string | null }> = {};
-      await Promise.all(userIds.map(async (id) => {
-        try {
-          // @ts-ignore - admin.getUserById exists on the admin client in supported SDKs
-          const { data: fetchedUser } = await supabaseAdmin.auth.admin.getUserById(String(id));
-          const meta = (fetchedUser as any)?.user_metadata ?? (fetchedUser as any)?.user?.user_metadata ?? {};
-          const name = meta?.fullName || meta?.full_name || meta?.name || (fetchedUser as any)?.email || 'Teacher';
-          const avatar = meta?.avatar_url || meta?.avatar || null;
-          const username = meta?.username || null;
-          userInfoMap[String(id)] = { name, avatar, username };
-        } catch (err) {
-          // swallow — we'll show a generic fallback
-          userInfoMap[String(id)] = { name: 'Teacher', avatar: null, username: null };
-        }
-      }));
-
-      // Fetch attempt counts for these questions
       const questionIds = rows.map((r: any) => r.id);
-      let attemptsMap: Record<string, { total: number; solved: number }> = {};
 
-      // Attempt tracking for the current user
       const authHeader = req.headers.get('authorization');
       const currentUserId = parseJwtField(authHeader, 'sub') || parseJwtField(authHeader, 'user_id');
 
-      let userAttempts = new Set<string>();
-      let userWrittenSubmissions: Record<string, string> = {};
+      // Single batch query instead of N individual admin.getUserById calls
+      const [profilesMap, attemptsResult, wSubsResult] = await Promise.all([
+        getProfilesMap(userIds),
+        questionIds.length > 0
+          ? supabaseAdmin.from('question_attempts').select('question_id, is_correct, user_id').in('question_id', questionIds)
+          : Promise.resolve({ data: [] }),
+        currentUserId && questionIds.length > 0
+          ? supabaseAdmin.from('written_submissions').select('id, question_id').eq('student_id', currentUserId).in('question_id', questionIds)
+          : Promise.resolve({ data: [] }),
+      ]);
 
-      if (questionIds.length > 0) {
-        // Aggregate attempt stats
-        const { data: attempts } = await supabaseAdmin
-          .from('question_attempts')
-          .select('question_id, is_correct, user_id')
-          .in('question_id', questionIds);
+      // Build attempts map
+      const attemptsMap: Record<string, { total: number; solved: number }> = {};
+      const userAttempts = new Set<string>();
+      ((attemptsResult as any).data || []).forEach((att: any) => {
+        const qid = String(att.question_id);
+        if (!attemptsMap[qid]) attemptsMap[qid] = { total: 0, solved: 0 };
+        attemptsMap[qid].total += 1;
+        if (att.is_correct) attemptsMap[qid].solved += 1;
+        if (currentUserId && att.user_id === currentUserId) userAttempts.add(qid);
+      });
 
-        if (attempts) {
-          attempts.forEach((att: any) => {
-            const qid = String(att.question_id);
-            if (!attemptsMap[qid]) attemptsMap[qid] = { total: 0, solved: 0 };
-            attemptsMap[qid].total += 1;
-            if (att.is_correct) attemptsMap[qid].solved += 1;
-
-            // Check if user attempted it
-            if (currentUserId && att.user_id === currentUserId) {
-              userAttempts.add(qid);
-            }
-          });
-        }
-
-        // Also fetch written submissions if logged in
-        if (currentUserId) {
-          const { data: wSubs } = await supabaseAdmin
-            .from('written_submissions')
-            .select('id, question_id')
-            .eq('student_id', currentUserId)
-            .in('question_id', questionIds);
-
-          wSubs?.forEach((s: any) => {
-            userWrittenSubmissions[String(s.question_id)] = String(s.id);
-          });
-        }
-      }
+      const userWrittenSubmissions: Record<string, string> = {};
+      ((wSubsResult as any).data || []).forEach((s: any) => {
+        userWrittenSubmissions[String(s.question_id)] = String(s.id);
+      });
 
       const apps = rows.map((r: any) => ({
         id: String(r.id),
         createdBy: r.created_by ? String(r.created_by) : null,
-        createdByName: r.created_by ? (userInfoMap[String(r.created_by)]?.name || 'Teacher') : 'Teacher',
-        createdByAvatar: r.created_by ? (userInfoMap[String(r.created_by)]?.avatar || null) : null,
-        createdByUsername: r.created_by ? (userInfoMap[String(r.created_by)]?.username || null) : null,
+        createdByName: r.created_by ? (profilesMap.get(String(r.created_by))?.full_name || 'Teacher') : 'Teacher',
+        createdByAvatar: r.created_by ? (profilesMap.get(String(r.created_by))?.avatar_url || null) : null,
+        createdByUsername: r.created_by ? (profilesMap.get(String(r.created_by))?.username || null) : null,
         title: r.title,
         body: r.body,
         subject: r.subject,

@@ -42,7 +42,11 @@ const StudentProfile: React.FC = () => {
     totalPoints: 0,
     battlesAttempted: 0,
     battlesWon: 0,
+    showWeeklyReport: true,
   });
+
+  const [weeklyReport, setWeeklyReport] = useState<any>(null);
+  const [loadingReport, setLoadingReport] = useState(true);
 
   const winRate = userData.battlesAttempted > 0 ? Math.round((userData.battlesWon / userData.battlesAttempted) * 100) : 0;
 
@@ -73,7 +77,7 @@ const StudentProfile: React.FC = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', username: '', school: '', grade: '', bio: '' });
+  const [editForm, setEditForm] = useState({ name: '', username: '', school: '', grade: '', bio: '', showWeeklyReport: true });
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'achievements' | 'posts' | 'badges'>('achievements');
   const [equippedBadges, setEquippedBadges] = useState<BadgeKey[]>([]);
@@ -200,7 +204,8 @@ const StudentProfile: React.FC = () => {
         username: metaUsername,
         school: meta.school || '',
         grade: meta.classGrade || '',
-        bio: metaBio || ''
+        bio: metaBio || '',
+        showWeeklyReport: meta.showWeeklyReport !== false
       });
       setUserData((s) => ({
         ...s,
@@ -214,6 +219,7 @@ const StudentProfile: React.FC = () => {
         totalPoints: Number(meta.totalPoints) || 0,
         battlesAttempted: Number(meta.battlesAttempted) || 0,
         battlesWon: Number(meta.battlesWon) || 0,
+        showWeeklyReport: meta.showWeeklyReport !== false,
       }));
       setEquippedBadges(metaEquippedBadges);
 
@@ -251,12 +257,13 @@ const StudentProfile: React.FC = () => {
           username: dbProfile.username || metaUsername || '',
           school: dbProfile.school || meta.school || '',
           grade: dbProfile.class_grade || meta.classGrade || '',
-          bio: dbProfile.bio || metaBio || ''
+          bio: dbProfile.bio || metaBio || '',
+          showWeeklyReport: meta.showWeeklyReport !== false
         });
       }
     });
-    // Fetch real solved questions
-    const fetchSolved = async () => {
+    // Fetch real solved questions & weekly report
+    const fetchSolvedAndReport = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
@@ -265,16 +272,25 @@ const StudentProfile: React.FC = () => {
           });
           if (res.ok) {
             const data = await res.json();
-            setRecentBattles(data); // Store all for analysis
+            setRecentBattles(data);
+          }
+          
+          const repRes = await fetch('/api/report', {
+            headers: { 'Authorization': `Bearer ${session.access_token}` },
+            cache: 'no-store'
+          });
+          if (repRes.ok) {
+            setWeeklyReport(await repRes.json());
           }
         }
       } catch (err) {
-        console.error("Error fetching solved questions:", err);
+        console.error("Error fetching data:", err);
       } finally {
         setLoadingSolved(false);
+        setLoadingReport(false);
       }
     };
-    fetchSolved();
+    fetchSolvedAndReport();
 
     return () => {
       mounted = false;
@@ -505,7 +521,8 @@ const StudentProfile: React.FC = () => {
           username_updates: newUsernameUpdates,
           school: editForm.school,
           classGrade: editForm.grade,
-          bio: editForm.bio
+          bio: editForm.bio,
+          showWeeklyReport: editForm.showWeeklyReport
         }
       });
 
@@ -526,7 +543,8 @@ const StudentProfile: React.FC = () => {
         usernameUpdates: newUsernameUpdates,
         school: editForm.school,
         grade: editForm.grade,
-        bio: editForm.bio
+        bio: editForm.bio,
+        showWeeklyReport: editForm.showWeeklyReport
       }));
       setShowEditProfile(false);
       setMessage('Profile updated successfully');
@@ -1002,49 +1020,62 @@ const StudentProfile: React.FC = () => {
           </div>
             </div>
 
-            {/* Progress Overview */}
-            <div className="mt-8 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 sm:p-10 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-colors pointer-events-none"></div>
+            {/* Weekly Report */}
+            {userData.showWeeklyReport && (
+              <div className="mt-8 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 sm:p-10 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-colors pointer-events-none"></div>
 
-              <div className="flex items-center gap-4 mb-8">
-                <div className="p-3.5 bg-emerald-50 dark:bg-emerald-900/40 rounded-2xl border border-emerald-100 dark:border-emerald-800 shadow-inner group-hover:scale-110 transition-transform">
-                  <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400 drop-shadow-sm" />
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="p-3.5 bg-indigo-50 dark:bg-indigo-900/40 rounded-2xl border border-indigo-100 dark:border-indigo-800 shadow-inner group-hover:scale-110 transition-transform">
+                    <TrendingUp className="w-6 h-6 text-indigo-600 dark:text-indigo-400 drop-shadow-sm" />
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Weekly Report</h2>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Progress Overview</h2>
+
+                {loadingReport ? (
+                  <div className="h-48 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-3xl"></div>
+                ) : weeklyReport ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/40 dark:shadow-none hover:-translate-y-1 transition-transform group/card">
+                      <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-6 border border-blue-100 dark:border-blue-800 group-hover/card:scale-110 transition-transform">
+                        <Target className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Accuracy</h3>
+                      <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">{weeklyReport.stats.accuracy}<span className="text-3xl text-slate-400">%</span></div>
+                      <div className="text-sm font-semibold mt-4 text-slate-500">
+                        {weeklyReport.stats.correctAttempts} / {weeklyReport.stats.totalAttempts} questions answered
+                      </div>
+                      <div className="mt-4 bg-slate-100 dark:bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full" style={{ width: `${weeklyReport.stats.accuracy}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="p-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl border border-indigo-400 shadow-xl shadow-indigo-500/30 hover:-translate-y-1 transition-transform group/card text-white relative overflow-hidden">
+                      <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
+                      <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6 border border-white/30 group-hover/card:scale-110 transition-transform backdrop-blur-sm">
+                        <Star className="w-7 h-7 text-white drop-shadow-sm" />
+                      </div>
+                      <h3 className="font-bold text-indigo-100 uppercase tracking-widest text-xs mb-2">Performance Rating</h3>
+                      <div className="text-4xl font-black text-white tracking-tight leading-tight">{weeklyReport.rating.label}</div>
+                      <p className="text-sm font-medium text-emerald-50 mt-4 bg-black/20 px-4 py-3 rounded-xl inline-block border border-white/10 backdrop-blur-md leading-relaxed">{weeklyReport.rating.message}</p>
+                    </div>
+
+                    <div className="p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/40 dark:shadow-none hover:-translate-y-1 transition-transform group/card">
+                      <div className="w-14 h-14 bg-orange-50 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center mb-6 border border-orange-100 dark:border-orange-800 group-hover/card:scale-110 transition-transform">
+                         <Zap className="w-7 h-7 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Active Days</h3>
+                      <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">{weeklyReport.stats.activeDays}<span className="text-2xl text-slate-400">/7</span></div>
+                      <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-4 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-2 rounded-xl inline-block border border-emerald-100 dark:border-emerald-800">
+                        {weeklyReport.stats.activeDays >= 3 ? 'Great consistency!' : 'Keep building the habit!'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-slate-500 italic">Report not available.</div>
+                )}
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/40 dark:shadow-none hover:-translate-y-1 transition-transform group/card">
-                  <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-6 border border-blue-100 dark:border-blue-800 group-hover/card:scale-110 transition-transform">
-                    <BookOpen className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Subjects Mastered</h3>
-                  <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">8<span className="text-2xl text-slate-400">/12</span></div>
-                  <div className="mt-6 bg-slate-100 dark:bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
-                    <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full w-[67%]" />
-                  </div>
-                </div>
-
-                <div className="p-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl border border-emerald-400 shadow-xl shadow-emerald-500/30 hover:-translate-y-1 transition-transform group/card text-white relative overflow-hidden">
-                  <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/20 rounded-full blur-2xl"></div>
-                  <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6 border border-white/30 group-hover/card:scale-110 transition-transform backdrop-blur-sm">
-                    <Users className="w-7 h-7 text-white drop-shadow-sm" />
-                  </div>
-                  <h3 className="font-bold text-emerald-100 uppercase tracking-widest text-xs mb-2">School Ranking</h3>
-                  <div className="text-5xl font-black text-white tracking-tight">#2</div>
-                  <p className="text-sm font-medium text-emerald-50 mt-4 bg-black/20 px-4 py-2 rounded-xl inline-block border border-white/10 backdrop-blur-md">Out of 156 students</p>
-                </div>
-
-                <div className="p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/40 dark:shadow-none hover:-translate-y-1 transition-transform group/card">
-                  <div className="w-14 h-14 bg-purple-50 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mb-6 border border-purple-100 dark:border-purple-800 group-hover/card:scale-110 transition-transform">
-                    <Brain className="w-7 h-7 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Knowledge Points</h3>
-                  <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-slate-700">8,543</div>
-                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-4 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-2 rounded-xl inline-block border border-emerald-100 dark:border-emerald-800">+234 this week</p>
-                </div>
-              </div>
-            </div>
+            )}
           </>
         )}
 

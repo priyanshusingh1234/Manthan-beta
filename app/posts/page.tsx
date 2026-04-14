@@ -168,18 +168,20 @@ export default function SocialFeedPage() {
         try {
             let imageUrl = null;
             if (imageFile) {
-                const isRealBlob = imageFile instanceof Blob || typeof (imageFile as any).slice === 'function';
-                let uploadBlob: Blob = isRealBlob ? (imageFile as unknown as Blob) : await (await fetch(imagePreview!)).blob();
-                const ext = (imageFile as any)?.name?.split('.').pop() || 'jpg';
+                const ext = (imageFile.name || 'post-image.jpg').split('.').pop() || 'webp';
                 const form = new FormData();
-                form.append('file', uploadBlob, `post-${Date.now()}.${ext}`);
+                // imageFile is already a compressed Blob/File from compressImage — use it directly
+                form.append('file', imageFile, `post-${Date.now()}.${ext}`);
                 const up = await fetch('/api/posts/upload', {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${session.access_token}` },
                     body: form,
                 });
+                if (!up.ok) {
+                    const upData = await up.json().catch(() => ({}));
+                    throw new Error(upData.error || `Upload failed (${up.status})`);
+                }
                 const upData = await up.json();
-                if (!up.ok) throw new Error(upData.error || 'Upload failed');
                 imageUrl = upData.url;
             }
 
