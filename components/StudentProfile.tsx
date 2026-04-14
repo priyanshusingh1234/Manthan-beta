@@ -360,6 +360,11 @@ const StudentProfile: React.FC = () => {
 
   const performUpload = async (fileToUpload: File, type: 'avatar' | 'banner') => {
     if (!currentUser) return;
+    if (avatarUploading || bannerUploading) {
+        setMessage('Upload already in progress...');
+        return;
+    }
+
     const bucket = type === 'avatar' ? 'avatars' : 'banners';
     const path = `${type}s/${currentUser.id}/${type}_${Date.now()}.webp`;
     let oldPath = currentUser.user_metadata?.[`${type}_path`];
@@ -377,6 +382,7 @@ const StudentProfile: React.FC = () => {
       if (type === 'avatar') setAvatarUploading(true);
       else setBannerUploading(true);
 
+      setMessage(`Uploading ${type}...`);
       // Compress before uploading
       const compressed = await compressImage(fileToUpload, type === 'avatar' ? 'avatar' : 'banner');
 
@@ -408,7 +414,6 @@ const StudentProfile: React.FC = () => {
       setMessage(`${type[0].toUpperCase() + type.slice(1)} updated`);
 
       if (oldPath) {
-        const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         const delRes = await fetch('/api/profile/delete', {
           method: 'DELETE',
@@ -436,6 +441,7 @@ const StudentProfile: React.FC = () => {
     } finally {
       setAvatarUploading(false);
       setBannerUploading(false);
+      setShowCrop(false);
     }
   };
 
@@ -445,7 +451,6 @@ const StudentProfile: React.FC = () => {
       const blob = await getCroppedImg(imageSrc, croppedAreaPixels);
       if (!blob) throw new Error('Crop failed');
       const file = blobToFile(blob, `${cropType}_${Date.now()}.png`);
-      setShowCrop(false);
       setSelectedFile(null);
       await performUpload(file, cropType);
     } catch (err) {
@@ -633,6 +638,7 @@ const StudentProfile: React.FC = () => {
                 accept="image/*"
                 type="file"
                 className="hidden"
+                disabled={bannerUploading}
                 onChange={(ev) => handleBannerChange(ev.target.files?.[0] ?? null)}
               />
             </label>
@@ -662,7 +668,7 @@ const StudentProfile: React.FC = () => {
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full text-[10px] font-black shadow-lg text-slate-700 dark:text-slate-300">
                       {avatarUploading ? '…' : <Pencil className="w-3 h-3" />}
                     </span>
-                    <input id="avatar-upload" accept="image/*" type="file" className="hidden" onChange={(ev) => handleAvatarChange(ev.target.files?.[0] ?? null)} />
+                    <input id="avatar-upload" accept="image/*" type="file" className="hidden" disabled={avatarUploading} onChange={(ev) => handleAvatarChange(ev.target.files?.[0] ?? null)} />
                   </label>
                 </div>
                 

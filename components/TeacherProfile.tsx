@@ -161,6 +161,11 @@ const TeacherProfile: React.FC = () => {
 
   const performUpload = async (fileToUpload: File, type: 'avatar' | 'banner') => {
     if (!currentUser) return;
+    if (avatarUploading || bannerUploading) {
+        setMessage('Upload already in progress...');
+        return;
+    }
+
     const bucket = type === 'avatar' ? 'avatars' : 'banners';
     const path = `${type}s/${currentUser.id}/${type}_${Date.now()}.webp`;
     let oldPath = currentUser.user_metadata?.[`${type}_path`];
@@ -178,6 +183,7 @@ const TeacherProfile: React.FC = () => {
       if (type === 'avatar') setAvatarUploading(true);
       else setBannerUploading(true);
 
+      setMessage(`Uploading ${type}...`);
       // Compress before uploading
       const compressed = await compressImage(fileToUpload, type === 'avatar' ? 'avatar' : 'banner');
 
@@ -209,7 +215,6 @@ const TeacherProfile: React.FC = () => {
       setMessage(`${type[0].toUpperCase() + type.slice(1)} updated`);
 
       if (oldPath) {
-        const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         const delRes = await fetch('/api/profile/delete', {
           method: 'DELETE',
@@ -237,6 +242,7 @@ const TeacherProfile: React.FC = () => {
     } finally {
       setAvatarUploading(false);
       setBannerUploading(false);
+      setShowCrop(false);
     }
   };
 
@@ -246,7 +252,6 @@ const TeacherProfile: React.FC = () => {
       const blob = await getCroppedImg(imageSrc, croppedAreaPixels);
       if (!blob) throw new Error('Crop failed');
       const file = blobToFile(blob, `${cropType}_${Date.now()}.png`);
-      setShowCrop(false);
       setSelectedFile(null);
       await performUpload(file, cropType);
     } catch (err) {
@@ -383,7 +388,7 @@ const TeacherProfile: React.FC = () => {
         {/* Edit Profile Modal */}
         {showEditProfile && (
           <EditProfileModal
-            form={{ name: editForm.name, username: editForm.username, school: editForm.school, grade: editForm.subject, bio: editForm.bio }}
+            form={{ name: editForm.name, username: editForm.username, school: editForm.school, grade: editForm.subject, bio: editForm.bio, showWeeklyReport: true }}
             message={message}
             onFormChange={(f) => setEditForm({ ...editForm, name: f.name, username: f.username, school: f.school, subject: f.grade, bio: f.bio })}
             onSave={saveProfile}
@@ -418,6 +423,7 @@ const TeacherProfile: React.FC = () => {
                 accept="image/*"
                 type="file"
                 className="hidden"
+                disabled={bannerUploading}
                 onChange={(ev) => handleBannerChange(ev.target.files?.[0] ?? null)}
               />
             </label>
@@ -454,6 +460,7 @@ const TeacherProfile: React.FC = () => {
                       accept="image/*"
                       type="file"
                       className="hidden"
+                      disabled={avatarUploading}
                       onChange={(ev) => handleAvatarChange(ev.target.files?.[0] ?? null)}
                     />
                   </label>
