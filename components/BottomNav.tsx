@@ -22,6 +22,8 @@ const BottomNav: React.FC = () => {
     }
   };
 
+  if (pathname?.startsWith('/store')) return null;
+
   const navItems: NavItem[] = [
     { href: '/', icon: Home, label: 'Home' },
     { href: '/chat', icon: MessageSquare, label: 'Chat' },
