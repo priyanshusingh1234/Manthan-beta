@@ -11,8 +11,7 @@ export default async function LeaderboardPage() {
   noStore();
   const allProfiles = await getAllProfiles();
   
-  // Exclude teachers and ensure they have a username
-  const students = allProfiles
+    const students = allProfiles
     .filter(p => !p.is_teacher && p.username)
     .map(p => ({
       id: p.id,
@@ -21,6 +20,7 @@ export default async function LeaderboardPage() {
       school: p.school || "Unknown School",
       totalPoints: p.total_points,
       avatar: p.avatar_url || null,
+      cosmetics: p.cosmetics || [],
     }))
     .slice(0, 50); // Top 50
 
