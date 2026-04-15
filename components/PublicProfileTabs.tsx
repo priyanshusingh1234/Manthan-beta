@@ -45,6 +45,7 @@ export default function PublicProfileTabs({
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [hasFetchedPosts, setHasFetchedPosts] = useState(false);
+  const [postsFetchError, setPostsFetchError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function PublicProfileTabs({
     if (loadingPosts) return;
     if (!force && hasFetchedPosts) return;
     setLoadingPosts(true);
+    setPostsFetchError(null);
     try {
         const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch(`/api/posts/user/${userId}?t=${Date.now()}`, {
@@ -67,11 +69,17 @@ export default function PublicProfileTabs({
         });
         if (res.ok) {
             const data = await res.json();
-            setUserPosts(data || []);
+            setUserPosts(Array.isArray(data) ? data : []);
             setHasFetchedPosts(true);
+        } else {
+            const errData = await res.json().catch(() => ({}));
+            const msg = errData?.error || `Server error ${res.status}`;
+            console.error('[PublicProfileTabs] posts fetch failed:', res.status, msg);
+            setPostsFetchError(msg);
         }
-    } catch (err) {
+    } catch (err: any) {
         console.error("Failed to fetch user posts:", err);
+        setPostsFetchError(err?.message || 'Network error');
     } finally {
         setLoadingPosts(false);
     }
@@ -253,6 +261,11 @@ export default function PublicProfileTabs({
                 <div className="py-20 text-center flex flex-col items-center gap-4">
                     <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
                     <p className="text-slate-500 font-bold italic">Gathering records...</p>
+                </div>
+            ) : postsFetchError ? (
+                <div className="py-20 text-center flex flex-col items-center gap-4 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-red-100 dark:border-red-900/30 shadow-sm">
+                   <p className="text-red-400 font-bold italic tracking-tight">Could not load posts. Tap to retry.</p>
+                   <button onClick={() => fetchUserPosts(true)} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold">Retry</button>
                 </div>
             ) : userPosts.length === 0 ? (
                 <div className="py-20 text-center flex flex-col items-center gap-4 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">

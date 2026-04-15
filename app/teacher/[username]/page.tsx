@@ -137,6 +137,7 @@ export default async function TeacherProfilePage({ params }: Props) {
           correctOption: typeof r.correct_option === 'number' ? r.correct_option : null,
           imagePath: r.image_path || null,
           imageUrl: r.image_url || null,
+          chapter: r.chapter || null,
           createdAt: r.created_at,
         }));
       }

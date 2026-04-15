@@ -16,37 +16,69 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
             currentUserId = user?.id || null;
         }
 
-        const { data: posts, error } = await supabaseAdmin
-            .from('posts')
-            .select(`
-                *,
-                post_likes ( user_id )
-            `)
-            .eq('author_id', userId)
-            .order('created_at', { ascending: false })
-            .limit(50);
+        // Try with join first, fall back to plain query if join fails
+        let posts: any[] = [];
+        let likesMap: Record<string, string[]> = {};
 
-        if (error) throw error;
+        try {
+            const { data, error } = await supabaseAdmin
+                .from('posts')
+                .select(`*, post_likes ( user_id )`)
+                .eq('author_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+            if (error) throw error;
+            posts = data || [];
+            posts.forEach(p => {
+                likesMap[p.id] = (p.post_likes || []).map((l: any) => l.user_id);
+            });
+        } catch (joinErr: any) {
+            console.warn('[posts/user] join failed, falling back:', joinErr?.message);
+            // Fallback: plain posts query + separate likes query
+            const { data, error } = await supabaseAdmin
+                .from('posts')
+                .select('*')
+                .eq('author_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+            if (error) throw error;
+            posts = data || [];
+
+            if (posts.length > 0) {
+                const postIds = posts.map((p: any) => p.id);
+                const { data: likesData } = await supabaseAdmin
+                    .from('post_likes')
+                    .select('post_id, user_id')
+                    .in('post_id', postIds);
+                (likesData || []).forEach((l: any) => {
+                    if (!likesMap[l.post_id]) likesMap[l.post_id] = [];
+                    likesMap[l.post_id].push(l.user_id);
+                });
+            }
+        }
 
         // Fetch profile data for the author
         const profilesMap = await getProfilesMap([userId]);
         const profile = profilesMap.get(userId);
 
-        const enriched = (posts || []).map(p => {
+        const enriched = posts.map(p => {
             let finalContent = p.content || '';
             let isPinned = false;
             if (finalContent.startsWith('[PINNED]')) {
                 isPinned = true;
                 finalContent = finalContent.substring(8).trim();
             }
-            const likesCount = Array.isArray(p.post_likes) ? p.post_likes.length : (p.likes_count || 0);
+            const postLikers = likesMap[p.id] || [];
+            const likesCount = postLikers.length || p.likes_count || 0;
 
             return {
                 ...p,
                 content: finalContent,
                 is_pinned: isPinned,
                 likes_count: likesCount,
-                is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
+                is_liked_by_me: currentUserId ? postLikers.includes(currentUserId) : false,
                 author: {
                     id: userId,
                     name: profile?.full_name || 'Student',
@@ -59,6 +91,7 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
 
         return NextResponse.json(enriched);
     } catch (err: any) {
+        console.error('[posts/user] error:', err.message);
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }
