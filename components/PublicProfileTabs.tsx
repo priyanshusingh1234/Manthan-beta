@@ -59,6 +59,7 @@ export default function PublicProfileTabs({
     if (!force && hasFetchedPosts) return;
     setLoadingPosts(true);
     setPostsFetchError(null);
+    console.log('[PublicProfileTabs] fetching posts for userId:', userId);
     try {
         const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch(`/api/posts/user/${userId}?t=${Date.now()}`, {

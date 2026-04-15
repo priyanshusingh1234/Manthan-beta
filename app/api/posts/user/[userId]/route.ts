@@ -7,6 +7,12 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest, { params }: { params: { userId: string } }) {
     try {
         const userId = params.userId;
+
+        if (!userId || userId === 'undefined' || userId === 'null') {
+            console.error('[posts/user] Invalid userId:', userId);
+            return NextResponse.json([], { status: 200 });
+        }
+
         const authHeader = req.headers.get('Authorization');
         let currentUserId = null;
         
@@ -16,54 +22,42 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
             currentUserId = user?.id || null;
         }
 
-        // Try with join first, fall back to plain query if join fails
-        let posts: any[] = [];
+        console.log(`[posts/user] Fetching posts for userId=${userId}`);
+
+        // Fetch posts without join first (avoid join failures)
+        const { data: posts, error: postsErr } = await supabaseAdmin
+            .from('posts')
+            .select('*')
+            .eq('author_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (postsErr) {
+            console.error('[posts/user] posts query failed:', postsErr.message);
+            throw postsErr;
+        }
+
+        console.log(`[posts/user] Found ${posts?.length || 0} posts for userId=${userId}`);
+
+        // Fetch likes separately
         let likesMap: Record<string, string[]> = {};
-
-        try {
-            const { data, error } = await supabaseAdmin
-                .from('posts')
-                .select(`*, post_likes ( user_id )`)
-                .eq('author_id', userId)
-                .order('created_at', { ascending: false })
-                .limit(50);
-
-            if (error) throw error;
-            posts = data || [];
-            posts.forEach(p => {
-                likesMap[p.id] = (p.post_likes || []).map((l: any) => l.user_id);
+        if (posts && posts.length > 0) {
+            const postIds = posts.map((p: any) => p.id);
+            const { data: likesData } = await supabaseAdmin
+                .from('post_likes')
+                .select('post_id, user_id')
+                .in('post_id', postIds);
+            (likesData || []).forEach((l: any) => {
+                if (!likesMap[l.post_id]) likesMap[l.post_id] = [];
+                likesMap[l.post_id].push(l.user_id);
             });
-        } catch (joinErr: any) {
-            console.warn('[posts/user] join failed, falling back:', joinErr?.message);
-            // Fallback: plain posts query + separate likes query
-            const { data, error } = await supabaseAdmin
-                .from('posts')
-                .select('*')
-                .eq('author_id', userId)
-                .order('created_at', { ascending: false })
-                .limit(50);
-
-            if (error) throw error;
-            posts = data || [];
-
-            if (posts.length > 0) {
-                const postIds = posts.map((p: any) => p.id);
-                const { data: likesData } = await supabaseAdmin
-                    .from('post_likes')
-                    .select('post_id, user_id')
-                    .in('post_id', postIds);
-                (likesData || []).forEach((l: any) => {
-                    if (!likesMap[l.post_id]) likesMap[l.post_id] = [];
-                    likesMap[l.post_id].push(l.user_id);
-                });
-            }
         }
 
         // Fetch profile data for the author
         const profilesMap = await getProfilesMap([userId]);
         const profile = profilesMap.get(userId);
 
-        const enriched = posts.map(p => {
+        const enriched = (posts || []).map((p: any) => {
             let finalContent = p.content || '';
             let isPinned = false;
             if (finalContent.startsWith('[PINNED]')) {
