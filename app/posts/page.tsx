@@ -7,6 +7,7 @@ import SuggestedUsersCard from '@/components/SuggestedUsersCard';
 import { ImageIcon, X, Sparkles, User, Send } from 'lucide-react';
 import Image from 'next/image';
 import { compressImage } from '@/utils/compressImage';
+import { Check } from 'lucide-react';
 
 const MAX_CHARS = 500;
 
@@ -15,6 +16,11 @@ export default function SocialFeedPage() {
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [session, setSession] = useState<any>(null);
+
+    // Pagination state
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const observerTarget = useRef<HTMLDivElement>(null);
 
     // Composer state
     const [content, setContent] = useState('');
@@ -42,6 +48,7 @@ export default function SocialFeedPage() {
     // ── Fetch feed ──────────────────────────────────────────────────────────
     const fetchFeed = useCallback(async () => {
         setLoading(true);
+        setHasMore(true);
         try {
             const { data: { session: s } } = await supabase.auth.getSession();
             const token = s?.access_token || null;
@@ -55,7 +62,7 @@ export default function SocialFeedPage() {
             const postItems = allItems.filter((item: any) => item.type === 'post');
 
             if (postItems.length < 5) {
-                const fbRes = await fetch('/api/posts', {
+                const fbRes = await fetch('/api/posts?limit=20', {
                     headers: token ? { Authorization: `Bearer ${token}` } : {},
                     cache: 'no-store',
                 });
@@ -65,17 +72,84 @@ export default function SocialFeedPage() {
                     const fallbackPosts = (Array.isArray(fbData) ? fbData : [])
                         .filter((p: any) => !existingIds.has(p.id))
                         .map((p: any) => ({ ...p, type: 'post', _feedLabel: '💡 Community Post' }));
-                    setPosts([...postItems, ...fallbackPosts]);
+                    const combined = [...postItems, ...fallbackPosts];
+                    setPosts(combined);
+                    if (fallbackPosts.length < 20) setHasMore(false);
                     return;
                 }
             }
             setPosts(postItems);
+            // If very few items, probably reached the end
+            if (postItems.length < 10 && allItems.length < 60) setHasMore(false);
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
         }
     }, []);
+
+    const loadMore = async () => {
+        if (!hasMore || loadingMore || posts.length === 0) return;
+        setLoadingMore(true);
+        try {
+            const lastPost = posts[posts.length - 1];
+            // Determine timestamp: some come as 'createdAt' (from questions), some as 'created_at' (from posts).
+            // But since these are social posts, it's usually created_at.
+            const cursor = lastPost.created_at || lastPost.createdAt;
+            if (!cursor) {
+                setHasMore(false);
+                return;
+            }
+
+            const token = session?.access_token || null;
+            const fbRes = await fetch(`/api/posts?limit=20&before=${encodeURIComponent(cursor)}`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                cache: 'no-store',
+            });
+
+            if (fbRes.ok) {
+                const fbData = await fbRes.json();
+                const newPosts = Array.isArray(fbData) ? fbData : [];
+                
+                if (newPosts.length === 0) {
+                    setHasMore(false);
+                } else {
+                    const formattedPosts = newPosts.map(p => ({ ...p, type: 'post' }));
+                    // Deduplicate
+                    setPosts(prev => {
+                        const existingIds = new Set(prev.map(item => item.id));
+                        const uniqueNew = formattedPosts.filter(p => !existingIds.has(p.id));
+                        return [...prev, ...uniqueNew];
+                    });
+                    if (newPosts.length < 20) setHasMore(false);
+                }
+            } else {
+                setHasMore(false);
+            }
+        } catch (error) {
+            console.error("Failed to load more posts:", error);
+            setHasMore(false);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            entries => {
+                if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+                    loadMore();
+                }
+            },
+            { threshold: 0.1, rootMargin: '400px' }
+        );
+
+        if (observerTarget.current) {
+            observer.observe(observerTarget.current);
+        }
+
+        return () => observer.disconnect();
+    }, [hasMore, loadingMore, loading, posts.length]);
 
     useEffect(() => {
         let mounted = true;
@@ -380,16 +454,37 @@ export default function SocialFeedPage() {
                             <p className="text-slate-500 dark:text-slate-400 font-medium">Be the first to share something with the academy!</p>
                         </div>
                     ) : (
-                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-                            {posts.map((p: any) => (
-                                <PostCard
-                                    key={p.id}
-                                    post={p}
-                                    currentUserId={currentUserId}
-                                    feedLabel={p._feedLabel}
-                                    onUpdate={fetchFeed}
-                                />
-                            ))}
+                        <div className="space-y-6">
+                            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                                {posts.map((p: any) => (
+                                    <PostCard
+                                        key={p.id}
+                                        post={p}
+                                        currentUserId={currentUserId}
+                                        feedLabel={p._feedLabel}
+                                        onUpdate={fetchFeed}
+                                    />
+                                ))}
+                            </div>
+                            
+                            {/* Infinite scroll sentinel */}
+                            <div ref={observerTarget} className="py-6 flex justify-center">
+                                {loadingMore ? (
+                                    <div className="flex items-center gap-2 text-indigo-500 font-bold text-sm">
+                                        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                        Loading older posts...
+                                    </div>
+                                ) : hasMore && posts.length > 0 ? (
+                                    <div className="text-slate-400 dark:text-slate-500 text-sm italic">
+                                        Scroll down to see more
+                                    </div>
+                                ) : posts.length > 0 ? (
+                                    <div className="flex items-center justify-center gap-2 text-slate-400 dark:text-slate-500 font-bold text-sm bg-slate-100 dark:bg-slate-800/50 py-3 px-6 rounded-full">
+                                        <Check className="w-4 h-4 text-emerald-500" />
+                                        You&apos;ve reached the end
+                                    </div>
+                                ) : null}
+                            </div>
                         </div>
                     )}
                 </div>

@@ -8,6 +8,10 @@ export const dynamic = 'force-dynamic';
 // GET /api/posts - Fetch feed
 export async function GET(req: NextRequest) {
     try {
+        const url = new URL(req.url);
+        const before = url.searchParams.get('before'); // ISO timestamp cursor
+        const limit = Math.min(Number(url.searchParams.get('limit') || '20'), 50);
+
         const authHeader = req.headers.get('Authorization');
         let currentUserId = null;
         if (authHeader) {
@@ -16,15 +20,17 @@ export async function GET(req: NextRequest) {
             currentUserId = user?.id || null;
         }
 
-        const { data: posts, error } = await supabaseAdmin
+        let query = supabaseAdmin
             .from('posts')
-            .select(`
-                *,
-                post_likes ( user_id )
-            `)
+            .select('*, post_likes ( user_id )')
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(limit);
 
+        if (before) {
+            query = query.lt('created_at', before);
+        }
+
+        const { data: posts, error } = await query;
         if (error) throw error;
 
         // Fast profile lookup via profiles table (no listUsers!)

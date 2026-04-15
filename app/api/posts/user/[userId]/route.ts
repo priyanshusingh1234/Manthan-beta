@@ -22,8 +22,6 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
             currentUserId = user?.id || null;
         }
 
-        console.log(`[posts/user] Fetching posts for userId=${userId}`);
-
         // Fetch posts without join first (avoid join failures)
         const { data: posts, error: postsErr } = await supabaseAdmin
             .from('posts')
@@ -37,7 +35,6 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
             throw postsErr;
         }
 
-        console.log(`[posts/user] Found ${posts?.length || 0} posts for userId=${userId}`);
 
         // Fetch likes separately
         let likesMap: Record<string, string[]> = {};
