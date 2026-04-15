@@ -25,6 +25,7 @@ type Question = {
   title: string;
   body?: string | null;
   subject?: string | null;
+  chapter?: string | null;
   classGrade?: string | null;
   points?: number | null;
   timeLimit?: number | null;
@@ -245,6 +246,12 @@ export default function QuestionCard({ q }: { q: Question }) {
             </div>
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               <span className="font-medium whitespace-nowrap">{q.subject || 'General'}</span>
+              {q.chapter && (
+                <>
+                  <span className="text-slate-300 dark:text-slate-600">·</span>
+                  <span className="whitespace-nowrap text-indigo-500 dark:text-indigo-400 font-bold">{q.chapter}</span>
+                </>
+              )}
               {q.classGrade && (
                 <>
                   <span className="text-slate-300 dark:text-slate-600">·</span>

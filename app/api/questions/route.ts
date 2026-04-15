@@ -157,7 +157,7 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
     const body = await req.json();
-    const { title, body: questionBody, subject, classGrade, points, timeLimit, difficulty, options, correctOption, imagePath, imageUrl } = body || {};
+    const { title, body: questionBody, subject, classGrade, points, timeLimit, difficulty, options, correctOption, imagePath, imageUrl, chapter } = body || {};
 
     // Basic validation server-side
     if (!title || !subject || (!classGrade && subject !== 'English') || !points || !timeLimit) {
@@ -207,6 +207,7 @@ export async function POST(req: Request) {
         correct_option: (typeof correctOption === 'number') ? Number(correctOption) : null,
         image_path: imagePath || null,
         image_url: imageUrl || null,
+        chapter: chapter || null,
       };
 
       // attempt insert; if DB schema is missing `correct_option`, retry without it

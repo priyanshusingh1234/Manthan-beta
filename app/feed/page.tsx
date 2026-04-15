@@ -25,6 +25,7 @@ export default function FeedPage() {
     const [selectedSubject, setSelectedSubject] = useState('');
     const [selectedClass, setSelectedClass] = useState('');
     const [selectedDifficulty, setSelectedDifficulty] = useState('');
+    const [selectedChapter, setSelectedChapter] = useState('');
 
     useEffect(() => {
         if (selectedSubject === 'English' && selectedClass) {
@@ -43,6 +44,7 @@ export default function FeedPage() {
             // Also pass class to API so server pre-filters when possible
             if (selectedClass && selectedSubject !== 'English') params.set('class', selectedClass);
             if (selectedDifficulty) params.set('difficulty', selectedDifficulty);
+            if (selectedChapter) params.set('chapter', selectedChapter);
 
             const headers: Record<string, string> = {};
             if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
@@ -87,7 +89,7 @@ export default function FeedPage() {
         });
 
         return () => { mounted = false; };
-    }, [selectedSubject, selectedClass]);
+    }, [selectedSubject, selectedClass, selectedDifficulty, selectedChapter]);
 
     // Filter logic
     const filteredQuestions = questions.filter((q: any) => {
@@ -111,6 +113,12 @@ export default function FeedPage() {
             
             if (!isModerateMatch && qDiff !== sDiff) return false;
         }
+
+        if (selectedChapter) {
+            const qChap = (q.chapter || '').toLowerCase();
+            if (!qChap.includes(selectedChapter.toLowerCase())) return false;
+        }
+        
         return true;
     });
 
@@ -222,6 +230,20 @@ export default function FeedPage() {
                                     <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                                 </div>
                             </div>
+                            
+                            {/* Chapter Search */}
+                            <div className="relative group sm:col-span-3">
+                                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 pointer-events-none group-focus-within:text-indigo-500 transition-colors">
+                                    <BookOpen className="w-4 h-4" />
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Search by Chapter name..."
+                                    value={selectedChapter}
+                                    onChange={(e) => setSelectedChapter(e.target.value)}
+                                    className="w-full bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded-2xl pl-10 pr-4 py-3.5 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none transition-all shadow-sm"
+                                />
+                            </div>
                         </div>
 
                         {selectedSubject === 'English' && (
@@ -247,9 +269,9 @@ export default function FeedPage() {
                             <p className="text-slate-500 dark:text-slate-400 font-medium max-w-sm">
                                 We couldn't find any questions matching your current filters. Try changing the selectors above or clear the filters to see all.
                             </p>
-                            {(selectedSubject || selectedClass || selectedDifficulty) && (
+                            {(selectedSubject || selectedClass || selectedDifficulty || selectedChapter) && (
                                 <button
-                                    onClick={() => { setSelectedSubject(''); setSelectedClass(''); setSelectedDifficulty(''); }}
+                                    onClick={() => { setSelectedSubject(''); setSelectedClass(''); setSelectedDifficulty(''); setSelectedChapter(''); }}
                                     className="mt-6 px-6 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl transition-colors"
                                 >
                                     Clear all filters

@@ -498,8 +498,13 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                         {question.subject && (
                             <span className="bg-gray-100/80 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 px-3 py-1 rounded-full text-xs font-medium tracking-wide">{question.subject}</span>
                         )}
+                        {question.chapter && (
+                            <span className="bg-indigo-100/80 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-bold tracking-wide">
+                                📖 {question.chapter}
+                            </span>
+                        )}
                         {question.difficulty && (
-                            <span className="bg-gray-100/80 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 px-3 py-1 rounded-full text-xs font-medium capitalize tracking-wide">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize tracking-wide border ${question.difficulty?.toLowerCase() === 'easy' ? 'bg-emerald-100/80 dark:bg-emerald-900/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300' : question.difficulty?.toLowerCase() === 'hard' ? 'bg-red-100/80 dark:bg-red-900/40 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300' : 'bg-gray-100/80 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300'}`}>
                                 {question.difficulty}
                             </span>
                         )}

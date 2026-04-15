@@ -40,6 +40,7 @@ function normalizeQuestion(
         title: r.title,
         body: r.body,
         subject: r.subject,
+        chapter: r.chapter || null,
         classGrade: r.class_grade,
         points: r.points,
         timeLimit: r.time_limit,
@@ -133,7 +134,7 @@ function calculatePostScore(
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: apply subject filter uniformly across all query types
 // ─────────────────────────────────────────────────────────────────────────────
-function applyCommonFilters(query: any, subject: string, difficulty: string) {
+function applyCommonFilters(query: any, subject: string, difficulty: string, chapter: string = '') {
     let q = query;
     if (subject) {
         const sLower = subject.toLowerCase();
@@ -155,6 +156,9 @@ function applyCommonFilters(query: any, subject: string, difficulty: string) {
             q = q.eq('difficulty', difficulty);
         }
     }
+    if (chapter) {
+        q = q.ilike('chapter', `%${chapter}%`);
+    }
     return q;
 }
 
@@ -168,6 +172,7 @@ export async function GET(req: NextRequest) {
         const userId = currentUser?.id ?? null;
         const subject = req.nextUrl.searchParams.get('subject') || '';
         const difficulty = req.nextUrl.searchParams.get('difficulty') || '';
+        const chapter = req.nextUrl.searchParams.get('chapter') || '';
         const targetClass = req.nextUrl.searchParams.get('class') || null;
         const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || '30'), 60);
 
@@ -240,7 +245,7 @@ export async function GET(req: NextRequest) {
         // Build a base query helper
         const baseQ = () => {
             let q = supabaseAdmin.from('questions').select('*');
-            return applyCommonFilters(q, subject, difficulty);
+            return applyCommonFilters(q, subject, difficulty, chapter);
         };
 
         const CORE_SUBJECTS = ['Mathematics', 'Science', 'English', 'SST', 'English Literature', 'G.K'];
@@ -252,7 +257,7 @@ export async function GET(req: NextRequest) {
         async function fetchSubjectTimeBuckets(subjectToFetch: string, gradeToFetch: string | null) {
             const applyFilter = (q: any) => {
                 let query = q;
-                query = applyCommonFilters(query, subjectToFetch, difficulty);
+                query = applyCommonFilters(query, subjectToFetch, difficulty, chapter);
                 if (gradeToFetch) {
                     query = query.in('class_grade', [String(gradeToFetch), 'All', 'Any']);
                 }
@@ -350,7 +355,7 @@ export async function GET(req: NextRequest) {
             
             if (pickArr.length > 0) {
                 let query = supabaseAdmin.from('questions').select('*').in('id', pickArr);
-                query = applyCommonFilters(query, subject, difficulty);
+                query = applyCommonFilters(query, subject, difficulty, chapter);
                 
                 const { data } = await query;
                 const reviewQuestions = shuffle(data || []).slice(0, MAX_REVIEW);
@@ -386,7 +391,7 @@ export async function GET(req: NextRequest) {
 
                 if (peerQIds.length > 0) {
                     let query = supabaseAdmin.from('questions').select('*').in('id', peerQIds);
-                    query = applyCommonFilters(query, subject, difficulty);
+                    query = applyCommonFilters(query, subject, difficulty, chapter);
                     const { data } = await query;
                     (data || []).forEach((r: any) => pool.push({ ...r, _layer: 3, _label: '🏫 Trending at Your School', _score: 90 }));
                 }
@@ -417,7 +422,7 @@ export async function GET(req: NextRequest) {
 
             if (trendingHard.length > 0) {
                 let query = supabaseAdmin.from('questions').select('*').in('id', trendingHard).eq('class_grade', userGrade);
-                query = applyCommonFilters(query, subject, difficulty);
+                query = applyCommonFilters(query, subject, difficulty, chapter);
                 const { data } = await query.limit(layer4Count);
                 (data || []).forEach((r: any) => pool.push({ ...r, _layer: 4, _label: '🔥 Everyone\'s Struggling With This', _score: 85 }));
             }
@@ -465,7 +470,7 @@ export async function GET(req: NextRequest) {
 
             if (followedQIds.length > 0) {
                 let query = supabaseAdmin.from('questions').select('*').in('id', followedQIds);
-                query = applyCommonFilters(query, subject, difficulty);
+                query = applyCommonFilters(query, subject, difficulty, chapter);
                 const { data } = await query.limit(layer6Count);
 
                 (data || []).forEach((r: any) => {
