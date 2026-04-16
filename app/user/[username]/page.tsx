@@ -169,7 +169,7 @@ export default async function StudentProfilePage({ params }: Props) {
         // sync by every point-awarding API route via upsertProfile().
         const totalPoints = Number(profile?.total_points) || Number(meta.totalPoints) || 0;
         // Use profiles.avatar_url first (written by /api/profile/sync), then fallback to auth meta.
-        const avatar = (profile?.avatar_url as string | null) || fetchedUser.avatar_url || meta.avatar_url || meta.avatar || null;
+        const avatar = meta.custom_avatar_url || (profile?.avatar_url as string | null) || fetchedUser.avatar_url || meta.avatar_url || meta.avatar || null;
         const battlesAttempted = Number(meta.battlesAttempted) || 0;
         const battlesWon = Number(meta.battlesWon) || 0;
         const winRate = battlesAttempted > 0 ? Math.round((battlesWon / battlesAttempted) * 100) : 0;
