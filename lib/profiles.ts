@@ -31,10 +31,30 @@ export interface Profile {
  * Call this on every signup and every metadata update.
  */
 export async function upsertProfile(userId: string, meta: Record<string, any>) {
+    // Prioritize custom_avatar_url, then avatar_url, then picture (Google fallback)
+    const candidateAvatar = meta.custom_avatar_url || meta.avatar_url || meta.picture || null;
+
+    // ── Guard: never overwrite a real custom avatar with a Google one ──
+    // If the session metadata has a Google URL as the "best" candidate,
+    // check the current DB value — if it already has a real storage URL, keep it.
+    let finalAvatar = candidateAvatar;
+    const isGoogleUrl = (u: string | null) => !!u && u.includes('googleusercontent.com');
+    if (isGoogleUrl(finalAvatar)) {
+        const { data: existing } = await supabaseAdmin
+            .from('profiles')
+            .select('avatar_url')
+            .eq('id', userId)
+            .maybeSingle();
+        if (existing?.avatar_url && !isGoogleUrl(existing.avatar_url)) {
+            // DB already has a real custom avatar — keep it, don't overwrite with Google
+            finalAvatar = existing.avatar_url;
+        }
+    }
+
     const { error } = await supabaseAdmin.from('profiles').upsert({
         id: userId,
         full_name: meta.fullName || meta.name || null,
-        avatar_url: meta.custom_avatar_url || meta.avatar_url || meta.picture || null,
+        avatar_url: finalAvatar,
         school: meta.school || null,
         school_id: meta.school_id ? String(meta.school_id) : null,
         is_teacher: meta.isTeacher === true,
@@ -50,10 +70,6 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
     if (error) {
         console.error('[upsertProfile] failed:', error.message);
     } else {
-        // Bust the leaderboard cache so the next /api/leaderboard request
-        // returns fresh data. This is a safety net: the leaderboard route no
-        // longer caches, but this ensures any remaining callers that might
-        // still hold a reference also see the invalidation.
         leaderboardCache.invalidate();
     }
 }
