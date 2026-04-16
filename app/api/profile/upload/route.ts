@@ -27,7 +27,7 @@ export async function POST(req: Request) {
         const bucket = form.get('bucket') as string | null;
         const path = form.get('path') as string | null;
 
-        if (!file || !bucket || !path) {
+        if (!bucket || !file || !path) {
             return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
         }
 
