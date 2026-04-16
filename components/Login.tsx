@@ -230,7 +230,7 @@ const Login: React.FC = () => {
               <div className="grid grid-cols-1 gap-3">
                 <button
                   type="button"
-                  onClick={() => supabase.auth.signInWithOAuth({ provider: 'google' })}
+                  onClick={() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/profile` } })}
                   className="flex items-center justify-center px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 hover:shadow-md w-full"
                 >
                   <Chrome className="h-5 w-5 mr-2" />
