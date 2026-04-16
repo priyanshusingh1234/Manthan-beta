@@ -294,14 +294,23 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         try { localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(freshCache)); } catch { }
         window.dispatchEvent(new Event('user_metadata_updated'));
 
-        // ── On login: sync DB so feed/cards show correct avatar immediately ──
-        // This is especially important after Google SSO which may write its own
-        // avatar_url. The sync will call upsertProfile which prioritizes custom_avatar_url.
-        if (event === 'SIGNED_IN' && session.access_token) {
-          fetch('/api/profile/sync', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${session.access_token}` }
-          }).catch(() => { });
+        // ── Sync DB on login AND on initial page load (INITIAL_SESSION) ──
+        // SIGNED_IN fires on fresh login; INITIAL_SESSION fires when the user
+        // loads any page while already authenticated. We need both so the
+        // profiles table (used by feed/question cards) always reflects the
+        // latest custom_avatar_url, even without a fresh login.
+        // Rate-limited to once per hour via sessionStorage to avoid hammering.
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session.access_token) {
+          const syncKey = 'profile_sync_last';
+          const lastSync = parseInt(sessionStorage.getItem(syncKey) || '0');
+          const now = Date.now();
+          if (now - lastSync > 60 * 60 * 1000) { // once per hour
+            sessionStorage.setItem(syncKey, now.toString());
+            fetch('/api/profile/sync', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${session.access_token}` }
+            }).catch(() => { });
+          }
         }
       }
       if (session?.access_token) {

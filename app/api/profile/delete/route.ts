@@ -28,11 +28,22 @@ export async function DELETE(req: Request) {
             return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
         }
 
-        if (!path.startsWith(`avatars/${userId}/`) && !path.startsWith(`banners/${userId}/`)) {
+        // Ensure the bucket is one of the allowed ones
+        if (bucket !== 'avatars' && bucket !== 'banners') {
+            return NextResponse.json({ error: 'Invalid bucket' }, { status: 400 });
+        }
+
+        // Ensure the path belongs to the user (e.g. USER_ID/...)
+        // We handle both "USER_ID/..." and "avatars/USER_ID/..." (just in case)
+        const pathIsSafe = path.startsWith(`${userId}/`) || path.startsWith(`${bucket}/${userId}/`);
+        if (!pathIsSafe) {
             return NextResponse.json({ error: 'Unauthorized to delete this path' }, { status: 403 });
         }
 
-        const { error } = await supabaseAdmin.storage.from(bucket).remove([path]);
+        // Strip bucket name from path if it was included (Supabase remove() expects relative path)
+        const cleanPath = path.startsWith(`${bucket}/`) ? path.slice(bucket.length + 1) : path;
+
+        const { error } = await supabaseAdmin.storage.from(bucket).remove([cleanPath]);
 
         if (error) {
             console.error('Profile Storage delete error:', error);

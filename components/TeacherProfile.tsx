@@ -170,7 +170,8 @@ const TeacherProfile: React.FC = () => {
     const path = `${type}s/${currentUser.id}/${type}_${Date.now()}.webp`;
     let oldPath = currentUser.user_metadata?.[`${type}_path`];
     const urlKey = `${type}_url`;
-    const maybeUrl = currentUser.user_metadata?.[urlKey] as string | undefined;
+    const customUrlKey = `custom_${type}_url`;
+    const maybeUrl = (currentUser.user_metadata?.[customUrlKey] || currentUser.user_metadata?.[urlKey]) as string | undefined;
     if (!oldPath && maybeUrl && typeof maybeUrl === 'string') {
       try {
         const m = maybeUrl.match(/\/storage\/v1\/object\/public\/(?:[^\/]+)\/(.+)$/);
