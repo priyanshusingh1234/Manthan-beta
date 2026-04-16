@@ -257,14 +257,10 @@ const Signup: React.FC = () => {
                 <div className="relative flex justify-center"><span className="bg-white dark:bg-slate-900 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">or continue via</span></div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <button type="button" onClick={() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/profile` } })} className="flex items-center justify-center gap-2 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-slate-300 dark:hover:border-slate-600 active:scale-95 transition-all shadow-sm">
+              <div className="grid grid-cols-1 gap-4">
+                <button type="button" onClick={() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/profile` } })} className="flex items-center justify-center gap-2 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-slate-300 dark:hover:border-slate-600 active:scale-95 transition-all shadow-sm w-full">
                   <Chrome className="w-5 h-5 text-slate-700 dark:text-slate-300" />
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">Google</span>
-                </button>
-                <button type="button" onClick={() => supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: `${window.location.origin}/profile` } })} className="flex items-center justify-center gap-2 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-slate-300 dark:hover:border-slate-600 active:scale-95 transition-all shadow-sm">
-                  <Github className="w-5 h-5 text-slate-700 dark:text-slate-300" />
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">Github</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">Continue with Google</span>
                 </button>
               </div>
 

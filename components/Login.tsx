@@ -227,22 +227,14 @@ const Login: React.FC = () => {
               </div>
 
               {/* Social Login */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <button
                   type="button"
                   onClick={() => supabase.auth.signInWithOAuth({ provider: 'google' })}
-                  className="flex items-center justify-center px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 hover:shadow-md"
+                  className="flex items-center justify-center px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 hover:shadow-md w-full"
                 >
                   <Chrome className="h-5 w-5 mr-2" />
-                  Google
-                </button>
-                <button
-                  type="button"
-                  onClick={() => supabase.auth.signInWithOAuth({ provider: 'github' })}
-                  className="flex items-center justify-center px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 hover:shadow-md"
-                >
-                  <Github className="h-5 w-5 mr-2" />
-                  GitHub
+                  Continue with Google
                 </button>
               </div>
 

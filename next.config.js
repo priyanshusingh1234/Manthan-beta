@@ -5,7 +5,14 @@ const nextConfig = {
 
   // Image optimization configuration
   images: {
-    domains: ['placehold.co', 'ivkrupsksxibaibmiibk.supabase.co', 'api.dicebear.com', 'i.pinimg.com'],
+    domains: [
+      'placehold.co', 
+      'ivkrupsksxibaibmiibk.supabase.co', 
+      'api.dicebear.com', 
+      'i.pinimg.com',
+      'lh3.googleusercontent.com',
+      'avatars.githubusercontent.com'
+    ],
   },
   // Force SWC transforms and avoid native SWC minifier to use WASM on ARM
   experimental: {

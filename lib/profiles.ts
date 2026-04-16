@@ -34,7 +34,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
     const { error } = await supabaseAdmin.from('profiles').upsert({
         id: userId,
         full_name: meta.fullName || meta.name || null,
-        avatar_url: meta.avatar_url || null,
+        avatar_url: meta.custom_avatar_url || meta.avatar_url || meta.picture || null,
         school: meta.school || null,
         school_id: meta.school_id ? String(meta.school_id) : null,
         is_teacher: meta.isTeacher === true,
