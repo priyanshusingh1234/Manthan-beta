@@ -422,7 +422,7 @@ export default function TestsHubPage() {
                                         </div>
                                     </div>
 
-                                    <h2 className="text-3xl font-black italic uppercase tracking-tight mb-4 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-500 leading-[0.9]">
+                                    <h2 className="text-2xl font-black italic uppercase tracking-tight mb-4 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-500 leading-tight line-clamp-3">
                                         {g.title}
                                     </h2>
                                     

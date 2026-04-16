@@ -16,6 +16,8 @@ import GlobalCallListener from '@/components/GlobalCallListener';
 import GlobalPrefetcher from '@/components/GlobalPrefetcher';
 
 
+import CompleteProfileOverlay from '@/components/CompleteProfileOverlay';
+
 let nativePushInitialized = false;
 
 function normalizeInAppPath(input?: string | null): string | null {
@@ -242,10 +244,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }, []);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setIsAuthenticated(!!user);
+      if (user && !user.user_metadata?.username) setNeedsOnboarding(true);
+      
       if (user && Capacitor.isNativePlatform()) {
         initNativePush(user.id, (path) => router.push(path));
       }
@@ -271,6 +276,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session?.user);
+      if (session?.user && !session.user.user_metadata?.username) {
+        setNeedsOnboarding(true);
+      } else {
+        setNeedsOnboarding(false);
+      }
+
       if (session?.user && Capacitor.isNativePlatform()) {
         initNativePush(session.user.id, (path) => router.push(path));
       }
@@ -357,6 +368,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const hideMainSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isSearchPage || isIndividualTest || isChatPage;
   const hideBottomNav = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isIndividualTest || isChatPage || isStorePage;
+
+  if (needsOnboarding) {
+    return <CompleteProfileOverlay onComplete={() => setNeedsOnboarding(false)} />;
+  }
 
   return (
     <>
