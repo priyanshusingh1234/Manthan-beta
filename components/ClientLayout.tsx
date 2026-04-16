@@ -287,6 +287,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       }
       if (session?.user) {
         ActivityTracker.restoreFromCloud();
+        // ── Always rebuild the local cache with correct avatar priority ──
+        // Google SSO may have overwritten avatar_url in session metadata.
+        // We must ensure custom_avatar_url is always stored as the primary
+        // so the Header and other cache-readers show the right avatar.
+        const meta = session.user.user_metadata || {};
+        const effectiveAvatar = meta.custom_avatar_url || meta.avatar_url || meta.picture || null;
+        const freshCache = { ...meta, avatar_url: effectiveAvatar };
+        try { localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(freshCache)); } catch { }
+        window.dispatchEvent(new Event('user_metadata_updated'));
       }
       if (session?.access_token) {
         const lastCheck = localStorage.getItem('last_weekly_report_check');
