@@ -187,7 +187,7 @@ export async function POST(req: Request) {
         const meta = (fetchedUser as any)?.user_metadata ?? (fetchedUser as any)?.user?.user_metadata ?? {};
         const isTeacher = meta?.isTeacher;
         posterName = meta?.fullName || meta?.full_name || meta?.name || (fetchedUser as any)?.email || null;
-        posterAvatar = meta?.avatar_url || meta?.avatar || null;
+        posterAvatar = meta?.custom_avatar_url || meta?.avatar_url || meta?.avatar || null;
         posterUsername = meta?.username || null;
         if (!isTeacher) return NextResponse.json({ error: 'Forbidden — teachers only' }, { status: 403 });
       } catch (err) {

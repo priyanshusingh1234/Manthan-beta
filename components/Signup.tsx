@@ -85,7 +85,8 @@ const Signup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-start lg:justify-center p-4 sm:p-8 relative overflow-y-auto">
+    <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div className="min-h-full flex flex-col items-center justify-start lg:justify-center p-4 sm:p-8 relative">
       {/* Dynamic Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5 dark:from-indigo-900/10 dark:via-purple-900/10 dark:to-pink-900/10 pointer-events-none" />
       
@@ -97,7 +98,7 @@ const Signup: React.FC = () => {
         <span className="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-500 transition-colors hidden sm:block">Back to Arena</span>
       </Link>
 
-      <div className="w-full max-w-6xl bg-white dark:bg-slate-900 rounded-[2.5rem] md:rounded-[3rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col lg:flex-row relative z-10 lg:min-h-[85vh]">
+      <div className="w-full max-w-6xl bg-white dark:bg-slate-900 rounded-[2.5rem] md:rounded-[3rem] shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row relative z-10 lg:min-h-[85vh]">
         
         {/* Left Side: Creative Branding (Desktop only, acts as hero) */}
         <div className="hidden lg:flex w-5/12 bg-slate-950 p-12 flex-col justify-between relative overflow-hidden group">
@@ -275,6 +276,7 @@ const Signup: React.FC = () => {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };
