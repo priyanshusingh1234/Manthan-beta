@@ -31,25 +31,13 @@ export interface Profile {
  * Call this on every signup and every metadata update.
  */
 export async function upsertProfile(userId: string, meta: Record<string, any>) {
-    // Prioritize custom_avatar_url, then avatar_url, then picture (Google fallback)
-    const candidateAvatar = meta.custom_avatar_url || meta.avatar_url || meta.picture || null;
-
-    // ── Guard: never overwrite a real custom avatar with a Google one ──
-    // If the session metadata has a Google URL as the "best" candidate,
-    // check the current DB value — if it already has a real storage URL, keep it.
-    let finalAvatar = candidateAvatar;
-    const isGoogleUrl = (u: string | null) => !!u && u.includes('googleusercontent.com');
-    if (isGoogleUrl(finalAvatar)) {
-        const { data: existing } = await supabaseAdmin
-            .from('profiles')
-            .select('avatar_url')
-            .eq('id', userId)
-            .maybeSingle();
-        if (existing?.avatar_url && !isGoogleUrl(existing.avatar_url)) {
-            // DB already has a real custom avatar — keep it, don't overwrite with Google
-            finalAvatar = existing.avatar_url;
-        }
-    }
+    // Intentionally store ONLY user-uploaded custom avatars in profiles.avatar_url.
+    // Do NOT fall back to Google/provider avatars (avatar_url, picture): those URLs
+    // expire for third-party requests and expose provider account information in
+    // public surfaces (feed, leaderboard, question cards, etc.).
+    // When a user has no custom avatar, profiles.avatar_url remains null and the UI
+    // falls back to initials — this is the desired behaviour.
+    const finalAvatar = meta.custom_avatar_url || null;
 
     const { error } = await supabaseAdmin.from('profiles').upsert({
         id: userId,
