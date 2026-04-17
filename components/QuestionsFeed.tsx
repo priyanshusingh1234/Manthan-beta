@@ -108,15 +108,32 @@ export default function QuestionsFeed() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const currentId = session?.user?.id || null;
-      if (refresh || offsetRef.current === 0) {
+        if (refresh || offsetRef.current === 0) {
         setUserId(currentId);
         if (currentId) {
             supabase.auth.getUser().then(({ data }) => {
                 const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim());
+                const meta = data?.user?.user_metadata || {};
+                // Apply the same avatar priority chain as ClientLayout so that
+                // custom_avatar_url (the real uploaded photo) always wins over
+                // the raw avatar_url which may be a stale Google OAuth URL.
+                const effectiveAvatar = meta.custom_avatar_url || meta.avatar_url || meta.picture || null;
                 setCurrentUserData({
-                    ...(data?.user?.user_metadata || {}),
+                    ...meta,
+                    avatar_url: effectiveAvatar,   // normalised field
                     _isAdmin: adminEmails.includes(data?.user?.email || '')
                 });
+                // Also keep localStorage in sync
+                if (typeof window !== 'undefined' && effectiveAvatar) {
+                    try {
+                        const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+                        const parsed = cached ? JSON.parse(cached) : {};
+                        if (effectiveAvatar !== parsed.avatar_url) {
+                            localStorage.setItem('dheeyudha_user_meta_cache',
+                                JSON.stringify({ ...parsed, ...meta, avatar_url: effectiveAvatar }));
+                        }
+                    } catch {}
+                }
             });
         } else {
             setCurrentUserData(null);
@@ -213,15 +230,16 @@ export default function QuestionsFeed() {
         return true;
       })
       .map(item => {
-        // For question cards authored by the current user, patch createdByAvatar
-        // with the cached real avatar if the API returned null/stale.
-        // This mirrors how PostCard uses suppliedCurrentUserData for post authors.
+        // For question cards authored by the current user, ALWAYS override
+        // createdByAvatar with the locally-cached real avatar.
+        // We intentionally don't check !item.createdByAvatar because the API
+        // may return a stale/wrong value (e.g. old Google URL) that we want
+        // to replace — consistent with how PostCard handles post authors.
         if (
           item.type !== 'post' &&
           userId &&
           item.createdBy === userId &&
-          myAvatar &&
-          !item.createdByAvatar
+          myAvatar
         ) {
           return { ...item, createdByAvatar: myAvatar };
         }
