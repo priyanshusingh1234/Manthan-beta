@@ -94,9 +94,12 @@ export default function PostCard({
 
     const effectiveAuthor = isOwner && currentUserData ? {
         ...post.author,
-        avatar_url: currentUserData.avatar_url || post.author.avatar_url,
-        name: currentUserData.fullName || post.author.name,
-        cosmetics: currentUserData.cosmetics || post.author.cosmetics,
+        // Prioritize the DB-sourced avatar (post.author) over session metadata,
+        // because user_metadata may contain a stale Google OAuth URL that has
+        // already been correctly overridden in the profiles table by the API.
+        avatar_url: post.author.avatar_url || currentUserData.avatar_url,
+        name: post.author.name || currentUserData.fullName,
+        cosmetics: post.author.cosmetics || currentUserData.cosmetics,
     } : post.author;
 
     useEffect(() => {
@@ -518,9 +521,11 @@ export default function PostCard({
                                 const isCommentOwner = currentUserId && comment.author?.id === currentUserId;
                                 const effectiveCommentAuthor = isCommentOwner && currentUserData ? {
                                     ...comment.author,
-                                    avatar_url: currentUserData.avatar_url || comment.author.avatar_url,
-                                    name: currentUserData.fullName || comment.author.name,
-                                    cosmetics: currentUserData.cosmetics || comment.author.cosmetics,
+                                    // Same fix as effectiveAuthor: DB avatar takes priority
+                                    // over session metadata which may hold a stale Google URL.
+                                    avatar_url: comment.author.avatar_url || currentUserData.avatar_url,
+                                    name: comment.author.name || currentUserData.fullName,
+                                    cosmetics: comment.author.cosmetics || currentUserData.cosmetics,
                                 } : comment.author;
 
                                 const commentUsername = getUsername(effectiveCommentAuthor);
