@@ -670,10 +670,14 @@ export async function GET(req: NextRequest) {
                     const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(id);
                     if (user?.user_metadata) {
                         const meta = user.user_metadata;
-                        // Always prefer custom_avatar_url (user-uploaded photo).
-                        // Skip raw avatar_url if it is a Google URL — it may have expired.
-                        const rawAvatar = meta.avatar_url && !isGoogleUrl(meta.avatar_url) ? meta.avatar_url : null;
-                        const fallbackAvatar = meta.custom_avatar_url || rawAvatar || meta.picture || null;
+                        // Always prefer custom_avatar_url (user-uploaded Supabase Storage photo).
+                        // Filter out any Google OAuth URLs — they expire for third-party requests.
+                        const nonGoogle = (url?: string | null) => url && !isGoogleUrl(url) ? url : null;
+                        const fallbackAvatar =
+                            nonGoogle(meta.custom_avatar_url) ||
+                            nonGoogle(meta.avatar_url) ||
+                            nonGoogle(meta.picture) ||
+                            null;
                         authMetaMap[id] = {
                             name: meta.fullName || meta.full_name || meta.name || user.email || 'Teacher',
                             avatar: fallbackAvatar,
@@ -683,9 +687,16 @@ export async function GET(req: NextRequest) {
                         // future requests don't need this expensive fallback path.
                         if (fallbackAvatar) {
                             const { upsertProfile } = await import('@/lib/profiles');
-                            // Inject custom_avatar_url so upsertProfile uses it as the
-                            // canonical avatar and overwrites any stale Google URL.
-                            upsertProfile(id, { ...meta, custom_avatar_url: meta.custom_avatar_url || fallbackAvatar }).catch(() => {});
+                            // MUST be awaited — fire-and-forget is silently killed by
+                            // Vercel serverless once the response is sent, so the DB
+                            // write never actually happened before this fix.
+                            // Also explicitly set avatar_url so upsertProfile's Google
+                            // guard sees a non-Google URL and writes it to the DB.
+                            await upsertProfile(id, {
+                                ...meta,
+                                custom_avatar_url: meta.custom_avatar_url || fallbackAvatar,
+                                avatar_url: fallbackAvatar,
+                            });
                         }
                     }
                 } catch { /* non-fatal */ }
