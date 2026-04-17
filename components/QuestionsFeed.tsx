@@ -190,14 +190,44 @@ export default function QuestionsFeed() {
     load({ subject, classGrade });
   }, [subject, classGrade, load]);
 
-  // ── Client-side smart filter (applied on top of fetched data) ────────────
+  // ── Derive the current user's definitive avatar from the localStorage cache ──
+  // Priority: custom_avatar_url > avatar_url > picture — same as the profile page.
+  // This is used below to patch question cards so teachers see their own avatar
+  // even when the server-side profiles table is stale or not yet synced.
+  const myAvatar = useMemo(() => {
+    if (!currentUserData) return null;
+    return (
+      currentUserData.custom_avatar_url ||
+      currentUserData.avatar_url ||
+      currentUserData.picture ||
+      null
+    );
+  }, [currentUserData]);
+
+  // ── Client-side smart filter + owner-avatar patch ────────────────────────
   const filtered = useMemo(() => {
-    return allData.filter(item => {
-      if (!matchSubject(item.subject, subject)) return false;
-      if (!matchClass(item.classGrade, classGrade)) return false;
-      return true;
-    });
-  }, [allData, subject, classGrade]);
+    return allData
+      .filter(item => {
+        if (!matchSubject(item.subject, subject)) return false;
+        if (!matchClass(item.classGrade, classGrade)) return false;
+        return true;
+      })
+      .map(item => {
+        // For question cards authored by the current user, patch createdByAvatar
+        // with the cached real avatar if the API returned null/stale.
+        // This mirrors how PostCard uses suppliedCurrentUserData for post authors.
+        if (
+          item.type !== 'post' &&
+          userId &&
+          item.createdBy === userId &&
+          myAvatar &&
+          !item.createdByAvatar
+        ) {
+          return { ...item, createdByAvatar: myAvatar };
+        }
+        return item;
+      });
+  }, [allData, subject, classGrade, userId, myAvatar]);
 
   // ── IntersectionObserver ──────────────────────────────────────────────────
   useEffect(() => {
