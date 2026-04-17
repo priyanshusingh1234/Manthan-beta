@@ -650,12 +650,44 @@ export async function GET(req: NextRequest) {
 
         const profilesMap = await getProfilesMap(creatorIds);
         const userInfoMap: Record<string, any> = {};
+
+        // Find any creator whose profiles row has a null avatar — these need
+        // a fallback to auth user_metadata (same priority chain the profile page uses).
+        const missingAvatarIds = creatorIds.filter(id => !profilesMap.get(id)?.avatar_url);
+
+        // Batch-fetch auth metadata only for those with missing avatars
+        const authMetaMap: Record<string, any> = {};
+        if (missingAvatarIds.length > 0) {
+            await Promise.all(missingAvatarIds.map(async (id) => {
+                try {
+                    const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(id);
+                    if (user?.user_metadata) {
+                        const meta = user.user_metadata;
+                        const fallbackAvatar = meta.custom_avatar_url || meta.avatar_url || meta.picture || null;
+                        authMetaMap[id] = {
+                            name: meta.fullName || meta.full_name || meta.name || user.email || 'Teacher',
+                            avatar: fallbackAvatar,
+                            username: meta.username || null,
+                        };
+                        // Self-heal: write the correct avatar back to profiles so next
+                        // request is fast and doesn't need this fallback.
+                        if (fallbackAvatar) {
+                            const { upsertProfile } = await import('@/lib/profiles');
+                            upsertProfile(id, meta).catch(() => {});
+                        }
+                    }
+                } catch { /* non-fatal */ }
+            }));
+        }
+
         for (const id of creatorIds) {
             const p = profilesMap.get(id);
+            const auth = authMetaMap[id];
             userInfoMap[id] = {
-                name: p?.full_name || 'Teacher',
-                avatar: p?.avatar_url || null,
-                username: p?.username || null
+                name: p?.full_name || auth?.name || 'Teacher',
+                // DB profile takes priority; fall back to auth metadata if null
+                avatar: p?.avatar_url || auth?.avatar || null,
+                username: p?.username || auth?.username || null,
             };
         }
 
