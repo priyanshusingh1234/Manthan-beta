@@ -651,11 +651,18 @@ export async function GET(req: NextRequest) {
         const profilesMap = await getProfilesMap(creatorIds);
         const userInfoMap: Record<string, any> = {};
 
-        // Find any creator whose profiles row has a null avatar — these need
-        // a fallback to auth user_metadata (same priority chain the profile page uses).
-        const missingAvatarIds = creatorIds.filter(id => !profilesMap.get(id)?.avatar_url);
+        // Google profile photo URLs (lh3.googleusercontent.com) expire and return
+        // 403 for other users — treat them as effectively "missing" so we fall back
+        // to the authoritative auth metadata which has custom_avatar_url if uploaded.
+        const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
 
-        // Batch-fetch auth metadata only for those with missing avatars
+        // Include: null avatar OR stale Google URL
+        const missingAvatarIds = creatorIds.filter(id => {
+            const av = profilesMap.get(id)?.avatar_url;
+            return !av || isGoogleUrl(av);
+        });
+
+        // Batch-fetch auth metadata only for those with missing/stale avatars
         const authMetaMap: Record<string, any> = {};
         if (missingAvatarIds.length > 0) {
             await Promise.all(missingAvatarIds.map(async (id) => {
@@ -663,17 +670,22 @@ export async function GET(req: NextRequest) {
                     const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(id);
                     if (user?.user_metadata) {
                         const meta = user.user_metadata;
-                        const fallbackAvatar = meta.custom_avatar_url || meta.avatar_url || meta.picture || null;
+                        // Always prefer custom_avatar_url (user-uploaded photo).
+                        // Skip raw avatar_url if it is a Google URL — it may have expired.
+                        const rawAvatar = meta.avatar_url && !isGoogleUrl(meta.avatar_url) ? meta.avatar_url : null;
+                        const fallbackAvatar = meta.custom_avatar_url || rawAvatar || meta.picture || null;
                         authMetaMap[id] = {
                             name: meta.fullName || meta.full_name || meta.name || user.email || 'Teacher',
                             avatar: fallbackAvatar,
                             username: meta.username || null,
                         };
-                        // Self-heal: write the correct avatar back to profiles so next
-                        // request is fast and doesn't need this fallback.
+                        // Self-heal: upsert the CORRECT avatar into the profiles table so
+                        // future requests don't need this expensive fallback path.
                         if (fallbackAvatar) {
                             const { upsertProfile } = await import('@/lib/profiles');
-                            upsertProfile(id, meta).catch(() => {});
+                            // Inject custom_avatar_url so upsertProfile uses it as the
+                            // canonical avatar and overwrites any stale Google URL.
+                            upsertProfile(id, { ...meta, custom_avatar_url: meta.custom_avatar_url || fallbackAvatar }).catch(() => {});
                         }
                     }
                 } catch { /* non-fatal */ }
@@ -683,10 +695,12 @@ export async function GET(req: NextRequest) {
         for (const id of creatorIds) {
             const p = profilesMap.get(id);
             const auth = authMetaMap[id];
+            // Use profiles DB avatar only if it is NOT a Google URL (Google URLs expire).
+            // If it is Google, prefer the auth metadata fallback which has custom_avatar_url.
+            const dbAvatar = p?.avatar_url && !isGoogleUrl(p.avatar_url) ? p.avatar_url : null;
             userInfoMap[id] = {
                 name: p?.full_name || auth?.name || 'Teacher',
-                // DB profile takes priority; fall back to auth metadata if null
-                avatar: p?.avatar_url || auth?.avatar || null,
+                avatar: dbAvatar || auth?.avatar || null,
                 username: p?.username || auth?.username || null,
             };
         }
