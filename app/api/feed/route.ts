@@ -670,33 +670,23 @@ export async function GET(req: NextRequest) {
                     const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(id);
                     if (user?.user_metadata) {
                         const meta = user.user_metadata;
-                        // Always prefer custom_avatar_url (user-uploaded Supabase Storage photo).
-                        // Filter out any Google OAuth URLs — they expire for third-party requests.
+                        // Only use custom_avatar_url as the public avatar — never fall back to
+                        // Google/provider URLs which expire for third-party requests.
                         const nonGoogle = (url?: string | null) => url && !isGoogleUrl(url) ? url : null;
-                        const fallbackAvatar =
-                            nonGoogle(meta.custom_avatar_url) ||
-                            nonGoogle(meta.avatar_url) ||
-                            nonGoogle(meta.picture) ||
-                            null;
+                        const fallbackAvatar = nonGoogle(meta.custom_avatar_url) || null;
                         authMetaMap[id] = {
                             name: meta.fullName || meta.full_name || meta.name || user.email || 'Teacher',
                             avatar: fallbackAvatar,
                             username: meta.username || null,
                         };
-                        // Self-heal: upsert the CORRECT avatar into the profiles table so
-                        // future requests don't need this expensive fallback path.
+                        // Self-heal: if there is a confirmed custom avatar, write it into the
+                        // profiles table so future feed requests read it directly from the DB
+                        // without needing this expensive per-user auth lookup.
+                        // MUST be awaited — fire-and-forget is silently killed by Vercel
+                        // serverless once the response is sent.
                         if (fallbackAvatar) {
                             const { upsertProfile } = await import('@/lib/profiles');
-                            // MUST be awaited — fire-and-forget is silently killed by
-                            // Vercel serverless once the response is sent, so the DB
-                            // write never actually happened before this fix.
-                            // Also explicitly set avatar_url so upsertProfile's Google
-                            // guard sees a non-Google URL and writes it to the DB.
-                            await upsertProfile(id, {
-                                ...meta,
-                                custom_avatar_url: meta.custom_avatar_url || fallbackAvatar,
-                                avatar_url: fallbackAvatar,
-                            });
+                            await upsertProfile(id, meta);
                         }
                     }
                 } catch { /* non-fatal */ }
