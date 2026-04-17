@@ -343,9 +343,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const redirectImage = (img: HTMLImageElement) => {
       // Decode URL if Next.js optimized it, and check against Supabase
       const actualSrc = decodeURIComponent(img.src);
-      if (actualSrc.includes(realUrl)) {
-        img.src = actualSrc.replace(realUrl, proxyUrl);
-      }
+      if (!actualSrc.includes(realUrl)) return;
+
+      // Public Supabase Storage URLs (/storage/v1/object/public/...) must NOT
+      // be proxied — browser image requests carry no apikey/auth headers so
+      // Supabase returns 400. These URLs are already publicly accessible and
+      // do not need the ISP-bypass proxy.
+      if (actualSrc.includes('/storage/v1/object/public/')) return;
+
+      img.src = actualSrc.replace(realUrl, proxyUrl);
     };
 
     const observer = new MutationObserver((mutations) => {
