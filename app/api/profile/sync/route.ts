@@ -48,16 +48,34 @@ export async function POST(req: NextRequest) {
         const metaPoints = Number(meta.totalPoints) || 0;
 
         let finalMeta = { ...meta };
+        let metaNeedsUpdate = false;
+
+        // ── 🛟 AVATAR RESCUE OPERATION ──
+        // If a user uploaded a custom avatar previously, it was saved in `custom_avatar_url`.
+        // If Google overwrote their `avatar_url`, we rescue their old photo back into `avatar_url`.
+        // We also purge `custom_avatar_url` from their metadata forever to complete the migration.
+        if (finalMeta.custom_avatar_url && !isGoogleUrl(finalMeta.custom_avatar_url)) {
+            finalMeta.avatar_url = finalMeta.custom_avatar_url;
+            finalMeta.custom_avatar_url = null;
+            metaNeedsUpdate = true;
+        }
+
         if (dbPoints > metaPoints) {
             finalMeta.totalPoints = dbPoints;
+            metaNeedsUpdate = true;
+        }
+
+        if (metaNeedsUpdate) {
+            // Clean up null fields to completely remove them from the JSONB column
+            if (finalMeta.custom_avatar_url === null) delete finalMeta.custom_avatar_url;
             await supabaseAdmin.auth.admin.updateUserById(user.id, { user_metadata: finalMeta });
         }
 
         // Avatar self-heal: ALWAYS sync avatar_url → profiles.avatar_url when they differ.
         // Previous logic only healed null/Google values — if the DB had an OLD Supabase URL from a
         // previous upload it was left as-is, so question cards permanently showed a stale avatar.
-        const metaCustomAvatar = meta.avatar_url && !isGoogleUrl(meta.avatar_url)
-            ? meta.avatar_url : null;
+        const metaCustomAvatar = finalMeta.avatar_url && !isGoogleUrl(finalMeta.avatar_url)
+            ? finalMeta.avatar_url : null;
 
         if (metaCustomAvatar && dbProfile?.avatar_url !== metaCustomAvatar) {
             // DB has wrong value (null, Google URL, or an older Supabase URL) — overwrite with latest
@@ -65,7 +83,6 @@ export async function POST(req: NextRequest) {
                 .from('profiles')
                 .update({ avatar_url: metaCustomAvatar })
                 .eq('id', user.id);
-            finalMeta.avatar_url = metaCustomAvatar;
         }
 
         // Force a sync of the current user's freshest metadata to the profiles table
