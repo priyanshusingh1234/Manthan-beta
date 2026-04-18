@@ -5,6 +5,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
+// Never expose Google OAuth profile pictures — users must upload a custom avatar.
+const cleanAvatar = (url?: string | null): string | null =>
+    url && !url.includes('googleusercontent.com') ? url : null;
+
 // GET /api/posts - Fetch feed
 export async function GET(req: NextRequest) {
     try {
@@ -55,7 +59,7 @@ export async function GET(req: NextRequest) {
                         id: p.author_id,
                         name: profile?.full_name || 'Unknown',
                         username: profile?.username || null,
-                        avatar_url: profile?.avatar_url || null,
+                        avatar_url: cleanAvatar(profile?.avatar_url),
                         school: profile?.school || null,
                         isTeacher: profile?.is_teacher || false,
                         totalPoints: Number(profile?.total_points) || 0,
@@ -124,7 +128,7 @@ export async function POST(req: NextRequest) {
             .maybeSingle();
 
         const authorName = authorProfile?.full_name || user.user_metadata?.fullName || user.user_metadata?.username || 'Someone';
-        const authorAvatar = authorProfile?.avatar_url || user.user_metadata?.avatar_url || null;
+        const authorAvatar = cleanAvatar(authorProfile?.avatar_url) || cleanAvatar(user.user_metadata?.custom_avatar_url) || null;
         const cleanSnippet = String(content || '').trim().replace(/\s+/g, ' ').slice(0, 90);
         const excerpt = `${cleanSnippet}${cleanSnippet.length >= 90 ? '...' : ''}`;
 

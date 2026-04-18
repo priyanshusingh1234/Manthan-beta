@@ -284,7 +284,10 @@ export default function SocialFeedPage() {
 
     const charsLeft = MAX_CHARS - content.length;
     const canPost = (content.trim() || imageFile) && !submitting;
-    const avatarUrl = session?.user?.user_metadata?.avatar_url || null;
+    const meta = session?.user?.user_metadata || {};
+    const avatarUrl = (meta.custom_avatar_url && !meta.custom_avatar_url.includes('googleusercontent.com'))
+        ? meta.custom_avatar_url
+        : null;
 
     return (
         <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 pb-24 pt-4 sm:pt-8 md:pt-12 relative overflow-hidden">

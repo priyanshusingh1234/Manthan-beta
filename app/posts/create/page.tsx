@@ -210,11 +210,15 @@ export default function CreatePostPage() {
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-8 shadow-xl shadow-slate-200/40 dark:shadow-none">
                     <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
                         <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 overflow-hidden relative">
-                            {session.user.user_metadata?.avatar_url ? (
-                                <img src={session.user.user_metadata.avatar_url} alt="You" className="object-cover w-full h-full" />
-                            ) : (
-                                <User className="w-6 h-6 text-slate-400" />
-                            )}
+                            {(() => {
+                                const m = session.user.user_metadata || {};
+                                const av = m.custom_avatar_url && !m.custom_avatar_url.includes('googleusercontent.com') ? m.custom_avatar_url : null;
+                                return av ? (
+                                    <img src={av} alt="You" className="object-cover w-full h-full" />
+                                ) : (
+                                    <User className="w-6 h-6 text-slate-400" />
+                                );
+                            })()}
                         </div>
                         <div>
                             <h2 className="font-black text-xl text-slate-900 dark:text-white">Create a new post</h2>

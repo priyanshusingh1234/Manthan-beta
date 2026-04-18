@@ -5,6 +5,9 @@ import { createNotification } from "@/lib/createNotification";
 
 export const dynamic = 'force-dynamic';
 
+const cleanAvatar = (url?: string | null): string | null =>
+    url && !url.includes('googleusercontent.com') ? url : null;
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
     try {
         const { data: comments, error } = await supabaseAdmin
@@ -30,7 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
                     id: profile?.id || c.author_id,
                     name: profile?.full_name || 'Unknown',
                     username: profile?.username || null,
-                    avatar_url: profile?.avatar_url || null,
+                    avatar_url: cleanAvatar(profile?.avatar_url),
                     isTeacher: profile?.is_teacher || false,
                     totalPoints: Number(profile?.total_points) || 0,
                     cosmetics: profile?.cosmetics || [],
@@ -115,7 +118,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                     href: `/posts/${params.id}`,
                     actorId: user.id,
                     actorName: authorName,
-                    actorAvatar: meta.avatar_url,
+                    actorAvatar: cleanAvatar(meta.custom_avatar_url) || cleanAvatar(meta.avatar_url),
                 }))
             );
         }
@@ -130,7 +133,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 href: `/posts/${params.id}`,
                 actorId: user.id,
                 actorName: authorName,
-                actorAvatar: meta.avatar_url,
+                actorAvatar: cleanAvatar(meta.custom_avatar_url) || cleanAvatar(meta.avatar_url),
             });
         }
 
@@ -142,7 +145,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 id: user.id,
                 name: meta.fullName || meta.name || user.email?.split('@')[0],
                 username: meta.username || null,
-                avatar_url: meta.avatar_url,
+                avatar_url: cleanAvatar(meta.custom_avatar_url) || cleanAvatar(meta.avatar_url),
                 isTeacher: meta.isTeacher || false,
                 totalPoints: Number(meta.totalPoints) || 0,
             }
