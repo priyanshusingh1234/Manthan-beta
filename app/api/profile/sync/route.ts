@@ -53,12 +53,14 @@ export async function POST(req: NextRequest) {
             await supabaseAdmin.auth.admin.updateUserById(user.id, { user_metadata: finalMeta });
         }
 
-        // Avatar self-heal: if auth metadata has a newer custom avatar but profiles.avatar_url is stale, restore it.
+        // Avatar self-heal: ALWAYS sync custom_avatar_url → profiles.avatar_url when they differ.
+        // Previous logic only healed null/Google values — if the DB had an OLD Supabase URL from a
+        // previous upload it was left as-is, so question cards permanently showed a stale avatar.
         const metaCustomAvatar = meta.custom_avatar_url && !isGoogleUrl(meta.custom_avatar_url)
             ? meta.custom_avatar_url : null;
-        const dbAvatarIsStale = !dbProfile?.avatar_url || isGoogleUrl(dbProfile?.avatar_url);
 
-        if (metaCustomAvatar && dbAvatarIsStale) {
+        if (metaCustomAvatar && dbProfile?.avatar_url !== metaCustomAvatar) {
+            // DB has wrong value (null, Google URL, or an older Supabase URL) — overwrite with latest
             await supabaseAdmin
                 .from('profiles')
                 .update({ avatar_url: metaCustomAvatar })
