@@ -701,7 +701,7 @@ const TeacherProfile: React.FC = () => {
         </>
         )}
 
-        {activeTab === 'posts' && <MyPostsSection />}
+        {activeTab === 'posts' && <MyPostsSection userId={currentUser?.id} />}
 
         {/* Flagged Written Submissions Review Panel */}
         <div className="mt-8 relative z-10">

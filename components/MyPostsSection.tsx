@@ -5,7 +5,11 @@ import { supabase } from '@/lib/supabaseClient';
 import { Loader2, LayoutGrid } from 'lucide-react';
 import PostCard from './PostCard';
 
-export default function MyPostsSection() {
+interface MyPostsSectionProps {
+  userId?: string; // If passed, uses the public /api/posts/user/[id] route (no auth required)
+}
+
+export default function MyPostsSection({ userId }: MyPostsSectionProps = {}) {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -14,15 +18,16 @@ export default function MyPostsSection() {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      const resolvedUserId = userId || session?.user?.id || null;
       setCurrentUserId(session?.user?.id || null);
-      
-      if (!session?.access_token) {
+
+      if (!resolvedUserId) {
         setPosts([]);
         return;
       }
 
-      const res = await fetch('/api/posts/me', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+      // Always use the public user route — same one the public profile uses, no auth required
+      const res = await fetch(`/api/posts/user/${resolvedUserId}`, {
         cache: 'no-store',
       });
 

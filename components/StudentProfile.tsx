@@ -1112,7 +1112,7 @@ const StudentProfile: React.FC = () => {
           </>
         )}
 
-        {activeTab === 'posts' && <MyPostsSection />}
+        {activeTab === 'posts' && <MyPostsSection userId={currentUser?.id} />}
       </main>
     </div>
   );
