@@ -453,16 +453,42 @@ export async function GET(req: NextRequest) {
                 .limit(Math.ceil(100 * overFetch));
 
             const followedQMap: Record<string, string[]> = {};
-            const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-            const userNameMap = Object.fromEntries(
-                (usersData?.users || []).map(u => [u.id, u.user_metadata?.fullName || u.user_metadata?.username || 'Someone'])
+
+            // Build name map from profiles table first (most authoritative)
+            const { data: followerProfiles } = await supabaseAdmin
+                .from('profiles')
+                .select('id, full_name, username')
+                .in('id', followingIds);
+            const profileNameMap = Object.fromEntries(
+                (followerProfiles || []).map(p => [p.id, p.full_name || p.username || null])
             );
+
+            // Augment with auth metadata for anything missing from profiles table
+            const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+            const authNameMap = Object.fromEntries(
+                (usersData?.users || []).map(u => [
+                    u.id,
+                    u.user_metadata?.fullName ||
+                    u.user_metadata?.full_name ||
+                    u.user_metadata?.name ||
+                    u.user_metadata?.username ||
+                    (u.email ? u.email.split('@')[0] : null) ||
+                    null
+                ])
+            );
+
+            // Merge: profiles table wins, auth metadata is fallback
+            const userNameMap: Record<string, string> = {};
+            followingIds.forEach(id => {
+                userNameMap[id] = profileNameMap[id] || authNameMap[id] || 'A friend';
+            });
 
             (followedAttempts || []).forEach((a: any) => {
                 const id = String(a.question_id);
                 if (!followedQMap[id]) followedQMap[id] = [];
-                followedQMap[id].push(userNameMap[a.user_id] || 'Someone');
+                followedQMap[id].push(userNameMap[a.user_id] || 'A friend');
             });
+
 
             const followedQIds = Object.keys(followedQMap)
                 .filter(id => !userAttempted.has(id))
