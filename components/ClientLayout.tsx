@@ -301,7 +301,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         // latest custom_avatar_url, even without a fresh login.
         // Rate-limited to once per hour via sessionStorage to avoid hammering.
         if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session.access_token) {
-          const syncKey = 'profile_sync_last';
+          // v2: key bumped to force one immediate sync with the avatar self-heal patch.
+          // Any user whose profiles.avatar_url was wiped by the old upsertProfile bug
+          // will have it restored on their very next page load.
+          const syncKey = 'profile_sync_last_v2';
           const lastSync = parseInt(sessionStorage.getItem(syncKey) || '0');
           const now = Date.now();
           if (now - lastSync > 60 * 60 * 1000) { // once per hour
