@@ -48,6 +48,9 @@ export async function POST(req: NextRequest) {
         const metaPoints = Number(meta.totalPoints) || 0;
 
         let finalMeta = { ...meta };
+        if (callerAvatarUrl) {
+            finalMeta.avatar_url = callerAvatarUrl; // Inject fresh URL to bypass auth replication delay
+        }
         let metaNeedsUpdate = false;
 
         // ── 🛟 AVATAR RESCUE OPERATION ──
