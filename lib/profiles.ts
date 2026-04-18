@@ -29,15 +29,43 @@ export interface Profile {
 /**
  * Upsert a single user's profile from their auth user_metadata.
  * Call this on every signup and every metadata update.
+ *
+ * AVATAR PRESERVATION RULE:
+ * We NEVER erase an existing custom avatar from profiles.avatar_url unless the
+ * incoming metadata explicitly provides a better one. Every point-awarding route
+ * (solve, test/submit, written-submit, etc.) calls this with partial auth metadata
+ * that only carries the Google OAuth avatar_url — not the user's uploaded photo.
+ * Without this guard, each game action would overwrite profiles.avatar_url → null.
  */
 export async function upsertProfile(userId: string, meta: Record<string, any>) {
-    // Intentionally store ONLY user-uploaded custom avatars in profiles.avatar_url.
-    // Do NOT fall back to Google/provider avatars (avatar_url, picture): those URLs
-    // expire for third-party requests and expose provider account information in
-    // public surfaces (feed, leaderboard, question cards, etc.).
-    // When a user has no custom avatar, profiles.avatar_url remains null and the UI
-    // falls back to initials — this is the desired behaviour.
-    const finalAvatar = meta.custom_avatar_url || null;
+    const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
+
+    // Determine the best avatar to persist:
+    //   1. custom_avatar_url from incoming meta (user just uploaded) — always wins
+    //   2. Existing profiles.avatar_url if it's already a non-Google custom URL — preserve it
+    //   3. Otherwise null — never write a stale Google URL into the DB
+    const incomingCustom = meta.custom_avatar_url && !isGoogleUrl(meta.custom_avatar_url)
+        ? meta.custom_avatar_url
+        : null;
+
+    let finalAvatar: string | null = incomingCustom;
+
+    if (!finalAvatar) {
+        // Read the current DB value — only cost is when incoming meta lacks a custom avatar
+        // (i.e., every routine point-sync call). We preserve whatever custom URL is already there.
+        try {
+            const { data: existing } = await supabaseAdmin
+                .from('profiles')
+                .select('avatar_url')
+                .eq('id', userId)
+                .maybeSingle();
+
+            if (existing?.avatar_url && !isGoogleUrl(existing.avatar_url)) {
+                // Good non-Google custom URL already stored — keep it
+                finalAvatar = existing.avatar_url;
+            }
+        } catch { /* non-fatal — fall through to null */ }
+    }
 
     const { error } = await supabaseAdmin.from('profiles').upsert({
         id: userId,
@@ -61,6 +89,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
         leaderboardCache.invalidate();
     }
 }
+
 
 /**
  * Fetch profiles for a list of user IDs.

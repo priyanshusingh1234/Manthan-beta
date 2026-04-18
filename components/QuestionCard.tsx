@@ -46,6 +46,30 @@ type Question = {
   userSubmissionId?: string | null;
 };
 
+// Resilient avatar component for Question Cards
+function AvatarImage({ src, name }: { src: string | null | undefined; name: string | null | undefined }) {
+  const [failed, setFailed] = useState(false);
+  const initials = String((name || "T").split(" ").map((s) => s[0]).join("")).slice(0, 2).toUpperCase();
+
+  if (!src || failed) {
+    return (
+      <div className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 shadow-sm transition-all">
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={name || "Teacher"}
+      onError={() => setFailed(true)}
+      className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full object-cover border-2 border-white dark:border-slate-900 shadow-sm transition-all"
+    />
+  );
+}
+
 export default function QuestionCard({ q }: { q: Question }) {
   const router = useRouter();
   const [user, setUser] = useState<any | null | undefined>(undefined);
@@ -222,18 +246,7 @@ export default function QuestionCard({ q }: { q: Question }) {
           {/* Avatar */}
           <Link href={teacherProfileLink} className="shrink-0 relative">
             <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-fuchsia-500 rounded-full blur-[2px] opacity-70 group-hover:opacity-100 transition-opacity" />
-            {q.createdByAvatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={q.createdByAvatar}
-                alt={q.createdByName || "Teacher"}
-                className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full object-cover border-2 border-white dark:border-slate-900 shadow-sm transition-all"
-              />
-            ) : (
-              <div className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 shadow-sm transition-all">
-                {String((q.createdByName || "T").split(" ").map((s) => s[0]).join("")).slice(0, 2).toUpperCase()}
-              </div>
-            )}
+            <AvatarImage src={q.createdByAvatar} name={q.createdByName} />
           </Link>
 
           {/* Name + Verified Tick */}

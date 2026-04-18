@@ -108,12 +108,52 @@ export async function GET(req: Request) {
         userWrittenSubmissions[String(s.question_id)] = String(s.id);
       });
 
+      // Google profile photo URLs expire and return 403 for third-party requests.
+      // Treat them as missing so we fall back to auth metadata which carries custom_avatar_url.
+      const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
+
+      // Batch-fetch auth metadata for users whose DB avatar is missing or a stale Google URL
+      const missingAvatarIds = userIds.filter(id => {
+        const av = profilesMap.get(id)?.avatar_url;
+        return !av || isGoogleUrl(av);
+      });
+      const authMetaMap: Record<string, { avatar: string | null; name: string; username: string | null }> = {};
+      if (missingAvatarIds.length > 0) {
+        await Promise.all(missingAvatarIds.map(async (id) => {
+          try {
+            const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(id);
+            if (user?.user_metadata) {
+              const meta = user.user_metadata;
+              const nonGoogle = (url?: string | null) => url && !isGoogleUrl(url) ? url : null;
+              authMetaMap[id] = {
+                avatar: nonGoogle(meta.custom_avatar_url) || null,
+                name: meta.fullName || meta.full_name || meta.name || user.email || 'Teacher',
+                username: meta.username || null,
+              };
+            }
+          } catch { /* non-fatal */ }
+        }));
+      }
+
+      // Build a resolved avatar map: DB custom URL wins; Google URLs and null fall back to auth metadata
+      const resolvedAvatarMap: Record<string, { avatar: string | null; name: string; username: string | null }> = {};
+      for (const id of userIds) {
+        const p = profilesMap.get(id);
+        const dbAvatar = p?.avatar_url && !isGoogleUrl(p.avatar_url) ? p.avatar_url : null;
+        const auth = authMetaMap[id];
+        resolvedAvatarMap[id] = {
+          avatar: dbAvatar || auth?.avatar || null,
+          name: p?.full_name || auth?.name || 'Teacher',
+          username: p?.username || auth?.username || null,
+        };
+      }
+
       const apps = rows.map((r: any) => ({
         id: String(r.id),
         createdBy: r.created_by ? String(r.created_by) : null,
-        createdByName: r.created_by ? (profilesMap.get(String(r.created_by))?.full_name || 'Teacher') : 'Teacher',
-        createdByAvatar: r.created_by ? (profilesMap.get(String(r.created_by))?.avatar_url || null) : null,
-        createdByUsername: r.created_by ? (profilesMap.get(String(r.created_by))?.username || null) : null,
+        createdByName: r.created_by ? (resolvedAvatarMap[String(r.created_by)]?.name || 'Teacher') : 'Teacher',
+        createdByAvatar: r.created_by ? (resolvedAvatarMap[String(r.created_by)]?.avatar || null) : null,
+        createdByUsername: r.created_by ? (resolvedAvatarMap[String(r.created_by)]?.username || null) : null,
         title: r.title,
         body: r.body,
         subject: r.subject,

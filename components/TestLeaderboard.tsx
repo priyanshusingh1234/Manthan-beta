@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Star, Clock, Target, User, BarChart3 } from 'lucide-react';
+import { User, BarChart3 } from 'lucide-react';
 
-import Image from 'next/image';
 import Link from 'next/link';
 
 type LeaderboardEntry = {
@@ -19,6 +18,29 @@ type LeaderboardEntry = {
     accuracy: number;
     completedAt: string;
 };
+
+// Resilient avatar — falls back to initials on any image load error (expired/blocked URLs)
+function AvatarImage({ src, name }: { src: string | null; name: string }) {
+    const [failed, setFailed] = React.useState(false);
+    const initials = (name || '?').split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
+
+    if (!src || failed) {
+        return (
+            <div className="w-full h-full rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 border-2 border-white dark:border-slate-800 flex items-center justify-center text-white text-[10px] font-black">
+                {initials}
+            </div>
+        );
+    }
+    return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+            src={src}
+            alt={name}
+            onError={() => setFailed(true)}
+            className="w-full h-full rounded-full object-cover border-2 border-white dark:border-slate-800"
+        />
+    );
+}
 
 export default function TestLeaderboard({ testId }: { testId: string }) {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -103,18 +125,10 @@ export default function TestLeaderboard({ testId }: { testId: string }) {
                             
                             {/* Avatar */}
                             <div className="relative w-9 h-9 shrink-0">
-                                {entry.avatar ? (
-                                    <Image 
-                                        src={entry.avatar} 
-                                        alt={entry.name} 
-                                        fill 
-                                        className="rounded-full object-cover border-2 border-white dark:border-slate-800"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-800 flex items-center justify-center">
-                                        <User className="w-4 h-4 text-slate-400" />
-                                    </div>
-                                )}
+                                <AvatarImage
+                                    src={entry.avatar}
+                                    name={entry.name}
+                                />
                             </div>
 
                             {/* Name + School */}

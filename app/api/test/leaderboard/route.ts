@@ -50,15 +50,38 @@ export async function GET(req: NextRequest) {
         const profileMap: Record<string, any> = {};
         (profilesData || []).forEach((p: any) => { profileMap[p.id] = p; });
 
+        // Google profile photo URLs expire for third-party requests.
+        // Filter them out and fall back to custom_avatar_url from auth metadata.
+        const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
+
+        const missingAvatarIds = userIds.filter((id: string) => {
+            const av = profileMap[id]?.avatar_url;
+            return !av || isGoogleUrl(av);
+        });
+        const authAvatarMap: Record<string, string | null> = {};
+        if (missingAvatarIds.length > 0) {
+            await Promise.all(missingAvatarIds.map(async (id: string) => {
+                try {
+                    const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(id);
+                    if (user?.user_metadata) {
+                        const meta = user.user_metadata;
+                        const nonGoogle = (url?: string | null) => url && !isGoogleUrl(url) ? url : null;
+                        authAvatarMap[id] = nonGoogle(meta.custom_avatar_url) || null;
+                    }
+                } catch { /* non-fatal */ }
+            }));
+        }
+
         // 4. Assemble leaderboard
         const leaderboard = bestAttempts.map((entry: any, i: number) => {
             const profile = profileMap[entry.user_id] || {};
+            const dbAvatar = profile.avatar_url && !isGoogleUrl(profile.avatar_url) ? profile.avatar_url : null;
             return {
                 rank: i + 1,
                 userId: entry.user_id,
                 name: profile.full_name || profile.username || 'Scholar',
                 username: profile.username || 'scholar',
-                avatar: profile.avatar_url || null,
+                avatar: dbAvatar || authAvatarMap[entry.user_id] || null,
                 school: profile.school || 'Private Scholar',
                 score: entry.score,
                 maxScore: entry.max_score,
@@ -67,6 +90,7 @@ export async function GET(req: NextRequest) {
                 completedAt: entry.completed_at
             };
         });
+
 
         // 5. Get current user's best attempt (if they exist but aren't in top 10)
         let userStats = null;
