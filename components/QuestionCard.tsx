@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import NextImage from "next/image";
 import {
   Clock,
   Play,
@@ -51,7 +52,9 @@ type Question = {
 const avatarCache: Record<string, string | null> = {};
 
 // Resilient avatar component — queries profiles table directly when API returns null,
-// exactly the same data source the public profile page uses.
+// uses Next.js <Image> (routed through the Next.js image optimizer on the server)
+// so ISP blocks on the raw Supabase domain are bypassed — same reason
+// TeacherProfile shows avatars correctly while plain <img> fails.
 function AvatarImage({
   src,
   name,
@@ -65,12 +68,11 @@ function AvatarImage({
   const [failed, setFailed] = useState(false);
   const initials = String((name || "T").split(" ").map((s) => s[0]).join("")).slice(0, 2).toUpperCase();
 
-  // If API-provided src is null, do a direct profiles table lookup (same as public profile page)
+  // If API-provided src is null, do a direct profiles table lookup
   useEffect(() => {
     if (src) { setResolvedSrc(src); setFailed(false); return; }
     if (!userId) return;
 
-    // Check module-level cache first
     if (userId in avatarCache) {
       setResolvedSrc(avatarCache[userId]);
       return;
@@ -93,21 +95,25 @@ function AvatarImage({
     return () => { mounted = false; };
   }, [src, userId]);
 
-  if (!resolvedSrc || failed) {
-    return (
-      <div className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 shadow-sm transition-all">
-        {initials}
-      </div>
-    );
-  }
+  const fallback = (
+    <div className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 shadow-sm transition-all">
+      {initials}
+    </div>
+  );
 
+  if (!resolvedSrc || failed) return fallback;
+
+  // Use Next.js <Image> so the request is proxied through the Next.js image
+  // optimizer (/_next/image?url=...) — bypasses ISP blocks on the supabase domain.
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <NextImage
       src={resolvedSrc}
       alt={name || "Teacher"}
+      width={44}
+      height={44}
       onError={() => setFailed(true)}
       className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full object-cover border-2 border-white dark:border-slate-900 shadow-sm transition-all"
+      unoptimized={false}
     />
   );
 }

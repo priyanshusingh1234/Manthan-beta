@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, BarChart3 } from 'lucide-react';
-
+import Link from 'next/link';
+import NextImage from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 
 // Module-level cache shared across all leaderboard entries
@@ -38,18 +39,21 @@ function AvatarImage({ src, name, userId }: { src: string | null; name: string; 
         return () => { mounted = false; };
     }, [src, userId]);
 
-    if (!resolvedSrc || failed) {
-        return (
-            <div className="w-full h-full rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 border-2 border-white dark:border-slate-800 flex items-center justify-center text-white text-[10px] font-black">
-                {initials}
-            </div>
-        );
-    }
+    const fallback = (
+        <div className="w-full h-full rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 border-2 border-white dark:border-slate-800 flex items-center justify-center text-white text-[10px] font-black">
+            {initials}
+        </div>
+    );
+
+    if (!resolvedSrc || failed) return fallback;
+
+    // Next.js <Image> proxies via /_next/image — bypasses ISP blocks on the Supabase domain.
     return (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <NextImage
             src={resolvedSrc}
             alt={name}
+            width={36}
+            height={36}
             onError={() => setFailed(true)}
             className="w-full h-full rounded-full object-cover border-2 border-white dark:border-slate-800"
         />
