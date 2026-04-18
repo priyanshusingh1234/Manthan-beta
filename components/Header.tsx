@@ -144,7 +144,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
         return () => window.removeEventListener('user_metadata_updated', h);
     }, []);
 
-    const avatarUrl = cachedMeta?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+    const avatarUrl = cachedMeta?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.custom_avatar_url || user?.user_metadata?.picture;
     const fullName = cachedMeta?.fullName || user?.user_metadata?.fullName;
 
     return (
@@ -216,8 +216,8 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                 )}
                 <Link href="/profile" className="active:scale-95 transition-transform flex items-center justify-center">
                   <span className="inline-block h-9 w-9 rounded-full overflow-hidden border-[2px] border-slate-200 dark:border-slate-700 shadow-sm relative">
-                    {(user?.user_metadata?.avatar_url || user?.user_metadata?.picture) ? (
-                      <Image src={user.user_metadata.avatar_url || user.user_metadata.picture} alt="avatar" fill className="object-cover" referrerPolicy="no-referrer" />
+                    {(user?.user_metadata?.avatar_url || user?.user_metadata?.custom_avatar_url || user?.user_metadata?.picture) ? (
+                      <Image src={user.user_metadata.avatar_url || user?.user_metadata?.custom_avatar_url || user.user_metadata.picture} alt="avatar" fill className="object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       <span className="flex items-center justify-center h-full w-full text-base font-bold text-indigo-600 bg-white">
                         {user?.user_metadata?.fullName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'}

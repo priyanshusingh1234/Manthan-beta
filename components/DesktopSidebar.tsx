@@ -339,8 +339,8 @@ export default function DesktopSidebar() {
           <div className="relative h-10 w-10 shrink-0">
             <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500 to-fuchsia-500 blur-sm opacity-20 group-hover:opacity-40 transition-opacity"></div>
             <div className="relative h-10 w-10 rounded-full overflow-hidden border-2 border-white shadow-sm">
-              {(user?.user_metadata?.avatar_url || user?.user_metadata?.picture) ? (
-                <Image src={user.user_metadata.avatar_url || user.user_metadata.picture} alt="Profile" width={40} height={40} className="object-cover h-full w-full" />
+              {(user?.user_metadata?.avatar_url || user?.user_metadata?.custom_avatar_url || user?.user_metadata?.picture) ? (
+                <Image src={user.user_metadata.avatar_url || user?.user_metadata?.custom_avatar_url || user.user_metadata.picture} alt="Profile" width={40} height={40} className="object-cover h-full w-full" />
               ) : (
                 <div className="h-full w-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold text-sm">
                   {user?.email?.[0]?.toUpperCase() || 'U'}
