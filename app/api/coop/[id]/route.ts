@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { createNotification } from "@/lib/createNotification";
 
+const cleanAv = (u?: string | null) => u && !u.includes('googleusercontent.com') ? u : null;
+const cleanAvMeta = (m: Record<string, any>) => cleanAv(m.custom_avatar_url) || cleanAv(m.avatar_url) || null;
+
 export async function GET(req: Request, { params }: { params: { id: string } }) {
     try {
         const auth = req.headers.get("authorization");
@@ -64,7 +67,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                 id: challenge.initiator_id,
                 name: initiatorMeta.fullName || initiatorMeta.name || "Player 1",
                 username: initiatorMeta.username || "",
-                avatar: initiatorMeta.avatar_url || null,
+                avatar: cleanAvMeta(initiatorMeta),
                 submission: initiatorSub,
                 isCurrentUser: user.id === challenge.initiator_id,
             },
@@ -72,7 +75,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                 id: challenge.partner_id,
                 name: partnerMeta.fullName || partnerMeta.name || "Player 2",
                 username: partnerMeta.username || "",
-                avatar: partnerMeta.avatar_url || null,
+                avatar: cleanAvMeta(partnerMeta),
                 submission: partnerSub,
                 isCurrentUser: user.id === challenge.partner_id,
             },
@@ -146,7 +149,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
                 href: `/questions/${challenge.question_id}?challenge=${challengeId}`,
                 actorId: user.id,
                 actorName: partnerName,
-                actorAvatar: partnerRes.data?.user?.user_metadata?.avatar_url || null,
+                actorAvatar: cleanAvMeta(partnerRes.data?.user?.user_metadata || {}) || undefined,
             });
 
             return NextResponse.json({ success: true, status: 'active' });

@@ -62,13 +62,14 @@ export async function GET(request: Request) {
             pageNum++;
         }
 
+        const cleanAv = (u?: string | null) => u && !u.includes('googleusercontent.com') ? u : null;
         const matchedUsers = allUsers
             .filter(u => targetUserIds.includes(u.id))
             .map(u => ({
                 id: u.id,
                 name: u.user_metadata?.fullName || u.user_metadata?.full_name || u.user_metadata?.name || 'User',
                 username: u.user_metadata?.username || u.id.slice(0, 8),
-                avatar: u.user_metadata?.avatar_url || u.user_metadata?.avatar || null,
+                avatar: cleanAv(u.user_metadata?.custom_avatar_url) || cleanAv(u.user_metadata?.avatar_url) || null,
                 isTeacher: !!u.user_metadata?.isTeacher
             }));
 
@@ -121,7 +122,11 @@ export async function POST(request: Request) {
         // Fire notification to the followed user (fire-and-forget)
         const followerName = user.user_metadata?.fullName || user.user_metadata?.username || 'Someone';
         const followerUsername = user.user_metadata?.username || null;
-        const followerAvatar = user.user_metadata?.avatar_url || null;
+        const followerAvatar = (() => {
+            const m = user.user_metadata || {};
+            const u = m.custom_avatar_url || m.avatar_url || null;
+            return (u && !u.includes('googleusercontent.com') ? u : undefined);
+        })();
 
         try {
             await createNotification({
@@ -129,7 +134,7 @@ export async function POST(request: Request) {
                 type: 'new_follower',
                 title: `${followerName} started following you`,
                 body: `@${followerUsername || 'someone'} is now following you on Dheeyudha.`,
-                href: followerUsername ? `/user/${followerUsername}` : null,
+                href: followerUsername ? `/user/${followerUsername}` : undefined,
                 actorId: user.id,
                 actorName: followerName,
                 actorAvatar: followerAvatar,
