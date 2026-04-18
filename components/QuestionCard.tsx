@@ -46,12 +46,54 @@ type Question = {
   userSubmissionId?: string | null;
 };
 
-// Resilient avatar component for Question Cards
-function AvatarImage({ src, name }: { src: string | null | undefined; name: string | null | undefined }) {
+// Module-level avatar cache so re-renders and multiple cards for the same
+// teacher don't each fire a separate Supabase query.
+const avatarCache: Record<string, string | null> = {};
+
+// Resilient avatar component — queries profiles table directly when API returns null,
+// exactly the same data source the public profile page uses.
+function AvatarImage({
+  src,
+  name,
+  userId,
+}: {
+  src: string | null | undefined;
+  name: string | null | undefined;
+  userId: string | null | undefined;
+}) {
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(src || null);
   const [failed, setFailed] = useState(false);
   const initials = String((name || "T").split(" ").map((s) => s[0]).join("")).slice(0, 2).toUpperCase();
 
-  if (!src || failed) {
+  // If API-provided src is null, do a direct profiles table lookup (same as public profile page)
+  useEffect(() => {
+    if (src) { setResolvedSrc(src); setFailed(false); return; }
+    if (!userId) return;
+
+    // Check module-level cache first
+    if (userId in avatarCache) {
+      setResolvedSrc(avatarCache[userId]);
+      return;
+    }
+
+    let mounted = true;
+    supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!mounted) return;
+        const url = data?.avatar_url || null;
+        avatarCache[userId] = url;
+        setResolvedSrc(url);
+      })
+      .catch(() => { /* non-fatal */ });
+
+    return () => { mounted = false; };
+  }, [src, userId]);
+
+  if (!resolvedSrc || failed) {
     return (
       <div className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 shadow-sm transition-all">
         {initials}
@@ -62,7 +104,7 @@ function AvatarImage({ src, name }: { src: string | null | undefined; name: stri
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src}
+      src={resolvedSrc}
       alt={name || "Teacher"}
       onError={() => setFailed(true)}
       className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full object-cover border-2 border-white dark:border-slate-900 shadow-sm transition-all"
@@ -246,7 +288,7 @@ export default function QuestionCard({ q }: { q: Question }) {
           {/* Avatar */}
           <Link href={teacherProfileLink} className="shrink-0 relative">
             <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-fuchsia-500 rounded-full blur-[2px] opacity-70 group-hover:opacity-100 transition-opacity" />
-            <AvatarImage src={q.createdByAvatar} name={q.createdByName} />
+            <AvatarImage src={q.createdByAvatar} name={q.createdByName} userId={q.createdBy} />
           </Link>
 
           {/* Name + Verified Tick */}

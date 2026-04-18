@@ -3,28 +3,42 @@
 import React, { useState, useEffect } from 'react';
 import { User, BarChart3 } from 'lucide-react';
 
-import Link from 'next/link';
+import { supabase } from '@/lib/supabaseClient';
 
-type LeaderboardEntry = {
-    rank: number;
-    userId: string;
-    name: string;
-    username: string;
-    avatar: string | null;
-    school: string | null;
-    score: number;
-    maxScore: number;
-    timeTaken: number;
-    accuracy: number;
-    completedAt: string;
-};
+// Module-level cache shared across all leaderboard entries
+const lbAvatarCache: Record<string, string | null> = {};
 
-// Resilient avatar — falls back to initials on any image load error (expired/blocked URLs)
-function AvatarImage({ src, name }: { src: string | null; name: string }) {
-    const [failed, setFailed] = React.useState(false);
+// Resilient avatar — queries profiles table directly when API returns null,
+// identical to what the public profile page does.
+function AvatarImage({ src, name, userId }: { src: string | null; name: string; userId: string }) {
+    const [resolvedSrc, setResolvedSrc] = useState<string | null>(src);
+    const [failed, setFailed] = useState(false);
     const initials = (name || '?').split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
 
-    if (!src || failed) {
+    useEffect(() => {
+        if (src) { setResolvedSrc(src); setFailed(false); return; }
+        if (!userId) return;
+
+        if (userId in lbAvatarCache) { setResolvedSrc(lbAvatarCache[userId]); return; }
+
+        let mounted = true;
+        supabase
+            .from('profiles')
+            .select('avatar_url')
+            .eq('id', userId)
+            .maybeSingle()
+            .then(({ data }) => {
+                if (!mounted) return;
+                const url = data?.avatar_url || null;
+                lbAvatarCache[userId] = url;
+                setResolvedSrc(url);
+            })
+            .catch(() => { /* non-fatal */ });
+
+        return () => { mounted = false; };
+    }, [src, userId]);
+
+    if (!resolvedSrc || failed) {
         return (
             <div className="w-full h-full rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 border-2 border-white dark:border-slate-800 flex items-center justify-center text-white text-[10px] font-black">
                 {initials}
@@ -34,13 +48,14 @@ function AvatarImage({ src, name }: { src: string | null; name: string }) {
     return (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-            src={src}
+            src={resolvedSrc}
             alt={name}
             onError={() => setFailed(true)}
             className="w-full h-full rounded-full object-cover border-2 border-white dark:border-slate-800"
         />
     );
 }
+
 
 export default function TestLeaderboard({ testId }: { testId: string }) {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -128,6 +143,7 @@ export default function TestLeaderboard({ testId }: { testId: string }) {
                                 <AvatarImage
                                     src={entry.avatar}
                                     name={entry.name}
+                                    userId={entry.userId}
                                 />
                             </div>
 
