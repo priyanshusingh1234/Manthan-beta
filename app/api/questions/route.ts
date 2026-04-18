@@ -109,7 +109,7 @@ export async function GET(req: Request) {
       });
 
       // Google profile photo URLs expire and return 403 for third-party requests.
-      // Treat them as missing so we fall back to auth metadata which carries custom_avatar_url.
+      // Treat them as missing so we fall back to auth metadata which carries avatar_url.
       const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
 
       // Batch-fetch auth metadata for users whose DB avatar is missing or a stale Google URL
@@ -126,7 +126,7 @@ export async function GET(req: Request) {
               const meta = user.user_metadata;
               const nonGoogle = (url?: string | null) => url && !isGoogleUrl(url) ? url : null;
               authMetaMap[id] = {
-                avatar: nonGoogle(meta.custom_avatar_url) || null,
+                avatar: nonGoogle(meta.avatar_url) || null,
                 name: meta.fullName || meta.full_name || meta.name || user.email || 'Teacher',
                 username: meta.username || null,
               };
@@ -227,7 +227,7 @@ export async function POST(req: Request) {
         const meta = (fetchedUser as any)?.user_metadata ?? (fetchedUser as any)?.user?.user_metadata ?? {};
         const isTeacher = meta?.isTeacher;
         posterName = meta?.fullName || meta?.full_name || meta?.name || (fetchedUser as any)?.email || null;
-        posterAvatar = meta?.custom_avatar_url || meta?.avatar_url || meta?.avatar || null;
+        posterAvatar = meta?.avatar_url || meta?.avatar || null;
         posterUsername = meta?.username || null;
         if (!isTeacher) return NextResponse.json({ error: 'Forbidden — teachers only' }, { status: 403 });
       } catch (err) {

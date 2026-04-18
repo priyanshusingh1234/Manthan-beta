@@ -3,7 +3,7 @@ import supabaseAdmin from "@/lib/supabaseAdmin";
 import { createNotification } from "@/lib/createNotification";
 
 const cleanAv = (u?: string | null) => u && !u.includes('googleusercontent.com') ? u : null;
-const cleanAvMeta = (m: Record<string, any>) => cleanAv(m.custom_avatar_url) || cleanAv(m.avatar_url) || null;
+const cleanAvMeta = (m: Record<string, any>) => cleanAv(m.avatar_url) || cleanAv(m.avatar_url) || null;
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
     try {

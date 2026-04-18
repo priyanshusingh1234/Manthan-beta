@@ -69,7 +69,7 @@ export async function GET(request: Request) {
                 id: u.id,
                 name: u.user_metadata?.fullName || u.user_metadata?.full_name || u.user_metadata?.name || 'User',
                 username: u.user_metadata?.username || u.id.slice(0, 8),
-                avatar: cleanAv(u.user_metadata?.custom_avatar_url) || cleanAv(u.user_metadata?.avatar_url) || null,
+                avatar: cleanAv(u.user_metadata?.avatar_url) || cleanAv(u.user_metadata?.avatar_url) || null,
                 isTeacher: !!u.user_metadata?.isTeacher
             }));
 
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
         const followerUsername = user.user_metadata?.username || null;
         const followerAvatar = (() => {
             const m = user.user_metadata || {};
-            const u = m.custom_avatar_url || m.avatar_url || null;
+            const u = m.avatar_url || null;
             return (u && !u.includes('googleusercontent.com') ? u : undefined);
         })();
 

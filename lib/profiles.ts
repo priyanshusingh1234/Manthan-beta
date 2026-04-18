@@ -41,11 +41,11 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
     const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
 
     // Determine the best avatar to persist:
-    //   1. custom_avatar_url from incoming meta (user just uploaded) — always wins
+    //   1. avatar_url from incoming meta (user just uploaded) — always wins
     //   2. Existing profiles.avatar_url if it's already a non-Google custom URL — preserve it
     //   3. Otherwise null — never write a stale Google URL into the DB
-    const incomingCustom = meta.custom_avatar_url && !isGoogleUrl(meta.custom_avatar_url)
-        ? meta.custom_avatar_url
+    const incomingCustom = meta.avatar_url && !isGoogleUrl(meta.avatar_url)
+        ? meta.avatar_url
         : null;
 
     let finalAvatar: string | null = incomingCustom;

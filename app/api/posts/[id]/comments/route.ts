@@ -118,7 +118,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                     href: `/posts/${params.id}`,
                     actorId: user.id,
                     actorName: authorName,
-                    actorAvatar: cleanAvatar(meta.custom_avatar_url) || cleanAvatar(meta.avatar_url),
+                    actorAvatar: cleanAvatar(meta.avatar_url) || cleanAvatar(meta.avatar_url),
                 }))
             );
         }
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 href: `/posts/${params.id}`,
                 actorId: user.id,
                 actorName: authorName,
-                actorAvatar: cleanAvatar(meta.custom_avatar_url) || cleanAvatar(meta.avatar_url),
+                actorAvatar: cleanAvatar(meta.avatar_url) || cleanAvatar(meta.avatar_url),
             });
         }
 
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 id: user.id,
                 name: meta.fullName || meta.name || user.email?.split('@')[0],
                 username: meta.username || null,
-                avatar_url: cleanAvatar(meta.custom_avatar_url) || cleanAvatar(meta.avatar_url),
+                avatar_url: cleanAvatar(meta.avatar_url) || cleanAvatar(meta.avatar_url),
                 isTeacher: meta.isTeacher || false,
                 totalPoints: Number(meta.totalPoints) || 0,
             }

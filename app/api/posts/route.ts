@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
             .maybeSingle();
 
         const authorName = authorProfile?.full_name || user.user_metadata?.fullName || user.user_metadata?.username || 'Someone';
-        const authorAvatar = cleanAvatar(authorProfile?.avatar_url) || cleanAvatar(user.user_metadata?.custom_avatar_url) || null;
+        const authorAvatar = cleanAvatar(authorProfile?.avatar_url) || cleanAvatar(user.user_metadata?.avatar_url) || null;
         const cleanSnippet = String(content || '').trim().replace(/\s+/g, ' ').slice(0, 90);
         const excerpt = `${cleanSnippet}${cleanSnippet.length >= 90 ? '...' : ''}`;
 

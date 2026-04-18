@@ -115,9 +115,9 @@ export default function QuestionsFeed() {
                 const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim());
                 const meta = data?.user?.user_metadata || {};
                 // Apply the same avatar priority chain as ClientLayout so that
-                // custom_avatar_url (the real uploaded photo) always wins over
+                // avatar_url (the real uploaded photo) always wins over
                 // the raw avatar_url which may be a stale Google OAuth URL.
-                const effectiveAvatar = meta.custom_avatar_url || meta.avatar_url || meta.picture || null;
+                const effectiveAvatar = meta.avatar_url || meta.picture || null;
                 setCurrentUserData({
                     ...meta,
                     avatar_url: effectiveAvatar,   // normalised field
@@ -208,13 +208,13 @@ export default function QuestionsFeed() {
   }, [subject, classGrade, load]);
 
   // ── Derive the current user's definitive avatar from the localStorage cache ──
-  // Priority: custom_avatar_url > avatar_url > picture — same as the profile page.
+  // Priority: avatar_url > avatar_url > picture — same as the profile page.
   // This is used below to patch question cards so teachers see their own avatar
   // even when the server-side profiles table is stale or not yet synced.
   const myAvatar = useMemo(() => {
     if (!currentUserData) return null;
     return (
-      currentUserData.custom_avatar_url ||
+      currentUserData.avatar_url ||
       currentUserData.avatar_url ||
       currentUserData.picture ||
       null

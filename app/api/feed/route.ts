@@ -55,7 +55,7 @@ function normalizeQuestion(
         imageUrl: r.image_url || null,
         createdAt: r.created_at,
         _feedLabel: feedLabel,
-        _feedScore: 0, 
+        _feedScore: 0,
     };
 }
 
@@ -269,7 +269,7 @@ export async function GET(req: NextRequest) {
                 applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(3)).gte('created_at', daysAgo(14)).order('created_at', { ascending: false }).limit(30),
                 applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(14)).order('created_at', { ascending: false }).limit(30)
             ]);
-            
+
             return {
                 subject: subjectToFetch,
                 A: shuffle(resA.data || []),
@@ -283,7 +283,7 @@ export async function GET(req: NextRequest) {
             bucketsData = [await fetchSubjectTimeBuckets(subject, userGrade)];
         } else {
             bucketsData = await Promise.all(CORE_SUBJECTS.map(sub => fetchSubjectTimeBuckets(sub, userGrade)));
-            
+
             if (recentFailedSubject) {
                 // Redemption Protocol v2: Mark the failed subject to receive a 4x pull multiplier
                 const b = bucketsData.find(bData => bData.subject === recentFailedSubject);
@@ -295,17 +295,17 @@ export async function GET(req: NextRequest) {
         const layer8Count = Math.ceil(limit * 0.10 * overFetch);
         let layer8AddedCount = 0;
         let runningL8 = true;
-        
+
         while (runningL8 && layer8AddedCount < layer8Count) {
             let addedInRound = false;
             for (const bData of bucketsData) {
                 if (layer8AddedCount >= layer8Count) break;
-                
+
                 if (layer8AddedCount >= layer8Count) break;
                 // find the first unseen in A
                 const qIdx = bData.A.findIndex((q: any) => !userAttempted.has(String(q.id)) && !pool.some((p: any) => p.id === q.id));
                 if (qIdx !== -1) {
-                    const q = bData.A.splice(qIdx, 1)[0]; 
+                    const q = bData.A.splice(qIdx, 1)[0];
                     pool.push({ ...q, _layer: 8, _label: bData.isWeakness ? '🎯 Target Weakness' : '✨ Just Added', _score: 120 });
                     layer8AddedCount++;
                     addedInRound = true;
@@ -323,12 +323,12 @@ export async function GET(req: NextRequest) {
             let addedInRound = false;
             for (const bData of bucketsData) {
                 if (layer1AddedCount >= layer1Count) break;
-                
+
                 if (layer1AddedCount >= layer1Count) break;
                 // Combine remaining A, B, C for this subject
                 const combined = [...bData.A, ...bData.B, ...bData.C];
                 const qIdx = combined.findIndex((q: any) => !userAttempted.has(String(q.id)) && !pool.some((p: any) => p.id === q.id));
-                
+
                 if (qIdx !== -1) {
                     const q = combined[qIdx];
                     // Remove from original array
@@ -349,17 +349,17 @@ export async function GET(req: NextRequest) {
             const MAX_REVIEW = 2;
             const failedArr = shuffle(Array.from(userFailed)).slice(0, 10);
             const attemptedArr = shuffle(Array.from(userAttempted).filter(id => !userFailed.has(id))).slice(0, 10);
-            
+
             // Prioritize fails, then older successes
             const pickArr = [...failedArr, ...attemptedArr];
-            
+
             if (pickArr.length > 0) {
                 let query = supabaseAdmin.from('questions').select('*').in('id', pickArr);
                 query = applyCommonFilters(query, subject, difficulty, chapter);
-                
+
                 const { data } = await query;
                 const reviewQuestions = shuffle(data || []).slice(0, MAX_REVIEW);
-                
+
                 reviewQuestions.forEach((r: any) => {
                     const isFailed = userFailed.has(String(r.id));
                     const label = isFailed ? '🔄 Review: You missed this' : '🧠 SRS Review: Do you remember?';
@@ -436,7 +436,7 @@ export async function GET(req: NextRequest) {
                 .eq('class_grade', nextGrade)
                 .order('created_at', { ascending: false })
                 .limit(layer5Count * 3); // Overfetch
-                
+
             const shuffledStretch = shuffle(data || []).slice(0, layer5Count);
             shuffledStretch.forEach((r: any) => pool.push({ ...r, _layer: 5, _label: '🚀 Stretch: Class ' + nextGrade, _score: 80 }));
         }
@@ -596,9 +596,9 @@ export async function GET(req: NextRequest) {
                 // Split: 50% Peer Circle, 30% Trending, 20% Discovery
                 // Smart fallback: if a bucket is empty, give its slots to the next one.
                 const maxPostsToShow = Math.min(30, scoredPosts.length);
-                const peerSlots  = Math.ceil(maxPostsToShow * 0.50);
+                const peerSlots = Math.ceil(maxPostsToShow * 0.50);
                 const trendSlots = Math.ceil(maxPostsToShow * 0.30);
-                const discSlots  = maxPostsToShow; // fallback fills remaining slots
+                const discSlots = maxPostsToShow; // fallback fills remaining slots
 
                 pool.push(...bucketA.slice(0, peerSlots));
                 pool.push(...bucketB.slice(0, trendSlots));
@@ -632,7 +632,7 @@ export async function GET(req: NextRequest) {
             const { data } = await baseQ()
                 .order('created_at', { ascending: false })
                 .limit(limit); // fetch enough to filter
-            
+
             (data || []).forEach((r: any) => {
                 const id = String(r.id);
                 if (!userAttempted.has(id) && !pool.find(p => String(p.id) === id)) {
@@ -654,19 +654,19 @@ export async function GET(req: NextRequest) {
         // We overfetch slightly to ensure we have enough written candidates to hit the quota.
         const writtenItems = pool.filter(p => !p.type && (p.points || 0) > 15);
         const nonWrittenItems = pool.filter(p => p.type === 'post' || (p.points || 0) <= 15);
-        
+
         const targetWritten = Math.floor(limit * 0.4);
         const selectedWritten = writtenItems.slice(0, targetWritten);
         // If we have fewer than targetWritten, we just take all we have.
-        
+
         // Combine them back ensuring stratified order is preserved as much as possible
         // but prioritized by the 40% quota.
         let finalPool = [...selectedWritten, ...nonWrittenItems, ...writtenItems.slice(targetWritten)];
-        
+
         // ── Stratified Sort ──
         // This restores the layer-based ordering (Just Added > Peer Solved > For You, etc.)
         finalPool = shuffleWithinGroups(finalPool);
-        
+
         pool = finalPool;
 
 
@@ -679,7 +679,7 @@ export async function GET(req: NextRequest) {
 
         // Google profile photo URLs (lh3.googleusercontent.com) expire and return
         // 403 for other users — treat them as effectively "missing" so we fall back
-        // to the authoritative auth metadata which has custom_avatar_url if uploaded.
+        // to the authoritative auth metadata which has avatar_url if uploaded.
         const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
 
         // Include: null avatar OR stale Google URL
@@ -696,10 +696,10 @@ export async function GET(req: NextRequest) {
                     const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(id);
                     if (user?.user_metadata) {
                         const meta = user.user_metadata;
-                        // Only use custom_avatar_url as the public avatar — never fall back to
+                        // Only use avatar_url as the public avatar — never fall back to
                         // Google/provider URLs which expire for third-party requests.
                         const nonGoogle = (url?: string | null) => url && !isGoogleUrl(url) ? url : null;
-                        const fallbackAvatar = nonGoogle(meta.custom_avatar_url) || null;
+                        const fallbackAvatar = nonGoogle(meta.avatar_url) || null;
                         authMetaMap[id] = {
                             name: meta.fullName || meta.full_name || meta.name || user.email || 'Teacher',
                             avatar: fallbackAvatar,
@@ -723,7 +723,7 @@ export async function GET(req: NextRequest) {
             const p = profilesMap.get(id);
             const auth = authMetaMap[id];
             // Use profiles DB avatar only if it is NOT a Google URL (Google URLs expire).
-            // If it is Google, prefer the auth metadata fallback which has custom_avatar_url.
+            // If it is Google, prefer the auth metadata fallback which has avatar_url.
             const dbAvatar = p?.avatar_url && !isGoogleUrl(p.avatar_url) ? p.avatar_url : null;
             userInfoMap[id] = {
                 name: p?.full_name || auth?.name || 'Teacher',
@@ -750,7 +750,7 @@ export async function GET(req: NextRequest) {
             .slice(0, limit)
             .map(r => {
                 if (r.type === 'post') return r;
-                return { 
+                return {
                     ...normalizeQuestion(r, userInfoMap, attemptsMap, userAttempted, userFailed, r._label || ''),
                     type: 'question'
                 };

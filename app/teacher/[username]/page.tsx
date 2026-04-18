@@ -66,7 +66,7 @@ export default async function TeacherProfilePage({ params }: Props) {
     }
 
     const name = meta?.fullName || meta?.full_name || meta?.name || (fetchedUser as any)?.email || 'Teacher';
-    const avatar = meta?.custom_avatar_url || (profile as any)?.avatar_url || meta?.avatar_url || meta?.avatar || null;
+    const avatar = (profile as any)?.avatar_url || meta?.avatar_url || meta?.avatar || null;
     const bio = meta?.bio || null;
     const mainSubject = meta?.mainSubject || meta?.main_subject || null;
     const username = meta?.username || null;

@@ -212,7 +212,7 @@ export default function CreatePostPage() {
                         <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 overflow-hidden relative">
                             {(() => {
                                 const m = session.user.user_metadata || {};
-                                const av = m.custom_avatar_url && !m.custom_avatar_url.includes('googleusercontent.com') ? m.custom_avatar_url : null;
+                                const av = m.avatar_url && !m.avatar_url.includes('googleusercontent.com') ? m.avatar_url : null;
                                 return av ? (
                                     <img src={av} alt="You" className="object-cover w-full h-full" />
                                 ) : (

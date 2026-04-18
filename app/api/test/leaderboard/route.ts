@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
         (profilesData || []).forEach((p: any) => { profileMap[p.id] = p; });
 
         // Google profile photo URLs expire for third-party requests.
-        // Filter them out and fall back to custom_avatar_url from auth metadata.
+        // Filter them out and fall back to avatar_url from auth metadata.
         const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
 
         const missingAvatarIds = userIds.filter((id: string) => {
@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
                     if (user?.user_metadata) {
                         const meta = user.user_metadata;
                         const nonGoogle = (url?: string | null) => url && !isGoogleUrl(url) ? url : null;
-                        authAvatarMap[id] = nonGoogle(meta.custom_avatar_url) || null;
+                        authAvatarMap[id] = nonGoogle(meta.avatar_url) || null;
                     }
                 } catch { /* non-fatal */ }
             }));

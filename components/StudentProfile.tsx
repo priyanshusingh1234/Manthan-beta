@@ -200,7 +200,7 @@ const StudentProfile: React.FC = () => {
       const meta = user.user_metadata || {};
       const metaFullName = typeof meta.fullName === 'string' ? meta.fullName : undefined;
       const metaUsername = typeof meta.username === 'string' ? meta.username : '';
-      const metaAvatar = (typeof meta.custom_avatar_url === 'string' ? meta.custom_avatar_url : undefined) || (typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined) || (typeof meta.picture === 'string' ? meta.picture : undefined);
+      const metaAvatar = (typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined) || (typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined) || (typeof meta.picture === 'string' ? meta.picture : undefined);
       const metaBio = typeof meta.bio === 'string' ? meta.bio : undefined;
       const metaEquippedBadges = sanitizeBadgeList(meta.equipped_badges || meta.equippedBadges);
 
@@ -251,7 +251,7 @@ const StudentProfile: React.FC = () => {
           name: dbProfile.full_name || s.name,
           school: dbProfile.school || s.school,
           bio: dbProfile.bio || s.bio,
-          avatar: meta.custom_avatar_url || dbProfile.avatar_url || s.avatar,
+          avatar: dbProfile.avatar_url || s.avatar,
           username: dbProfile.username || s.username,
           totalPoints: freshPoints,
           battlesAttempted: Number(dbProfile.battles_attempted) || Number(meta.battlesAttempted) || 0,
@@ -395,7 +395,6 @@ const StudentProfile: React.FC = () => {
 
       const updateData: Record<string, unknown> = {};
       updateData[`${type}_url`] = publicUrl;
-      updateData[`custom_${type}_url`] = publicUrl;
       updateData[`${type}_path`] = newPath;
 
       await supabase.auth.updateUser({ data: updateData });

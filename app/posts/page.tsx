@@ -285,8 +285,8 @@ export default function SocialFeedPage() {
     const charsLeft = MAX_CHARS - content.length;
     const canPost = (content.trim() || imageFile) && !submitting;
     const meta = session?.user?.user_metadata || {};
-    const avatarUrl = (meta.custom_avatar_url && !meta.custom_avatar_url.includes('googleusercontent.com'))
-        ? meta.custom_avatar_url
+    const avatarUrl = (meta.avatar_url && !meta.avatar_url.includes('googleusercontent.com'))
+        ? meta.avatar_url
         : null;
 
     return (

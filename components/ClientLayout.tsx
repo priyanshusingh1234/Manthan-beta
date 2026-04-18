@@ -302,9 +302,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           }).catch(() => { /* non-fatal */ });
         }
 
-        // ── Local cache: custom_avatar_url only, never a Google URL ────────────
-        const effectiveAvatar = meta.custom_avatar_url && !isGoogleUrl(meta.custom_avatar_url)
-          ? meta.custom_avatar_url
+        // ── Local cache: avatar_url only, never a Google URL ────────────
+        const effectiveAvatar = meta.avatar_url && !isGoogleUrl(meta.avatar_url)
+          ? meta.avatar_url
           : null; // Google-only users show initials on their own posts too — consistent UX
         const freshCache = { ...meta, avatar_url: effectiveAvatar };
         try { localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(freshCache)); } catch { }

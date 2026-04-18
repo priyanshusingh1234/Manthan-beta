@@ -87,7 +87,7 @@ export async function POST(request: Request) {
             href: `/questions/${questionId}?challenge=${newChallenge.id}`,
             actorId: user.id,
             actorName: challengerName,
-            actorAvatar: (() => { const u = user.user_metadata?.custom_avatar_url || user.user_metadata?.avatar_url || null; return u && !u.includes('googleusercontent.com') ? u : undefined; })(),
+            actorAvatar: (() => { const u = user.user_metadata?.avatar_url || null; return u && !u.includes('googleusercontent.com') ? u : undefined; })(),
         });
 
         return NextResponse.json({ success: true, challenge: newChallenge });
