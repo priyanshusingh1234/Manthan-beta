@@ -287,24 +287,33 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       }
       if (session?.user) {
         ActivityTracker.restoreFromCloud();
-        // ── Always rebuild the local cache with correct avatar priority ──
+
         const meta = session.user.user_metadata || {};
-        const effectiveAvatar = meta.custom_avatar_url || meta.avatar_url || meta.picture || null;
+        const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
+
+        // ── Block Google avatars at the source ──────────────────────────────────
+        // On a fresh Google OAuth login, Supabase automatically writes the Google
+        // profile photo into avatar_url. We nullify it in auth metadata immediately
+        // so it is never seen by upsertProfile, profile/sync, or any other code.
+        // This runs only once per login session (SIGNED_IN), not on every page load.
+        if (event === 'SIGNED_IN' && isGoogleUrl(meta.avatar_url) && session.access_token) {
+          supabase.auth.updateUser({
+            data: { avatar_url: null, picture: null }
+          }).catch(() => { /* non-fatal */ });
+        }
+
+        // ── Local cache: custom_avatar_url only, never a Google URL ────────────
+        const effectiveAvatar = meta.custom_avatar_url && !isGoogleUrl(meta.custom_avatar_url)
+          ? meta.custom_avatar_url
+          : null; // Google-only users show initials on their own posts too — consistent UX
         const freshCache = { ...meta, avatar_url: effectiveAvatar };
         try { localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(freshCache)); } catch { }
         window.dispatchEvent(new Event('user_metadata_updated'));
 
         // ── Sync DB on login AND on initial page load (INITIAL_SESSION) ──
-        // SIGNED_IN fires on fresh login; INITIAL_SESSION fires when the user
-        // loads any page while already authenticated. We need both so the
-        // profiles table (used by feed/question cards) always reflects the
-        // latest custom_avatar_url, even without a fresh login.
-        // Rate-limited to once per hour via sessionStorage to avoid hammering.
         if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session.access_token) {
-          // v2: key bumped to force one immediate sync with the avatar self-heal patch.
-          // Any user whose profiles.avatar_url was wiped by the old upsertProfile bug
-          // will have it restored on their very next page load.
-          const syncKey = 'profile_sync_last_v2';
+          // v3: key bumped — forces one sync with the Google-URL-block patch for all active sessions.
+          const syncKey = 'profile_sync_last_v3';
           const lastSync = parseInt(sessionStorage.getItem(syncKey) || '0');
           const now = Date.now();
           if (now - lastSync > 60 * 60 * 1000) { // once per hour
