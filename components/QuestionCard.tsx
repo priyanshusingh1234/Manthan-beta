@@ -86,7 +86,11 @@ function AvatarImage({
       .maybeSingle()
       .then(({ data }) => {
         if (!mounted) return;
-        const url = data?.avatar_url || null;
+        // Mirror server logic: Google OAuth URLs are treated as null.
+        // Users with no custom upload will correctly show initials.
+        const raw = data?.avatar_url || null;
+        const isGoogle = (u: string | null) => !!u && u.includes('googleusercontent.com');
+        const url = raw && !isGoogle(raw) ? raw : null;
         avatarCache[userId] = url;
         setResolvedSrc(url);
       })

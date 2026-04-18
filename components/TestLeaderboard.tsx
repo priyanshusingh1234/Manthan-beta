@@ -30,7 +30,9 @@ function AvatarImage({ src, name, userId }: { src: string | null; name: string; 
             .maybeSingle()
             .then(({ data }) => {
                 if (!mounted) return;
-                const url = data?.avatar_url || null;
+                const raw = data?.avatar_url || null;
+                const isGoogle = (u: string | null) => !!u && u.includes('googleusercontent.com');
+                const url = raw && !isGoogle(raw) ? raw : null;
                 lbAvatarCache[userId] = url;
                 setResolvedSrc(url);
             })

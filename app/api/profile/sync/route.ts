@@ -15,6 +15,25 @@ export async function POST(req: NextRequest) {
         
         if (!user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
 
+        // Optional: caller can pass avatarUrl directly to bypass the timing race
+        // where admin.getUserById might still see old metadata right after auth.updateUser.
+        let callerAvatarUrl: string | null = null;
+        try {
+            const body = await req.json().catch(() => ({}));
+            if (body?.avatarUrl && typeof body.avatarUrl === 'string' && !isGoogleUrl(body.avatarUrl)) {
+                callerAvatarUrl = body.avatarUrl;
+            }
+        } catch { /* no body is fine */ }
+
+        // If caller gave us the new URL, write it immediately — no need to wait for auth propagation
+        if (callerAvatarUrl) {
+            await supabaseAdmin
+                .from('profiles')
+                .update({ avatar_url: callerAvatarUrl, updated_at: new Date().toISOString() })
+                .eq('id', user.id);
+            leaderboardCache.invalidate();
+        }
+
         // Fetch fresh from the DB to avoid stale JWT metadata
         const { data: freshUser } = await supabaseAdmin.auth.admin.getUserById(user.id);
         const meta = freshUser?.user?.user_metadata || user.user_metadata || {};
@@ -34,10 +53,7 @@ export async function POST(req: NextRequest) {
             await supabaseAdmin.auth.admin.updateUserById(user.id, { user_metadata: finalMeta });
         }
 
-        // ── Avatar self-heal ──────────────────────────────────────────────────────
-        // If auth metadata has a valid custom (non-Google) avatar but profiles.avatar_url
-        // was previously wiped to null or a Google URL by a point-sync call, restore it.
-        // This self-heals all existing users who were affected by the upsertProfile bug.
+        // Avatar self-heal: if auth metadata has a newer custom avatar but profiles.avatar_url is stale, restore it.
         const metaCustomAvatar = meta.custom_avatar_url && !isGoogleUrl(meta.custom_avatar_url)
             ? meta.custom_avatar_url : null;
         const dbAvatarIsStale = !dbProfile?.avatar_url || isGoogleUrl(dbProfile?.avatar_url);
@@ -47,7 +63,6 @@ export async function POST(req: NextRequest) {
                 .from('profiles')
                 .update({ avatar_url: metaCustomAvatar })
                 .eq('id', user.id);
-            // Carry it into finalMeta so upsertProfile below also has it
             finalMeta.custom_avatar_url = metaCustomAvatar;
         }
 
@@ -55,7 +70,6 @@ export async function POST(req: NextRequest) {
         await upsertProfile(user.id, finalMeta);
 
         // Bust the leaderboard cache so the next request reflects the latest
-        // avatar_url, name, etc. without waiting for the TTL to expire.
         leaderboardCache.invalidate();
         
         return NextResponse.json({ success: true });

@@ -208,7 +208,13 @@ const TeacherProfile: React.FC = () => {
       if (session?.access_token) {
           await fetch('/api/profile/sync', {
               method: 'POST',
-              headers: { Authorization: `Bearer ${session.access_token}` }
+              headers: {
+                  Authorization: `Bearer ${session.access_token}`,
+                  'Content-Type': 'application/json',
+              },
+              // Pass the new URL directly so the server writes it immediately,
+              // bypassing the race where admin.getUserById might still see old metadata.
+              body: JSON.stringify(type === 'avatar' ? { avatarUrl: publicUrl } : {}),
           }).catch(console.error);
       }
 

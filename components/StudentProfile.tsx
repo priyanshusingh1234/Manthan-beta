@@ -407,7 +407,11 @@ const StudentProfile: React.FC = () => {
       if (session?.access_token) {
         await fetch('/api/profile/sync', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${session.access_token}` }
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(type === 'avatar' ? { avatarUrl: publicUrl } : {}),
         }).catch(console.error);
       }
 
