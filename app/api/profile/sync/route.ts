@@ -63,8 +63,18 @@ export async function POST(req: NextRequest) {
             metaNeedsUpdate = true;
         }
 
-        if (dbPoints > metaPoints) {
+        if (dbPoints !== metaPoints) {
             finalMeta.totalPoints = dbPoints;
+            metaNeedsUpdate = true;
+        }
+
+        const dbCustomAvatar = dbProfile?.avatar_url && !isGoogleUrl(dbProfile.avatar_url) ? dbProfile.avatar_url : null;
+        let metaCustomAvatar = finalMeta.avatar_url && !isGoogleUrl(finalMeta.avatar_url) ? finalMeta.avatar_url : null;
+
+        if (!callerAvatarUrl && dbCustomAvatar && dbCustomAvatar !== metaCustomAvatar) {
+            // DB has a custom avatar that differs from Meta. Trust DB because user manually updated the DB.
+            finalMeta.avatar_url = dbCustomAvatar;
+            metaCustomAvatar = dbCustomAvatar;
             metaNeedsUpdate = true;
         }
 
@@ -75,11 +85,6 @@ export async function POST(req: NextRequest) {
         }
 
         // Avatar self-heal: ALWAYS sync avatar_url → profiles.avatar_url when they differ.
-        // Previous logic only healed null/Google values — if the DB had an OLD Supabase URL from a
-        // previous upload it was left as-is, so question cards permanently showed a stale avatar.
-        const metaCustomAvatar = finalMeta.avatar_url && !isGoogleUrl(finalMeta.avatar_url)
-            ? finalMeta.avatar_url : null;
-
         if (metaCustomAvatar && dbProfile?.avatar_url !== metaCustomAvatar) {
             // DB has wrong value (null, Google URL, or an older Supabase URL) — overwrite with latest
             await supabaseAdmin

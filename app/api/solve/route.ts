@@ -237,11 +237,12 @@ export async function POST(req: Request) {
 
         // --- STREAK LOGIC ---
         const { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
-        const newTotal = Math.max(0, currentPoints + userPointsChange);
+        const actualCurrentPoints = profile ? Number(profile.total_points) : currentPoints;
+        const newTotal = Math.max(0, actualCurrentPoints + userPointsChange);
 
         // Update totalPoints and increment attempts counter
-        const battlesAttempted = (Number(userMeta.battlesAttempted) || 0) + 1;
-        const battlesWon = (Number(userMeta.battlesWon) || 0) + (isCorrect ? 1 : 0);
+        const battlesAttempted = (profile ? Number(profile.battles_attempted) : Number(userMeta.battlesAttempted) || 0) + 1;
+        const battlesWon = (profile ? Number(profile.battles_won) : Number(userMeta.battlesWon) || 0) + (isCorrect ? 1 : 0);
 
         // SYNC BOTH: Auth & Profiles
         await supabaseAdmin.auth.admin.updateUserById(userId, {
