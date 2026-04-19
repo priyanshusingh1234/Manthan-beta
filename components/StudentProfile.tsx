@@ -265,8 +265,8 @@ const StudentProfile: React.FC = () => {
           avatar: bestAvatar || s.avatar,
           username: dbProfile.username || s.username,
           totalPoints: freshPoints,
-          battlesAttempted: Number(dbProfile.battles_attempted) || Number(meta.battlesAttempted) || 0,
-          battlesWon: Number(dbProfile.battles_won) || Number(meta.battlesWon) || 0,
+          battlesAttempted: Number(meta.battlesAttempted) || 0,
+          battlesWon: Number(meta.battlesWon) || 0,
         }));
         setEditForm({
           name: dbProfile.full_name || metaFullName || '',

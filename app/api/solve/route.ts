@@ -240,9 +240,9 @@ export async function POST(req: Request) {
         const actualCurrentPoints = profile ? Number(profile.total_points) : currentPoints;
         const newTotal = Math.max(0, actualCurrentPoints + userPointsChange);
 
-        // Update totalPoints and increment attempts counter
-        const battlesAttempted = (profile ? Number(profile.battles_attempted) : Number(userMeta.battlesAttempted) || 0) + 1;
-        const battlesWon = (profile ? Number(profile.battles_won) : Number(userMeta.battlesWon) || 0) + (isCorrect ? 1 : 0);
+        // battles_attempted / battles_won live only in auth user_metadata (no DB column)
+        const battlesAttempted = (Number(userMeta.battlesAttempted) || 0) + 1;
+        const battlesWon = (Number(userMeta.battlesWon) || 0) + (isCorrect ? 1 : 0);
 
         // SYNC BOTH: Auth & Profiles
         await supabaseAdmin.auth.admin.updateUserById(userId, {
