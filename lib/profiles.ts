@@ -51,15 +51,13 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
     let finalAvatar: string | null = incomingCustom;
 
     let dbPoints: number | undefined;
-    let dbBattlesAttempted: number | undefined;
-    let dbBattlesWon: number | undefined;
 
     if (!finalAvatar || preserveDBPoints) {
         // Read the current DB value
         try {
             const { data: existing } = await supabaseAdmin
                 .from('profiles')
-                .select('avatar_url, total_points, battles_attempted, battles_won')
+                .select('avatar_url, total_points')
                 .eq('id', userId)
                 .maybeSingle();
 
@@ -69,8 +67,6 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
             }
             if (existing) {
                 dbPoints = existing.total_points;
-                dbBattlesAttempted = existing.battles_attempted;
-                dbBattlesWon = existing.battles_won;
             }
         } catch { /* non-fatal — fall through to null */ }
     }
@@ -87,8 +83,6 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         last_streak_at: meta.lastStreakAt || null,
         daily_solved: Number(meta.dailySolved) || 0,
         total_points: preserveDBPoints && dbPoints !== undefined ? dbPoints : (Number(meta.totalPoints) || 0),
-        battles_attempted: preserveDBPoints && dbBattlesAttempted !== undefined ? dbBattlesAttempted : (Number(meta.battlesAttempted) || 0),
-        battles_won: preserveDBPoints && dbBattlesWon !== undefined ? dbBattlesWon : (Number(meta.battlesWon) || 0),
         username: meta.username || null,
         updated_at: new Date().toISOString(),
         cosmetics: meta.cosmetics || [],
