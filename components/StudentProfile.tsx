@@ -200,7 +200,7 @@ const StudentProfile: React.FC = () => {
       const meta = user.user_metadata || {};
       const metaFullName = typeof meta.fullName === 'string' ? meta.fullName : undefined;
       const metaUsername = typeof meta.username === 'string' ? meta.username : '';
-      const metaAvatar = (typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined) || (typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined) || (typeof meta.picture === 'string' ? meta.picture : undefined);
+      let metaAvatar = (typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined) || (typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined) || (typeof meta.picture === 'string' ? meta.picture : undefined);
       const metaBio = typeof meta.bio === 'string' ? meta.bio : undefined;
       const metaEquippedBadges = sanitizeBadgeList(meta.equipped_badges || meta.equippedBadges);
 
