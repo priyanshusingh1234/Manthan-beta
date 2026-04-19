@@ -51,7 +51,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
 
     let dbPoints: number | undefined;
 
-    if (!finalAvatar || preserveDBPoints) {
+    if (!finalAvatar || preserveDBPoints || true) { // Always fetch existing to protect DB Custom Avatars
         // Read the current DB value
         try {
             const { data: existing } = await supabaseAdmin
@@ -61,7 +61,9 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
                 .maybeSingle();
 
             if (existing?.avatar_url && !isGoogleUrl(existing.avatar_url)) {
-                // Good non-Google custom URL already stored — keep it
+                // If the DB already has a custom avatar, IT IS SACRED.
+                // We NEVER let stale JWTs from background routes overwrite the DB's avatar.
+                // The ONLY way this changes is if explicit targeted .update() queries are run.
                 finalAvatar = existing.avatar_url;
             }
             if (existing) {
@@ -69,7 +71,6 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
             }
         } catch { /* non-fatal — fall through to null */ }
     }
-
     const { error } = await supabaseAdmin.from('profiles').upsert({
         id: userId,
         full_name: meta.fullName || meta.name || null,
