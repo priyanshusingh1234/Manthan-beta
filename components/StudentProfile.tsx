@@ -193,7 +193,7 @@ const StudentProfile: React.FC = () => {
 
       // Async fetch fresh user to catch newly bought cosmetics without blocking initial render
       supabase.auth.getUser().then(({ data: fUser }) => {
-          if (fUser?.user && mounted) setCurrentUser(fUser.user);
+        if (fUser?.user && mounted) setCurrentUser(fUser.user);
       });
 
       // ── Step 1: Render immediately from metadata (instant) ──
@@ -290,7 +290,7 @@ const StudentProfile: React.FC = () => {
             const data = await res.json();
             setRecentBattles(data);
           }
-          
+
           const repRes = await fetch('/api/report', {
             headers: { 'Authorization': `Bearer ${session.access_token}` },
             cache: 'no-store'
@@ -372,8 +372,8 @@ const StudentProfile: React.FC = () => {
   const performUpload = async (fileToUpload: File, type: 'avatar' | 'banner') => {
     if (!currentUser) return;
     if (avatarUploading || bannerUploading) {
-        setMessage('Upload already in progress...');
-        return;
+      setMessage('Upload already in progress...');
+      return;
     }
 
     const bucket = type === 'avatar' ? 'avatars' : 'banners';
@@ -431,11 +431,11 @@ const StudentProfile: React.FC = () => {
 
       // Proactively update local cache to prevent flickering/stale views in Feed
       if (typeof window !== 'undefined') {
-          const currentMeta = currentUser.user_metadata || {};
-          const newMeta = { ...currentMeta, ...updateData };
-          localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(newMeta));
-          // Dispatch a custom event so other components (like QuestionsFeed) can update instantly
-          window.dispatchEvent(new Event('user_metadata_updated'));
+        const currentMeta = currentUser.user_metadata || {};
+        const newMeta = { ...currentMeta, ...updateData };
+        localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(newMeta));
+        // Dispatch a custom event so other components (like QuestionsFeed) can update instantly
+        window.dispatchEvent(new Event('user_metadata_updated'));
       }
 
       if (oldPath) {
@@ -671,18 +671,17 @@ const StudentProfile: React.FC = () => {
           <div className="px-5 sm:px-8 pb-8 relative">
             {/* Top Row: Avatar + Stats (mobile), Avatar + Info + Rank (desktop) */}
             <div className="flex flex-col sm:flex-row sm:items-start gap-5 sm:gap-8">
-              
+
               {/* Avatar Section */}
               <div className="flex items-center sm:items-start gap-6 sm:gap-0 w-full sm:w-auto -mt-10 sm:-mt-20">
                 <div className="relative group shrink-0 z-10">
                   {currentUser?.user_metadata?.cosmetics?.includes('avatar_glow') && (
                     <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-xl opacity-70 animate-pulse transition-opacity"></div>
                   )}
-                  <div className={`relative w-24 h-24 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 sm:border-[5px] shadow-2xl bg-white dark:bg-slate-800 transition-transform duration-300 ${
-                    currentUser?.user_metadata?.cosmetics?.includes('avatar_glow') 
-                      ? 'border-transparent shadow-indigo-500/50' 
+                  <div className={`relative w-24 h-24 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 sm:border-[5px] shadow-2xl bg-white dark:bg-slate-800 transition-transform duration-300 ${currentUser?.user_metadata?.cosmetics?.includes('avatar_glow')
+                      ? 'border-transparent shadow-indigo-500/50'
                       : 'border-white dark:border-slate-900'
-                  }`}>
+                    }`}>
                     {typeof userData.avatar === 'string' && userData.avatar.startsWith('http') ? (
                       <Image src={userData.avatar} alt="avatar" width={144} height={144} className="object-cover w-full h-full" />
                     ) : (
@@ -696,7 +695,7 @@ const StudentProfile: React.FC = () => {
                     <input id="avatar-upload" accept="image/*" type="file" className="hidden" disabled={avatarUploading} onChange={(ev) => handleAvatarChange(ev.target.files?.[0] ?? null)} />
                   </label>
                 </div>
-                
+
                 {/* Mobile-only: Stats next to avatar */}
                 <div className="flex-1 sm:hidden pt-2">
                   {currentUser && <FollowButton profileUserId={currentUser.id} />}
@@ -711,7 +710,7 @@ const StudentProfile: React.FC = () => {
                   </div>
                 )}
 
-                <BadgedName 
+                <BadgedName
                   name={userData.name}
                   userId={profileUserId}
                   isTeacher={currentUser?.user_metadata?.isTeacher}
@@ -828,7 +827,7 @@ const StudentProfile: React.FC = () => {
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="absolute top-0 right-0 -mt-4 -mr-4 w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-br from-slate-100 to-transparent dark:from-slate-800 rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity"></div>
- 
+
               <div className={`${stat.bgColor} w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-5 border border-white/20 shadow-sm relative z-10 group-hover:scale-110 transition-transform`}>
                 <stat.icon className={`w-5 h-5 sm:w-7 sm:h-7 ${stat.color} drop-shadow-sm`} />
               </div>
@@ -840,27 +839,27 @@ const StudentProfile: React.FC = () => {
 
         <div className="mb-8 relative z-10">
           <div className="inline-flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 relative overflow-hidden">
-             <div
-               className={`absolute top-1 bottom-1 w-1/3 rounded-xl bg-white dark:bg-slate-700 shadow-sm transition-transform duration-300 ${activeTab === 'posts' ? 'translate-x-[200%]' : activeTab === 'badges' ? 'translate-x-full' : 'translate-x-0'}`}
-             />
-             <button
-               onClick={() => setActiveTab('achievements')}
-               className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors w-1/3 ${activeTab === 'achievements' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
-             >
-               Stats
-             </button>
-             <button
-               onClick={() => setActiveTab('badges')}
-               className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors w-1/3 ${activeTab === 'badges' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
-             >
-               Badges
-             </button>
-             <button
-               onClick={() => setActiveTab('posts')}
-               className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors w-1/3 ${activeTab === 'posts' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
-             >
-               Posts
-             </button>
+            <div
+              className={`absolute top-1 bottom-1 w-1/3 rounded-xl bg-white dark:bg-slate-700 shadow-sm transition-transform duration-300 ${activeTab === 'posts' ? 'translate-x-[200%]' : activeTab === 'badges' ? 'translate-x-full' : 'translate-x-0'}`}
+            />
+            <button
+              onClick={() => setActiveTab('achievements')}
+              className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors w-1/3 ${activeTab === 'achievements' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+            >
+              Stats
+            </button>
+            <button
+              onClick={() => setActiveTab('badges')}
+              className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors w-1/3 ${activeTab === 'badges' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+            >
+              Badges
+            </button>
+            <button
+              onClick={() => setActiveTab('posts')}
+              className={`relative z-10 px-5 py-2.5 text-sm font-black rounded-xl transition-colors w-1/3 ${activeTab === 'posts' ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
+            >
+              Posts
+            </button>
           </div>
         </div>
 
@@ -1003,64 +1002,64 @@ const StudentProfile: React.FC = () => {
                 </div>
               </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 via-pink-500 to-rose-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3.5 bg-purple-50 dark:bg-purple-900/40 rounded-2xl border border-purple-100 dark:border-purple-800 shadow-inner group-hover:scale-110 transition-transform">
-                <CheckCircle2 className="w-6 h-6 text-purple-600 dark:text-purple-400 drop-shadow-sm" />
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Solved Questions</h2>
-            </div>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 font-medium italic">Your latest triumphs in learning</p>
-
-            <div className="space-y-4">
-              {loadingSolved ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl"></div>
-                  ))}
-                </div>
-              ) : recentBattles.length === 0 ? (
-                <div className="py-12 text-center text-slate-400 italic">No questions solved yet.</div>
-              ) : (
-                recentBattles.slice(0, 3).map((q, index) => (
-                  <div
-                    key={index}
-                    className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 group/battle cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between mb-3 sm:mb-4">
-                      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-full flex items-center justify-center font-black text-base sm:text-lg shadow-inner group-hover/battle:scale-105 transition-transform overflow-hidden shrink-0">
-                           {q.createdByAvatar ? (
-                             // eslint-disable-next-line @next/next/no-img-element
-                             <img src={q.createdByAvatar} alt="author" width={48} height={48} className="object-cover w-full h-full" />
-                           ) : (
-                             <span className="text-slate-400">{q.subject?.charAt(0) || '?'}</span>
-                           )}
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-sm sm:text-lg text-slate-900 dark:text-white group-hover/battle:text-purple-600 transition-colors truncate">{q.title}</h3>
-                          <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">{q.subject}</p>
-                        </div>
-                      </div>
-                      <div className="shrink-0 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-wide uppercase bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50">
-                        Solved
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 pt-2 sm:pt-3 border-t border-slate-50 dark:border-slate-800/50">
-                      <span className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg">+{q.points} <span className="hidden sm:inline">Points</span></span>
-                      <span>{new Date(q.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
-                    </div>
+              <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 via-pink-500 to-rose-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3.5 bg-purple-50 dark:bg-purple-900/40 rounded-2xl border border-purple-100 dark:border-purple-800 shadow-inner group-hover:scale-110 transition-transform">
+                    <CheckCircle2 className="w-6 h-6 text-purple-600 dark:text-purple-400 drop-shadow-sm" />
                   </div>
-                ))
-              )}
-            </div>
-            <Link href="/solved" className="block w-full mt-8">
-              <button className="w-full py-4 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-black rounded-2xl transition-all duration-300 active:scale-95 border border-slate-200 dark:border-slate-700 shadow-sm">
-                View All Solved
-              </button>
-            </Link>
-          </div>
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Solved Questions</h2>
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 font-medium italic">Your latest triumphs in learning</p>
+
+                <div className="space-y-4">
+                  {loadingSolved ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl"></div>
+                      ))}
+                    </div>
+                  ) : recentBattles.length === 0 ? (
+                    <div className="py-12 text-center text-slate-400 italic">No questions solved yet.</div>
+                  ) : (
+                    recentBattles.slice(0, 3).map((q, index) => (
+                      <div
+                        key={index}
+                        className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-purple-200 dark:hover:border-purple-800 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 group/battle cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between mb-3 sm:mb-4">
+                          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-full flex items-center justify-center font-black text-base sm:text-lg shadow-inner group-hover/battle:scale-105 transition-transform overflow-hidden shrink-0">
+                              {q.createdByAvatar ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={q.createdByAvatar} alt="author" width={48} height={48} className="object-cover w-full h-full" />
+                              ) : (
+                                <span className="text-slate-400">{q.subject?.charAt(0) || '?'}</span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-bold text-sm sm:text-lg text-slate-900 dark:text-white group-hover/battle:text-purple-600 transition-colors truncate">{q.title}</h3>
+                              <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 truncate">{q.subject}</p>
+                            </div>
+                          </div>
+                          <div className="shrink-0 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-wide uppercase bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50">
+                            Solved
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 pt-2 sm:pt-3 border-t border-slate-50 dark:border-slate-800/50">
+                          <span className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg">+{q.points} <span className="hidden sm:inline">Points</span></span>
+                          <span>{new Date(q.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <Link href="/solved" className="block w-full mt-8">
+                  <button className="w-full py-4 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-black rounded-2xl transition-all duration-300 active:scale-95 border border-slate-200 dark:border-slate-700 shadow-sm">
+                    View All Solved
+                  </button>
+                </Link>
+              </div>
             </div>
 
             {/* Weekly Report */}
@@ -1105,7 +1104,7 @@ const StudentProfile: React.FC = () => {
 
                     <div className="p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/40 dark:shadow-none hover:-translate-y-1 transition-transform group/card">
                       <div className="w-14 h-14 bg-orange-50 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center mb-6 border border-orange-100 dark:border-orange-800 group-hover/card:scale-110 transition-transform">
-                         <Zap className="w-7 h-7 text-orange-600 dark:text-orange-400" />
+                        <Zap className="w-7 h-7 text-orange-600 dark:text-orange-400" />
                       </div>
                       <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Active Days</h3>
                       <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">{weeklyReport.stats.activeDays}<span className="text-2xl text-slate-400">/7</span></div>

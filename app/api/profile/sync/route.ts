@@ -48,9 +48,6 @@ export async function POST(req: NextRequest) {
         const metaPoints = Number(meta.totalPoints) || 0;
 
         let finalMeta = { ...meta };
-        if (callerAvatarUrl) {
-            finalMeta.avatar_url = callerAvatarUrl; // Inject fresh URL to bypass auth replication delay
-        }
         let metaNeedsUpdate = false;
 
         // ── 🛟 AVATAR RESCUE OPERATION ──
@@ -68,11 +65,17 @@ export async function POST(req: NextRequest) {
             metaNeedsUpdate = true;
         }
 
+        // callerAvatarUrl = freshly uploaded avatar sent by the client.
+        // Apply it LAST so it cannot be overwritten by any rescue/merge logic above.
+        if (callerAvatarUrl) {
+            finalMeta.avatar_url = callerAvatarUrl;
+            metaNeedsUpdate = true; // always write back to auth so it persists post-signout
+        }
+
         const dbCustomAvatar = dbProfile?.avatar_url && !isGoogleUrl(dbProfile.avatar_url) ? dbProfile.avatar_url : null;
         let metaCustomAvatar = finalMeta.avatar_url && !isGoogleUrl(finalMeta.avatar_url) ? finalMeta.avatar_url : null;
 
         // Avatar priority: meta always wins over DB when meta has a custom (non-Google) URL.
-        // This ensures a freshly uploaded avatar is never overwritten by a stale DB value.
         // DB-wins only applies as a fallback when the session has NO custom avatar at all.
         if (!metaCustomAvatar && dbCustomAvatar) {
             // Session has no custom avatar but DB does — restore it (e.g. manual DB edit)
@@ -89,7 +92,6 @@ export async function POST(req: NextRequest) {
 
         // Avatar self-heal: ALWAYS sync avatar_url → profiles.avatar_url when they differ.
         if (metaCustomAvatar && dbProfile?.avatar_url !== metaCustomAvatar) {
-            // DB has wrong value (null, Google URL, or an older Supabase URL) — overwrite with latest
             await supabaseAdmin
                 .from('profiles')
                 .update({ avatar_url: metaCustomAvatar })
