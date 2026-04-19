@@ -71,8 +71,11 @@ export async function POST(req: NextRequest) {
         const dbCustomAvatar = dbProfile?.avatar_url && !isGoogleUrl(dbProfile.avatar_url) ? dbProfile.avatar_url : null;
         let metaCustomAvatar = finalMeta.avatar_url && !isGoogleUrl(finalMeta.avatar_url) ? finalMeta.avatar_url : null;
 
-        if (!callerAvatarUrl && dbCustomAvatar && dbCustomAvatar !== metaCustomAvatar) {
-            // DB has a custom avatar that differs from Meta. Trust DB because user manually updated the DB.
+        // Avatar priority: meta always wins over DB when meta has a custom (non-Google) URL.
+        // This ensures a freshly uploaded avatar is never overwritten by a stale DB value.
+        // DB-wins only applies as a fallback when the session has NO custom avatar at all.
+        if (!metaCustomAvatar && dbCustomAvatar) {
+            // Session has no custom avatar but DB does — restore it (e.g. manual DB edit)
             finalMeta.avatar_url = dbCustomAvatar;
             metaCustomAvatar = dbCustomAvatar;
             metaNeedsUpdate = true;

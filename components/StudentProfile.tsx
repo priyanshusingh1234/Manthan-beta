@@ -246,12 +246,23 @@ const StudentProfile: React.FC = () => {
       if (dbProfile && mounted) {
         // Use the MAX of meta vs DB points — never show a lower number
         const freshPoints = Math.max(Number(meta.totalPoints) || 0, Number(dbProfile.total_points) || 0);
+
+        // Avatar priority: prefer the session-metadata avatar if it's a custom (non-Google)
+        // URL — it's always the most recent upload. Fall back to DB, then keep current state.
+        const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
+        const bestAvatar =
+          (metaAvatar && !isGoogleUrl(metaAvatar))
+            ? metaAvatar
+            : (dbProfile.avatar_url && !isGoogleUrl(dbProfile.avatar_url))
+              ? dbProfile.avatar_url
+              : (metaAvatar || dbProfile.avatar_url || null);
+
         setUserData((s) => ({
           ...s,
           name: dbProfile.full_name || s.name,
           school: dbProfile.school || s.school,
           bio: dbProfile.bio || s.bio,
-          avatar: dbProfile.avatar_url || s.avatar,
+          avatar: bestAvatar || s.avatar,
           username: dbProfile.username || s.username,
           totalPoints: freshPoints,
           battlesAttempted: Number(dbProfile.battles_attempted) || Number(meta.battlesAttempted) || 0,
