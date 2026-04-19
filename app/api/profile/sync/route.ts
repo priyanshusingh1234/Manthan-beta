@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
         // Bust the leaderboard cache so the next request reflects the latest
         leaderboardCache.invalidate();
         
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, meta: finalMeta });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }

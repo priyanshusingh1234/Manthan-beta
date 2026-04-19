@@ -228,12 +228,28 @@ const StudentProfile: React.FC = () => {
       }));
       setEquippedBadges(metaEquippedBadges);
 
-      // ── Step 2: Force-sync auth metadata → DB (ensures DB has latest points) ──
+      // ── Step 2: Force-sync auth metadata → DB (ensures DB has latest points and self-heals avatar) ──
       try {
-        await fetch('/api/profile/sync', {
+        const syncRes = await fetch('/api/profile/sync', {
           method: 'POST',
           headers: { Authorization: `Bearer ${session.access_token}` }
         });
+        if (syncRes.ok) {
+          const { meta: syncedMeta } = await syncRes.json();
+          if (syncedMeta) {
+              // The sync route might have "rescued" the avatar from DB to overwite a Google login.
+              // We must update the browser's UI cache to match the server IMMEDIATELY.
+              if (typeof window !== 'undefined') {
+                 localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(syncedMeta));
+                 window.dispatchEvent(new Event('user_metadata_updated'));
+              }
+              // Also update Step 1's meta so Step 3 freshPoints logic knows the restored values
+              Object.assign(meta, syncedMeta);
+              if (syncedMeta.avatar_url && !syncedMeta.avatar_url.includes('googleusercontent')) {
+                  metaAvatar = syncedMeta.avatar_url;
+              }
+          }
+        }
       } catch { /* non-blocking */ }
 
       // ── Step 3: Read fresh from DB (guaranteed current after sync) ──
@@ -276,6 +292,24 @@ const StudentProfile: React.FC = () => {
           bio: dbProfile.bio || metaBio || '',
           showWeeklyReport: meta.showWeeklyReport !== false
         });
+
+        // ── Step 4: getUser() & refreshSession() fetches server-authoritative metadata ──
+        // This guarantees the browser's actual JWT is permanently purged of the Google avatar.
+        const { data: freshUserData } = await supabase.auth.getUser();
+        await supabase.auth.refreshSession();
+        
+        if (freshUserData?.user && mounted) {
+          const freshMeta = freshUserData.user.user_metadata || {};
+          const freshAttempted = Number(freshMeta.battlesAttempted);
+          const freshWon = Number(freshMeta.battlesWon);
+          if (!isNaN(freshAttempted) || !isNaN(freshWon)) {
+            setUserData((s) => ({
+              ...s,
+              battlesAttempted: isNaN(freshAttempted) ? s.battlesAttempted : freshAttempted,
+              battlesWon: isNaN(freshWon) ? s.battlesWon : freshWon,
+            }));
+          }
+        }
       }
     });
     // Fetch real solved questions & weekly report
