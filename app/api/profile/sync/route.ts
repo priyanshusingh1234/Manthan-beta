@@ -5,18 +5,20 @@ import { leaderboardCache } from '@/lib/leaderboardCache';
 
 const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 export async function POST(req: NextRequest) {
     try {
         const authHeader = req.headers.get('authorization');
         if (!authHeader) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
         
         const token = authHeader.replace('Bearer ', '');
-        const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+        const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
         
-        if (!user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+        if (authErr || !user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
 
-        // Optional: caller can pass avatarUrl directly to bypass the timing race
-        // where admin.getUserById might still see old metadata right after auth.updateUser.
         let callerAvatarUrl: string | null = null;
         try {
             const body = await req.json().catch(() => ({}));
@@ -25,35 +27,38 @@ export async function POST(req: NextRequest) {
             }
         } catch { /* no body is fine */ }
 
-        // If caller gave us the new URL, write it immediately — no need to wait for auth propagation
-        if (callerAvatarUrl) {
-            await supabaseAdmin
-                .from('profiles')
-                .update({ avatar_url: callerAvatarUrl, updated_at: new Date().toISOString() })
-                .eq('id', user.id);
-            leaderboardCache.invalidate();
-        }
-
         // Fetch fresh from the DB to avoid stale JWT metadata
         const { data: freshUser } = await supabaseAdmin.auth.admin.getUserById(user.id);
         const meta = freshUser?.user?.user_metadata || user.user_metadata || {};
 
-        // Check if there are manual edits in the profiles table that are higher
+        let finalMeta = { ...meta };
+        let metaNeedsUpdate = false;
+
+        // If caller gave us the new URL, force it immediately into finalMeta BEFORE we process DB
+        if (callerAvatarUrl) {
+            finalMeta.avatar_url = callerAvatarUrl;
+            metaNeedsUpdate = true;
+            
+            // Immediately overwrite the DB
+            const { error: dbUpdateErr } = await supabaseAdmin
+                .from('profiles')
+                .update({ avatar_url: callerAvatarUrl })
+                .eq('id', user.id);
+                
+            if (dbUpdateErr) console.error("Force caller DB update failed:", dbUpdateErr);
+            leaderboardCache.invalidate();
+        }
+
         const { data: dbProfile } = await supabaseAdmin
             .from('profiles')
             .select('total_points, avatar_url')
             .eq('id', user.id)
             .maybeSingle();
-        const dbPoints = Number(dbProfile?.total_points) || 0;
-        const metaPoints = Number(meta.totalPoints) || 0;
 
-        let finalMeta = { ...meta };
-        let metaNeedsUpdate = false;
+        const dbPoints = Number(dbProfile?.total_points) || 0;
+        const metaPoints = Number(finalMeta.totalPoints) || 0;
 
         // ── 🛟 AVATAR RESCUE OPERATION ──
-        // If a user uploaded a custom avatar previously, it was saved in `custom_avatar_url`.
-        // If Google overwrote their `avatar_url`, we rescue their old photo back into `avatar_url`.
-        // We also purge `custom_avatar_url` from their metadata forever to complete the migration.
         if (finalMeta.custom_avatar_url && !isGoogleUrl(finalMeta.custom_avatar_url)) {
             finalMeta.avatar_url = finalMeta.custom_avatar_url;
             finalMeta.custom_avatar_url = null;
@@ -65,47 +70,30 @@ export async function POST(req: NextRequest) {
             metaNeedsUpdate = true;
         }
 
-        // callerAvatarUrl = freshly uploaded avatar sent by the client.
-        // Apply it LAST so it cannot be overwritten by any rescue/merge logic above.
-        if (callerAvatarUrl) {
-            finalMeta.avatar_url = callerAvatarUrl;
-            metaNeedsUpdate = true; // always write back to auth so it persists post-signout
-        }
-
         const dbCustomAvatar = dbProfile?.avatar_url && !isGoogleUrl(dbProfile.avatar_url) ? dbProfile.avatar_url : null;
         let metaCustomAvatar = finalMeta.avatar_url && !isGoogleUrl(finalMeta.avatar_url) ? finalMeta.avatar_url : null;
 
-        // Avatar priority: meta always wins over DB when meta has a custom (non-Google) URL.
-        // DB-wins only applies as a fallback when the session has NO custom avatar at all.
-        if (!metaCustomAvatar && dbCustomAvatar) {
-            // Session has no custom avatar but DB does — restore it (e.g. manual DB edit)
+        // Session has no custom avatar (Google) but DB does — restore it (ONLY if not uploading!)
+        if (!metaCustomAvatar && dbCustomAvatar && !callerAvatarUrl) {
             finalMeta.avatar_url = dbCustomAvatar;
             metaCustomAvatar = dbCustomAvatar;
             metaNeedsUpdate = true;
         }
 
         if (metaNeedsUpdate) {
-            // Clean up null fields to completely remove them from the JSONB column
             if (finalMeta.custom_avatar_url === null) delete finalMeta.custom_avatar_url;
-            await supabaseAdmin.auth.admin.updateUserById(user.id, { user_metadata: finalMeta });
+            const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(user.id, { user_metadata: finalMeta });
+            if (updErr) console.error("updateUserById Failed:", updErr);
         }
 
-        // Avatar self-heal: ALWAYS sync avatar_url → profiles.avatar_url when they differ.
-        if (metaCustomAvatar && dbProfile?.avatar_url !== metaCustomAvatar) {
-            await supabaseAdmin
-                .from('profiles')
-                .update({ avatar_url: metaCustomAvatar })
-                .eq('id', user.id);
-        }
+        // Final sync into the database safely
+        await upsertProfile(user.id, finalMeta, false);
 
-        // Force a sync of the current user's freshest metadata to the profiles table
-        await upsertProfile(user.id, finalMeta);
-
-        // Bust the leaderboard cache so the next request reflects the latest
         leaderboardCache.invalidate();
         
         return NextResponse.json({ success: true, meta: finalMeta });
     } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        console.error("FATAL ERROR IN SYNC:", err);
+        return NextResponse.json({ error: err.message || String(err) }, { status: 500 });
     }
 }
