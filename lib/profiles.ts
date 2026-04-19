@@ -37,7 +37,7 @@ export interface Profile {
  * that only carries the Google OAuth avatar_url — not the user's uploaded photo.
  * Without this guard, each game action would overwrite profiles.avatar_url → null.
  */
-export async function upsertProfile(userId: string, meta: Record<string, any>) {
+export async function upsertProfile(userId: string, meta: Record<string, any>, preserveDBPoints: boolean = false) {
     const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
 
     // Determine the best avatar to persist:
@@ -50,19 +50,27 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
 
     let finalAvatar: string | null = incomingCustom;
 
-    if (!finalAvatar) {
-        // Read the current DB value — only cost is when incoming meta lacks a custom avatar
-        // (i.e., every routine point-sync call). We preserve whatever custom URL is already there.
+    let dbPoints: number | undefined;
+    let dbBattlesAttempted: number | undefined;
+    let dbBattlesWon: number | undefined;
+
+    if (!finalAvatar || preserveDBPoints) {
+        // Read the current DB value
         try {
             const { data: existing } = await supabaseAdmin
                 .from('profiles')
-                .select('avatar_url')
+                .select('avatar_url, total_points, battles_attempted, battles_won')
                 .eq('id', userId)
                 .maybeSingle();
 
             if (existing?.avatar_url && !isGoogleUrl(existing.avatar_url)) {
                 // Good non-Google custom URL already stored — keep it
                 finalAvatar = existing.avatar_url;
+            }
+            if (existing) {
+                dbPoints = existing.total_points;
+                dbBattlesAttempted = existing.battles_attempted;
+                dbBattlesWon = existing.battles_won;
             }
         } catch { /* non-fatal — fall through to null */ }
     }
@@ -78,7 +86,9 @@ export async function upsertProfile(userId: string, meta: Record<string, any>) {
         streak_count: Number(meta.streakCount) || 0,
         last_streak_at: meta.lastStreakAt || null,
         daily_solved: Number(meta.dailySolved) || 0,
-        total_points: Number(meta.totalPoints) || 0,
+        total_points: preserveDBPoints && dbPoints !== undefined ? dbPoints : (Number(meta.totalPoints) || 0),
+        battles_attempted: preserveDBPoints && dbBattlesAttempted !== undefined ? dbBattlesAttempted : (Number(meta.battlesAttempted) || 0),
+        battles_won: preserveDBPoints && dbBattlesWon !== undefined ? dbBattlesWon : (Number(meta.battlesWon) || 0),
         username: meta.username || null,
         updated_at: new Date().toISOString(),
         cosmetics: meta.cosmetics || [],

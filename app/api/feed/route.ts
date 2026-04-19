@@ -712,7 +712,7 @@ export async function GET(req: NextRequest) {
                         // serverless once the response is sent.
                         if (fallbackAvatar) {
                             const { upsertProfile } = await import('@/lib/profiles');
-                            await upsertProfile(id, meta);
+                            await upsertProfile(id, meta, true);
                         }
                     }
                 } catch { /* non-fatal */ }

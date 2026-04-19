@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
         });
 
         // CRITICAL FIX: Keep profiles table in sync for live lookups
-        await upsertProfile(user.id, updatedMeta);
+        await upsertProfile(user.id, updatedMeta, true);
 
         return NextResponse.json({ success: true, school, squad });
     } catch (err: any) {

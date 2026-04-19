@@ -87,7 +87,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const authorName = meta.fullName || meta.name || user.email?.split('@')[0];
 
         // Keep profiles table in sync
-        await upsertProfile(user.id, meta);
+        await upsertProfile(user.id, meta, true);
 
         // --- Tagging / Mentions Logic ---
         const mentionRegex = /@([\w.-]+)/g;

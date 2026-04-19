@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
                     });
 
                     // CRITICAL FIX: Keep profiles table in sync
-                    await upsertProfile(joinRequest.user_id, updatedMeta);
+                    await upsertProfile(joinRequest.user_id, updatedMeta, true);
                 }
                 return NextResponse.json({ success: true, message: 'Student approved and added to school!' });
             }
