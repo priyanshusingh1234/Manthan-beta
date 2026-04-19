@@ -16,7 +16,6 @@ export interface Profile {
     school: string | null;
     school_id: string | null;
     is_teacher: boolean;
-    is_ghost: boolean;
     streak_count: number;
     last_streak_at: string | null;
     daily_solved: number;
@@ -78,7 +77,6 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         school: meta.school || null,
         school_id: meta.school_id ? String(meta.school_id) : null,
         is_teacher: meta.isTeacher === true,
-        is_ghost: false, // Explicitly clear ghost flag — upsertProfile is only called for real active users
         streak_count: Number(meta.streakCount) || 0,
         last_streak_at: meta.lastStreakAt || null,
         daily_solved: Number(meta.dailySolved) || 0,
