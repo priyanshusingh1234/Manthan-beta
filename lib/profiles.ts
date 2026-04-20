@@ -56,7 +56,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         try {
             const { data: existing } = await supabaseAdmin
                 .from('profiles')
-                .select('avatar_url, total_points')
+                .select('avatar_url, total_points, cosmetics')
                 .eq('id', userId)
                 .maybeSingle();
 
@@ -68,6 +68,10 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
             }
             if (existing) {
                 dbPoints = existing.total_points;
+                // If incoming meta doesn't have cosmetics, but DB does, preserve DB ones
+                if (!meta.cosmetics && existing.cosmetics) {
+                    meta.cosmetics = existing.cosmetics;
+                }
             }
         } catch { /* non-fatal — fall through to null */ }
     }

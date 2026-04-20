@@ -40,8 +40,10 @@ export async function DELETE(req: Request) {
             return NextResponse.json({ error: 'Unauthorized to delete this path' }, { status: 403 });
         }
 
-        // Strip bucket name from path if it was included (Supabase remove() expects relative path)
-        const cleanPath = path.startsWith(`${bucket}/`) ? path.slice(bucket.length + 1) : path;
+        // Supabase remove() expects the full path relative to the bucket.
+        // We no longer strip the bucket name from the path because our app 
+        // explicitly uses paths like "avatars/USER_ID/..." inside the 'avatars' bucket.
+        const cleanPath = path;
 
         const { error } = await supabaseAdmin.storage.from(bucket).remove([cleanPath]);
 
