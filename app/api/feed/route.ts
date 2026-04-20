@@ -564,9 +564,12 @@ export async function GET(req: NextRequest) {
 
                 for (const post of scoredPosts) {
                     const authorId = post.author.id;
-                    const slots = authorSlots[authorId] || 0;
-                    if (slots >= 2) continue; // Diversity guard
-                    authorSlots[authorId] = slots + 1;
+                    // Own posts are always shown — never throttled by the diversity guard
+                    if (authorId !== userId) {
+                        const slots = authorSlots[authorId] || 0;
+                        if (slots >= 2) continue; // Diversity guard
+                        authorSlots[authorId] = slots + 1;
+                    }
 
                     const isFollowed = followingIds.includes(authorId);
                     const isSchoolmate = userSchoolName && post.author.school === userSchoolName;

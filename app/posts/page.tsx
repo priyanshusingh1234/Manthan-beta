@@ -62,7 +62,7 @@ export default function SocialFeedPage() {
             const postItems = allItems.filter((item: any) => item.type === 'post');
 
             if (postItems.length < 5) {
-                const fbRes = await fetch('/api/posts?limit=20', {
+                const fbRes = await fetch(`/api/posts?limit=20&t=${Date.now()}`, {
                     headers: token ? { Authorization: `Bearer ${token}` } : {},
                     cache: 'no-store',
                 });
@@ -102,7 +102,7 @@ export default function SocialFeedPage() {
             }
 
             const token = session?.access_token || null;
-            const fbRes = await fetch(`/api/posts?limit=20&before=${encodeURIComponent(cursor)}`, {
+            const fbRes = await fetch(`/api/posts?limit=20&before=${encodeURIComponent(cursor)}&t=${Date.now()}`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                 cache: 'no-store',
             });
@@ -268,12 +268,49 @@ export default function SocialFeedPage() {
                 body: JSON.stringify({ content: content.trim(), imageUrl }),
             });
             if (!res.ok) throw new Error((await res.json()).error || 'Failed');
+            const newPostRaw = await res.json();
 
-            // Reset composer and refresh feed
+            // ── Optimistic UI: prepend instantly so the post is immediately visible ──
+            // Grab author info from cache to avoid a round-trip
+            let cachedMeta: any = {};
+            try { cachedMeta = JSON.parse(localStorage.getItem('dheeyudha_user_meta_cache') || '{}'); } catch { }
+            const localMeta = session.user?.user_metadata || {};
+            const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
+            const authorAvatar = (() => {
+                const u = cachedMeta?.avatar_url || localMeta?.avatar_url;
+                return u && !isGoogleUrl(u) ? u : null;
+            })();
+
+            const optimisticPost: any = {
+                id: newPostRaw.id,
+                type: 'post',
+                content: content.trim(),
+                image_url: imageUrl,
+                likes_count: 0,
+                comments_count: 0,
+                created_at: newPostRaw.created_at || new Date().toISOString(),
+                is_liked_by_me: false,
+                _feedLabel: '✨ Just posted',
+                author: {
+                    id: session.user.id,
+                    name: cachedMeta?.fullName || localMeta?.fullName || localMeta?.full_name || 'You',
+                    username: cachedMeta?.username || localMeta?.username || null,
+                    avatar_url: authorAvatar,
+                    isTeacher: localMeta?.is_teacher || false,
+                    totalPoints: 0,
+                },
+            };
+
+            // Reset composer
             setContent('');
             removeImage();
             setFocused(false);
             if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+            // Prepend the new post immediately so it's visible right away
+            setPosts(prev => [optimisticPost, ...prev.filter(p => p.id !== optimisticPost.id)]);
+
+            // Then silently refresh in the background to sync full db state
             fetchFeed();
         } catch (err: any) {
             setPostError(err.message);

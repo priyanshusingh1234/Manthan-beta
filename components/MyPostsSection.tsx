@@ -27,7 +27,7 @@ export default function MyPostsSection({ userId }: MyPostsSectionProps = {}) {
       }
 
       // Always use the public user route — same one the public profile uses, no auth required
-      const res = await fetch(`/api/posts/user/${resolvedUserId}`, {
+      const res = await fetch(`/api/posts/user/${resolvedUserId}?t=${Date.now()}`, {
         cache: 'no-store',
       });
 
