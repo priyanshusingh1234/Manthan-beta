@@ -73,8 +73,10 @@ export async function POST(req: NextRequest) {
         const dbCustomAvatar = dbProfile?.avatar_url && !isGoogleUrl(dbProfile.avatar_url) ? dbProfile.avatar_url : null;
         let metaCustomAvatar = finalMeta.avatar_url && !isGoogleUrl(finalMeta.avatar_url) ? finalMeta.avatar_url : null;
 
-        // Session has no custom avatar (Google) but DB does — restore it (ONLY if not uploading!)
-        if (!metaCustomAvatar && dbCustomAvatar && !callerAvatarUrl) {
+        // DB ALWAYS WINS: If DB has a custom avatar, and it doesn't match the JWT,
+        // it means the JWT is stale. The DB is the sacred source of truth.
+        // We sync the DB's avatar back to the JWT metadata to heal the session permanently.
+        if (dbCustomAvatar && metaCustomAvatar !== dbCustomAvatar && !callerAvatarUrl) {
             finalMeta.avatar_url = dbCustomAvatar;
             metaCustomAvatar = dbCustomAvatar;
             metaNeedsUpdate = true;
