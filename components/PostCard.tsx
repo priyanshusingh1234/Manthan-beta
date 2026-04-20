@@ -81,25 +81,52 @@ export default function PostCard({
     useEffect(() => {
         if (suppliedCurrentUserData !== undefined) return;
         
-        supabase.auth.getUser().then(({ data }) => {
+        let mounted = true;
+        const syncUser = async () => {
+            const { data } = await supabase.auth.getUser();
+            if (!mounted) return;
+
             const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim());
             if (data?.user?.email && adminEmails.includes(data.user.email)) {
                 setIsAdmin(true);
             }
-            if (data?.user) {
-                setLocalCurrentUserData(data.user.user_metadata || {});
+            
+            let meta = data?.user?.user_metadata || {};
+            if (typeof window !== 'undefined') {
+                try {
+                    const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+                    if (cached) meta = { ...meta, ...JSON.parse(cached) };
+                } catch { /* ignore */ }
             }
-        });
+            setLocalCurrentUserData(meta);
+        };
+
+        syncUser();
+
+        const handleUpdate = () => syncUser();
+        if (typeof window !== 'undefined') {
+            window.addEventListener('user_metadata_updated', handleUpdate);
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'dheeyudha_user_meta_cache') handleUpdate();
+            });
+        }
+
+        return () => { 
+            mounted = false;
+            if (typeof window !== 'undefined') window.removeEventListener('user_metadata_updated', handleUpdate);
+        };
     }, [suppliedCurrentUserData]);
 
     const effectiveAuthor = isOwner && currentUserData ? {
         ...post.author,
-        // Prioritize the DB-sourced avatar (post.author) over session metadata,
-        // because user_metadata may contain a stale Google OAuth URL that has
-        // already been correctly overridden in the profiles table by the API.
-        avatar_url: post.author.avatar_url || currentUserData.avatar_url,
-        name: post.author.name || currentUserData.fullName,
-        cosmetics: post.author.cosmetics || currentUserData.cosmetics,
+        // Prioritize the fresh session metadata (currentUserData) for the owner,
+        // because the background feed API might still return a stale joined avatar_url
+        // from the database cache.
+        avatar_url: (currentUserData.avatar_url && !currentUserData.avatar_url.includes('googleusercontent')) 
+            ? currentUserData.avatar_url 
+            : (post.author.avatar_url || currentUserData.avatar_url),
+        name: currentUserData.fullName || post.author.name || currentUserData.name,
+        cosmetics: currentUserData.cosmetics || post.author.cosmetics,
     } : post.author;
 
     useEffect(() => {

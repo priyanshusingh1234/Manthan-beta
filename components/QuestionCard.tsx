@@ -68,35 +68,83 @@ function AvatarImage({
   const [failed, setFailed] = useState(false);
   const initials = String((name || "T").split(" ").map((s) => s[0]).join("")).slice(0, 2).toUpperCase();
 
-  // If API-provided src is null, do a direct profiles table lookup
+  // If API-provided src is null or this is the current user, try to resolve from DB/Cache
   useEffect(() => {
-    if (src) { setResolvedSrc(src); setFailed(false); return; }
-    if (!userId) return;
+    let mounted = true;
+    
+    const resolveAvatar = async () => {
+      // 1. Check if this is the current user and we have a local cache
+      if (typeof window !== 'undefined' && userId) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user?.id === userId) {
+            const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed.avatar_url && !parsed.avatar_url.includes('googleusercontent')) {
+                if (mounted) {
+                  setResolvedSrc(parsed.avatar_url);
+                  setFailed(false);
+                  return;
+                }
+              }
+            }
+          }
+        } catch { /* ignore */ }
+      }
 
-    if (userId in avatarCache) {
-      setResolvedSrc(avatarCache[userId]);
-      return;
+      // 2. If we have a direct src, use it as fallback
+      if (src) { 
+        if (mounted) {
+          setResolvedSrc(src); 
+          setFailed(false); 
+        }
+        return; 
+      }
+      
+      // 3. Otherwise, check global memory cache or fetch from DB
+      if (!userId) return;
+      if (userId in avatarCache) {
+        if (mounted) setResolvedSrc(avatarCache[userId]);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (!mounted) return;
+      
+      const raw = data?.avatar_url || null;
+      const isGoogle = (u: string | null) => !!u && u.includes('googleusercontent.com');
+      const url = raw && !isGoogle(raw) ? raw : null;
+      avatarCache[userId] = url;
+      setResolvedSrc(url);
+    };
+
+    resolveAvatar();
+
+    const handleUpdate = () => {
+      // Clear cache and re-resolve
+      if (userId) delete avatarCache[userId];
+      resolveAvatar();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('user_metadata_updated', handleUpdate);
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'dheeyudha_user_meta_cache') handleUpdate();
+      });
     }
 
-    let mounted = true;
-    supabase
-      .from('profiles')
-      .select('avatar_url')
-      .eq('id', userId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!mounted) return;
-        // Mirror server logic: Google OAuth URLs are treated as null.
-        // Users with no custom upload will correctly show initials.
-        const raw = data?.avatar_url || null;
-        const isGoogle = (u: string | null) => !!u && u.includes('googleusercontent.com');
-        const url = raw && !isGoogle(raw) ? raw : null;
-        avatarCache[userId] = url;
-        setResolvedSrc(url);
-      })
-      .catch(() => { /* non-fatal */ });
-
-    return () => { mounted = false; };
+    return () => { 
+      mounted = false; 
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('user_metadata_updated', handleUpdate);
+      }
+    };
   }, [src, userId]);
 
   const fallback = (
