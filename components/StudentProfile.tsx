@@ -302,12 +302,24 @@ const StudentProfile: React.FC = () => {
           const freshMeta = freshUserData.user.user_metadata || {};
           const freshAttempted = Number(freshMeta.battlesAttempted);
           const freshWon = Number(freshMeta.battlesWon);
-          if (!isNaN(freshAttempted) || !isNaN(freshWon)) {
-            setUserData((s) => ({
-              ...s,
-              battlesAttempted: isNaN(freshAttempted) ? s.battlesAttempted : freshAttempted,
-              battlesWon: isNaN(freshWon) ? s.battlesWon : freshWon,
-            }));
+          
+          const guaranteedAvatar = dbProfile?.avatar_url && !dbProfile.avatar_url.includes('googleusercontent') 
+            ? dbProfile.avatar_url 
+            : freshMeta.avatar_url;
+
+          setUserData((s) => ({
+            ...s,
+            avatar: guaranteedAvatar || s.avatar,
+            battlesAttempted: isNaN(freshAttempted) ? s.battlesAttempted : freshAttempted,
+            battlesWon: isNaN(freshWon) ? s.battlesWon : freshWon,
+          }));
+
+          if (guaranteedAvatar) {
+            if (typeof window !== 'undefined') {
+              const currentCache = JSON.parse(localStorage.getItem('dheeyudha_user_meta_cache') || '{}');
+              localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify({ ...currentCache, ...freshMeta, avatar_url: guaranteedAvatar }));
+              window.dispatchEvent(new Event('user_metadata_updated'));
+            }
           }
         }
       }
