@@ -12,6 +12,7 @@ interface CropModalProps {
     onCropComplete: (croppedArea: Area, croppedAreaPixels: Area) => void;
     onSave: () => void;
     onCancel: () => void;
+    loading?: boolean;
 }
 
 export default function CropModal({
@@ -24,6 +25,7 @@ export default function CropModal({
     onCropComplete,
     onSave,
     onCancel,
+    loading = false,
 }: CropModalProps) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -62,9 +64,13 @@ export default function CropModal({
                         </button>
                         <button
                             onClick={onSave}
-                            className="px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium hover:from-blue-700 hover:to-purple-700 transition shadow-md"
+                            disabled={loading}
+                            className="flex items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium hover:from-blue-700 hover:to-purple-700 transition shadow-md disabled:opacity-50"
                         >
-                            Save
+                            {loading ? (
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : null}
+                            {loading ? 'Saving...' : 'Save'}
                         </button>
                     </div>
                 </div>

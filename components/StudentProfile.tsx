@@ -8,7 +8,7 @@ import { getCroppedImg, blobToFile } from '@/utils/cropImage';
 import { compressImage } from '@/utils/compressImage';
 import {
   Trophy, Target, Award, Zap, BookOpen, Users, TrendingUp,
-  Star, Medal, Brain, Sword, Shield, Pencil, Check, X, CheckCircle2
+  Star, Medal, Brain, Sword, Shield, Pencil, Check, X, CheckCircle2, Loader2
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -428,13 +428,21 @@ const StudentProfile: React.FC = () => {
     const urlKey = `${type}_url`;
     const customUrlKey = `custom_${type}_url`;
     const maybeUrl = (currentUser.user_metadata?.[customUrlKey] || currentUser.user_metadata?.[urlKey]) as string | undefined;
+    
+    // If we have an avatar_path / banner_path, use it. 
+    // Fallback: Parse it from the URL if it's a Supabase public URL.
     if (!oldPath && maybeUrl && typeof maybeUrl === 'string') {
       try {
         const m = maybeUrl.match(/\/storage\/v1\/object\/public\/(?:[^\/]+)\/(.+)$/);
-        if (m && m[1]) oldPath = decodeURIComponent(m[1]);
-      } catch {
-        // ignore parse errors
-      }
+        if (m && m[1]) {
+          oldPath = decodeURIComponent(m[1]);
+        }
+      } catch { /* ignore parse errors */ }
+    }
+
+    // Protect against deleting external URLs (like Google)
+    if (oldPath && (oldPath.includes('googleusercontent') || oldPath.includes('http'))) {
+      oldPath = null;
     }
     try {
       if (type === 'avatar') setAvatarUploading(true);
@@ -672,6 +680,7 @@ const StudentProfile: React.FC = () => {
             onCropComplete={onCropComplete}
             onSave={onCropSave}
             onCancel={() => setShowCrop(false)}
+            loading={avatarUploading || bannerUploading}
           />
         )}
 
@@ -695,11 +704,20 @@ const StudentProfile: React.FC = () => {
                   src={currentUser.user_metadata.banner_url}
                   alt="banner"
                   fill
-                  className="object-cover opacity-90"
+                  className={`object-cover transition-opacity duration-300 ${bannerUploading ? 'opacity-50' : 'opacity-90'}`}
                 />
               </div>
             ) : (
               <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
+            )}
+
+            {bannerUploading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px] z-10">
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="w-10 h-10 text-white animate-spin" />
+                  <span className="text-white font-bold text-sm drop-shadow-md">Uploading...</span>
+                </div>
+              </div>
             )}
 
             {/* subtle divider/shadow at banner bottom to separate from card */}
@@ -734,9 +752,15 @@ const StudentProfile: React.FC = () => {
                       : 'border-white dark:border-slate-900'
                     }`}>
                     {typeof userData.avatar === 'string' && userData.avatar.startsWith('http') ? (
-                      <Image src={userData.avatar} alt="avatar" width={144} height={144} className="object-cover w-full h-full" />
+                      <Image src={userData.avatar} alt="avatar" width={144} height={144} className={`object-cover w-full h-full transition-opacity ${avatarUploading ? 'opacity-30' : 'opacity-100'}`} />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl sm:text-5xl">{userData.avatar}</div>
+                      <div className={`w-full h-full flex items-center justify-center text-4xl sm:text-5xl transition-opacity ${avatarUploading ? 'opacity-30' : 'opacity-100'}`}>{userData.avatar}</div>
+                    )}
+                    
+                    {avatarUploading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/5">
+                        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                      </div>
                     )}
                   </div>
                   <label className="absolute -bottom-1 left-1/2 -translate-x-1/2 cursor-pointer opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity z-20">
