@@ -28,9 +28,9 @@ export default function EditProfileModal({
     onClose,
 }: EditProfileModalProps) {
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 sm:p-4 animate-in fade-in zoom-in-95 overflow-hidden">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="relative bg-white dark:bg-slate-900 sm:rounded-[2rem] shadow-2xl w-full max-w-lg h-full sm:h-auto sm:max-h-[90vh] flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
                 {/* Header */}
                 <div className="px-6 py-4 shrink-0 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                     <h3 className="text-xl font-black text-slate-900 dark:text-white">Edit Profile</h3>
