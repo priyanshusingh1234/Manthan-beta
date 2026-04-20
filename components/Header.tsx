@@ -43,17 +43,60 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
       if (!visited) setIsFirstSearch(true);
     }
     let mounted = true;
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (mounted) setUser(user);
-    });
+
+    const syncSessionAndCache = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      let finalUser = session?.user ?? null;
+
+      if (finalUser && typeof window !== 'undefined') {
+        try {
+          const cachedMeta = localStorage.getItem('dheeyudha_user_meta_cache');
+          if (cachedMeta) {
+            const parsed = JSON.parse(cachedMeta);
+            finalUser = { ...finalUser, user_metadata: { ...finalUser.user_metadata, ...parsed } };
+          }
+        } catch { /* ignore */ }
+      }
+
+      if (mounted) setUser(finalUser);
+      
+      // Still fetch the actual fresh user in background to ensure it wasn't externally updated
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (mounted && user) {
+          if (typeof window !== 'undefined') {
+              const cachedMeta = localStorage.getItem('dheeyudha_user_meta_cache');
+              const finalMeta = cachedMeta ? { ...user.user_metadata, ...JSON.parse(cachedMeta) } : user.user_metadata;
+              setUser({ ...user, user_metadata: finalMeta });
+          } else {
+              setUser(user);
+          }
+        }
+      });
+    };
+
+    syncSessionAndCache();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) setUser(session?.user ?? null);
+      syncSessionAndCache();
     });
+
+    const handleMetaUpdate = () => {
+      syncSessionAndCache();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('user_metadata_updated', handleMetaUpdate);
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'dheeyudha_user_meta_cache') handleMetaUpdate();
+      });
+    }
 
     return () => {
       mounted = false;
       listener?.subscription.unsubscribe();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('user_metadata_updated', handleMetaUpdate);
+      }
     };
   }, []);
 

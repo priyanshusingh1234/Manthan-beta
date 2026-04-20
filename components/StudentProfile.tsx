@@ -469,6 +469,11 @@ const StudentProfile: React.FC = () => {
           },
           body: JSON.stringify(type === 'avatar' ? { avatarUrl: publicUrl } : {}),
         }).catch(console.error);
+        
+        // Force the browser to grab a completely new JWT from the server.
+        // This is strictly required because supabase.auth.updateUser silenty drops
+        // `avatar_url` from the client cache to protect OAuth profiles.
+        await supabase.auth.refreshSession();
       }
 
       if (type === 'avatar') setUserData((s) => ({ ...s, avatar: publicUrl }));

@@ -66,26 +66,49 @@ export default function DesktopSidebar() {
   useEffect(() => {
     let mounted = true;
 
-    const getSession = async () => {
+    const syncSessionAndCache = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      let finalUser = session?.user ?? null;
+      if (finalUser && typeof window !== 'undefined') {
+        try {
+          const cachedMeta = localStorage.getItem('dheeyudha_user_meta_cache');
+          if (cachedMeta) {
+            const parsed = JSON.parse(cachedMeta);
+            finalUser = { ...finalUser, user_metadata: { ...finalUser.user_metadata, ...parsed } };
+          }
+        } catch { /* ignore parse errors */ }
+      }
+
       if (mounted) {
-        setUser(session?.user ?? null);
+        setUser(finalUser);
         setToken(session?.access_token ?? null);
       }
     };
 
-    getSession();
+    syncSessionAndCache();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
-        setUser(session?.user ?? null);
-        setToken(session?.access_token ?? null);
-      }
+      syncSessionAndCache();
     });
+
+    const handleMetaUpdate = () => {
+      syncSessionAndCache();
+    };
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('user_metadata_updated', handleMetaUpdate);
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'dheeyudha_user_meta_cache') handleMetaUpdate();
+      });
+    }
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('user_metadata_updated', handleMetaUpdate);
+      }
     };
   }, []);
 
