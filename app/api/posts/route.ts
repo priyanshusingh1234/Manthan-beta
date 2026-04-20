@@ -67,8 +67,7 @@ export async function GET(req: NextRequest) {
                         cosmetics: profile?.cosmetics || [],
                     }
                 };
-            })
-            .filter(p => !p.author.isGhost || (currentUserId ? p.author.id === currentUserId : false));
+            });
 
         return NextResponse.json(enriched);
     } catch (err: any) {
@@ -143,7 +142,7 @@ export async function POST(req: NextRequest) {
                     href: `/posts/${post.id}`,
                     actorId: user.id,
                     actorName: authorName,
-                    actorAvatar: authorAvatar,
+                    actorAvatar: authorAvatar ?? undefined,
                 }))
             );
         }
@@ -170,7 +169,7 @@ export async function POST(req: NextRequest) {
                     href: `/posts/${post.id}`,
                     actorId: user.id,
                     actorName: authorName,
-                    actorAvatar: authorAvatar,
+                    actorAvatar: authorAvatar ?? undefined,
                 }))
             );
         }

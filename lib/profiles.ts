@@ -23,6 +23,7 @@ export interface Profile {
     username: string | null;
     updated_at: string;
     cosmetics?: string[] | null;
+    is_ghost?: boolean;
 }
 
 /**
