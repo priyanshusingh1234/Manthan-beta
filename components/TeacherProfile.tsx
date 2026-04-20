@@ -68,35 +68,98 @@ const TeacherProfile: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!mounted) return;
-      setCurrentUser(user || null);
-      if (user) {
-        const meta = user.user_metadata || {};
-        const metaFullName = typeof meta.fullName === 'string' ? meta.fullName : undefined;
-        const metaUsername = typeof meta.username === 'string' ? meta.username : '';
-        const metaAvatar = (typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined) || (typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined) || (typeof meta.picture === 'string' ? meta.picture : undefined);
-        const metaBio = typeof meta.bio === 'string' ? meta.bio : undefined;
+      if (!session?.user) return;
+      const user = session.user;
+      setCurrentUser(user);
 
-        setEditForm({
-          name: metaFullName || user.email || '',
-          username: metaUsername,
-          school: meta.school || '',
-          subject: meta.mainSubject || meta.main_subject || '',
-          bio: meta.bio || ''
+      // Fetch fresh user to ensure we don't block render
+      supabase.auth.getUser().then(({ data: fUser }) => {
+        if (fUser?.user && mounted) setCurrentUser(fUser.user);
+      });
+
+      // ── Step 1: Render immediately from metadata ──
+      const meta = user.user_metadata || {};
+      const metaFullName = typeof meta.fullName === 'string' ? meta.fullName : undefined;
+      const metaUsername = typeof meta.username === 'string' ? meta.username : '';
+      let metaAvatar = (typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined) || (typeof meta.picture === 'string' ? meta.picture : undefined);
+      const metaBio = typeof meta.bio === 'string' ? meta.bio : undefined;
+
+      setEditForm({
+        name: metaFullName || user.email || '',
+        username: metaUsername,
+        school: meta.school || '',
+        subject: meta.mainSubject || meta.main_subject || '',
+        bio: metaBio || ''
+      });
+
+      setUserData((s) => ({
+        ...s,
+        name: metaFullName || user.email || 'User',
+        school: meta.school || s.school,
+        subject: meta.mainSubject || meta.main_subject || s.subject,
+        bio: metaBio || s.bio,
+        avatar: metaAvatar || s.avatar,
+        username: metaUsername,
+        usernameUpdates: Array.isArray(meta.username_updates) ? meta.username_updates : []
+      }));
+
+      // ── Step 2: Force-sync auth metadata → DB (self-heals avatar) ──
+      try {
+        const syncRes = await fetch('/api/profile/sync', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` }
         });
+        if (syncRes.ok) {
+          const { meta: syncedMeta } = await syncRes.json();
+          if (syncedMeta) {
+              if (typeof window !== 'undefined') {
+                 localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(syncedMeta));
+                 window.dispatchEvent(new Event('user_metadata_updated'));
+              }
+              Object.assign(meta, syncedMeta);
+              if (syncedMeta.avatar_url && !syncedMeta.avatar_url.includes('googleusercontent')) {
+                  metaAvatar = syncedMeta.avatar_url;
+              }
+          }
+        }
+      } catch { /* non-blocking */ }
+
+      // ── Step 3: Read fresh from DB (guaranteed current after sync) ──
+      const { data: dbProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (dbProfile && mounted) {
+        const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
+        const bestAvatar =
+          (metaAvatar && !isGoogleUrl(metaAvatar))
+            ? metaAvatar
+            : (dbProfile.avatar_url && !isGoogleUrl(dbProfile.avatar_url))
+              ? dbProfile.avatar_url
+              : (metaAvatar || dbProfile.avatar_url || null);
 
         setUserData((s) => ({
           ...s,
-          name: metaFullName || user.email || 'User',
-          school: meta.school || s.school,
-          subject: meta.mainSubject || meta.main_subject || s.subject,
-          bio: meta.bio || s.bio,
-          avatar: metaAvatar || s.avatar,
-          username: metaUsername,
-          usernameUpdates: Array.isArray(meta.username_updates) ? meta.username_updates : []
+          name: dbProfile.full_name || s.name,
+          school: dbProfile.school || s.school,
+          subject: dbProfile.main_subject || s.subject,
+          bio: dbProfile.bio || s.bio,
+          avatar: bestAvatar || s.avatar,
+          username: dbProfile.username || s.username,
         }));
-
+        setEditForm({
+          name: dbProfile.full_name || metaFullName || '',
+          username: dbProfile.username || metaUsername || '',
+          school: dbProfile.school || meta.school || '',
+          subject: dbProfile.main_subject || meta.mainSubject || meta.main_subject || '',
+          bio: dbProfile.bio || metaBio || '',
+        });
+        
+        // ── Step 4: Refresh Teacher Stats ──
         supabase.from('teacher_stats').select('average_rating, total_reviews').eq('teacher_id', user.id).maybeSingle().then(({ data }) => {
           if (mounted && data) {
             setStatsData({
@@ -172,13 +235,21 @@ const TeacherProfile: React.FC = () => {
     const urlKey = `${type}_url`;
     const customUrlKey = `custom_${type}_url`;
     const maybeUrl = (currentUser.user_metadata?.[customUrlKey] || currentUser.user_metadata?.[urlKey]) as string | undefined;
+
+    // If we have an avatar_path / banner_path, use it. 
+    // Fallback: Parse it from the URL if it's a Supabase public URL.
     if (!oldPath && maybeUrl && typeof maybeUrl === 'string') {
       try {
         const m = maybeUrl.match(/\/storage\/v1\/object\/public\/(?:[^\/]+)\/(.+)$/);
-        if (m && m[1]) oldPath = decodeURIComponent(m[1]);
-      } catch {
-        // ignore parse errors
-      }
+        if (m && m[1]) {
+          oldPath = decodeURIComponent(m[1]);
+        }
+      } catch { /* ignore parse errors */ }
+    }
+
+    // Protect against deleting external URLs (like Google)
+    if (oldPath && (oldPath.includes('googleusercontent') || oldPath.includes('http'))) {
+      oldPath = null;
     }
     try {
       if (type === 'avatar') setAvatarUploading(true);
@@ -205,16 +276,19 @@ const TeacherProfile: React.FC = () => {
       // and on the leaderboard for the rest of this request lifecycle.
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
-          await fetch('/api/profile/sync', {
-              method: 'POST',
-              headers: {
-                  Authorization: `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json',
-              },
-              // Pass the new URL directly so the server writes it immediately,
-              // bypassing the race where admin.getUserById might still see old metadata.
-              body: JSON.stringify(type === 'avatar' ? { avatarUrl: publicUrl } : {}),
-          }).catch(console.error);
+        await fetch('/api/profile/sync', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(type === 'avatar' ? { avatarUrl: publicUrl } : {}),
+        }).catch(console.error);
+        
+        // Force the browser to grab a completely new JWT from the server.
+        // This is strictly required because supabase.auth.updateUser silenty drops
+        // `avatar_url` from the client cache to protect OAuth profiles.
+        await supabase.auth.refreshSession();
       }
 
       if (type === 'avatar') setUserData((s) => ({ ...s, avatar: publicUrl }));

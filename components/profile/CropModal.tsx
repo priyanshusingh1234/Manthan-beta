@@ -28,10 +28,10 @@ export default function CropModal({
     loading = false,
 }: CropModalProps) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
-            <div className="relative bg-white dark:bg-slate-800 sm:rounded-2xl shadow-2xl w-full max-w-3xl h-full sm:h-[70vh] sm:max-h-[90vh] flex flex-col p-4 md:p-6 overflow-hidden pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))]">
-                <div className="flex-1 bg-slate-100 dark:bg-slate-700 sm:rounded-xl overflow-hidden relative min-h-0">
+            <div className="relative bg-white dark:bg-slate-800 sm:rounded-2xl shadow-2xl w-full max-w-3xl h-full sm:h-[70vh] sm:max-h-[90vh] flex flex-col p-4 md:p-6 overflow-hidden pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))] sm:pb-4">
+                <div className="flex-1 bg-slate-100 dark:bg-slate-700 sm:rounded-xl overflow-hidden relative min-h-0 mb-4 sm:mb-0">
                     <Cropper
                         image={imageSrc}
                         crop={crop}

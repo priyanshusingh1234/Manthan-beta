@@ -32,6 +32,10 @@ export default function GlobalCallListener() {
 
   const dismissCall = () => {
     setIncomingCall(null);
+    if ((window as any)._activeCallHapticInterval) {
+      clearInterval((window as any)._activeCallHapticInterval);
+      delete (window as any)._activeCallHapticInterval;
+    }
     if (callTimeoutRef.current) {
       clearTimeout(callTimeoutRef.current);
       callTimeoutRef.current = null;
@@ -41,6 +45,9 @@ export default function GlobalCallListener() {
   const acceptCall = () => {
     if (!incomingCall) return;
     const roomId = incomingCall.roomId;
+    
+    // Stop ringing
+    dismissCall();
 
     // Unsubscribe THIS room's channel BEFORE navigating so the chat page
     // gets a clean, sole subscription — prevents duplicate call-ended firing
@@ -95,6 +102,11 @@ export default function GlobalCallListener() {
               } catch { }
 
               Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+              
+              // Start a haptic loop for ringing feel
+              const hapticInterval = setInterval(() => {
+                Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
+              }, 1500);
 
               if (callTimeoutRef.current) {
                 clearTimeout(callTimeoutRef.current);
@@ -111,8 +123,12 @@ export default function GlobalCallListener() {
 
               // Auto-dismiss after 45 seconds
               callTimeoutRef.current = setTimeout(() => {
+                clearInterval(hapticInterval);
                 setIncomingCall(null);
               }, 45000);
+
+              // We need to store the interval somewhere to clear it if call is accepted/declined
+              (window as any)._activeCallHapticInterval = hapticInterval;
             });
 
             channel.on('broadcast', { event: 'call-ended' }, () => {
@@ -130,6 +146,7 @@ export default function GlobalCallListener() {
       channelsRef.current.forEach(ch => supabaseRealtime.removeChannel(ch));
       channelsRef.current = [];
       if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+      if ((window as any)._activeCallHapticInterval) clearInterval((window as any)._activeCallHapticInterval);
     };
   }, []); // Run once on mount — intentionally no pathname dep
 

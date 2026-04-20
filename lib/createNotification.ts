@@ -27,6 +27,7 @@ export type NotificationType =
     | 'war_started'
     | 'post_mention'
     | 'weekly_report'
+    | 'incoming_call'
     | 'chat_message';
 
 interface CreateNotificationParams {

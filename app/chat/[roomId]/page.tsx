@@ -713,7 +713,15 @@ function ChatRoomContent() {
             }).catch(() => {});
         }
       }
-    } catch (err) { console.error('[Agora]', err); setCallState('idle'); }
+    } catch (err: any) { 
+      console.error('[Agora]', err); 
+      setCallState('idle'); 
+      if (err.message?.includes('Permission') || err.name === 'NotAllowedError') {
+        alert('Permission Denied: Please allow Camera and Microphone access in your Android settings to use this feature.');
+      } else {
+        alert(`Call failed: ${err.message || 'Unknown error'}`);
+      }
+    }
   };
 
   const endCall = async () => {

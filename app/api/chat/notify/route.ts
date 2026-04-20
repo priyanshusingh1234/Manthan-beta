@@ -17,12 +17,13 @@ export async function POST(req: Request) {
       .single();
 
     const realSenderName = profile?.full_name || 'Scholar';
+    const isCall = content?.startsWith('📞 Incoming');
 
     await createNotification({
       userId: receiverId,
-      type: 'chat_message',
-      title: `New message from ${realSenderName}`,
-      body: 'New message',
+      type: isCall ? 'incoming_call' as any : 'chat_message',
+      title: isCall ? `${realSenderName} is calling you...` : `New message from ${realSenderName}`,
+      body: isCall ? 'Live Call' : (content?.substring(0, 50) || 'New message'),
       href: `/chat/${roomId}`
     });
 
