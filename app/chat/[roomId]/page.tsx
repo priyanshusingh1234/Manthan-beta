@@ -6,7 +6,7 @@ import Image from 'next/image';
 import {
   ArrowLeft, MoreVertical, Send, Image as ImageIcon, CheckCheck, Check,
   Loader2, Trash2, Reply, X, Ban, Phone, Video, PhoneOff, Mic, MicOff,
-  VideoOff, Copy, MessageSquare,
+  VideoOff, Copy, MessageSquare, RefreshCcw, Volume2, Ear
 } from 'lucide-react';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -294,6 +294,8 @@ function ChatRoomContent() {
   const [callType, setCallType] = useState<'voice' | 'video'>('voice');
   const [isMuted, setIsMuted] = useState(false);
   const [isCamOff, setIsCamOff] = useState(false);
+  const [isSpeaker, setIsSpeaker] = useState(true);
+  const [currentCameraIdx, setCurrentCameraIdx] = useState(0);
   const [remoteVideoTrack, setRemoteVideoTrack] = useState<any>(null);
   const [localVideoTrack, setLocalVideoTrack] = useState<any>(null);
   const rtcClientRef = useRef<any>(null);
@@ -685,6 +687,11 @@ function ChatRoomContent() {
       
       await client.publish([audioTrack, ...(videoTrack ? [videoTrack] : [])]);
       
+      try {
+         const devices = await AgoraRTC.getCameras();
+         if (devices.length > 0) setCurrentCameraIdx(0);
+      } catch(e) {}
+      
       setCallState('active');
       // Notify other party only if we are starting a NEW call, not answering an existing one
       if (!isAnswering) {
@@ -752,6 +759,25 @@ function ChatRoomContent() {
     localVideoTrackRef.current?.setEnabled(isCamOff);
     setIsCamOff(v => !v);
   };
+  const toggleSpeaker = () => {
+     // Natively on Capacitor Web, true hardware routing requires a native plugin.
+     // We toggle the state for visual feedback and future plugin integration.
+     setIsSpeaker(v => !v);
+  };
+  const flipCamera = async () => {
+    if (!localVideoTrackRef.current) return;
+    try {
+        const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+        const devices = await AgoraRTC.getCameras();
+        if (devices.length > 1) {
+            const nextIdx = (currentCameraIdx + 1) % devices.length;
+            await localVideoTrackRef.current.setDevice(devices[nextIdx].deviceId);
+            setCurrentCameraIdx(nextIdx);
+        }
+    } catch (err) {
+        console.error('Failed to flip camera:', err);
+    }
+  };
 
   // ─── Long press handler ───────────────────────────────────────────────────
   const handleLongPress = (msg: Message) => {
@@ -804,11 +830,22 @@ function ChatRoomContent() {
             <button onClick={toggleMute} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${isMuted ? 'bg-rose-500 text-white' : 'bg-white/10 backdrop-blur-md text-white border border-white/10'}`}>
               {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
             </button>
-            {callType === 'video' && (
-              <button onClick={toggleCamera} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${isCamOff ? 'bg-rose-500 text-white' : 'bg-white/10 backdrop-blur-md text-white border border-white/10'}`}>
-                {isCamOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
-              </button>
+
+            {callType === 'video' ? (
+              <>
+                <button onClick={toggleCamera} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${isCamOff ? 'bg-rose-500 text-white' : 'bg-white/10 backdrop-blur-md text-white border border-white/10'}`}>
+                  {isCamOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+                </button>
+                <button onClick={flipCamera} className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors bg-white/10 backdrop-blur-md text-white border border-white/10">
+                  <RefreshCcw className="w-6 h-6" />
+                </button>
+              </>
+            ) : (
+               <button onClick={toggleSpeaker} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${!isSpeaker ? 'bg-rose-500 text-white' : 'bg-white/10 backdrop-blur-md text-white border border-white/10'}`}>
+                  {isSpeaker ? <Volume2 className="w-6 h-6" /> : <Ear className="w-6 h-6" />}
+               </button>
             )}
+
             <button onClick={endCall} className="w-16 h-16 rounded-full bg-rose-600 flex items-center justify-center shadow-xl shadow-rose-900/40 active:scale-95 transition-transform">
               <PhoneOff className="w-7 h-7 text-white" />
             </button>

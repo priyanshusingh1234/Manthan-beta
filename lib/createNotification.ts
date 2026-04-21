@@ -47,7 +47,7 @@ interface CreateNotificationParams {
  */
 export async function createNotification(params: CreateNotificationParams): Promise<void> {
     try {
-        if (params.type !== 'chat_message') {
+        if (params.type !== 'chat_message' && params.type !== 'incoming_call') {
             const { error } = await supabaseAdmin
                 .from('notifications')
                 .insert({
