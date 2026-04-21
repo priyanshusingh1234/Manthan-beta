@@ -171,6 +171,7 @@ const TeacherProfile: React.FC = () => {
           });
         }
       });
+      } // Closes if (dbProfile && mounted) {
 
       // ── Step 5: Calculate Teaching Impact — Students Reached and Solve Counts ──
       const calculateImpact = async () => {
