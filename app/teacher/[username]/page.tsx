@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import TeacherBadge from '@/ticks/teacher';
-import QuestionCard from '@/components/QuestionCard';
+import TeacherPublicTabs from '@/components/TeacherPublicTabs';
 import FollowButton from '@/components/FollowButton';
 
 
@@ -143,6 +143,21 @@ export default async function TeacherProfilePage({ params }: Props) {
       }
     }
 
+    let reached = 0;
+    let solves = 0;
+    let accuracy = 0;
+    const showImpact = meta?.showImpact !== false;
+
+    if (showImpact && questions.length > 0) {
+      const qIds = questions.map(q => q.id);
+      const { data: attempts } = await supabaseAdmin.from('question_attempts').select('user_id, is_correct').in('question_id', qIds);
+      if (attempts) {
+        reached = new Set(attempts.map(a => a.user_id)).size;
+        solves = attempts.filter(a => a.is_correct).length;
+        accuracy = attempts.length > 0 ? Math.round((solves / attempts.length) * 100) : 0;
+      }
+    }
+
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 pt-4 sm:pt-10">
         <div className="max-w-[90rem] mx-auto px-0 sm:px-6 lg:px-8">
@@ -191,22 +206,12 @@ export default async function TeacherProfilePage({ params }: Props) {
             </div>
           </div>
 
-          {/* Authored Questions Section */}
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight mb-6">Posted Questions <span className="text-slate-400 font-normal text-lg ml-2">({questions.length})</span></h2>
-
-            {questions.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {questions.map((q) => (
-                  <QuestionCard key={q.id} q={q} />
-                ))}
-              </div>
-            ) : (
-              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 p-12 text-center text-slate-500 dark:text-slate-400">
-                This teacher hasn&apos;t posted any questions yet.
-              </div>
-            )}
-          </div>
+          {/* Render Client Component with data */}
+          <TeacherPublicTabs 
+            showImpact={showImpact} 
+            impactStats={{ accuracy, reached, solves }} 
+            questions={questions} 
+          />
         </div>
       </div>
     );

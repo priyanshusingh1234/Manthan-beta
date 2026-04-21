@@ -34,6 +34,7 @@ const TeacherProfile: React.FC = () => {
   });
 
   const [statsData, setStatsData] = useState({ averageRating: 0, totalReviews: 0 });
+  const [impactStats, setImpactStats] = useState({ reached: 0, solves: 0, accuracy: 0 });
 
   const stats = [
     { icon: BookOpen, label: 'Questions Posted', value: '34', color: 'text-blue-500', bgColor: 'bg-blue-50 dark:bg-blue-900/20' },
@@ -62,7 +63,7 @@ const TeacherProfile: React.FC = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', username: '', school: '', subject: '', bio: '' });
+  const [editForm, setEditForm] = useState({ name: '', username: '', school: '', subject: '', bio: '', showImpact: true });
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'achievements' | 'posts'>('achievements');
 
@@ -91,7 +92,8 @@ const TeacherProfile: React.FC = () => {
         username: metaUsername,
         school: meta.school || '',
         subject: meta.mainSubject || meta.main_subject || '',
-        bio: metaBio || ''
+        bio: metaBio || '',
+        showImpact: meta.showImpact !== false
       });
 
       setUserData((s) => ({
@@ -157,24 +159,51 @@ const TeacherProfile: React.FC = () => {
           school: dbProfile.school || meta.school || '',
           subject: dbProfile.main_subject || meta.mainSubject || meta.main_subject || '',
           bio: dbProfile.bio || metaBio || '',
+          showImpact: meta.showImpact !== false
         });
         
-        // ── Step 4: Refresh Teacher Stats ──
-        supabase.from('teacher_stats').select('average_rating, total_reviews').eq('teacher_id', user.id).maybeSingle().then(({ data }) => {
-          if (mounted && data) {
-            setStatsData({
-              averageRating: Number(data.average_rating) || 0,
-              totalReviews: Number(data.total_reviews) || 0
-            });
-          }
-        });
-      }
+      // ── Step 4: Refresh Teacher Stats ──
+      supabase.from('teacher_stats').select('average_rating, total_reviews').eq('teacher_id', user.id).maybeSingle().then(({ data }) => {
+        if (mounted && data) {
+          setStatsData({
+            averageRating: Number(data.average_rating) || 0,
+            totalReviews: Number(data.total_reviews) || 0
+          });
+        }
+      });
+
+      // ── Step 5: Calculate Teaching Impact — Students Reached and Solve Counts ──
+      const calculateImpact = async () => {
+        // Find all their question IDs
+        const { data: qs } = await supabase.from('questions').select('id').eq('created_by', user.id);
+        const qids = (qs || []).map(q => q.id);
+        
+        if (qids.length === 0) {
+          if (mounted) setImpactStats({ reached: 0, solves: 0, accuracy: 0 });
+          return;
+        }
+
+        // Get all attempts on these questions
+        const { data: attempts } = await supabase.from('question_attempts').select('user_id, is_correct').in('question_id', qids);
+        
+        if (attempts && mounted) {
+           const uniqueParticipants = new Set(attempts.map(a => a.user_id)).size;
+           const correctAttempts = attempts.filter(a => a.is_correct).length;
+           const accuracy = attempts.length > 0 ? (correctAttempts / attempts.length) * 100 : 0;
+           setImpactStats({ 
+              reached: uniqueParticipants, 
+              solves: correctAttempts, 
+              accuracy: Math.round(accuracy) 
+           });
+        }
+      };
+
+      calculateImpact();
     });
     return () => {
       mounted = false;
     };
   }, []);
-
   const uploadToStorage = async (bucket: string, path: string, file: File) => {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
@@ -422,7 +451,8 @@ const TeacherProfile: React.FC = () => {
           username_updates: newUsernameUpdates,
           school: editForm.school,
           mainSubject: editForm.subject,
-          bio: editForm.bio
+          bio: editForm.bio,
+          showImpact: editForm.showImpact
         }
       });
 
@@ -478,9 +508,17 @@ const TeacherProfile: React.FC = () => {
         {/* Edit Profile Modal */}
         {showEditProfile && (
           <EditProfileModal
-            form={{ name: editForm.name, username: editForm.username, school: editForm.school, grade: editForm.subject, bio: editForm.bio, showWeeklyReport: true }}
+            form={{ 
+              name: editForm.name, 
+              username: editForm.username, 
+              school: editForm.school, 
+              grade: editForm.subject, 
+              bio: editForm.bio, 
+              showWeeklyReport: true,
+              showImpact: editForm.showImpact
+            }}
             message={message}
-            onFormChange={(f) => setEditForm({ ...editForm, name: f.name, username: f.username, school: f.school, subject: f.grade, bio: f.bio })}
+            onFormChange={(f) => setEditForm({ ...editForm, name: f.name, username: f.username, school: f.school, subject: f.grade, bio: f.bio, showImpact: f.showImpact ?? true })}
             onSave={saveProfile}
             onClose={() => setShowEditProfile(false)}
           />
@@ -744,10 +782,13 @@ const TeacherProfile: React.FC = () => {
               <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-6 border border-blue-100 dark:border-blue-800 group-hover/card:scale-110 transition-transform">
                 <BookOpen className="w-7 h-7 text-blue-600 dark:text-blue-400" />
               </div>
-              <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Engagement Rate</h3>
-              <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">84<span className="text-2xl text-slate-400">%</span></div>
+              <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Community Accuracy</h3>
+              <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">{impactStats.accuracy}<span className="text-2xl text-slate-400">%</span></div>
               <div className="mt-6 bg-slate-100 dark:bg-slate-700 rounded-full h-3 overflow-hidden shadow-inner">
-                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full w-[84%]" />
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-1000" 
+                  style={{ width: `${impactStats.accuracy}%` }}
+                />
               </div>
             </div>
 
@@ -756,18 +797,18 @@ const TeacherProfile: React.FC = () => {
               <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mb-6 border border-white/30 group-hover/card:scale-110 transition-transform backdrop-blur-sm">
                 <Users className="w-7 h-7 text-white drop-shadow-sm" />
               </div>
-              <h3 className="font-bold text-emerald-100 uppercase tracking-widest text-xs mb-2">Total Participants</h3>
-              <div className="text-5xl font-black text-white tracking-tight">1,245</div>
-              <p className="text-sm font-medium text-emerald-50 mt-4 bg-black/20 px-4 py-2 rounded-xl inline-block border border-white/10 backdrop-blur-md">Across all questions</p>
+              <h3 className="font-bold text-emerald-100 uppercase tracking-widest text-xs mb-2">Total Students Impacted</h3>
+              <div className="text-5xl font-black text-white tracking-tight">{impactStats.reached.toLocaleString()}</div>
+              <p className="text-sm font-medium text-emerald-50 mt-4 bg-black/20 px-4 py-2 rounded-xl inline-block border border-white/10 backdrop-blur-md">Unique scholars reached</p>
             </div>
 
             <div className="p-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/40 dark:shadow-none hover:-translate-y-1 transition-transform group/card">
               <div className="w-14 h-14 bg-purple-50 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mb-6 border border-purple-100 dark:border-purple-800 group-hover/card:scale-110 transition-transform">
                 <Star className="w-7 h-7 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Upvotes & Likes</h3>
-              <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-slate-700">856</div>
-              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-4 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-2 rounded-xl inline-block border border-emerald-100 dark:border-emerald-800">Top 5% of Educators</p>
+              <h3 className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-xs mb-2">Cumulative Solves</h3>
+              <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">{impactStats.solves.toLocaleString()}</div>
+              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-4 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-2 rounded-xl inline-block border border-emerald-100 dark:border-emerald-800">Verified Successes</p>
             </div>
           </div>
         </div>
