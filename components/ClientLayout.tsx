@@ -157,6 +157,15 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       await PushNotifications.register();
     }
 
+    // Call Kit Permissions
+    try {
+      const { IncomingCallKit } = await import('@capgo/capacitor-incoming-call-kit');
+      await IncomingCallKit.requestPermissions();
+      await IncomingCallKit.requestFullScreenIntentPermission();
+    } catch (e) {
+      console.log('[CallKit] Setup skipped or failed:', e);
+    }
+
   } catch (err) {
     nativePushInitialized = false;
     console.error('[NativePush] Init error:', err);

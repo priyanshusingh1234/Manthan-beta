@@ -7,6 +7,8 @@ import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, PhoneOff, Video } from 'lucide-react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Capacitor } from '@capacitor/core';
+import { IncomingCallKit } from '@capgo/capacitor-incoming-call-kit';
 import Image from 'next/image';
 
 interface IncomingCall {
@@ -21,6 +23,7 @@ export default function GlobalCallListener() {
   const pathname = usePathname();
   const router = useRouter();
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
+  const incomingCallRef = useRef<IncomingCall | null>(null);
   const userRef = useRef<any>(null);
   const pathnameRef = useRef(pathname);
   const channelsRef = useRef<any[]>([]);
@@ -31,7 +34,11 @@ export default function GlobalCallListener() {
   }, [pathname]);
 
   const dismissCall = () => {
+    if (Capacitor.isNativePlatform() && incomingCallRef.current) {
+      IncomingCallKit.endCall({ callId: incomingCallRef.current.roomId }).catch(() => {});
+    }
     setIncomingCall(null);
+    incomingCallRef.current = null;
     if ((window as any)._activeCallHapticInterval) {
       clearInterval((window as any)._activeCallHapticInterval);
       delete (window as any)._activeCallHapticInterval;
@@ -43,8 +50,9 @@ export default function GlobalCallListener() {
   };
 
   const acceptCall = () => {
-    if (!incomingCall) return;
-    const roomId = incomingCall.roomId;
+    const call = incomingCallRef.current;
+    if (!call) return;
+    const roomId = call.roomId;
     
     // Stop ringing
     dismissCall();
@@ -63,9 +71,65 @@ export default function GlobalCallListener() {
     router.push(`/chat/${roomId}?incoming=1&autoAccept=1`);
   };
 
-  const declineCall = () => {
+  const declineCall = async () => {
+    const call = incomingCallRef.current;
+    if (call && userRef.current) {
+      await supabase.from('chat_messages').insert({
+        room_id: call.roomId,
+        sender_id: userRef.current.id,
+        content: '__CALL_ENDED__: Call declined',
+        message_type: 'text'
+      }).catch(() => {});
+      
+      const roomChannelIndex = channelsRef.current.findIndex(
+        ch => ch.topic === `realtime:room-${call.roomId}`
+      );
+      if (roomChannelIndex !== -1) {
+        channelsRef.current[roomChannelIndex].send({
+          type: 'broadcast',
+          event: 'call-ended',
+          payload: { roomId: call.roomId }
+        }).catch(() => {});
+      }
+    }
     dismissCall();
   };
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      IncomingCallKit.addListener('callAccepted', (event) => {
+        const roomId = event.call.callId;
+        const roomChannelIndex = channelsRef.current.findIndex(ch => ch.topic === `realtime:room-${roomId}`);
+        if (roomChannelIndex !== -1) {
+          supabaseRealtime.removeChannel(channelsRef.current[roomChannelIndex]);
+          channelsRef.current.splice(roomChannelIndex, 1);
+        }
+        dismissCall();
+        router.push(`/chat/${roomId}?incoming=1&autoAccept=1`);
+      });
+
+      IncomingCallKit.addListener('callDeclined', async (event) => {
+        const roomId = event.call.callId;
+        if (userRef.current) {
+          await supabase.from('chat_messages').insert({
+            room_id: roomId,
+            sender_id: userRef.current.id,
+            content: '__CALL_ENDED__: Call declined',
+            message_type: 'text'
+          }).catch(() => {});
+          const roomChannelIndex = channelsRef.current.findIndex(ch => ch.topic === `realtime:room-${roomId}`);
+          if (roomChannelIndex !== -1) {
+            channelsRef.current[roomChannelIndex].send({
+              type: 'broadcast',
+              event: 'call-ended',
+              payload: { roomId }
+            }).catch(() => {});
+          }
+        }
+        dismissCall();
+      });
+    }
+  }, [router]);
 
   useEffect(() => {
     // Get current user
@@ -113,13 +177,30 @@ export default function GlobalCallListener() {
                 callTimeoutRef.current = null;
               }
 
-              setIncomingCall({
+              const newCall: IncomingCall = {
                 roomId: room.room_id,
                 callerId: payload.callerId,
                 callerName: payload.callerName || 'Scholar',
                 callerAvatar,
                 type: payload.type || 'voice',
-              });
+              };
+              
+              setIncomingCall(newCall);
+              incomingCallRef.current = newCall;
+
+              if (Capacitor.isNativePlatform()) {
+                IncomingCallKit.showIncomingCall({
+                  callId: newCall.roomId,
+                  callerName: newCall.callerName,
+                  hasVideo: newCall.type === 'video',
+                  timeoutMs: 45000,
+                  appName: 'Dheeyudha',
+                  android: {
+                    showFullScreen: true,
+                    isHighPriority: true,
+                  }
+                }).catch(() => {});
+              }
 
               // Auto-dismiss after 45 seconds
               callTimeoutRef.current = setTimeout(() => {
