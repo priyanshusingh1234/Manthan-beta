@@ -5,7 +5,7 @@ import { firebaseAdmin } from '@/lib/firebaseAdmin';
 // Configure Web Push with VAPID keys from the .env file
 if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     webpush.setVapidDetails(
-        'mailto:support@dheeyudha.com',
+        'mailto:kpk22128@gmail.com',
         process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
         process.env.VAPID_PRIVATE_KEY
     );

@@ -109,7 +109,7 @@ export default function ChildSafetyPage() {
           </Link>
 
           <a
-            href="mailto:support@dheeyudha.com"
+            href="mailto:kpk22128@gmail.com"
             className="flex items-center justify-between px-4 sm:px-5 py-4 border-t border-slate-100 hover:bg-slate-50 transition-colors"
           >
             <div className="text-slate-900 font-medium">Contact support</div>

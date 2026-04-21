@@ -9,7 +9,7 @@ export const metadata = {
   description: 'Learn how Dheeyudha collects, uses, and protects your personal data.',
 };
 
-const LAST_UPDATED = 'April 08, 2026';
+const LAST_UPDATED = 'April 21, 2026';
 
 const sections = [
   { id: 'overview', label: 'Overview', icon: Shield },
@@ -392,8 +392,8 @@ export default function PrivacyPage() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5">
                     <div className="font-bold text-indigo-800 mb-1 text-sm">💌 Email</div>
-                    <a href="mailto:privacy@dheeyudha.app" className="text-indigo-600 font-semibold hover:underline text-sm">
-                      privacy@dheeyudha.app
+                    <a href="mailto:kpk22128@gmail.com" className="text-indigo-600 font-semibold hover:underline text-sm">
+                      kpk22128@gmail.com
                     </a>
                     <p className="text-xs text-indigo-500 mt-1">We aim to respond within 2 business days.</p>
                   </div>
