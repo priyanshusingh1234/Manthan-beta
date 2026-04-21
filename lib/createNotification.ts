@@ -106,11 +106,17 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             notification: {
                                                 channelId: 'default',
                                                 color: '#4f46e5',
-                                                // clickAction must match the intent-filter action in AndroidManifest.xml
-                                                clickAction: 'OPEN_APP',
+                                                clickAction: params.type === 'incoming_call' ? 'incoming_call' : 'OPEN_APP',
                                                 tag: params.type,
                                                 icon: 'ic_notification',
                                                 sound: 'default'
+                                            }
+                                        },
+                                        apns: {
+                                            payload: {
+                                                aps: {
+                                                    category: params.type === 'incoming_call' ? 'incoming_call' : undefined
+                                                }
                                             }
                                         }
                                     });

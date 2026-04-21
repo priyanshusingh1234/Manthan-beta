@@ -125,9 +125,44 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       console.log('[NativePush] Foreground notification received:', notification);
     });
 
-    // This fires when user TAPS a notification (app in foreground or background)
+    // This fires when user TAPS a notification or clicks an action button
     await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-      console.log('[NativePush] Notification tapped:', JSON.stringify(action));
+      console.log('[NativePush] Notification tapped/action:', action);
+      
+      const data = action.notification?.data || {};
+      const url = data.url || data.href || data.link || data.deep_link;
+
+      if (action.actionId === 'answer') {
+         if (url && url.includes('/chat/')) {
+            const path = normalizeInAppPath(url);
+            if (path) safeNavigate(`${path}?incoming=1&autoAccept=1`, navigate);
+            return;
+         }
+      } else if (action.actionId === 'decline') {
+         const roomIdMatch = url?.match(/\/chat\/([^?]+)/);
+         if (roomIdMatch && roomIdMatch[1]) {
+            const roomId = roomIdMatch[1];
+            // End call silently without opening foreground routing
+            supabase.auth.getUser().then(({ data: { user } }) => {
+              if (user) {
+                supabase.from('chat_messages').insert({
+                  room_id: roomId,
+                  sender_id: user.id,
+                  content: '__CALL_ENDED__: Call declined from notification',
+                  message_type: 'text'
+                }).then(() => {
+                  supabaseRealtime.channel(`realtime:room-${roomId}`).send({
+                    type: 'broadcast',
+                    event: 'call-ended',
+                    payload: { roomId }
+                  }).catch(() => {});
+                });
+              }
+            });
+            return;
+         }
+      }
+      
       navigateFromPayload(action);
     });
 
@@ -153,6 +188,17 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
         importance: 5,
         visibility: 1,
         vibration: true
+      });
+      await PushNotifications.registerActionTypes({
+        types: [
+          {
+            id: 'incoming_call',
+            actions: [
+              { id: 'answer', title: 'Answer', foreground: true },
+              { id: 'decline', title: 'Decline', foreground: false, destructive: true } // destructive true implies red/decline
+            ]
+          }
+        ]
       });
       await PushNotifications.register();
     }
