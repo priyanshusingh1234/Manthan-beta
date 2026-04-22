@@ -9,6 +9,7 @@ import {
   VideoOff, Copy, MessageSquare, RefreshCcw, Volume2, Ear
 } from 'lucide-react';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
+import { useCallContext } from '@/components/CallProvider';
 import { format, isToday, isYesterday } from 'date-fns';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -60,18 +61,6 @@ function playNotifSound() {
     }
   } catch {}
 }
-
-// ─── Agora Video Players ─────────────────────────────────────────────────────
-const RemoteVideoPlayer = memo(({ track }: { track: any }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (track && ref.current) track.play(ref.current); return () => { if (track) track.stop(); }; }, [track]);
-  return <div ref={ref} className="h-full w-full object-cover" />;
-});
-const LocalVideoPlayer = memo(({ track }: { track: any }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (track && ref.current) track.play(ref.current); }, [track]);
-  return <div ref={ref} className="h-full w-full scale-x-[-1] object-cover" />;
-});
 
 // ─── Message item (memoized) ─────────────────────────────────────────────────
 const MessageItem = memo(function MessageItem({
@@ -289,18 +278,7 @@ function ChatRoomContent() {
 
   useEffect(() => { isBlockedRef.current = isBlocked; }, [isBlocked]);
 
-  // Agora call state
-  const [callState, setCallState] = useState<'idle' | 'calling' | 'active' | 'incoming'>('idle');
-  const [callType, setCallType] = useState<'voice' | 'video'>('voice');
-  const [isMuted, setIsMuted] = useState(false);
-  const [isCamOff, setIsCamOff] = useState(false);
-  const [isSpeaker, setIsSpeaker] = useState(true);
-  const [currentCameraIdx, setCurrentCameraIdx] = useState(0);
-  const [remoteVideoTrack, setRemoteVideoTrack] = useState<any>(null);
-  const [localVideoTrack, setLocalVideoTrack] = useState<any>(null);
-  const rtcClientRef = useRef<any>(null);
-  const localAudioTrackRef = useRef<any>(null);
-  const localVideoTrackRef = useRef<any>(null);
+  
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -346,8 +324,9 @@ function ChatRoomContent() {
         if (Date.now() - createdAt < 45000) { // Active call timeframe
           processedCallIdRef.current = lastMsg.id;
           const type = lastMsg.content.split(':')[1] as 'voice' | 'video';
-          setCallType(type);
-          setCallState('incoming');
+          if (searchParams.get('autoAccept') === '1' && callCtx.callState === 'idle') {
+                callCtx.startCall(roomId, type, pRes.data?.[0]?.user_id, prof?.full_name || 'Scholar', true);
+            }
         }
       }
     }
@@ -418,8 +397,9 @@ function ChatRoomContent() {
           if (Date.now() - createdAt < 45000) { // Call active within last 45s
             processedCallIdRef.current = lastMsg.id;
             const type = lastMsg.content.split(':')[1] as 'voice' | 'video';
-            setCallType(type);
-            setCallState('incoming');
+            if (searchParams.get('autoAccept') === '1' && callCtx.callState === 'idle') {
+                callCtx.startCall(roomId, type, pRes.data?.[0]?.user_id, prof?.full_name || 'Scholar', true);
+            }
           }
         }
       }
@@ -466,8 +446,9 @@ function ChatRoomContent() {
           if (msg.sender_id !== user.id) {
             processedCallIdRef.current = msg.id;
             const type = msg.content.split(':')[1] as 'voice' | 'video';
-            setCallType(type);
-            setCallState('incoming');
+            if (searchParams.get('autoAccept') === '1' && callCtx.callState === 'idle') {
+                callCtx.startCall(roomId, type, pRes.data?.[0]?.user_id, prof?.full_name || 'Scholar', true);
+            }
             playNotifSound();
             vibrate('medium');
           }
@@ -499,22 +480,8 @@ function ChatRoomContent() {
         const delId = (payload.old as any)?.id;
         if (delId) setMessages(prev => prev.filter(m => m.id !== delId));
       })
-      .on('broadcast', { event: 'call-ended' }, () => {
-        // Caller side: receiver declined/hung up — dismiss call overlay immediately
-        setCallState('idle');
-        setRemoteVideoTrack(null);
-        setLocalVideoTrack(null);
-      })
-      .on('broadcast', { event: 'call-invite' }, ({ payload }) => {
-        // Receiver side (inside chat room): show incoming call overlay directly
-        if (payload.callerId !== user.id) {
-          const type = payload.type as 'voice' | 'video';
-          setCallType(type);
-          setCallState('incoming');
-          playNotifSound();
-          vibrate('medium');
-        }
-      })
+      
+      
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           console.log('[Realtime] Subscribed to room:', roomId);
@@ -650,166 +617,6 @@ function ChatRoomContent() {
     finally { setUploadingImage(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
   };
 
-  // ─── Agora call ───────────────────────────────────────────────────────────
-  const startCall = async (type: 'voice' | 'video', isAnswering = false) => {
-    if (isBlocked) return alert('You cannot call a blocked user.');
-    setCallType(type);
-    setCallState('calling');
-    try {
-      const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
-      const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-      rtcClientRef.current = client;
-      
-      client.on('user-published', async (remoteUser: any, mediaType: 'video' | 'audio') => {
-        await client.subscribe(remoteUser, mediaType as any);
-        if (mediaType === 'video') setRemoteVideoTrack(remoteUser.videoTrack);
-        if (mediaType === 'audio') remoteUser.audioTrack?.play();
-      });
-      
-      const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '';
-      const uid = Math.floor(Math.random() * 100000);
-      let token: string | null = null;
-      try {
-        const tokenRes = await fetch(`/api/agora/token?channel=${encodeURIComponent(roomId)}&uid=${uid}`, { cache: 'no-store' });
-        if (tokenRes.ok) {
-          const tokenData = await tokenRes.json();
-          token = tokenData?.token || null;
-        } else {
-          const tokenErr = await tokenRes.json().catch(() => ({}));
-          throw new Error(tokenErr.error || 'Failed to fetch Agora token');
-        }
-      } catch (tokenError: any) {
-        throw new Error(tokenError?.message || 'Failed to fetch Agora token');
-      }
-      if (!appId || !token) {
-        throw new Error('Calling is not configured. Missing Agora App ID or token.');
-      }
-      await client.join(appId, roomId, token, uid);
-      
-      let audioTrack, videoTrack;
-      if (type === 'video') {
-          const tracks = await AgoraRTC.createMicrophoneAndCameraTracks();
-          audioTrack = tracks[0];
-          videoTrack = tracks[1];
-      } else {
-          audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-      }
-      
-      localAudioTrackRef.current = audioTrack;
-      if (videoTrack) {
-          localVideoTrackRef.current = videoTrack;
-          setLocalVideoTrack(videoTrack);
-      }
-      
-      await client.publish([audioTrack, ...(videoTrack ? [videoTrack] : [])]);
-      
-      try {
-         const devices = await AgoraRTC.getCameras();
-         if (devices.length > 0) setCurrentCameraIdx(0);
-      } catch(e) {}
-      
-      setCallState('active');
-      // Notify other party only if we are starting a NEW call, not answering an existing one
-      if (!isAnswering) {
-        await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_STARTED__:${type}`, message_type: 'text' });
-        channelRef.current?.send({
-          type: 'broadcast',
-          event: 'call-invite',
-          payload: {
-            callerId: user.id,
-            callerName: participant?.full_name || 'Scholar',
-            type,
-          }
-        }).catch(() => {});
-        
-        // Push notification for incoming call
-        if (participant?.user_id) {
-            fetch('/api/chat/notify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    receiverId: participant.user_id,
-                    senderId: user.id,
-                    roomId: roomId,
-                    content: `📞 Incoming ${type} call`
-                })
-            }).catch(() => {});
-        }
-      }
-    } catch (err: any) { 
-      console.error('[Agora]', err); 
-      setCallState('idle'); 
-      if (err.message?.includes('Permission') || err.name === 'NotAllowedError') {
-        alert('Permission Denied: Please allow Camera and Microphone access in your Android settings to use this feature.');
-      } else {
-        alert(`Call failed: ${err.message || 'Unknown error'}`);
-      }
-    }
-  };
-
-  const endCall = async () => {
-    try {
-      localAudioTrackRef.current?.stop(); localAudioTrackRef.current?.close();
-      localVideoTrackRef.current?.stop(); localVideoTrackRef.current?.close();
-      await rtcClientRef.current?.leave();
-    } catch {}
-    setCallState('idle');
-    setRemoteVideoTrack(null);
-    setLocalVideoTrack(null);
-    
-    // Only insert CALL_ENDED if it was an active call or if we are outright terminating it
-    await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_ENDED__: ${callType} call ended`, message_type: 'text' });
-    
-    channelRef.current?.send({
-      type: 'broadcast',
-      event: 'call-ended',
-      payload: { roomId }
-    }).catch(() => {});
-
-    // Push a 'missed call' FCM notification to OVERWRITE the ringing notification on their phone
-    // (uses same tag as incoming_call, so Android replaces it silently and stops the ring)
-    if (participant?.user_id) {
-      fetch('/api/chat/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          receiverId: participant.user_id,
-          senderId: user.id,
-          roomId: roomId,
-          content: '__CALL_ENDED__'
-        })
-      }).catch(() => {});
-    }
-  };
-
-  const toggleMute = () => {
-    localAudioTrackRef.current?.setEnabled(isMuted);
-    setIsMuted(v => !v);
-  };
-  const toggleCamera = () => {
-    localVideoTrackRef.current?.setEnabled(isCamOff);
-    setIsCamOff(v => !v);
-  };
-  const toggleSpeaker = () => {
-     // Natively on Capacitor Web, true hardware routing requires a native plugin.
-     // We toggle the state for visual feedback and future plugin integration.
-     setIsSpeaker(v => !v);
-  };
-  const flipCamera = async () => {
-    if (!localVideoTrackRef.current) return;
-    try {
-        const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
-        const devices = await AgoraRTC.getCameras();
-        if (devices.length > 1) {
-            const nextIdx = (currentCameraIdx + 1) % devices.length;
-            await localVideoTrackRef.current.setDevice(devices[nextIdx].deviceId);
-            setCurrentCameraIdx(nextIdx);
-        }
-    } catch (err) {
-        console.error('Failed to flip camera:', err);
-    }
-  };
-
   // ─── Long press handler ───────────────────────────────────────────────────
   const handleLongPress = (msg: Message) => {
     vibrate('medium');
@@ -943,10 +750,10 @@ function ChatRoomContent() {
               <p className="font-bold text-[15px] text-slate-900 dark:text-white truncate leading-tight">{displayName}</p>
               <p className="text-[11px] text-slate-400 font-medium">{isOnline ? '🟢 Online' : 'Tap for info'}</p>
             </div>
-            <button onClick={() => startCall('voice')} className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+            <button onClick={() => callCtx.startCall(roomId, 'voice', participant?.user_id, participant?.full_name || 'Scholar')} className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
               <Phone className="w-5 h-5" />
             </button>
-            <button onClick={() => startCall('video')} className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+            <button onClick={() => callCtx.startCall(roomId, 'video', participant?.user_id, participant?.full_name || 'Scholar')} className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
               <Video className="w-5 h-5" />
             </button>
             <div className="relative shrink-0">

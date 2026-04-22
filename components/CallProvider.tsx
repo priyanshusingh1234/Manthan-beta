@@ -16,7 +16,7 @@ interface CallContextType {
   remoteVideoTrack: any;
   localVideoTrack: any;
   startCall: (roomId: string, type: 'voice' | 'video', participantUserId: string | undefined, participantName: string, isAnswering?: boolean) => Promise<void>;
-  endCall: () => Promise<void>;
+  endCall: (skipBroadcast?: boolean) => Promise<void>;
   toggleMute: () => void;
   toggleCamera: () => void;
   flipCamera: () => void;
@@ -77,6 +77,22 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
          if (data?.user) currentUserRef.current = data.user;
      });
   }, []);
+
+  useEffect(() => {
+      if (!roomId) return;
+      const channel = supabase.channel(`call-watcher-${roomId}`);
+      channel.on('broadcast', { event: 'call-ended' }, () => {
+          endCall(true);
+      });
+      channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
+          const msg = payload.new as any;
+          if (msg.content.startsWith('__CALL_ENDED__') && msg.sender_id !== currentUserRef.current?.id) {
+              endCall(true);
+          }
+      });
+      channel.subscribe();
+      return () => { supabase.removeChannel(channel); };
+  }, [roomId]);
 
   const startCall = async (rid: string, type: 'voice' | 'video', pUserId: string | undefined, pName: string, isAnswering = false) => {
     setCallType(type);
@@ -173,7 +189,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const endCall = async () => {
+  const endCall = async (skipBroadcast = false) => {
     try {
       localAudioTrackRef.current?.stop(); localAudioTrackRef.current?.close();
       localVideoTrackRef.current?.stop(); localVideoTrackRef.current?.close();
@@ -183,20 +199,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setCallState('idle');
     setRemoteVideoTrack(null);
     setLocalVideoTrack(null);
+    const rid = roomId; // save locally
     setRoomId(null);
     setIsMinimized(false);
     
     const user = currentUserRef.current;
-    if (user && roomId) {
-        await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content: `__CALL_ENDED__: ${callType} call ended`, message_type: 'text' });
+    if (!skipBroadcast && user && rid) {
+        await supabase.from('chat_messages').insert({ room_id: rid, sender_id: user.id, content: `__CALL_ENDED__: ${callType} call ended`, message_type: 'text' });
         if (participantId) {
             fetch('/api/chat/notify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ receiverId: participantId, senderId: user.id, roomId: roomId, content: `__CALL_ENDED__` })
+                body: JSON.stringify({ receiverId: participantId, senderId: user.id, roomId: rid, content: `__CALL_ENDED__` })
             }).catch(() => {});
         }
-        supabase.channel(`room-${roomId}`).send({ type: 'broadcast', event: 'call-ended', payload: { roomId } }).catch(() => {});
+        supabase.channel(`room-${rid}`).send({ type: 'broadcast', event: 'call-ended', payload: { roomId: rid } }).catch(() => {});
     }
   };
 

@@ -107,7 +107,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             notification: {
                                                 channelId: 'default',
                                                 color: '#4f46e5',
-                                                clickAction: (params.type === 'incoming_call' || params.type === 'missed_call') ? 'OPEN_APP' : 'OPEN_APP',
+                                                clickAction: params.type === 'incoming_call' ? 'incoming_call' : 'OPEN_APP',
                                                 // CRITICAL: missed_call uses SAME tag as incoming_call
                                                 // Android replaces the notify silently, killing the ringtone
                                                 tag: (params.type === 'missed_call') ? 'incoming_call' : params.type,
