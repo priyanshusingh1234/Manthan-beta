@@ -343,6 +343,17 @@ export async function GET(req: NextRequest) {
                         .select('*')
                         .maybeSingle();
 
+                    if (completedWar && winnerSchoolId) {
+                        // School Victory Reward! +20 points to the winning school's total_war_points
+                        const { data: winSchool } = await supabaseAdmin.from('schools').select('total_war_points').eq('id', winnerSchoolId).single();
+                        if (winSchool && typeof winSchool.total_war_points === 'number') {
+                            await supabaseAdmin
+                                .from('schools')
+                                .update({ total_war_points: winSchool.total_war_points + 20 })
+                                .eq('id', winnerSchoolId);
+                        }
+                    }
+
                     if (completedWar) {
                         await notifyWarResult({
                             warId: completedWar.id,

@@ -254,10 +254,10 @@ export async function POST(req: Request) {
             }
         });
 
-        await upsertProfile(userId, { 
-            ...userMeta, 
-            totalPoints: newTotal, 
-            battlesAttempted, 
+        await upsertProfile(userId, {
+            ...userMeta,
+            totalPoints: newTotal,
+            battlesAttempted,
             battlesWon
         });
         leaderboardCache.invalidate();
@@ -287,7 +287,9 @@ export async function POST(req: Request) {
 
         // ── WAR SUBMISSION ───────────────────────────────
         if (warId && currentWar && mySchoolId) {
-            const pointsAwarded = isCorrect ? (q.points || 0) : 0;
+            // The school scoreboard normalizes to 10 points per solve for fairness.
+            // (Note: The student still gets their personal 'userPointsChange' based on difficulty!)
+            const pointsAwarded = isCorrect ? 10 : 0;
 
             // Insert war submission
             await supabaseAdmin.from("war_submissions").insert({
@@ -302,47 +304,47 @@ export async function POST(req: Request) {
             // Check all-correct bonus: if every question assigned to my squad is now correct
             const isChallenger = currentWar.challenger_school_id === mySchoolId;
             const myQuestionIds: string[] = isChallenger ? (currentWar.defender_questions || []) : (currentWar.challenger_questions || []);
-            
+
             if (myQuestionIds.length > 0) {
-                    const { data: correctSubs } = await supabaseAdmin
-                        .from("war_submissions")
-                        .select("question_id")
-                        .eq("war_id", warId)
-                        .eq("school_id", mySchoolId)
-                        .eq("status", "correct");
+                const { data: correctSubs } = await supabaseAdmin
+                    .from("war_submissions")
+                    .select("question_id")
+                    .eq("war_id", warId)
+                    .eq("school_id", mySchoolId)
+                    .eq("status", "correct");
 
-                    const correctIds = new Set((correctSubs || []).map(s => s.question_id));
-                    const allCorrect = myQuestionIds.every(id => correctIds.has(id));
+                const correctIds = new Set((correctSubs || []).map(s => s.question_id));
+                const allCorrect = myQuestionIds.every(id => correctIds.has(id));
 
-                    if (allCorrect) {
-                        // +5 all-correct bonus to every squad member
-                        if (mySquadId) {
-                            const selectedMemberIds = await getSelectedWarMemberIds(warId, mySchoolId);
-                            let recipientIds = selectedMemberIds || [];
+                if (allCorrect) {
+                    // +5 all-correct bonus to every squad member
+                    if (mySquadId) {
+                        const selectedMemberIds = await getSelectedWarMemberIds(warId, mySchoolId);
+                        let recipientIds = selectedMemberIds || [];
 
-                            if (!recipientIds.length) {
-                                const { data: squadUsers } = await supabaseAdmin
-                                    .from("squad_members").select("user_id")
-                                    .eq("squad_id", mySquadId);
-                                recipientIds = (squadUsers || []).map((su: any) => String(su.user_id)).filter(Boolean);
-                            }
-
-                            for (const recipientId of recipientIds) {
-                                const { data: suResp } = await supabaseAdmin.auth.admin.getUserById(recipientId);
-                                if (suResp?.user) {
-                                    const recipientMeta = suResp.user.user_metadata || {};
-                                    const newRecipientTotal = Math.max(0, (Number(recipientMeta.totalPoints) || 0) + 5);
-                                    await supabaseAdmin.auth.admin.updateUserById(recipientId, {
-                                        user_metadata: { ...recipientMeta, totalPoints: newRecipientTotal }
-                                    });
-                                    // Sync profiles table so public profile & leaderboard stay accurate
-                                    await upsertProfile(recipientId, { ...recipientMeta, totalPoints: newRecipientTotal });
-                                }
-                            }
-                            leaderboardCache.invalidate();
+                        if (!recipientIds.length) {
+                            const { data: squadUsers } = await supabaseAdmin
+                                .from("squad_members").select("user_id")
+                                .eq("squad_id", mySquadId);
+                            recipientIds = (squadUsers || []).map((su: any) => String(su.user_id)).filter(Boolean);
                         }
+
+                        for (const recipientId of recipientIds) {
+                            const { data: suResp } = await supabaseAdmin.auth.admin.getUserById(recipientId);
+                            if (suResp?.user) {
+                                const recipientMeta = suResp.user.user_metadata || {};
+                                const newRecipientTotal = Math.max(0, (Number(recipientMeta.totalPoints) || 0) + 5);
+                                await supabaseAdmin.auth.admin.updateUserById(recipientId, {
+                                    user_metadata: { ...recipientMeta, totalPoints: newRecipientTotal }
+                                });
+                                // Sync profiles table so public profile & leaderboard stay accurate
+                                await upsertProfile(recipientId, { ...recipientMeta, totalPoints: newRecipientTotal });
+                            }
+                        }
+                        leaderboardCache.invalidate();
                     }
                 }
+            }
         }
         // ────────────────────────────────────────────────
 
