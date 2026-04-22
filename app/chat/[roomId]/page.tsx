@@ -499,6 +499,22 @@ function ChatRoomContent() {
         const delId = (payload.old as any)?.id;
         if (delId) setMessages(prev => prev.filter(m => m.id !== delId));
       })
+      .on('broadcast', { event: 'call-ended' }, () => {
+        // Caller side: receiver declined/hung up — dismiss call overlay immediately
+        setCallState('idle');
+        setRemoteVideoTrack(null);
+        setLocalVideoTrack(null);
+      })
+      .on('broadcast', { event: 'call-invite' }, ({ payload }) => {
+        // Receiver side (inside chat room): show incoming call overlay directly
+        if (payload.callerId !== user.id) {
+          const type = payload.type as 'voice' | 'video';
+          setCallType(type);
+          setCallState('incoming');
+          playNotifSound();
+          vibrate('medium');
+        }
+      })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           console.log('[Realtime] Subscribed to room:', roomId);
