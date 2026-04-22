@@ -749,6 +749,21 @@ function ChatRoomContent() {
       event: 'call-ended',
       payload: { roomId }
     }).catch(() => {});
+
+    // Push a 'missed call' FCM notification to OVERWRITE the ringing notification on their phone
+    // (uses same tag as incoming_call, so Android replaces it silently and stops the ring)
+    if (participant?.user_id) {
+      fetch('/api/chat/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          receiverId: participant.user_id,
+          senderId: user.id,
+          roomId: roomId,
+          content: '__CALL_ENDED__'
+        })
+      }).catch(() => {});
+    }
   };
 
   const toggleMute = () => {

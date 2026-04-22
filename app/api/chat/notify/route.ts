@@ -18,12 +18,27 @@ export async function POST(req: Request) {
 
     const realSenderName = profile?.full_name || 'Scholar';
     const isCall = content?.startsWith('📞 Incoming');
+    const isCallEnded = content === '__CALL_ENDED__';
+
+    let notifType = 'chat_message';
+    let title = `New message from ${realSenderName}`;
+    let body = content?.substring(0, 50) || 'New message';
+
+    if (isCall) {
+      notifType = 'incoming_call';
+      title = `${realSenderName} is calling you...`;
+      body = 'Tap to answer';
+    } else if (isCallEnded) {
+      notifType = 'missed_call';
+      title = `Missed call from ${realSenderName}`;
+      body = 'Call ended';
+    }
 
     await createNotification({
       userId: receiverId,
-      type: isCall ? 'incoming_call' as any : 'chat_message',
-      title: isCall ? `${realSenderName} is calling you...` : `New message from ${realSenderName}`,
-      body: isCall ? 'Live Call' : (content?.substring(0, 50) || 'New message'),
+      type: notifType as any,
+      title,
+      body,
       href: `/chat/${roomId}`
     });
 
