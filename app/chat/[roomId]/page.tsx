@@ -626,72 +626,7 @@ function ChatRoomContent() {
 
   const displayName = participant?.full_name || initialName || 'Chat';
 
-  // ─── Agora Call Overlay ───────────────────────────────────────────────────
-  if (callState !== 'idle') {
-    return (
-      <div className="fixed inset-0 z-[60] bg-slate-900 flex flex-col items-center justify-between py-16" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        {callType === 'video' && remoteVideoTrack ? (
-          <div className="absolute inset-0"><RemoteVideoPlayer track={remoteVideoTrack} /></div>
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-800 to-slate-950 flex items-center justify-center">
-            <div className="w-28 h-28 rounded-full bg-indigo-600/20 border-4 border-indigo-500/40 flex items-center justify-center text-5xl font-black text-indigo-300">
-              {displayName[0]?.toUpperCase()}
-            </div>
-          </div>
-        )}
-        
-        {/* Local PiP */}
-        {callType === 'video' && localVideoTrack && !isCamOff && (
-          <div className="absolute top-16 right-4 w-28 h-40 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl z-10 transition-all">
-            <LocalVideoPlayer track={localVideoTrack} />
-          </div>
-        )}
 
-        <div className="relative z-10 text-center animate-in fade-in duration-500">
-          <h2 className="text-white text-3xl font-black tracking-tight">{displayName}</h2>
-          <p className="text-slate-400 text-sm font-medium mt-2">
-            {callState === 'calling' ? 'Calling...' : callState === 'incoming' ? `Incoming ${callType} call` : `${callType === 'video' ? 'Video' : 'Voice'} active`}
-          </p>
-        </div>
-
-        {callState === 'incoming' ? (
-          <div className="relative z-10 flex items-center justify-center gap-12 mb-8 scale-110">
-            <button onClick={endCall} className="w-16 h-16 rounded-full bg-rose-600 flex items-center justify-center shadow-xl shadow-rose-900/40 active:scale-90 transition-transform">
-              <PhoneOff className="w-7 h-7 text-white" />
-            </button>
-            <button onClick={() => startCall(callType, true)} className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center shadow-xl shadow-green-900/40 active:scale-90 transition-transform animate-bounce">
-              <Phone className="w-7 h-7 text-white" />
-            </button>
-          </div>
-        ) : (
-          <div className="relative z-10 flex items-center justify-center gap-6 mb-8">
-            <button onClick={toggleMute} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${isMuted ? 'bg-rose-500 text-white' : 'bg-white/10 backdrop-blur-md text-white border border-white/10'}`}>
-              {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-            </button>
-
-            {callType === 'video' ? (
-              <>
-                <button onClick={toggleCamera} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${isCamOff ? 'bg-rose-500 text-white' : 'bg-white/10 backdrop-blur-md text-white border border-white/10'}`}>
-                  {isCamOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
-                </button>
-                <button onClick={flipCamera} className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors bg-white/10 backdrop-blur-md text-white border border-white/10">
-                  <RefreshCcw className="w-6 h-6" />
-                </button>
-              </>
-            ) : (
-               <button onClick={toggleSpeaker} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-colors ${!isSpeaker ? 'bg-rose-500 text-white' : 'bg-white/10 backdrop-blur-md text-white border border-white/10'}`}>
-                  {isSpeaker ? <Volume2 className="w-6 h-6" /> : <Ear className="w-6 h-6" />}
-               </button>
-            )}
-
-            <button onClick={endCall} className="w-16 h-16 rounded-full bg-rose-600 flex items-center justify-center shadow-xl shadow-rose-900/40 active:scale-95 transition-transform">
-              <PhoneOff className="w-7 h-7 text-white" />
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <div

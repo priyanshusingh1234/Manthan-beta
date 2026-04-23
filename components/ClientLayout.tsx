@@ -14,6 +14,7 @@ import { ActivityTracker } from '@/lib/activityTracker';
 import CongratsBadgeModal from '@/components/CongratsBadgeModal';
 import GlobalCallListener from '@/components/GlobalCallListener';
 import GlobalPrefetcher from '@/components/GlobalPrefetcher';
+import { CallProvider } from '@/components/CallProvider';
 
 
 import CompleteProfileOverlay from '@/components/CompleteProfileOverlay';
@@ -472,7 +473,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }
 
   return (
-    <>
+    <CallProvider>
       {!hideMainSidebar && <DesktopSidebar />}
       <div
         className={`${hideMainSidebar ? 'lg:pl-0' : 'lg:pl-64'} ${showBottomNav && !hideBottomNav ? 'pb-20' : ''}`}
@@ -487,6 +488,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {isAuthenticated && <GlobalChatListener />}
       {isAuthenticated && <GlobalCallListener />}
       <GlobalPrefetcher isAuthenticated={isAuthenticated} />
-    </>
+    </CallProvider>
   );
 }
