@@ -18,6 +18,7 @@ interface TeacherPublicTabsProps {
 
 export default function TeacherPublicTabs({ showImpact, impactStats, questions }: TeacherPublicTabsProps) {
   const [activeTab, setActiveTab] = useState<'impact' | 'posts'>(showImpact ? 'impact' : 'posts');
+  const [visibleCount, setVisibleCount] = useState(10);
 
   return (
     <div>
@@ -97,11 +98,23 @@ export default function TeacherPublicTabs({ showImpact, impactStats, questions }
           </h2>
 
           {questions.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {questions.map((q) => (
-                <QuestionCard key={q.id} q={q} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {questions.slice(0, visibleCount).map((q) => (
+                  <QuestionCard key={q.id} q={q} />
+                ))}
+              </div>
+              {visibleCount < questions.length && (
+                <div className="mt-8 text-center flex justify-center">
+                  <button 
+                    onClick={() => setVisibleCount(v => v + 10)} 
+                    className="px-6 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl active:scale-95 transition-all w-full md:w-auto"
+                  >
+                    Load More
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 p-12 text-center text-slate-500 dark:text-slate-400">
               This teacher hasn't posted any questions yet.

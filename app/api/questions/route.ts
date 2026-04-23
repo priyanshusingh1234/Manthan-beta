@@ -108,43 +108,13 @@ export async function GET(req: Request) {
         userWrittenSubmissions[String(s.question_id)] = String(s.id);
       });
 
-      // Google profile photo URLs expire and return 403 for third-party requests.
-      // Treat them as missing so we fall back to auth metadata which carries avatar_url.
-      const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
-
-      // Batch-fetch auth metadata for users whose DB avatar is missing or a stale Google URL
-      const missingAvatarIds = userIds.filter(id => {
-        const av = profilesMap.get(id)?.avatar_url;
-        return !av || isGoogleUrl(av);
-      });
-      const authMetaMap: Record<string, { avatar: string | null; name: string; username: string | null }> = {};
-      if (missingAvatarIds.length > 0) {
-        await Promise.all(missingAvatarIds.map(async (id) => {
-          try {
-            const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(id);
-            if (user?.user_metadata) {
-              const meta = user.user_metadata;
-              const nonGoogle = (url?: string | null) => url && !isGoogleUrl(url) ? url : null;
-              authMetaMap[id] = {
-                avatar: nonGoogle(meta.avatar_url) || null,
-                name: meta.fullName || meta.full_name || meta.name || user.email || 'Teacher',
-                username: meta.username || null,
-              };
-            }
-          } catch { /* non-fatal */ }
-        }));
-      }
-
-      // Build a resolved avatar map: DB custom URL wins; Google URLs and null fall back to auth metadata
       const resolvedAvatarMap: Record<string, { avatar: string | null; name: string; username: string | null }> = {};
       for (const id of userIds) {
         const p = profilesMap.get(id);
-        const dbAvatar = p?.avatar_url && !isGoogleUrl(p.avatar_url) ? p.avatar_url : null;
-        const auth = authMetaMap[id];
         resolvedAvatarMap[id] = {
-          avatar: dbAvatar || auth?.avatar || null,
-          name: p?.full_name || auth?.name || 'Teacher',
-          username: p?.username || auth?.username || null,
+          avatar: p?.avatar_url || null,
+          name: p?.full_name || 'Teacher',
+          username: p?.username || null,
         };
       }
 

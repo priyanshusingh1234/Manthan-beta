@@ -680,58 +680,12 @@ export async function GET(req: NextRequest) {
         const profilesMap = await getProfilesMap(creatorIds);
         const userInfoMap: Record<string, any> = {};
 
-        // Google profile photo URLs (lh3.googleusercontent.com) expire and return
-        // 403 for other users — treat them as effectively "missing" so we fall back
-        // to the authoritative auth metadata which has avatar_url if uploaded.
-        const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
-
-        // Include: null avatar OR stale Google URL
-        const missingAvatarIds = creatorIds.filter(id => {
-            const av = profilesMap.get(id)?.avatar_url;
-            return !av || isGoogleUrl(av);
-        });
-
-        // Batch-fetch auth metadata only for those with missing/stale avatars
-        const authMetaMap: Record<string, any> = {};
-        if (missingAvatarIds.length > 0) {
-            await Promise.all(missingAvatarIds.map(async (id) => {
-                try {
-                    const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(id);
-                    if (user?.user_metadata) {
-                        const meta = user.user_metadata;
-                        // Only use avatar_url as the public avatar — never fall back to
-                        // Google/provider URLs which expire for third-party requests.
-                        const nonGoogle = (url?: string | null) => url && !isGoogleUrl(url) ? url : null;
-                        const fallbackAvatar = nonGoogle(meta.avatar_url) || null;
-                        authMetaMap[id] = {
-                            name: meta.fullName || meta.full_name || meta.name || user.email || 'Teacher',
-                            avatar: fallbackAvatar,
-                            username: meta.username || null,
-                        };
-                        // Self-heal: if there is a confirmed custom avatar, write it into the
-                        // profiles table so future feed requests read it directly from the DB
-                        // without needing this expensive per-user auth lookup.
-                        // MUST be awaited — fire-and-forget is silently killed by Vercel
-                        // serverless once the response is sent.
-                        if (fallbackAvatar) {
-                            const { upsertProfile } = await import('@/lib/profiles');
-                            await upsertProfile(id, meta, true);
-                        }
-                    }
-                } catch { /* non-fatal */ }
-            }));
-        }
-
         for (const id of creatorIds) {
             const p = profilesMap.get(id);
-            const auth = authMetaMap[id];
-            // Use profiles DB avatar only if it is NOT a Google URL (Google URLs expire).
-            // If it is Google, prefer the auth metadata fallback which has avatar_url.
-            const dbAvatar = p?.avatar_url && !isGoogleUrl(p.avatar_url) ? p.avatar_url : null;
             userInfoMap[id] = {
-                name: p?.full_name || auth?.name || 'Teacher',
-                avatar: dbAvatar || auth?.avatar || null,
-                username: p?.username || auth?.username || null,
+                name: p?.full_name || 'Teacher',
+                avatar: p?.avatar_url || null,
+                username: p?.username || null,
             };
         }
 

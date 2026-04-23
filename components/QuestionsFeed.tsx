@@ -64,8 +64,21 @@ function matchClass(qClass: string | null | undefined, filterClass: string): boo
 
 export default function QuestionsFeed() {
   // Filter state
-  const [subject, setSubject]   = useState('');
-  const [classGrade, setClass]  = useState('');
+  const [subject, setSubject]   = useState(() => {
+      if (typeof window !== 'undefined') return sessionStorage.getItem('dheeyudhha_feed_subject') || '';
+      return '';
+  });
+  const [classGrade, setClass]  = useState(() => {
+      if (typeof window !== 'undefined') return sessionStorage.getItem('dheeyudhha_feed_class') || '';
+      return '';
+  });
+
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+          sessionStorage.setItem('dheeyudhha_feed_subject', subject);
+          sessionStorage.setItem('dheeyudhha_feed_class', classGrade);
+      }
+  }, [subject, classGrade]);
 
   // Feed data
   const [allData, setAllData]     = useState<FeedItem[]>([]);   // raw from API (algorithmic or questions)
@@ -192,10 +205,10 @@ export default function QuestionsFeed() {
   }, []);
 
   // Initial load
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load({ subject, classGrade }); }, [load]);
 
   // Re-fetch when filters change
-  const prevFiltersRef = useRef({ subject: '', classGrade: '' });
+  const prevFiltersRef = useRef({ subject: typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_subject') || '' : '', classGrade: typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_class') || '' : '' });
   useEffect(() => {
     const prev = prevFiltersRef.current;
     if (prev.subject === subject && prev.classGrade === classGrade) return;
