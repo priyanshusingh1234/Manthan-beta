@@ -81,7 +81,17 @@ export default function QuestionsFeed() {
   }, [subject, classGrade]);
 
   // Feed data
-  const [allData, setAllData]     = useState<FeedItem[]>([]);   // raw from API (algorithmic or questions)
+  const [allData, setAllData]     = useState<FeedItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const sub = sessionStorage.getItem('dheeyudhha_feed_subject') || '';
+      const cls = sessionStorage.getItem('dheeyudhha_feed_class') || '';
+      const cached = localStorage.getItem(`dheeyudhha_feed_cache_${sub}_${cls}`);
+      if (cached) {
+        try { return JSON.parse(cached); } catch {}
+      }
+    }
+    return [];
+  });
   const [userId, setUserId]       = useState<string | null>(null);
   const [currentUserData, setCurrentUserData] = useState<any>(() => {
     if (typeof window !== 'undefined') {
@@ -100,7 +110,14 @@ export default function QuestionsFeed() {
     return () => window.removeEventListener('user_metadata_updated', handleUpdate);
   }, []);
 
-  const [loading, setLoading]     = useState(true);
+  const [loading, setLoading]     = useState(() => {
+    if (typeof window !== 'undefined') {
+      const sub = sessionStorage.getItem('dheeyudhha_feed_subject') || '';
+      const cls = sessionStorage.getItem('dheeyudhha_feed_class') || '';
+      if (localStorage.getItem(`dheeyudhha_feed_cache_${sub}_${cls}`)) return false;
+    }
+    return true;
+  });
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setMore]    = useState(false);
   const [exhausted, setExhausted] = useState(false);
@@ -185,6 +202,9 @@ export default function QuestionsFeed() {
         setAllData(items);
         setVisible(PAGE_SIZE);
         setExhausted(items.length < 10);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`dheeyudhha_feed_cache_${sub}_${cls}`, JSON.stringify(items.slice(0, 20)));
+        }
       } else {
         setAllData(prev => {
           const ids = new Set(prev.map(i => i.id));
@@ -214,7 +234,20 @@ export default function QuestionsFeed() {
     if (prev.subject === subject && prev.classGrade === classGrade) return;
     prevFiltersRef.current = { subject, classGrade };
     offsetRef.current = 0;
-    setAllData([]);
+    
+    // Attempt instant load from cache when filters change
+    const cached = typeof window !== 'undefined' ? localStorage.getItem(`dheeyudhha_feed_cache_${subject}_${classGrade}`) : null;
+    if (cached) {
+      try {
+        setAllData(JSON.parse(cached));
+        setLoading(false);
+      } catch {
+        setAllData([]);
+      }
+    } else {
+      setAllData([]);
+    }
+    
     setVisible(PAGE_SIZE);
     setExhausted(false);
     load({ subject, classGrade });
