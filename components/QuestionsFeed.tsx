@@ -85,15 +85,6 @@ export default function QuestionsFeed() {
     if (typeof window !== 'undefined') {
       const sub = sessionStorage.getItem('dheeyudhha_feed_subject') || '';
       const cls = sessionStorage.getItem('dheeyudhha_feed_class') || '';
-      
-      const sessionData = sessionStorage.getItem(`dheeyudhha_feed_session_${sub}_${cls}`);
-      if (sessionData) {
-        try { 
-          const parsed = JSON.parse(sessionData);
-          if (parsed.length > 0) return parsed;
-        } catch {}
-      }
-
       const cached = localStorage.getItem(`dheeyudhha_feed_cache_${sub}_${cls}`);
       if (cached) {
         try { return JSON.parse(cached); } catch {}
@@ -140,10 +131,7 @@ export default function QuestionsFeed() {
   // ── Fetch logic: algorithmic feed OR all questions for filter ─────────────
   const load = useCallback(async ({ refresh = false, subject: sub = '', classGrade: cls = '' } = {}) => {
     if (refresh) { setRefreshing(true); offsetRef.current = 0; }
-    else if (offsetRef.current === 0) {
-      const cached = typeof window !== 'undefined' ? localStorage.getItem(`dheeyudhha_feed_cache_${sub}_${cls}`) : null;
-      setLoading(!cached);
-    }
+    else if (offsetRef.current === 0) setLoading(true);
     else setMore(true);
     setErr(null);
 
@@ -191,7 +179,7 @@ export default function QuestionsFeed() {
         // Filter mode — pass subject/class to server so DB filtering returns ALL matching
         // questions (not just the newest 300 across all subjects).
         filterModeRef.current = true;
-        const qs = new URLSearchParams({ limit: '20', offset: offsetRef.current.toString() });
+        const qs = new URLSearchParams({ limit: '1000' });
         if (sub)  qs.set('subject', sub);
         if (cls)  qs.set('class',   cls);
         const res = await fetch(`/api/questions?${qs.toString()}`, { headers, cache: 'no-store' });
@@ -202,7 +190,7 @@ export default function QuestionsFeed() {
         // Algorithmic feed (no filter)
         filterModeRef.current = false;
         const localClass = typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_recent_class') || '' : '';
-        const qs = new URLSearchParams({ t: Date.now().toString(), limit: '40', offset: offsetRef.current.toString() });
+        const qs = new URLSearchParams({ t: Date.now().toString(), limit: '40' });
         if (localClass) qs.set('class', localClass);
         const res = await fetch(`/api/feed?${qs.toString()}`, { headers, cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
@@ -216,18 +204,13 @@ export default function QuestionsFeed() {
         setExhausted(items.length < 10);
         if (typeof window !== 'undefined') {
           localStorage.setItem(`dheeyudhha_feed_cache_${sub}_${cls}`, JSON.stringify(items.slice(0, 20)));
-          sessionStorage.setItem(`dheeyudhha_feed_session_${sub}_${cls}`, JSON.stringify(items.slice(0, 100)));
         }
       } else {
         setAllData(prev => {
           const ids = new Set(prev.map(i => i.id));
           const fresh = items.filter(i => !ids.has(i.id));
           if (fresh.length === 0) setExhausted(true);
-          const nextArr = [...prev, ...fresh];
-          if (typeof window !== 'undefined') {
-             sessionStorage.setItem(`dheeyudhha_feed_session_${sub}_${cls}`, JSON.stringify(nextArr.slice(0, 300)));
-          }
-          return nextArr;
+          return [...prev, ...fresh];
         });
       }
       offsetRef.current += items.length;
@@ -242,17 +225,7 @@ export default function QuestionsFeed() {
   }, []);
 
   // Initial load
-  useEffect(() => { 
-     // Standard load behavior except don't fetch if allData was perfectly restored
-     // from a deep session (prevents wiping position)
-     if (allData.length > 40 && offsetRef.current === 0) {
-        offsetRef.current = allData.length;
-        setVisible(Math.min(allData.length, PAGE_SIZE * 3));
-        setLoading(false);
-        return;
-     }
-     load({ subject, classGrade }); 
-  }, [load, subject, classGrade]);
+  useEffect(() => { load({ subject, classGrade }); }, [load]);
 
   // Re-fetch when filters change
   const prevFiltersRef = useRef({ subject: typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_subject') || '' : '', classGrade: typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_class') || '' : '' });
@@ -328,7 +301,7 @@ export default function QuestionsFeed() {
       if (!entry.isIntersecting) return;
       setVisible(v => {
         const next = v + PAGE_SIZE;
-        if (next >= filtered.length && !exhausted) {
+        if (next >= filtered.length && !exhausted && !filterModeRef.current) {
           load({ subject, classGrade });
         }
         return next;

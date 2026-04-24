@@ -174,9 +174,7 @@ export async function GET(req: NextRequest) {
         const difficulty = req.nextUrl.searchParams.get('difficulty') || '';
         const chapter = req.nextUrl.searchParams.get('chapter') || '';
         const targetClass = req.nextUrl.searchParams.get('class') || null;
-        const qLimit = Math.min(Number(req.nextUrl.searchParams.get('limit') || '30'), 60);
-        const qOffset = Number(req.nextUrl.searchParams.get('offset') || '0');
-        const limit = qLimit + qOffset; // Expand internal horizon so stratifications can generate enough data to slice
+        const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || '30'), 60);
 
         // ── Get user profile ─────────────────────────────────────────────────────────
         let userGrade: string | null = targetClass || null;
@@ -185,10 +183,10 @@ export async function GET(req: NextRequest) {
 
         if (userId && currentUser) {
             try {
-                // Instantly fetch the minimal fields needed from the profiles table
-                const { data: profile } = await supabaseAdmin.from('profiles').select('school').eq('id', userId).maybeSingle();
-                if (!targetClass) userGrade = currentUser.user_metadata?.classGrade?.toString() || currentUser.user_metadata?.grade?.toString() || null;
-                userSchoolName = profile?.school || currentUser.user_metadata?.school || null;
+                const { data: freshUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+                const freshMeta = freshUser?.user?.user_metadata ?? currentUser.user_metadata ?? {};
+                if (!targetClass) userGrade = freshMeta?.classGrade?.toString() || null;
+                userSchoolName = freshMeta?.school || null;
             } catch {
                 if (!targetClass) userGrade = currentUser.user_metadata?.classGrade?.toString() || null;
                 userSchoolName = currentUser.user_metadata?.school || null;
@@ -373,13 +371,10 @@ export async function GET(req: NextRequest) {
         // LAYER 3 (~20%): What school peers solved recently
         if (userSchoolName && userId) {
             const layer3Count = Math.ceil(limit * 0.20 * overFetch);
-            const { data: schoolmates } = await supabaseAdmin
-                .from('profiles')
-                .select('id')
-                .eq('school', userSchoolName)
-                .neq('id', userId)
-                .limit(200);
-            const schoolmateIds = (schoolmates || []).map((u: any) => u.id);
+            const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+            const schoolmateIds = (usersData?.users || [])
+                .filter(u => u.user_metadata?.school === userSchoolName && u.id !== userId)
+                .map(u => u.id);
 
             if (schoolmateIds.length > 0) {
                 const { data: peerAttempts } = await supabaseAdmin
@@ -468,10 +463,24 @@ export async function GET(req: NextRequest) {
                 (followerProfiles || []).map(p => [p.id, p.full_name || p.username || null])
             );
 
-            // Merge: profiles table wins
+            // Augment with auth metadata for anything missing from profiles table
+            const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+            const authNameMap = Object.fromEntries(
+                (usersData?.users || []).map(u => [
+                    u.id,
+                    u.user_metadata?.fullName ||
+                    u.user_metadata?.full_name ||
+                    u.user_metadata?.name ||
+                    u.user_metadata?.username ||
+                    (u.email ? u.email.split('@')[0] : null) ||
+                    null
+                ])
+            );
+
+            // Merge: profiles table wins, auth metadata is fallback
             const userNameMap: Record<string, string> = {};
             followingIds.forEach(id => {
-                userNameMap[id] = profileNameMap[id] || 'A friend';
+                userNameMap[id] = profileNameMap[id] || authNameMap[id] || 'A friend';
             });
 
             (followedAttempts || []).forEach((a: any) => {
@@ -695,7 +704,7 @@ export async function GET(req: NextRequest) {
         }
 
         const questions = pool
-            .slice(qOffset, limit)
+            .slice(0, limit)
             .map(r => {
                 if (r.type === 'post') return r;
                 return {

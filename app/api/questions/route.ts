@@ -46,12 +46,12 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const subject    = url.searchParams.get('subject');
     const classParam = url.searchParams.get('class');
-    const limit = Math.min(Number(url.searchParams.get('limit') || '20'), 100);
-    const offset = Number(url.searchParams.get('offset') || '0');
+    // Allow up to 1000 so a full subject filter is never truncated
+    const limit = Math.min(Number(url.searchParams.get('limit') || '50'), 1000);
 
     // Prefer DB when service role configured
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      let builder: any = supabaseAdmin.from('questions').select('*').order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+      let builder: any = supabaseAdmin.from('questions').select('*').order('created_at', { ascending: false }).limit(limit);
 
       if (subject) {
         const sLower = subject.toLowerCase();
