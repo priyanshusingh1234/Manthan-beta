@@ -86,13 +86,18 @@ export default async function SolveQuestionPage({
         );
     }
 
-    // Fetch the teacher metadata
+    // Fetch the teacher metadata rapidly from the profiles table instead of slow Auth APIs
     let teacherMetadata: any = {};
     if (q.created_by) {
         try {
-            const { data: userData, error: uErr } = await supabaseAdmin.auth.admin.getUserById(q.created_by);
-            if (!uErr && userData?.user) {
-                teacherMetadata = userData.user.user_metadata || {};
+            const { data: profile, error: uErr } = await supabaseAdmin
+                .from('profiles')
+                .select('full_name, username, avatar_url')
+                .eq('id', q.created_by)
+                .single();
+                
+            if (!uErr && profile) {
+                teacherMetadata = profile;
             }
         } catch (err) {
             console.warn('Failed to fetch teacher metadata', err);
