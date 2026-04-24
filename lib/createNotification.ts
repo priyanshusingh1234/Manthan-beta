@@ -90,11 +90,14 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                 try {
                                      await firebaseAdmin.messaging().send({
                                         token: sub.endpoint,
-                                        notification: {
+                                        // Data-only push is required for Incoming Call on Android to wake JS
+                                        notification: params.type === 'incoming_call' ? undefined : {
                                             title: params.title,
                                             body: params.body,
                                         },
                                         data: {
+                                            title: params.title,
+                                            body: params.body,
                                             url: params.href || '/',
                                             href: params.href || '/',
                                             link: params.href || '/',
@@ -104,12 +107,10 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         },
                                         android: {
                                             priority: 'high',
-                                            notification: {
+                                            notification: params.type === 'incoming_call' ? undefined : {
                                                 channelId: 'default',
                                                 color: '#4f46e5',
-                                                clickAction: params.type === 'incoming_call' ? 'incoming_call' : 'OPEN_APP',
-                                                // CRITICAL: missed_call uses SAME tag as incoming_call
-                                                // Android replaces the notify silently, killing the ringtone
+                                                clickAction: 'OPEN_APP',
                                                 tag: (params.type === 'missed_call') ? 'incoming_call' : params.type,
                                                 icon: 'ic_notification',
                                                 sound: params.type === 'missed_call' ? undefined : 'default'

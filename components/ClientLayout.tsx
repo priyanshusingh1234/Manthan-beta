@@ -122,8 +122,27 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       console.error('[NativePush] Registration error:', err.error);
     });
 
-    await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('[NativePush] Foreground notification received:', notification);
+    await PushNotifications.addListener('pushNotificationReceived', async (notification) => {
+      console.log('[NativePush] Foreground/Background push received:', notification);
+      const data = notification.data || {};
+      
+      if (data.type === 'incoming_call') {
+        try {
+          const { IncomingCallKit } = await import('@capgo/capacitor-incoming-call-kit');
+          await IncomingCallKit.showIncomingCall({
+            callId: data.roomId || data.deep_link?.split('/chat/')[1] || String(Date.now()),
+            callerName: data.title || notification.title || 'Scholar',
+            hasVideo: false,
+            appName: 'Dheeyudha',
+            android: {
+              showFullScreen: true,
+              isHighPriority: true,
+            }
+          });
+        } catch (e) {
+          console.error('[CallKit] Failed to show incoming call from push', e);
+        }
+      }
     });
 
     // This fires when user TAPS a notification or clicks an action button
