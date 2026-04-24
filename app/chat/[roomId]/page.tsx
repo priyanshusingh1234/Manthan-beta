@@ -257,6 +257,7 @@ function ChatRoomContent() {
   const { roomId } = useParams() as { roomId: string };
   const searchParams = useSearchParams();
   const initialName = searchParams.get('name') || '';
+  const callCtx = useCallContext();
 
   const [user, setUser] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -455,7 +456,6 @@ function ChatRoomContent() {
           return;
         }
         if (msg.content.startsWith('__CALL_ENDED__')) {
-          if (msg.sender_id !== user.id) setCallState('idle');
           return;
         }
 
