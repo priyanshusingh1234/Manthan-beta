@@ -179,7 +179,7 @@ export default function QuestionsFeed() {
         // Filter mode — pass subject/class to server so DB filtering returns ALL matching
         // questions (not just the newest 300 across all subjects).
         filterModeRef.current = true;
-        const qs = new URLSearchParams({ limit: '1000' });
+        const qs = new URLSearchParams({ limit: '20', offset: offsetRef.current.toString() });
         if (sub)  qs.set('subject', sub);
         if (cls)  qs.set('class',   cls);
         const res = await fetch(`/api/questions?${qs.toString()}`, { headers, cache: 'no-store' });
