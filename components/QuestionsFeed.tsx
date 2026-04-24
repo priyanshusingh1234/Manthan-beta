@@ -10,12 +10,12 @@ const PAGE_SIZE = 10;
 
 // ── Filter constants ──────────────────────────────────────────────────────────
 const SUBJECTS = [
-  { label: 'All',     value: '',         emoji: '⚡' },
-  { label: 'Maths',   value: 'Maths',    emoji: '📐' },
-  { label: 'Science', value: 'Science',  emoji: '🔬' },
-  { label: 'English', value: 'English',  emoji: '📖' },
-  { label: 'SST',     value: 'SST',      emoji: '🌍' },
-  { label: 'G.K',     value: 'G.K',      emoji: '🧠' },
+  { label: 'All', value: '', emoji: '⚡' },
+  { label: 'Maths', value: 'Maths', emoji: '📐' },
+  { label: 'Science', value: 'Science', emoji: '🔬' },
+  { label: 'English', value: 'English', emoji: '📖' },
+  { label: 'SST', value: 'SST', emoji: '🌍' },
+  { label: 'G.K', value: 'G.K', emoji: '🧠' },
 ];
 
 const CLASSES = [
@@ -30,9 +30,9 @@ function matchSubject(qSubject: string | null | undefined, filterValue: string):
   const q = qSubject.trim().toLowerCase();
   const f = filterValue.trim().toLowerCase();
   switch (f) {
-    case 'maths':              return q.includes('math') || q === 'maths';
-    case 'science':            return q.includes('science') || q.includes('physics') || q.includes('chemistry') || q.includes('biology');
-    case 'english':            return (q.includes('english') || q === 'eng') && !q.includes('literature') && !q.includes('lit');
+    case 'maths': return q.includes('math') || q === 'maths';
+    case 'science': return q.includes('science') || q.includes('physics') || q.includes('chemistry') || q.includes('biology');
+    case 'english': return (q.includes('english') || q === 'eng') && !q.includes('literature') && !q.includes('lit');
     case 'english literature': return q.includes('english literature') || q.includes('eng lit') || q.includes('english lit') || q.includes('lit');
     case 'sst': {
       // Match all stored variations: 'SST', 'Social Studies', 'Social Science',
@@ -48,8 +48,8 @@ function matchSubject(qSubject: string | null | undefined, filterValue: string):
         q === 'ss'
       );
     }
-    case 'g.k':               return q === 'g.k' || q === 'gk' || q.includes('g.k') || q.includes('general knowledge') || q.includes('general k');
-    default:                   return q.startsWith(f) || q === f || q.includes(f);
+    case 'g.k': return q === 'g.k' || q === 'gk' || q.includes('g.k') || q.includes('general knowledge') || q.includes('general k');
+    default: return q.startsWith(f) || q === f || q.includes(f);
   }
 }
 
@@ -64,53 +64,53 @@ function matchClass(qClass: string | null | undefined, filterClass: string): boo
 
 export default function QuestionsFeed() {
   // Filter state
-  const [subject, setSubject]   = useState(() => {
-      if (typeof window !== 'undefined') return sessionStorage.getItem('dheeyudhha_feed_subject') || '';
-      return '';
+  const [subject, setSubject] = useState(() => {
+    if (typeof window !== 'undefined') return sessionStorage.getItem('dheeyudhha_feed_subject') || '';
+    return '';
   });
-  const [classGrade, setClass]  = useState(() => {
-      if (typeof window !== 'undefined') return sessionStorage.getItem('dheeyudhha_feed_class') || '';
-      return '';
+  const [classGrade, setClass] = useState(() => {
+    if (typeof window !== 'undefined') return sessionStorage.getItem('dheeyudhha_feed_class') || '';
+    return '';
   });
 
   useEffect(() => {
-      if (typeof window !== 'undefined') {
-          sessionStorage.setItem('dheeyudhha_feed_subject', subject);
-          sessionStorage.setItem('dheeyudhha_feed_class', classGrade);
-      }
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('dheeyudhha_feed_subject', subject);
+      sessionStorage.setItem('dheeyudhha_feed_class', classGrade);
+    }
   }, [subject, classGrade]);
 
   // Feed data
-  const [allData, setAllData]     = useState<FeedItem[]>(() => {
+  const [allData, setAllData] = useState<FeedItem[]>(() => {
     if (typeof window !== 'undefined') {
       const sub = sessionStorage.getItem('dheeyudhha_feed_subject') || '';
       const cls = sessionStorage.getItem('dheeyudhha_feed_class') || '';
       const cached = localStorage.getItem(`dheeyudhha_feed_cache_${sub}_${cls}`);
       if (cached) {
-        try { return JSON.parse(cached); } catch {}
+        try { return JSON.parse(cached); } catch { }
       }
     }
     return [];
   });
-  const [userId, setUserId]       = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [currentUserData, setCurrentUserData] = useState<any>(() => {
     if (typeof window !== 'undefined') {
-        const cached = localStorage.getItem('dheeyudha_user_meta_cache');
-        return cached ? JSON.parse(cached) : null;
+      const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+      return cached ? JSON.parse(cached) : null;
     }
     return null;
   });
 
   useEffect(() => {
     const handleUpdate = () => {
-        const cached = localStorage.getItem('dheeyudha_user_meta_cache');
-        if (cached) setCurrentUserData(JSON.parse(cached));
+      const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+      if (cached) setCurrentUserData(JSON.parse(cached));
     };
     window.addEventListener('user_metadata_updated', handleUpdate);
     return () => window.removeEventListener('user_metadata_updated', handleUpdate);
   }, []);
 
-  const [loading, setLoading]     = useState(() => {
+  const [loading, setLoading] = useState(() => {
     if (typeof window !== 'undefined') {
       const sub = sessionStorage.getItem('dheeyudhha_feed_subject') || '';
       const cls = sessionStorage.getItem('dheeyudhha_feed_class') || '';
@@ -119,13 +119,13 @@ export default function QuestionsFeed() {
     return true;
   });
   const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setMore]    = useState(false);
+  const [loadingMore, setMore] = useState(false);
   const [exhausted, setExhausted] = useState(false);
-  const [err, setErr]             = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [visibleCount, setVisible] = useState(PAGE_SIZE);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const offsetRef   = useRef(0);
+  const offsetRef = useRef(0);
   const filterModeRef = useRef(false); // true = browsing specific filter
 
   // ── Fetch logic: algorithmic feed OR all questions for filter ─────────────
@@ -138,35 +138,35 @@ export default function QuestionsFeed() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const currentId = session?.user?.id || null;
-        if (refresh || offsetRef.current === 0) {
+      if (refresh || offsetRef.current === 0) {
         setUserId(currentId);
         if (currentId) {
-            supabase.auth.getUser().then(({ data }) => {
-                const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim());
-                const meta = data?.user?.user_metadata || {};
-                // Apply the same avatar priority chain as ClientLayout so that
-                // avatar_url (the real uploaded photo) always wins over
-                // the raw avatar_url which may be a stale Google OAuth URL.
-                const effectiveAvatar = meta.avatar_url || meta.picture || null;
-                setCurrentUserData({
-                    ...meta,
-                    avatar_url: effectiveAvatar,   // normalised field
-                    _isAdmin: adminEmails.includes(data?.user?.email || '')
-                });
-                // Also keep localStorage in sync
-                if (typeof window !== 'undefined' && effectiveAvatar) {
-                    try {
-                        const cached = localStorage.getItem('dheeyudha_user_meta_cache');
-                        const parsed = cached ? JSON.parse(cached) : {};
-                        if (effectiveAvatar !== parsed.avatar_url) {
-                            localStorage.setItem('dheeyudha_user_meta_cache',
-                                JSON.stringify({ ...parsed, ...meta, avatar_url: effectiveAvatar }));
-                        }
-                    } catch {}
-                }
+          supabase.auth.getUser().then(({ data }) => {
+            const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim());
+            const meta = data?.user?.user_metadata || {};
+            // Apply the same avatar priority chain as ClientLayout so that
+            // avatar_url (the real uploaded photo) always wins over
+            // the raw avatar_url which may be a stale Google OAuth URL.
+            const effectiveAvatar = meta.avatar_url || meta.picture || null;
+            setCurrentUserData({
+              ...meta,
+              avatar_url: effectiveAvatar,   // normalised field
+              _isAdmin: adminEmails.includes(data?.user?.email || '')
             });
+            // Also keep localStorage in sync
+            if (typeof window !== 'undefined' && effectiveAvatar) {
+              try {
+                const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+                const parsed = cached ? JSON.parse(cached) : {};
+                if (effectiveAvatar !== parsed.avatar_url) {
+                  localStorage.setItem('dheeyudha_user_meta_cache',
+                    JSON.stringify({ ...parsed, ...meta, avatar_url: effectiveAvatar }));
+                }
+              } catch { }
+            }
+          });
         } else {
-            setCurrentUserData(null);
+          setCurrentUserData(null);
         }
       }
 
@@ -180,8 +180,8 @@ export default function QuestionsFeed() {
         // questions (not just the newest 300 across all subjects).
         filterModeRef.current = true;
         const qs = new URLSearchParams({ limit: '1000' });
-        if (sub)  qs.set('subject', sub);
-        if (cls)  qs.set('class',   cls);
+        if (sub) qs.set('subject', sub);
+        if (cls) qs.set('class', cls);
         const res = await fetch(`/api/questions?${qs.toString()}`, { headers, cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const raw = await res.json();
@@ -234,7 +234,7 @@ export default function QuestionsFeed() {
     if (prev.subject === subject && prev.classGrade === classGrade) return;
     prevFiltersRef.current = { subject, classGrade };
     offsetRef.current = 0;
-    
+
     // Attempt instant load from cache when filters change
     const cached = typeof window !== 'undefined' ? localStorage.getItem(`dheeyudhha_feed_cache_${subject}_${classGrade}`) : null;
     if (cached) {
@@ -247,7 +247,7 @@ export default function QuestionsFeed() {
     } else {
       setAllData([]);
     }
-    
+
     setVisible(PAGE_SIZE);
     setExhausted(false);
     load({ subject, classGrade });
@@ -350,11 +350,10 @@ export default function QuestionsFeed() {
               <button
                 key={s.value}
                 onClick={() => setSubject(active ? '' : s.value)}
-                className={`shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black transition-all active:scale-95 ${
-                  active
+                className={`shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black transition-all active:scale-95 ${active
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                }`}
+                  }`}
               >
                 <span>{s.emoji}</span> {s.label}
               </button>
@@ -369,11 +368,10 @@ export default function QuestionsFeed() {
             <select
               value={classGrade}
               onChange={e => setClass(e.target.value)}
-              className={`appearance-none pl-3 pr-7 py-1.5 rounded-xl text-xs font-black outline-none transition-all cursor-pointer ${
-                classGrade
+              className={`appearance-none pl-3 pr-7 py-1.5 rounded-xl text-xs font-black outline-none transition-all cursor-pointer ${classGrade
                   ? 'bg-violet-600 text-white'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-              }`}
+                }`}
             >
               {CLASSES.map(c => (
                 <option key={c.value} value={c.value} className="bg-white dark:bg-slate-900 text-slate-900">
