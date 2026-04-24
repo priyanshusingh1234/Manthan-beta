@@ -176,10 +176,13 @@ export async function GET(req: NextRequest) {
         const targetClass = req.nextUrl.searchParams.get('class') || null;
         const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || '30'), 60);
 
-        // ── Get user profile ─────────────────────────────────────────────────────────
+        // ── Get user profile, follows, attempts — all in parallel ──────────────
         let userGrade: string | null = targetClass || null;
         let userSchoolName: string | null = null;
         let followingIds: string[] = [];
+        const userAttempted = new Set<string>();
+        const userFailed = new Set<string>();
+        let recentFailedSubject: string | null = null;
 
         if (userId && currentUser) {
             // ── Run all user setup queries in PARALLEL for speed ──────────────────
