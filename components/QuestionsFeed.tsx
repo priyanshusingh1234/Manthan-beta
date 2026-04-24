@@ -85,6 +85,15 @@ export default function QuestionsFeed() {
     if (typeof window !== 'undefined') {
       const sub = sessionStorage.getItem('dheeyudhha_feed_subject') || '';
       const cls = sessionStorage.getItem('dheeyudhha_feed_class') || '';
+      
+      const sessionData = sessionStorage.getItem(`dheeyudhha_feed_session_${sub}_${cls}`);
+      if (sessionData) {
+        try { 
+          const parsed = JSON.parse(sessionData);
+          if (parsed.length > 0) return parsed;
+        } catch {}
+      }
+
       const cached = localStorage.getItem(`dheeyudhha_feed_cache_${sub}_${cls}`);
       if (cached) {
         try { return JSON.parse(cached); } catch {}
@@ -207,13 +216,18 @@ export default function QuestionsFeed() {
         setExhausted(items.length < 10);
         if (typeof window !== 'undefined') {
           localStorage.setItem(`dheeyudhha_feed_cache_${sub}_${cls}`, JSON.stringify(items.slice(0, 20)));
+          sessionStorage.setItem(`dheeyudhha_feed_session_${sub}_${cls}`, JSON.stringify(items.slice(0, 100)));
         }
       } else {
         setAllData(prev => {
           const ids = new Set(prev.map(i => i.id));
           const fresh = items.filter(i => !ids.has(i.id));
           if (fresh.length === 0) setExhausted(true);
-          return [...prev, ...fresh];
+          const nextArr = [...prev, ...fresh];
+          if (typeof window !== 'undefined') {
+             sessionStorage.setItem(`dheeyudhha_feed_session_${sub}_${cls}`, JSON.stringify(nextArr.slice(0, 300)));
+          }
+          return nextArr;
         });
       }
       offsetRef.current += items.length;
@@ -228,7 +242,17 @@ export default function QuestionsFeed() {
   }, []);
 
   // Initial load
-  useEffect(() => { load({ subject, classGrade }); }, [load]);
+  useEffect(() => { 
+     // Standard load behavior except don't fetch if allData was perfectly restored
+     // from a deep session (prevents wiping position)
+     if (allData.length > 40 && offsetRef.current === 0) {
+        offsetRef.current = allData.length;
+        setVisible(Math.min(allData.length, PAGE_SIZE * 3));
+        setLoading(false);
+        return;
+     }
+     load({ subject, classGrade }); 
+  }, [load, subject, classGrade]);
 
   // Re-fetch when filters change
   const prevFiltersRef = useRef({ subject: typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_subject') || '' : '', classGrade: typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_class') || '' : '' });
@@ -304,7 +328,7 @@ export default function QuestionsFeed() {
       if (!entry.isIntersecting) return;
       setVisible(v => {
         const next = v + PAGE_SIZE;
-        if (next >= filtered.length && !exhausted && !filterModeRef.current) {
+        if (next >= filtered.length && !exhausted) {
           load({ subject, classGrade });
         }
         return next;
