@@ -182,59 +182,33 @@ export async function GET(req: NextRequest) {
         let followingIds: string[] = [];
 
         if (userId && currentUser) {
-            try {
-                const { data: freshUser } = await supabaseAdmin.auth.admin.getUserById(userId);
-                const freshMeta = freshUser?.user?.user_metadata ?? currentUser.user_metadata ?? {};
-                if (!targetClass) userGrade = freshMeta?.classGrade?.toString() || null;
-                userSchoolName = freshMeta?.school || null;
-            } catch {
-                if (!targetClass) userGrade = currentUser.user_metadata?.classGrade?.toString() || null;
-                userSchoolName = currentUser.user_metadata?.school || null;
-            }
+            // ── Run all user setup queries in PARALLEL for speed ──────────────────
+            const [profileResult, followsResult, attemptsResult, writtenResult] = await Promise.all([
+                supabaseAdmin.from('profiles').select('school').eq('id', userId).maybeSingle(),
+                supabaseAdmin.from('follows').select('following_id').eq('follower_id', userId),
+                supabaseAdmin.from('question_attempts').select('question_id, is_correct, created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(500),
+                supabaseAdmin.from('written_submissions').select('question_id').eq('student_id', userId),
+            ]);
 
-            const { data: followsData } = await supabaseAdmin
-                .from('follows')
-                .select('following_id')
-                .eq('follower_id', userId);
-            followingIds = (followsData || []).map((f: any) => f.following_id);
-        }
+            if (!targetClass) userGrade = currentUser.user_metadata?.classGrade?.toString() || currentUser.user_metadata?.grade?.toString() || null;
+            userSchoolName = profileResult.data?.school || currentUser.user_metadata?.school || null;
+            followingIds = (followsResult.data || []).map((f: any) => f.following_id);
 
-        // ── Get attempted & failed question IDs ────────────────────────────
-        const userAttempted = new Set<string>();
-        const userFailed = new Set<string>();
-        let recentFailedSubject: string | null = null;
-
-        if (userId) {
-            const { data: attempts } = await supabaseAdmin
-                .from('question_attempts')
-                .select('question_id, is_correct, created_at')
-                .eq('user_id', userId)
-                .order('created_at', { ascending: false });
-
-            (attempts || []).forEach((a: any) => {
+            const attempts = attemptsResult.data || [];
+            attempts.forEach((a: any) => {
                 userAttempted.add(String(a.question_id));
                 if (!a.is_correct) userFailed.add(String(a.question_id));
             });
 
-            // "Redemption Protocol": If user failed any of their last 3 questions, aggressively target that subject
-            const recentAttempts = (attempts || []).slice(0, 3);
+            // "Redemption Protocol": If user failed any of their last 3 questions, target that subject
+            const recentAttempts = attempts.slice(0, 3);
             const recentFail = recentAttempts.find((a: any) => !a.is_correct);
             if (recentFail && !subject) {
-                const { data: qData } = await supabaseAdmin
-                    .from('questions')
-                    .select('subject')
-                    .eq('id', recentFail.question_id)
-                    .maybeSingle();
-                if (qData && qData.subject) {
-                    recentFailedSubject = qData.subject;
-                }
+                const { data: qData } = await supabaseAdmin.from('questions').select('subject').eq('id', recentFail.question_id).maybeSingle();
+                if (qData?.subject) recentFailedSubject = qData.subject;
             }
 
-            const { data: written } = await supabaseAdmin
-                .from('written_submissions')
-                .select('question_id')
-                .eq('student_id', userId);
-            (written || []).forEach((w: any) => userAttempted.add(String(w.question_id)));
+            (writtenResult.data || []).forEach((w: any) => userAttempted.add(String(w.question_id)));
         }
 
         // ── Get question pools per layer ───────────────────────────────────
@@ -371,10 +345,13 @@ export async function GET(req: NextRequest) {
         // LAYER 3 (~20%): What school peers solved recently
         if (userSchoolName && userId) {
             const layer3Count = Math.ceil(limit * 0.20 * overFetch);
-            const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-            const schoolmateIds = (usersData?.users || [])
-                .filter(u => u.user_metadata?.school === userSchoolName && u.id !== userId)
-                .map(u => u.id);
+            const { data: schoolmates } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('school', userSchoolName)
+                .neq('id', userId)
+                .limit(200);
+            const schoolmateIds = (schoolmates || []).map((u: any) => u.id);
 
             if (schoolmateIds.length > 0) {
                 const { data: peerAttempts } = await supabaseAdmin
@@ -403,7 +380,8 @@ export async function GET(req: NextRequest) {
         if (userGrade) {
             const { data: allAttempts } = await supabaseAdmin
                 .from('question_attempts')
-                .select('question_id, is_correct');
+                .select('question_id, is_correct')
+                .limit(2000);
 
             const statsMap: Record<string, { total: number; correct: number }> = {};
             (allAttempts || []).forEach((a: any) => {
