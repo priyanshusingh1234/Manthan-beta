@@ -131,7 +131,10 @@ export default function QuestionsFeed() {
   // ── Fetch logic: algorithmic feed OR all questions for filter ─────────────
   const load = useCallback(async ({ refresh = false, subject: sub = '', classGrade: cls = '' } = {}) => {
     if (refresh) { setRefreshing(true); offsetRef.current = 0; }
-    else if (offsetRef.current === 0) setLoading(true);
+    else if (offsetRef.current === 0) {
+      const cached = typeof window !== 'undefined' ? localStorage.getItem(`dheeyudhha_feed_cache_${sub}_${cls}`) : null;
+      setLoading(!cached);
+    }
     else setMore(true);
     setErr(null);
 
