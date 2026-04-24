@@ -214,6 +214,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             }).catch(() => {});
         }
         supabase.channel(`room-${rid}`).send({ type: 'broadcast', event: 'call-ended', payload: { roomId: rid } }).catch(() => {});
+        supabase.channel(`call-watcher-${rid}`).send({ type: 'broadcast', event: 'call-ended', payload: { roomId: rid } }).catch(() => {});
     }
   };
 
