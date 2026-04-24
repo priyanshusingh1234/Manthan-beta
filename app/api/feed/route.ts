@@ -174,7 +174,9 @@ export async function GET(req: NextRequest) {
         const difficulty = req.nextUrl.searchParams.get('difficulty') || '';
         const chapter = req.nextUrl.searchParams.get('chapter') || '';
         const targetClass = req.nextUrl.searchParams.get('class') || null;
-        const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || '30'), 60);
+        const qLimit = Math.min(Number(req.nextUrl.searchParams.get('limit') || '30'), 60);
+        const qOffset = Number(req.nextUrl.searchParams.get('offset') || '0');
+        const limit = qLimit + qOffset; // Expand internal horizon so stratifications can generate enough data to slice
 
         // ── Get user profile ─────────────────────────────────────────────────────────
         let userGrade: string | null = targetClass || null;
@@ -693,7 +695,7 @@ export async function GET(req: NextRequest) {
         }
 
         const questions = pool
-            .slice(0, limit)
+            .slice(qOffset, limit)
             .map(r => {
                 if (r.type === 'post') return r;
                 return {

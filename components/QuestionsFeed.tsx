@@ -202,7 +202,7 @@ export default function QuestionsFeed() {
         // Algorithmic feed (no filter)
         filterModeRef.current = false;
         const localClass = typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_recent_class') || '' : '';
-        const qs = new URLSearchParams({ t: Date.now().toString(), limit: '40' });
+        const qs = new URLSearchParams({ t: Date.now().toString(), limit: '40', offset: offsetRef.current.toString() });
         if (localClass) qs.set('class', localClass);
         const res = await fetch(`/api/feed?${qs.toString()}`, { headers, cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
