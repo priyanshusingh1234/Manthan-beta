@@ -175,27 +175,20 @@ const TeacherProfile: React.FC = () => {
 
       // ── Step 5: Calculate Teaching Impact — Students Reached and Solve Counts ──
       const calculateImpact = async () => {
-        // Find all their question IDs
-        const { data: qs } = await supabase.from('questions').select('id').eq('created_by', user.id);
-        const qids = (qs || []).map(q => q.id);
-        
-        if (qids.length === 0) {
-          if (mounted) setImpactStats({ reached: 0, solves: 0, accuracy: 0 });
-          return;
-        }
-
-        // Get all attempts on these questions
-        const { data: attempts } = await supabase.from('question_attempts').select('user_id, is_correct').in('question_id', qids);
-        
-        if (attempts && mounted) {
-           const uniqueParticipants = new Set(attempts.map(a => a.user_id)).size;
-           const correctAttempts = attempts.filter(a => a.is_correct).length;
-           const accuracy = attempts.length > 0 ? (correctAttempts / attempts.length) * 100 : 0;
-           setImpactStats({ 
-              reached: uniqueParticipants, 
-              solves: correctAttempts, 
-              accuracy: Math.round(accuracy) 
-           });
+        try {
+          const res = await fetch(`/api/profile/impact?userId=${user.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (mounted) {
+              setImpactStats({
+                reached: data.reached || 0,
+                solves: data.solves || 0,
+                accuracy: data.accuracy || 0
+              });
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch teacher impact:", e);
         }
       };
 
