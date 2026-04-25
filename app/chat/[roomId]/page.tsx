@@ -304,14 +304,15 @@ function ChatRoomContent() {
       .from('chat_messages')
       .select('*')
       .eq('room_id', roomId)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })  // newest first
       .limit(80);
 
     if (error || !latestMessages) return;
 
     const roomDeletedKey = `deleted_for_me_${roomId}`;
     const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
-    const filtered = latestMessages.filter(m => !deletedIds.includes(m.id));
+    // Reverse so messages are displayed oldest→newest
+    const filtered = latestMessages.slice().reverse().filter(m => !deletedIds.includes(m.id));
 
     // Merge DB messages with any optimistic messages still in flight.
     // Without this, the 1-second poll would replace the entire array and wipe
@@ -372,7 +373,8 @@ function ChatRoomContent() {
 
       const [pRes, mRes] = await Promise.all([
         supabase.from('chat_participants').select('user_id').eq('room_id', roomId).neq('user_id', u.id),
-        supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: true }).limit(80),
+        // Fetch newest 80 (descending), then reverse for display — works for chats with 80+ messages
+        supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: false }).limit(80),
       ]);
 
       if (pRes.data?.[0]?.user_id) {
@@ -388,7 +390,8 @@ function ChatRoomContent() {
         const roomDeletedKey = `deleted_for_me_${roomId}`;
         const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
 
-        const filtered = mRes.data.filter(m => !deletedIds.includes(m.id));
+        // Reverse from descending fetch → oldest-first for display
+        const filtered = mRes.data.slice().reverse().filter(m => !deletedIds.includes(m.id));
 
         setMessages(filtered);
         setLoading(false);
