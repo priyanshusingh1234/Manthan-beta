@@ -468,6 +468,14 @@ const StudentProfile: React.FC = () => {
       // avatar_url before we return — prevents stale data on /user/[username]
       // and on the leaderboard for the rest of this request lifecycle.
       const { data: { session } } = await supabase.auth.getSession();
+      // ── Immediately patch currentUser so banner renders right now ──
+      // Don't rely on getUser() returning fresh metadata (it may be cached).
+      setCurrentUser((prev) =>
+        prev
+          ? { ...prev, user_metadata: { ...prev.user_metadata, ...updateData } }
+          : prev
+      );
+
       if (session?.access_token) {
         await fetch('/api/profile/sync', {
           method: 'POST',
@@ -475,17 +483,19 @@ const StudentProfile: React.FC = () => {
             Authorization: `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(type === 'avatar' ? { avatarUrl: publicUrl } : {}),
+          // Pass both avatar and banner URLs so DB profiles table stays in sync
+          body: JSON.stringify(
+            type === 'avatar'
+              ? { avatarUrl: publicUrl }
+              : { bannerUrl: publicUrl }
+          ),
         }).catch(console.error);
-        
-        // Force the browser to grab a completely new JWT from the server.
-        // This is strictly required because supabase.auth.updateUser silenty drops
-        // `avatar_url` from the client cache to protect OAuth profiles.
+
         await supabase.auth.refreshSession();
       }
 
       if (type === 'avatar') setUserData((s) => ({ ...s, avatar: publicUrl }));
-      else setUserData((s) => ({ ...s }));
+      // banner is shown via currentUser.user_metadata.banner_url (patched above)
       setMessage(`${type[0].toUpperCase() + type.slice(1)} updated`);
 
       // Proactively update local cache to prevent flickering/stale views in Feed
@@ -515,7 +525,14 @@ const StudentProfile: React.FC = () => {
 
       try {
         const { data: refreshed } = await supabase.auth.getUser();
-        setCurrentUser(refreshed.user || null);
+        if (refreshed.user) {
+          // Merge updateData in case getUser() returns a cached object without the
+          // latest metadata (Supabase client sometimes lags one tick after updateUser)
+          setCurrentUser({
+            ...refreshed.user,
+            user_metadata: { ...refreshed.user.user_metadata, ...updateData },
+          });
+        }
       } catch (e) {
         console.warn('Failed to refresh user after upload', e);
       }
