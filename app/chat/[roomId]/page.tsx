@@ -523,6 +523,8 @@ function ChatRoomContent() {
   }, [scrollToBottom]);
 
   // ─── Send message ────────────────────────────────────────────────────────
+  const [sendError, setSendError] = useState<string | null>(null);
+
   const handleSend = useCallback(async () => {
     if (!newMessage.trim() || !user || sending) return;
 
@@ -539,35 +541,45 @@ function ChatRoomContent() {
     const optimistic: Message = { id: tempId, room_id: roomId, sender_id: user.id, content, created_at: new Date().toISOString(), is_read: false, message_type: 'text' };
     setMessages(p => [...p, optimistic]);
     setNewMessage('');
+    setSendError(null);
     setSending(true);
     setTimeout(() => scrollToBottom(), 50);
-    // Reset textarea height
     if (inputRef.current) { inputRef.current.style.height = 'auto'; }
 
     try {
-      const { data, error } = await supabase.from('chat_messages').insert({ room_id: roomId, sender_id: user.id, content, message_type: 'text' }).select('*').single();
-      if (error) throw error;
-      if (data) {
-        setMessages(p => p.map(m => m.id === tempId ? data : m));
-        // Send Push Notification
-        if (participant?.user_id) {
-          fetch('/api/chat/notify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              receiverId: participant.user_id,
-              senderId: user.id,
-              roomId: roomId,
-              content: content.substring(0, 50)
-            })
-          }).catch(() => {});
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Session expired — please refresh the page');
+
+      // Use server-side API route so message insertion uses supabaseAdmin
+      // (bypasses proxy + RLS, always works regardless of client auth state)
+      const res = await fetch('/api/chat/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ roomId, content, messageType: 'text' }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `Send failed (${res.status})`);
+
+      setMessages(p => p.map(m => m.id === tempId ? json.message : m));
+
+      if (participant?.user_id) {
+        fetch('/api/chat/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ receiverId: participant.user_id, senderId: user.id, roomId, content: content.substring(0, 50) }),
+        }).catch(() => {});
       }
-    } catch {
+    } catch (e: any) {
       setMessages(p => p.filter(m => m.id !== tempId));
       setNewMessage(content);
+      setSendError(e.message || 'Failed to send — tap to retry');
     } finally { setSending(false); }
   }, [newMessage, user, sending, replyingTo, participant, roomId, scrollToBottom]);
+
 
   // ─── Delete messages ──────────────────────────────────────────────────────
   const deleteMessages = async (ids: string[]) => {
@@ -1015,7 +1027,15 @@ function ChatRoomContent() {
         className="shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/60 dark:border-slate-800/60"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 4px)' }}
       >
+      {/* ── Send error banner ───────────────────────────────────────── */}
+        {sendError && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-950/30 border-b border-rose-100 dark:border-rose-900/30">
+            <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex-1">{sendError}</span>
+            <button onClick={() => setSendError(null)} className="text-rose-400 text-xs font-bold">✕</button>
+          </div>
+        )}
         {/* Reply preview */}
+
         {replyingTo && (
           <div className="flex items-center gap-3 px-4 pt-2.5 pb-0">
             <div className="flex-1 border-l-[3px] border-indigo-500 pl-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 rounded-r-xl min-w-0">
