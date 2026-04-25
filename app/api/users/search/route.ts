@@ -13,33 +13,30 @@ export async function GET(req: Request) {
             return NextResponse.json({ users: [] });
         }
 
-        // Fetch all users (paginated — up to 1000 for now)
-        const { data: usersData, error } = await supabaseAdmin.auth.admin.listUsers({
-            perPage: 1000,
-        });
+        // Search profiles table directly — always fresh, no stale auth metadata
+        const { data: profiles, error } = await supabaseAdmin
+            .from('profiles')
+            .select('id, full_name, username, avatar_url, is_teacher')
+            .or(`full_name.ilike.%${q}%,username.ilike.%${q}%`)
+            .eq('is_teacher', false)
+            .neq('id', exclude || '00000000-0000-0000-0000-000000000000')
+            .limit(15);
 
         if (error) throw error;
 
-        const matched = usersData.users
-            .filter((u) => {
-                if (u.id === exclude) return false;
-                // Skip teachers
-                if (u.user_metadata?.isTeacher) return false;
+        const isGoogleAvatar = (url: string | null) =>
+            !!url && url.includes('googleusercontent.com');
 
-                const name = (u.user_metadata?.fullName || u.user_metadata?.name || "").toLowerCase();
-                const username = (u.user_metadata?.username || "").toLowerCase();
-
-                return name.includes(q) || username.includes(q);
-            })
-            .slice(0, 15) // max 15 results
-            .map((u) => ({
-                id: u.id,
-                name: u.user_metadata?.fullName || u.user_metadata?.name || "Unknown",
-                username: u.user_metadata?.username || "",
-                avatar: u.user_metadata?.avatar_url || u.user_metadata?.avatar || null,
+        const users = (profiles || [])
+            .filter((p) => p.id !== exclude)
+            .map((p) => ({
+                id: p.id,
+                name: p.full_name || 'Unknown',
+                username: p.username || '',
+                avatar: p.avatar_url && !isGoogleAvatar(p.avatar_url) ? p.avatar_url : null,
             }));
 
-        return NextResponse.json({ users: matched });
+        return NextResponse.json({ users });
     } catch (err: any) {
         console.error("[users/search] Error:", err);
         return NextResponse.json({ error: "Search failed" }, { status: 500 });

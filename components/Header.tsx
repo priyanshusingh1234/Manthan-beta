@@ -228,6 +228,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
     if (pathname.startsWith('/privacy')) return { title: 'Privacy Policy', icon: Shield };
     if (pathname.startsWith('/notifications')) return { title: 'Notifications', icon: Bell };
     if (pathname.startsWith('/chat')) return { title: 'Messages', icon: MessageSquare };
+    if (pathname.startsWith('/duels') || pathname.startsWith('/duel')) return { title: 'My Duels', icon: Swords };
     return null;
   };
 
@@ -280,6 +281,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
           <div className="mt-3 overflow-x-auto scrollbar-hide flex items-center gap-1.5 pb-1 snap-x">
             {[
               { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
+              { label: 'Duels ⚔️', href: '/duels', icon: Swords },
               { label: 'Arena', href: '/tests', icon: Zap },
               { label: 'Search', href: '/search', icon: Search },
               { label: 'Community', href: '/posts', icon: MessageSquare },
@@ -441,6 +443,17 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                               <User className="h-5 w-5" />
                               <span>My Profile</span>
                             </Link>
+
+                            {!user?.user_metadata?.isTeacher && (
+                              <Link
+                                href="/duels"
+                                onClick={() => setDropdownOpen(false)}
+                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:text-orange-600 dark:hover:text-orange-400 hover:shadow-sm border border-transparent hover:border-orange-100 dark:hover:border-orange-900/40 transition-all"
+                              >
+                                <Swords className="h-5 w-5" />
+                                <span>My Duels</span>
+                              </Link>
+                            )}
 
                             <Link
                               href="/docs"

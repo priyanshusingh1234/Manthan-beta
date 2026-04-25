@@ -14,12 +14,14 @@ import {
   Users,
   FileImage,
   CheckCircle,
-  Eye
+  Eye,
+  Swords
 } from "lucide-react";
 import { Share } from "@capacitor/share";
 import { Capacitor } from "@capacitor/core";
 import TeacherBadge from "@/ticks/teacher";
 import { supabase } from "@/lib/supabaseClient";
+import DuelChallengeModal from "@/components/DuelChallengeModal";
 
 type Question = {
   id: string;
@@ -71,7 +73,7 @@ function AvatarImage({
   // If API-provided src is null or this is the current user, try to resolve from DB/Cache
   useEffect(() => {
     let mounted = true;
-    
+
     const resolveAvatar = async () => {
       // 1. Check if this is the current user and we have a local cache
       if (typeof window !== 'undefined' && userId) {
@@ -94,14 +96,14 @@ function AvatarImage({
       }
 
       // 2. If we have a direct src, use it as fallback
-      if (src) { 
+      if (src) {
         if (mounted) {
-          setResolvedSrc(src); 
-          setFailed(false); 
+          setResolvedSrc(src);
+          setFailed(false);
         }
-        return; 
+        return;
       }
-      
+
       // 3. Otherwise, check global memory cache or fetch from DB
       if (!userId) return;
       if (userId in avatarCache) {
@@ -114,9 +116,9 @@ function AvatarImage({
         .select('avatar_url')
         .eq('id', userId)
         .maybeSingle();
-      
+
       if (!mounted) return;
-      
+
       const raw = data?.avatar_url || null;
       const isGoogle = (u: string | null) => !!u && u.includes('googleusercontent.com');
       const url = raw && !isGoogle(raw) ? raw : null;
@@ -139,8 +141,8 @@ function AvatarImage({
       });
     }
 
-    return () => { 
-      mounted = false; 
+    return () => {
+      mounted = false;
       if (typeof window !== 'undefined') {
         window.removeEventListener('user_metadata_updated', handleUpdate);
       }
@@ -176,6 +178,7 @@ export default function QuestionCard({ q }: { q: Question }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
+  const [duelOpen, setDuelOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -335,6 +338,7 @@ export default function QuestionCard({ q }: { q: Question }) {
   }
 
   return (
+    <>
     <article className="group relative w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-white/40 dark:border-slate-800/40 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 dark:hover:shadow-blue-500/10 transition-all duration-300 overflow-visible ring-1 ring-slate-200/50 dark:ring-slate-800/50 hover:ring-blue-500/30 dark:hover:ring-blue-500/30">
 
       {/* Decorative gradient blur */}
@@ -493,6 +497,19 @@ export default function QuestionCard({ q }: { q: Question }) {
             <Share2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Share</span>
           </button>
+
+          {/* ⚔️ Duel button — students only, MCQ only */}
+          {user && !isTeacher && Array.isArray(q.options) && q.options.length > 0 && !q.hasAttempted && (
+            <button
+              type="button"
+              onClick={() => setDuelOpen(true)}
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors text-[10px] sm:text-xs font-bold uppercase tracking-wider"
+              aria-label="Challenge a friend"
+            >
+              <Swords className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Duel</span>
+            </button>
+          )}
         </div>
 
         {/* Action Button — hidden for teachers */}
@@ -532,5 +549,17 @@ export default function QuestionCard({ q }: { q: Question }) {
         )}
       </div>
     </article>
+
+    {/* Duel Challenge Modal */}
+    {user && !isTeacher && (
+      <DuelChallengeModal
+        isOpen={duelOpen}
+        onClose={() => setDuelOpen(false)}
+        questionId={q.id}
+        questionTitle={q.title}
+        currentUserId={user.id}
+      />
+    )}
+    </>
   );
 }
