@@ -15,6 +15,7 @@ interface CallContextType {
   isMinimized: boolean;
   remoteVideoTrack: any;
   localVideoTrack: any;
+  callActive: React.MutableRefObject<boolean>; // ref so stale closures always see current value
   startCall: (roomId: string, type: 'voice' | 'video', participantUserId: string | undefined, participantName: string, isAnswering?: boolean) => Promise<void>;
   endCall: (skipBroadcast?: boolean) => Promise<void>;
   toggleMute: () => void;
@@ -69,6 +70,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const localAudioTrackRef = useRef<any>(null);
   const localVideoTrackRef = useRef<any>(null);
   const currentCameraIdxRef = useRef(0);
+  // Guard: prevents any re-entrant / double startCall invocation.
+  // Using a ref (not state) so stale closures in page.tsx always read the live value.
+  const callActive = useRef(false);
   
   const currentUserRef = useRef<any>(null);
 
@@ -95,6 +99,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [roomId]);
 
   const startCall = async (rid: string, type: 'voice' | 'video', pUserId: string | undefined, pName: string, isAnswering = false) => {
+    // ── Double-join guard ────────────────────────────────────────────────
+    // This ref is set synchronously (before any await) so even stale-closure
+    // callers (syncMessages, realtime handlers) will see it immediately.
+    if (callActive.current) {
+      console.log('[Call] startCall blocked — call already active');
+      return;
+    }
+    callActive.current = true;
+
     setCallType(type);
     setRoomId(rid);
     setParticipantName(pName);
@@ -200,7 +213,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (err: any) { 
-      console.error('[Agora]', err); 
+      console.error('[Agora]', err);
+      callActive.current = false; // reset guard on failure
       setCallState('idle'); 
       if (err.message?.includes('Permission') || err.name === 'NotAllowedError') {
         alert('Permission Denied: Please allow Camera and Microphone access in your Android settings to use this feature.');
@@ -211,6 +225,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   };
 
   const endCall = async (skipBroadcast = false) => {
+    callActive.current = false; // release guard immediately
     try {
       localAudioTrackRef.current?.stop(); localAudioTrackRef.current?.close();
       localVideoTrackRef.current?.stop(); localVideoTrackRef.current?.close();
@@ -240,13 +255,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleMute = () => {
-    localAudioTrackRef.current?.setEnabled(isMuted);
-    setIsMuted(v => !v);
+    const newMuted = !isMuted;
+    localAudioTrackRef.current?.setEnabled(!newMuted); // enabled = NOT muted
+    setIsMuted(newMuted);
   };
   
   const toggleCamera = () => {
-    localVideoTrackRef.current?.setEnabled(isCamOff);
-    setIsCamOff(v => !v);
+    const newCamOff = !isCamOff;
+    localVideoTrackRef.current?.setEnabled(!newCamOff); // enabled = cam ON
+    setIsCamOff(newCamOff);
   };
 
   const flipCamera = async () => {
@@ -267,7 +284,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   return (
     <CallContext.Provider value={{
         callState, callType, roomId, participantName, isMuted, isCamOff, isMinimized, setIsMinimized,
-        remoteVideoTrack, localVideoTrack, startCall, endCall, toggleMute, toggleCamera, flipCamera
+        remoteVideoTrack, localVideoTrack, callActive, startCall, endCall, toggleMute, toggleCamera, flipCamera
     }}>
       {children}
       

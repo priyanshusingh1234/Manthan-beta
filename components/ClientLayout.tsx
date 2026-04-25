@@ -125,7 +125,7 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
     await PushNotifications.addListener('pushNotificationReceived', async (notification) => {
       console.log('[NativePush] Foreground/Background push received:', notification);
       const data = notification.data || {};
-      
+
       if (data.type === 'incoming_call') {
         try {
           const { IncomingCallKit } = await import('@capgo/capacitor-incoming-call-kit');
@@ -148,41 +148,41 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
     // This fires when user TAPS a notification or clicks an action button
     await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       console.log('[NativePush] Notification tapped/action:', action);
-      
+
       const data = action.notification?.data || {};
       const url = data.url || data.href || data.link || data.deep_link;
 
       if (action.actionId === 'answer') {
-         if (url && url.includes('/chat/')) {
-            const path = normalizeInAppPath(url);
-            if (path) safeNavigate(`${path}?incoming=1&autoAccept=1`, navigate);
-            return;
-         }
+        if (url && url.includes('/chat/')) {
+          const path = normalizeInAppPath(url);
+          if (path) safeNavigate(`${path}?incoming=1&autoAccept=1`, navigate);
+          return;
+        }
       } else if (action.actionId === 'decline') {
-         const roomIdMatch = url?.match(/\/chat\/([^?]+)/);
-         if (roomIdMatch && roomIdMatch[1]) {
-            const roomId = roomIdMatch[1];
-            // End call silently without opening foreground routing
-            supabase.auth.getUser().then(({ data: { user } }) => {
-              if (user) {
-                supabase.from('chat_messages').insert({
-                  room_id: roomId,
-                  sender_id: user.id,
-                  content: '__CALL_ENDED__: Call declined from notification',
-                  message_type: 'text'
-                }).then(() => {
-                  supabaseRealtime.channel(`room-${roomId}`).send({
-                    type: 'broadcast',
-                    event: 'call-ended',
-                    payload: { roomId }
-                  }).catch(() => {});
-                });
-              }
-            });
-            return;
-         }
+        const roomIdMatch = url?.match(/\/chat\/([^?]+)/);
+        if (roomIdMatch && roomIdMatch[1]) {
+          const roomId = roomIdMatch[1];
+          // End call silently without opening foreground routing
+          supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) {
+              supabase.from('chat_messages').insert({
+                room_id: roomId,
+                sender_id: user.id,
+                content: '__CALL_ENDED__: Call declined from notification',
+                message_type: 'text'
+              }).then(() => {
+                supabaseRealtime.channel(`room-${roomId}`).send({
+                  type: 'broadcast',
+                  event: 'call-ended',
+                  payload: { roomId }
+                }).catch(() => { });
+              });
+            }
+          });
+          return;
+        }
       }
-      
+
       navigateFromPayload(action);
     });
 
@@ -325,7 +325,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     supabase.auth.getUser().then(({ data: { user } }) => {
       setIsAuthenticated(!!user);
       if (user && !user.user_metadata?.username) setNeedsOnboarding(true);
-      
+
       if (user && Capacitor.isNativePlatform()) {
         initNativePush(user.id, (path) => router.push(path));
       }

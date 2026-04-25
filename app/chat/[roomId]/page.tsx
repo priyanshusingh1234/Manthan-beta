@@ -316,23 +316,9 @@ function ChatRoomContent() {
     if (unread.length) {
       supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
     }
-
-    // Smart sync for call state - run dynamically during sync polling
-    const lastMsg = filtered[filtered.length - 1];
-    if (lastMsg && lastMsg.content.startsWith('__CALL_STARTED__') && lastMsg.sender_id !== activeUserId) {
-      if (processedCallIdRef.current !== lastMsg.id) {
-        const createdAt = new Date(lastMsg.created_at).getTime();
-        if (Date.now() - createdAt < 45000) { // Active call timeframe
-          processedCallIdRef.current = lastMsg.id;
-          const type = (searchParams.get('callType') as 'voice' | 'video') || lastMsg.content.split(':')[1] as 'voice' | 'video';
-          const callerId = searchParams.get('callerId') || participant?.user_id;
-          const callerName = searchParams.get('callerName') ? decodeURIComponent(searchParams.get('callerName')!) : (participant?.full_name || 'Scholar');
-          if (searchParams.get('autoAccept') === '1' && callCtx.callState === 'idle') {
-                callCtx.startCall(roomId, type, callerId, callerName, true);
-            }
-        }
-      }
-    }
+    // Note: autoAccept / startCall is intentionally NOT done here.
+    // syncMessages runs every 1 second and has a stale closure — doing startCall
+    // here would cause double Agora joins. Only init() handles autoAccept.
   }, [roomId, user?.id]);
 
   const syncBlockStatus = useCallback(async () => {
@@ -394,18 +380,25 @@ function ChatRoomContent() {
         if (unread.length) supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
 
         // Resume incoming call state if the last message is a recent CALL_STARTED
+        // autoAccept=1 means we arrived here from GlobalCallListener.acceptCall()
         const lastMsg = filtered[filtered.length - 1];
-        if (lastMsg && lastMsg.content.startsWith('__CALL_STARTED__') && lastMsg.sender_id !== u.id) {
+        if (
+          lastMsg &&
+          lastMsg.content.startsWith('__CALL_STARTED__') &&
+          lastMsg.sender_id !== u.id &&
+          searchParams.get('autoAccept') === '1' &&
+          !callCtx.callActive.current  // use ref — never stale, safe to check here
+        ) {
           const createdAt = new Date(lastMsg.created_at).getTime();
-          if (Date.now() - createdAt < 45000) { // Call active within last 45s
+          if (Date.now() - createdAt < 45000) {
             processedCallIdRef.current = lastMsg.id;
-            // Prefer type from URL params (set by GlobalCallListener), fall back to message
             const type = (searchParams.get('callType') as 'voice' | 'video') || lastMsg.content.split(':')[1] as 'voice' | 'video';
             const callerId = searchParams.get('callerId') || pRes.data?.[0]?.user_id;
-            const callerName = searchParams.get('callerName') ? decodeURIComponent(searchParams.get('callerName')!) : (prof?.full_name || 'Scholar');
-            if (searchParams.get('autoAccept') === '1' && callCtx.callState === 'idle') {
-                callCtx.startCall(roomId, type, callerId, callerName, true);
-            }
+            const callerName = searchParams.get('callerName')
+              ? decodeURIComponent(searchParams.get('callerName')!)
+              : (prof?.full_name || 'Scholar');
+            // startCall has its own internal guard too — this is belt-and-suspenders
+            callCtx.startCall(roomId, type, callerId, callerName, true);
           }
         }
       }
@@ -450,13 +443,8 @@ function ChatRoomContent() {
         if (isBlockedRef.current) return;
         if (msg.content.startsWith('__CALL_STARTED__')) {
           if (msg.sender_id !== user.id) {
-            processedCallIdRef.current = msg.id;
-            const type = (searchParams.get('callType') as 'voice' | 'video') || msg.content.split(':')[1] as 'voice' | 'video';
-            const callerId = searchParams.get('callerId') || participant?.user_id;
-            const callerName = searchParams.get('callerName') ? decodeURIComponent(searchParams.get('callerName')!) : (participant?.full_name || 'Scholar');
-            if (searchParams.get('autoAccept') === '1' && callCtx.callState === 'idle') {
-                callCtx.startCall(roomId, type, callerId, callerName, true);
-            }
+            // Do NOT call startCall here — this handler has a stale closure and
+            // would double-join Agora. autoAccept is handled once in init().
             playNotifSound();
             vibrate('medium');
           }
