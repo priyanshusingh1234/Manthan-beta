@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import Header from '@/components/Header';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import { usePathname, useRouter } from 'next/navigation';
@@ -171,7 +171,7 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
                   content: '__CALL_ENDED__: Call declined from notification',
                   message_type: 'text'
                 }).then(() => {
-                  supabaseRealtime.channel(`realtime:room-${roomId}`).send({
+                  supabaseRealtime.channel(`room-${roomId}`).send({
                     type: 'broadcast',
                     event: 'call-ended',
                     payload: { roomId }
@@ -505,7 +505,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {isAuthenticated && <PushNotificationPrompt />}
       {isAuthenticated && <CongratsBadgeModal />}
       {isAuthenticated && <GlobalChatListener />}
-      {isAuthenticated && <GlobalCallListener />}
+      <GlobalCallListener />
       <GlobalPrefetcher isAuthenticated={isAuthenticated} />
     </CallProvider>
   );
