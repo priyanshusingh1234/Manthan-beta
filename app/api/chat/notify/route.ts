@@ -4,7 +4,7 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 
 export async function POST(req: Request) {
   try {
-    const { receiverId, senderId, content, roomId } = await req.json();
+    const { receiverId, senderId, content, roomId, actorName } = await req.json();
 
     if (!receiverId || !roomId || !senderId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -39,7 +39,8 @@ export async function POST(req: Request) {
       type: notifType as any,
       title,
       body,
-      href: `/chat/${roomId}`
+      href: `/chat/${roomId}`,
+      actorName: actorName || realSenderName,  // used as callerName in FCM data
     });
 
     return NextResponse.json({ success: true });

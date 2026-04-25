@@ -213,11 +213,19 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           }
         }).catch(() => {});
 
+
         if (pUserId) {
+          const callerName = user.user_metadata?.fullName || user.user_metadata?.full_name || 'Scholar';
           fetch('/api/chat/notify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ receiverId: pUserId, senderId: user.id, roomId: rid, content: `📞 Incoming ${type} call` })
+            body: JSON.stringify({
+              receiverId: pUserId,
+              senderId: user.id,
+              roomId: rid,
+              content: `📞 Incoming ${type} call`,
+              actorName: callerName,  // passed through to FCM data.callerName
+            })
           }).catch(() => {});
         }
       }

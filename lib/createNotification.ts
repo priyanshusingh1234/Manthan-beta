@@ -103,6 +103,9 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             link: params.href || '/',
                                             deep_link: params.href || '/',
                                             type: params.type,
+                                            // Extract roomId from href so IncomingCallKit can use it
+                                            roomId: params.href?.split('/chat/')?.[1]?.split('?')?.[0] || '',
+                                            callerName: params.actorName || params.title || 'Scholar',
                                             click_action: 'OPEN_APP',
                                         },
                                         android: {

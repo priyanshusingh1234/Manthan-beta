@@ -129,9 +129,11 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       if (data.type === 'incoming_call') {
         try {
           const { IncomingCallKit } = await import('@capgo/capacitor-incoming-call-kit');
+          const roomId = data.roomId || data.deep_link?.split('/chat/')?.[1]?.split('?')?.[0] || String(Date.now());
+          const callerName = data.callerName || data.title || notification.title || 'Scholar';
           await IncomingCallKit.showIncomingCall({
-            callId: data.roomId || data.deep_link?.split('/chat/')[1] || String(Date.now()),
-            callerName: data.title || notification.title || 'Scholar',
+            callId: roomId,
+            callerName,
             hasVideo: false,
             appName: 'Dheeyudha',
             android: {
