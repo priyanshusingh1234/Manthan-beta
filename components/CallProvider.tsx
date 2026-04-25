@@ -84,18 +84,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
       if (!roomId) return;
-      const channel = supabase.channel(`call-watcher-${roomId}`);
+      // MUST use supabaseRealtime (direct WS connection), NOT supabase.
+      // supabase goes through the HTTP proxy which can't upgrade to WebSocket
+      // on Vercel — so the call-ended broadcast was never received.
+      const channel = supabaseRealtime.channel(`call-watcher-${roomId}`);
       channel.on('broadcast', { event: 'call-ended' }, () => {
           endCall(true);
       });
       channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
           const msg = payload.new as any;
-          if (msg.content.startsWith('__CALL_ENDED__') && msg.sender_id !== currentUserRef.current?.id) {
+          if (msg.content?.startsWith('__CALL_ENDED__') && msg.sender_id !== currentUserRef.current?.id) {
               endCall(true);
           }
       });
       channel.subscribe();
-      return () => { supabase.removeChannel(channel); };
+      return () => { supabaseRealtime.removeChannel(channel); };
   }, [roomId]);
 
   const startCall = async (rid: string, type: 'voice' | 'video', pUserId: string | undefined, pName: string, isAnswering = false) => {
@@ -124,6 +127,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         await client.subscribe(remoteUser, mediaType as any);
         if (mediaType === 'video') setRemoteVideoTrack(remoteUser.videoTrack);
         if (mediaType === 'audio') remoteUser.audioTrack?.play();
+      });
+
+      // When the remote party hangs up, Agora fires user-left.
+      // This is the FASTEST end-call signal — fires before any DB/broadcast.
+      client.on('user-left', () => {
+        endCall(true);
       });
       
       const appId = process.env.NEXT_PUBLIC_AGORA_APP_ID || '';
