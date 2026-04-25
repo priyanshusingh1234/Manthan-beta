@@ -10,6 +10,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Capacitor } from '@capacitor/core';
 import { IncomingCallKit } from '@capgo/capacitor-incoming-call-kit';
 import Image from 'next/image';
+import { useCallContext } from '@/components/CallProvider';
 
 interface IncomingCall {
   roomId: string;
@@ -22,13 +23,14 @@ interface IncomingCall {
 export default function GlobalCallListener() {
   const pathname = usePathname();
   const router = useRouter();
+  const callCtx = useCallContext();
+
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const incomingCallRef = useRef<IncomingCall | null>(null);
   const userRef = useRef<any>(null);
   const pathnameRef = useRef(pathname);
   const channelsRef = useRef<any[]>([]);
   const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  // Track processed call message IDs to avoid showing the same call twice
   const processedCallMsgIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -60,25 +62,19 @@ export default function GlobalCallListener() {
     }
   };
 
-  // Central handler — called from both broadcast and postgres_changes paths
   const handleIncomingCall = async (
     roomId: string,
     callerId: string,
     callerName: string,
     callType: 'voice' | 'video',
-    dedupeKey: string, // message id or broadcast timestamp
+    dedupeKey: string,
   ) => {
-    // Ignore if we are the caller
     if (callerId === userRef.current?.id) return;
-    // Ignore if already on that chat page
     if (pathnameRef.current === `/chat/${roomId}`) return;
-    // Deduplicate: skip if already handled this call event
     if (processedCallMsgIdsRef.current.has(dedupeKey)) return;
     processedCallMsgIdsRef.current.add(dedupeKey);
-    // If there's already a call showing, skip
     if (incomingCallRef.current) return;
 
-    // Fetch caller avatar
     let callerAvatar: string | undefined;
     try {
       const { data: profile } = await supabase
@@ -124,14 +120,13 @@ export default function GlobalCallListener() {
     }
   };
 
-  const acceptCall = () => {
+  const acceptCall = async () => {
     const call = incomingCallRef.current;
     if (!call) return;
 
-    // Capture all needed info BEFORE dismissCall clears refs
     const { roomId, type, callerId, callerName } = call;
 
-    // Remove the channel for this room before navigating
+    // Remove the room channel before navigating
     const roomChannelIndex = channelsRef.current.findIndex(
       ch => ch.topic === `realtime:room-${roomId}`
     );
@@ -140,13 +135,25 @@ export default function GlobalCallListener() {
       channelsRef.current.splice(roomChannelIndex, 1);
     }
 
-    // Now clear the ringing UI
     dismissCall();
 
-    // Navigate with all metadata embedded in URL
-    router.push(
-      `/chat/${roomId}?incoming=1&autoAccept=1&callType=${type}&callerId=${callerId}&callerName=${encodeURIComponent(callerName)}`
-    );
+    if (!Capacitor.isNativePlatform()) {
+      // ── WEB PATH ─────────────────────────────────────────────────────────
+      // Browser AudioContext REQUIRES a user gesture to start. We are currently
+      // INSIDE a button onClick (user gesture), so we must call startCall()
+      // RIGHT HERE — before any navigation — otherwise the audio context will
+      // be blocked when init() tries to start it asynchronously after page load.
+      await callCtx.startCall(roomId, type, callerId, callerName, true);
+      // Navigate without autoAccept — call is already running
+      router.push(`/chat/${roomId}`);
+    } else {
+      // ── NATIVE PATH ───────────────────────────────────────────────────────
+      // No AudioContext restriction on native. Navigate first, let chat page
+      // handle Agora join via autoAccept URL param.
+      router.push(
+        `/chat/${roomId}?autoAccept=1&callType=${type}&callerId=${callerId}&callerName=${encodeURIComponent(callerName)}`
+      );
+    }
   };
 
   const declineCall = async () => {
@@ -191,7 +198,7 @@ export default function GlobalCallListener() {
       const callType = call?.type || 'voice';
       const callerId = call?.callerId || '';
       const callerName = encodeURIComponent(call?.callerName || 'Scholar');
-      router.push(`/chat/${roomId}?incoming=1&autoAccept=1&callType=${callType}&callerId=${callerId}&callerName=${callerName}`);
+      router.push(`/chat/${roomId}?autoAccept=1&callType=${callType}&callerId=${callerId}&callerName=${callerName}`);
     });
 
     IncomingCallKit.addListener('callDeclined', async (event) => {
@@ -218,10 +225,7 @@ export default function GlobalCallListener() {
       if (!user) return;
       userRef.current = user;
 
-      // ── CRITICAL: sync auth session to supabaseRealtime ──────────────────
-      // supabaseRealtime is a separate client instance. Without copying the
-      // session, its realtime subscriptions are unauthenticated and broadcasts
-      // are silently dropped by Supabase RLS.
+      // Sync auth session to supabaseRealtime
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         await supabaseRealtime.auth.setSession({
@@ -230,7 +234,6 @@ export default function GlobalCallListener() {
         });
       }
 
-      // Fetch all rooms this user is part of
       const { data: rooms } = await supabase
         .from('chat_participants')
         .select('room_id')
@@ -243,9 +246,9 @@ export default function GlobalCallListener() {
           config: { broadcast: { ack: false } }
         });
 
-        // ── Path 1: Broadcast (fast, ~instant) ───────────────────────────
+        // Fast path: broadcast
         channel.on('broadcast', { event: 'call-invite' }, ({ payload }) => {
-          const dedupe = `broadcast-${room.room_id}-${payload.callerId}-${payload.ts || Date.now()}`;
+          const dedupe = `broadcast-${room.room_id}-${payload.callerId}-${payload.ts || ''}`;
           handleIncomingCall(
             room.room_id,
             payload.callerId,
@@ -255,22 +258,18 @@ export default function GlobalCallListener() {
           );
         });
 
-        // ── Path 2: Postgres changes (reliable fallback) ──────────────────
-        // Catches __CALL_STARTED__ messages written to DB — works even if
-        // the broadcast was dropped due to auth/connection issues.
+        // Reliable fallback: postgres_changes on __CALL_STARTED__ message
         channel.on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${room.room_id}` },
           (payload) => {
             const msg = payload.new as any;
-            if (!msg.content.startsWith('__CALL_STARTED__')) return;
-            // Only process recent calls (within 45 seconds)
+            if (!msg.content?.startsWith('__CALL_STARTED__')) return;
             const age = Date.now() - new Date(msg.created_at).getTime();
             if (age > 45000) return;
 
+            // Fetch caller name, then show incoming call UI
             const callType = (msg.content.split(':')[1] || 'voice') as 'voice' | 'video';
-            // We don't have callerName from DB — use a placeholder, handleIncomingCall
-            // will fetch the avatar. Caller name will be fetched from profiles below.
             supabase.from('profiles').select('full_name').eq('id', msg.sender_id).single()
               .then(({ data: prof }) => {
                 handleIncomingCall(
@@ -278,7 +277,7 @@ export default function GlobalCallListener() {
                   msg.sender_id,
                   prof?.full_name || 'Scholar',
                   callType,
-                  msg.id, // Use message ID as dedupe key
+                  msg.id,
                 );
               });
           }
@@ -295,7 +294,6 @@ export default function GlobalCallListener() {
 
     setup();
 
-    // Also refresh the session sync whenever supabase auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         await supabaseRealtime.auth.setSession({
@@ -325,7 +323,6 @@ export default function GlobalCallListener() {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[2147483647] flex flex-col items-center justify-between bg-slate-900/97 backdrop-blur-2xl text-white py-20 px-8"
               >
-                {/* Animated ring effect */}
                 <div className="flex-1 flex flex-col items-center justify-center text-center gap-6">
                   <div className="relative">
                     <motion.div
@@ -365,9 +362,7 @@ export default function GlobalCallListener() {
                   </motion.p>
                 </div>
 
-                {/* Accept / Decline buttons */}
                 <div className="flex items-center justify-center gap-16 w-full">
-                  {/* Decline */}
                   <div className="flex flex-col items-center gap-3">
                     <button
                       onClick={declineCall}
@@ -378,7 +373,6 @@ export default function GlobalCallListener() {
                     <span className="text-xs font-bold text-white/50 uppercase tracking-widest">Decline</span>
                   </div>
 
-                  {/* Accept */}
                   <div className="flex flex-col items-center gap-3">
                     <button
                       onClick={acceptCall}
