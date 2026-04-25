@@ -41,7 +41,6 @@ export default function FeedPage() {
             setCurrentUserId(session?.user?.id || null);
             const params = new URLSearchParams({ limit: '40' });
             if (selectedSubject) params.set('subject', selectedSubject);
-            // Also pass class to API so server pre-filters when possible
             if (selectedClass && selectedSubject !== 'English') params.set('class', selectedClass);
             if (selectedDifficulty) params.set('difficulty', selectedDifficulty);
             if (selectedChapter) params.set('chapter', selectedChapter);
@@ -49,36 +48,11 @@ export default function FeedPage() {
             const headers: Record<string, string> = {};
             if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
 
-            // Add cache-busting so filter changes always fetch fresh data
-            params.set('t', Date.now().toString());
-
-            // Fetch feed + solved IDs in parallel for maximum speed
-            const [feedRes, solvedRes] = await Promise.all([
-                fetch(`/api/feed?${params}`, { headers, cache: 'no-store' }),
-                session?.access_token
-                    ? fetch('/api/questions/solved', { headers })
-                    : Promise.resolve(null),
-            ]);
-
+            const feedRes = await fetch(`/api/feed?${params}`, { headers, cache: 'no-store' });
             if (!mounted) return;
 
             const feedData = await feedRes.json();
-            let feedQuestions: any[] = Array.isArray(feedData) ? feedData : feedData.questions || [];
-
-            // Build a Set of solved question IDs from the separate solved endpoint
-            // This guarantees hasAttempted is correct even if the feed API missed it
-            if (solvedRes?.ok) {
-                const solvedData = await solvedRes.json();
-                const solvedIds = new Set<string>(
-                    (Array.isArray(solvedData) ? solvedData : []).map((q: any) => String(q.id))
-                );
-                if (solvedIds.size > 0) {
-                    feedQuestions = feedQuestions.map(q => ({
-                        ...q,
-                        hasAttempted: solvedIds.has(String(q.id)) ? true : q.hasAttempted,
-                    }));
-                }
-            }
+            const feedQuestions: any[] = Array.isArray(feedData) ? feedData : feedData.questions || [];
 
             setQuestions(feedQuestions);
             setFeedMeta(feedData.meta || null);
