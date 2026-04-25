@@ -275,6 +275,10 @@ function ChatRoomContent() {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [showMultiDeleteSheet, setShowMultiDeleteSheet] = useState(false);
+  // Incoming call banner — shown when the OTHER party starts a call while we are
+  // already on this chat page (GlobalCallListener skips this room in that case)
+  const [incomingCallBanner, setIncomingCallBanner] = useState<{type:'voice'|'video', callerId: string} | null>(null);
+  const incomingCallBannerRef = useRef<{type:'voice'|'video', callerId: string} | null>(null);
   const isBlockedRef = useRef(isBlocked);
 
   useEffect(() => { isBlockedRef.current = isBlocked; }, [isBlocked]);
@@ -442,11 +446,20 @@ function ChatRoomContent() {
         // Handle Call Signals
         if (isBlockedRef.current) return;
         if (msg.content.startsWith('__CALL_STARTED__')) {
-          if (msg.sender_id !== user.id) {
-            // Do NOT call startCall here — this handler has a stale closure and
-            // would double-join Agora. autoAccept is handled once in init().
+          if (msg.sender_id !== user.id && !callCtx.callActive.current) {
+            // User is on this chat page — show in-page accept/decline banner
+            // (GlobalCallListener skips this room for exactly this reason)
+            const callType = (msg.content.split(':')[1] || 'voice') as 'voice' | 'video';
+            const banner = { type: callType, callerId: msg.sender_id };
+            setIncomingCallBanner(banner);
+            incomingCallBannerRef.current = banner;
             playNotifSound();
             vibrate('medium');
+            // Auto-dismiss banner after 45s if not answered
+            setTimeout(() => {
+              setIncomingCallBanner(null);
+              incomingCallBannerRef.current = null;
+            }, 45000);
           }
           return;
         }
@@ -755,6 +768,59 @@ function ChatRoomContent() {
         <div className="bg-rose-50 dark:bg-rose-950/30 px-4 py-2 flex items-center justify-center gap-2 border-b border-rose-100 dark:border-rose-900/50">
           <Ban className="w-3.5 h-3.5 text-rose-500" />
           <p className="text-[11px] font-bold text-rose-500 uppercase tracking-tight">You have blocked this scholar</p>
+        </div>
+      )}
+
+      {/* ── In-page incoming call banner (user already on this chat page) ── */}
+      {incomingCallBanner && (
+        <div className="shrink-0 bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-3 animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
+              {incomingCallBanner.type === 'video' ? <Video className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold text-sm truncate">{participant?.full_name || 'Scholar'}</p>
+              <p className="text-xs text-white/60">Incoming {incomingCallBanner.type} call...</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => {
+                setIncomingCallBanner(null);
+                incomingCallBannerRef.current = null;
+                // Insert declined message
+                if (user) {
+                  supabase.from('chat_messages').insert({
+                    room_id: roomId, sender_id: user.id,
+                    content: '__CALL_ENDED__: Call declined', message_type: 'text'
+                  }).catch(() => {});
+                }
+              }}
+              className="h-10 w-10 rounded-full bg-red-500 flex items-center justify-center active:scale-95 transition-transform"
+            >
+              <PhoneOff className="w-5 h-5" />
+            </button>
+            <button
+              onClick={async () => {
+                const banner = incomingCallBannerRef.current;
+                if (!banner) return;
+                setIncomingCallBanner(null);
+                incomingCallBannerRef.current = null;
+                // MUST call startCall inside this onClick (user gesture)
+                // so browser AudioContext is allowed to start
+                await callCtx.startCall(
+                  roomId,
+                  banner.type,
+                  participant?.user_id,
+                  participant?.full_name || 'Scholar',
+                  true // isAnswering
+                );
+              }}
+              className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center active:scale-95 transition-transform"
+            >
+              <Phone className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       )}
 
