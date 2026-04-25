@@ -313,7 +313,18 @@ function ChatRoomContent() {
     const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
     const filtered = latestMessages.filter(m => !deletedIds.includes(m.id));
 
-    setMessages(filtered);
+    // Merge DB messages with any optimistic messages still in flight.
+    // Without this, the 1-second poll would replace the entire array and wipe
+    // optimistic messages before they are confirmed/rejected by the server.
+    setMessages(prev => {
+      const dbIds = new Set(filtered.map(m => m.id));
+      // Keep optimistic (temp-*) messages that haven't landed in the DB yet
+      const stillPending = prev.filter(m => m.id.startsWith('temp-') && !dbIds.has(m.id));
+      const merged = [...filtered, ...stillPending];
+      merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      return merged;
+    });
+
     setLoading(false);
     localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filtered.slice(-80)));
 
@@ -325,6 +336,7 @@ function ChatRoomContent() {
     // syncMessages runs every 1 second and has a stale closure — doing startCall
     // here would cause double Agora joins. Only init() handles autoAccept.
   }, [roomId, user?.id]);
+
 
   const syncBlockStatus = useCallback(async () => {
     try {
