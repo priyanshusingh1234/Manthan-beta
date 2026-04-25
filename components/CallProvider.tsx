@@ -158,33 +158,45 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
       const user = currentUserRef.current;
       if (!isAnswering && user) {
-        await supabase.from('chat_messages').insert({ room_id: rid, sender_id: user.id, content: `__CALL_STARTED__:${type}`, message_type: 'text' });
-
-        // Use a freshly subscribed channel to broadcast call-invite so that
-        // GlobalCallListener (which uses supabaseRealtime) receives it.
-        const inviteChannel = supabaseRealtime.channel(`room-${rid}`);
-        inviteChannel.subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            inviteChannel.send({
-              type: 'broadcast',
-              event: 'call-invite',
-              payload: {
-                callerId: user.id,
-                callerName: user.user_metadata?.fullName || user.user_metadata?.full_name || 'Scholar',
-                type,
-              }
-            }).catch(() => {});
-            // Detach after sending — GlobalCallListener has its own persistent subscription
-            setTimeout(() => supabaseRealtime.removeChannel(inviteChannel), 3000);
-          }
+        // ── Primary trigger: DB insert ────────────────────────────────────
+        // GlobalCallListener listens to postgres_changes on chat_messages, so
+        // this insert reliably triggers the incoming call UI on the web receiver
+        // regardless of broadcast auth/connectivity issues.
+        await supabase.from('chat_messages').insert({
+          room_id: rid,
+          sender_id: user.id,
+          content: `__CALL_STARTED__:${type}`,
+          message_type: 'text'
         });
-        
+
+        // ── Secondary trigger: broadcast (fast path, best-effort) ─────────
+        // Sync session to supabaseRealtime first so the broadcast is authenticated
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            await supabaseRealtime.auth.setSession({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+            });
+          }
+        } catch {}
+        supabaseRealtime.channel(`room-${rid}`).send({
+          type: 'broadcast',
+          event: 'call-invite',
+          payload: {
+            callerId: user.id,
+            callerName: user.user_metadata?.fullName || user.user_metadata?.full_name || 'Scholar',
+            type,
+            ts: Date.now(),
+          }
+        }).catch(() => {});
+
         if (pUserId) {
-            fetch('/api/chat/notify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ receiverId: pUserId, senderId: user.id, roomId: rid, content: `📞 Incoming ${type} call` })
-            }).catch(() => {});
+          fetch('/api/chat/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ receiverId: pUserId, senderId: user.id, roomId: rid, content: `📞 Incoming ${type} call` })
+          }).catch(() => {});
         }
       }
     } catch (err: any) { 

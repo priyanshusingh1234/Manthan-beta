@@ -28,10 +28,21 @@ export default function GlobalCallListener() {
   const pathnameRef = useRef(pathname);
   const channelsRef = useRef<any[]>([]);
   const callTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Track processed call message IDs to avoid showing the same call twice
+  const processedCallMsgIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     pathnameRef.current = pathname;
   }, [pathname]);
+
+  const startHapticLoop = () => {
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+    const hapticInterval = setInterval(() => {
+      Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+    }, 1500);
+    (window as any)._activeCallHapticInterval = hapticInterval;
+    return hapticInterval;
+  };
 
   const dismissCall = () => {
     if (Capacitor.isNativePlatform() && incomingCallRef.current) {
@@ -49,16 +60,78 @@ export default function GlobalCallListener() {
     }
   };
 
+  // Central handler — called from both broadcast and postgres_changes paths
+  const handleIncomingCall = async (
+    roomId: string,
+    callerId: string,
+    callerName: string,
+    callType: 'voice' | 'video',
+    dedupeKey: string, // message id or broadcast timestamp
+  ) => {
+    // Ignore if we are the caller
+    if (callerId === userRef.current?.id) return;
+    // Ignore if already on that chat page
+    if (pathnameRef.current === `/chat/${roomId}`) return;
+    // Deduplicate: skip if already handled this call event
+    if (processedCallMsgIdsRef.current.has(dedupeKey)) return;
+    processedCallMsgIdsRef.current.add(dedupeKey);
+    // If there's already a call showing, skip
+    if (incomingCallRef.current) return;
+
+    // Fetch caller avatar
+    let callerAvatar: string | undefined;
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', callerId)
+        .single();
+      callerAvatar = profile?.avatar_url;
+    } catch {}
+
+    const newCall: IncomingCall = {
+      roomId,
+      callerId,
+      callerName: callerName || 'Scholar',
+      callerAvatar,
+      type: callType,
+    };
+
+    setIncomingCall(newCall);
+    incomingCallRef.current = newCall;
+
+    startHapticLoop();
+
+    if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+    callTimeoutRef.current = setTimeout(() => {
+      setIncomingCall(null);
+      incomingCallRef.current = null;
+      if ((window as any)._activeCallHapticInterval) {
+        clearInterval((window as any)._activeCallHapticInterval);
+        delete (window as any)._activeCallHapticInterval;
+      }
+    }, 45000);
+
+    if (Capacitor.isNativePlatform()) {
+      IncomingCallKit.showIncomingCall({
+        callId: roomId,
+        callerName: callerName || 'Scholar',
+        hasVideo: callType === 'video',
+        timeoutMs: 45000,
+        appName: 'Dheeyudha',
+        android: { showFullScreen: true, isHighPriority: true },
+      }).catch(() => {});
+    }
+  };
+
   const acceptCall = () => {
     const call = incomingCallRef.current;
     if (!call) return;
-    const roomId = call.roomId;
-    
-    // Stop ringing
-    dismissCall();
 
-    // Unsubscribe THIS room's channel BEFORE navigating so the chat page
-    // gets a clean, sole subscription — prevents duplicate call-ended firing
+    // Capture all needed info BEFORE dismissCall clears refs
+    const { roomId, type, callerId, callerName } = call;
+
+    // Remove the channel for this room before navigating
     const roomChannelIndex = channelsRef.current.findIndex(
       ch => ch.topic === `realtime:room-${roomId}`
     );
@@ -67,9 +140,13 @@ export default function GlobalCallListener() {
       channelsRef.current.splice(roomChannelIndex, 1);
     }
 
-    // Embed callType and callerId so the chat page can startCall immediately
-    // without having to look up variables that are out of scope.
-    router.push(`/chat/${roomId}?incoming=1&autoAccept=1&callType=${call.type}&callerId=${call.callerId}&callerName=${encodeURIComponent(call.callerName)}`);
+    // Now clear the ringing UI
+    dismissCall();
+
+    // Navigate with all metadata embedded in URL
+    router.push(
+      `/chat/${roomId}?incoming=1&autoAccept=1&callType=${type}&callerId=${callerId}&callerName=${encodeURIComponent(callerName)}`
+    );
   };
 
   const declineCall = async () => {
@@ -81,12 +158,12 @@ export default function GlobalCallListener() {
         content: '__CALL_ENDED__: Call declined',
         message_type: 'text'
       }).catch(() => {});
-      
-      const roomChannelIndex = channelsRef.current.findIndex(
-        ch => ch.topic === `realtime:room-${call.roomId}`
+
+      const ch = channelsRef.current.find(
+        c => c.topic === `realtime:room-${call.roomId}`
       );
-      if (roomChannelIndex !== -1) {
-        channelsRef.current[roomChannelIndex].send({
+      if (ch) {
+        ch.send({
           type: 'broadcast',
           event: 'call-ended',
           payload: { roomId: call.roomId }
@@ -96,145 +173,146 @@ export default function GlobalCallListener() {
     dismissCall();
   };
 
+  // Native-only: handle system call screen accept/decline
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      IncomingCallKit.addListener('callAccepted', (event) => {
-        const roomId = event.call.callId;
-        const roomChannelIndex = channelsRef.current.findIndex(ch => ch.topic === `realtime:room-${roomId}`);
-        if (roomChannelIndex !== -1) {
-          supabaseRealtime.removeChannel(channelsRef.current[roomChannelIndex]);
-          channelsRef.current.splice(roomChannelIndex, 1);
-        }
-        const call = incomingCallRef.current;
-        dismissCall();
-        const callType = call?.type || 'voice';
-        const callerId = call?.callerId || '';
-        const callerName = encodeURIComponent(call?.callerName || 'Scholar');
-        router.push(`/chat/${roomId}?incoming=1&autoAccept=1&callType=${callType}&callerId=${callerId}&callerName=${callerName}`);
-      });
+    if (!Capacitor.isNativePlatform()) return;
 
-      IncomingCallKit.addListener('callDeclined', async (event) => {
-        const roomId = event.call.callId;
-        if (userRef.current) {
-          await supabase.from('chat_messages').insert({
-            room_id: roomId,
-            sender_id: userRef.current.id,
-            content: '__CALL_ENDED__: Call declined',
-            message_type: 'text'
-          }).catch(() => {});
-          const roomChannelIndex = channelsRef.current.findIndex(ch => ch.topic === `realtime:room-${roomId}`);
-          if (roomChannelIndex !== -1) {
-            channelsRef.current[roomChannelIndex].send({
-              type: 'broadcast',
-              event: 'call-ended',
-              payload: { roomId }
-            }).catch(() => {});
-          }
+    IncomingCallKit.addListener('callAccepted', (event) => {
+      const roomId = event.call.callId;
+      const roomChannelIndex = channelsRef.current.findIndex(
+        ch => ch.topic === `realtime:room-${roomId}`
+      );
+      if (roomChannelIndex !== -1) {
+        supabaseRealtime.removeChannel(channelsRef.current[roomChannelIndex]);
+        channelsRef.current.splice(roomChannelIndex, 1);
+      }
+      const call = incomingCallRef.current;
+      dismissCall();
+      const callType = call?.type || 'voice';
+      const callerId = call?.callerId || '';
+      const callerName = encodeURIComponent(call?.callerName || 'Scholar');
+      router.push(`/chat/${roomId}?incoming=1&autoAccept=1&callType=${callType}&callerId=${callerId}&callerName=${callerName}`);
+    });
+
+    IncomingCallKit.addListener('callDeclined', async (event) => {
+      const roomId = event.call.callId;
+      if (userRef.current) {
+        await supabase.from('chat_messages').insert({
+          room_id: roomId,
+          sender_id: userRef.current.id,
+          content: '__CALL_ENDED__: Call declined',
+          message_type: 'text'
+        }).catch(() => {});
+        const ch = channelsRef.current.find(c => c.topic === `realtime:room-${roomId}`);
+        if (ch) {
+          ch.send({ type: 'broadcast', event: 'call-ended', payload: { roomId } }).catch(() => {});
         }
-        dismissCall();
-      });
-    }
+      }
+      dismissCall();
+    });
   }, [router]);
 
   useEffect(() => {
-    // Get current user
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const setup = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       userRef.current = user;
 
-      // Fetch all room IDs this user is part of
-      supabase
+      // ── CRITICAL: sync auth session to supabaseRealtime ──────────────────
+      // supabaseRealtime is a separate client instance. Without copying the
+      // session, its realtime subscriptions are unauthenticated and broadcasts
+      // are silently dropped by Supabase RLS.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await supabaseRealtime.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+      }
+
+      // Fetch all rooms this user is part of
+      const { data: rooms } = await supabase
         .from('chat_participants')
         .select('room_id')
-        .eq('user_id', user.id)
-        .then(({ data: rooms }) => {
-          if (!rooms || rooms.length === 0) return;
+        .eq('user_id', user.id);
 
-          // Subscribe to each room's broadcast for call-invite
-          rooms.forEach((room: { room_id: string }) => {
-            const channel = supabaseRealtime.channel(`room-${room.room_id}`);
-            channel.on('broadcast', { event: 'call-invite' }, async ({ payload }) => {
-              // Ignore if already on that chat page or if we are the caller
-              const isOnChatPage = pathnameRef.current === `/chat/${room.room_id}`;
-              const isCaller = payload.callerId === userRef.current?.id;
-              if (isOnChatPage || isCaller) return;
+      if (!rooms || rooms.length === 0) return;
 
-              // Fetch caller profile for display
-              let callerAvatar: string | undefined;
-              try {
-                const { data: profile } = await supabase
-                  .from('profiles')
-                  .select('avatar_url')
-                  .eq('id', payload.callerId)
-                  .single();
-                callerAvatar = profile?.avatar_url;
-              } catch { }
-
-              Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
-              
-              // Start a haptic loop for ringing feel
-              const hapticInterval = setInterval(() => {
-                Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => { });
-              }, 1500);
-
-              if (callTimeoutRef.current) {
-                clearTimeout(callTimeoutRef.current);
-                callTimeoutRef.current = null;
-              }
-
-              const newCall: IncomingCall = {
-                roomId: room.room_id,
-                callerId: payload.callerId,
-                callerName: payload.callerName || 'Scholar',
-                callerAvatar,
-                type: payload.type || 'voice',
-              };
-              
-              setIncomingCall(newCall);
-              incomingCallRef.current = newCall;
-
-              if (Capacitor.isNativePlatform()) {
-                IncomingCallKit.showIncomingCall({
-                  callId: newCall.roomId,
-                  callerName: newCall.callerName,
-                  hasVideo: newCall.type === 'video',
-                  timeoutMs: 45000,
-                  appName: 'Dheeyudha',
-                  android: {
-                    showFullScreen: true,
-                    isHighPriority: true,
-                  }
-                }).catch(() => {});
-              }
-
-              // Auto-dismiss after 45 seconds
-              callTimeoutRef.current = setTimeout(() => {
-                clearInterval(hapticInterval);
-                setIncomingCall(null);
-              }, 45000);
-
-              // We need to store the interval somewhere to clear it if call is accepted/declined
-              (window as any)._activeCallHapticInterval = hapticInterval;
-            });
-
-            channel.on('broadcast', { event: 'call-ended' }, () => {
-              dismissCall();
-            });
-
-            channel.subscribe();
-            channelsRef.current.push(channel);
-          });
+      rooms.forEach((room: { room_id: string }) => {
+        const channel = supabaseRealtime.channel(`room-${room.room_id}`, {
+          config: { broadcast: { ack: false } }
         });
+
+        // ── Path 1: Broadcast (fast, ~instant) ───────────────────────────
+        channel.on('broadcast', { event: 'call-invite' }, ({ payload }) => {
+          const dedupe = `broadcast-${room.room_id}-${payload.callerId}-${payload.ts || Date.now()}`;
+          handleIncomingCall(
+            room.room_id,
+            payload.callerId,
+            payload.callerName,
+            payload.type || 'voice',
+            dedupe,
+          );
+        });
+
+        // ── Path 2: Postgres changes (reliable fallback) ──────────────────
+        // Catches __CALL_STARTED__ messages written to DB — works even if
+        // the broadcast was dropped due to auth/connection issues.
+        channel.on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${room.room_id}` },
+          (payload) => {
+            const msg = payload.new as any;
+            if (!msg.content.startsWith('__CALL_STARTED__')) return;
+            // Only process recent calls (within 45 seconds)
+            const age = Date.now() - new Date(msg.created_at).getTime();
+            if (age > 45000) return;
+
+            const callType = (msg.content.split(':')[1] || 'voice') as 'voice' | 'video';
+            // We don't have callerName from DB — use a placeholder, handleIncomingCall
+            // will fetch the avatar. Caller name will be fetched from profiles below.
+            supabase.from('profiles').select('full_name').eq('id', msg.sender_id).single()
+              .then(({ data: prof }) => {
+                handleIncomingCall(
+                  room.room_id,
+                  msg.sender_id,
+                  prof?.full_name || 'Scholar',
+                  callType,
+                  msg.id, // Use message ID as dedupe key
+                );
+              });
+          }
+        );
+
+        channel.on('broadcast', { event: 'call-ended' }, () => {
+          dismissCall();
+        });
+
+        channel.subscribe();
+        channelsRef.current.push(channel);
+      });
+    };
+
+    setup();
+
+    // Also refresh the session sync whenever supabase auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        await supabaseRealtime.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+      }
     });
 
     return () => {
-      // Cleanup all channels on unmount
+      subscription.unsubscribe();
       channelsRef.current.forEach(ch => supabaseRealtime.removeChannel(ch));
       channelsRef.current = [];
       if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
       if ((window as any)._activeCallHapticInterval) clearInterval((window as any)._activeCallHapticInterval);
     };
-  }, []); // Run once on mount — intentionally no pathname dep
+  }, []);
 
   return (
     typeof document !== 'undefined'
@@ -293,7 +371,7 @@ export default function GlobalCallListener() {
                   <div className="flex flex-col items-center gap-3">
                     <button
                       onClick={declineCall}
-                      className="h-18 w-18 flex items-center justify-center h-[72px] w-[72px] rounded-full bg-red-500 shadow-xl shadow-red-500/30 active:scale-95 transition-transform"
+                      className="flex items-center justify-center h-[72px] w-[72px] rounded-full bg-red-500 shadow-xl shadow-red-500/30 active:scale-95 transition-transform"
                     >
                       <PhoneOff className="h-8 w-8" />
                     </button>
@@ -304,7 +382,7 @@ export default function GlobalCallListener() {
                   <div className="flex flex-col items-center gap-3">
                     <button
                       onClick={acceptCall}
-                      className="h-18 w-18 flex items-center justify-center h-[72px] w-[72px] rounded-full bg-green-500 shadow-xl shadow-green-500/30 active:scale-95 transition-transform"
+                      className="flex items-center justify-center h-[72px] w-[72px] rounded-full bg-green-500 shadow-xl shadow-green-500/30 active:scale-95 transition-transform"
                     >
                       {incomingCall.type === 'video' ? <Video className="h-8 w-8" /> : <Phone className="h-8 w-8" />}
                     </button>
