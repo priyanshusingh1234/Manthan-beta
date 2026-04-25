@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, SwitchCamera, Minimize2, Maximize2 } from 'lucide-react';
 
@@ -159,16 +159,25 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const user = currentUserRef.current;
       if (!isAnswering && user) {
         await supabase.from('chat_messages').insert({ room_id: rid, sender_id: user.id, content: `__CALL_STARTED__:${type}`, message_type: 'text' });
-        
-        supabase.channel(`room-${rid}`).send({
-          type: 'broadcast',
-          event: 'call-invite',
-          payload: {
-            callerId: user.id,
-            callerName: user.user_metadata?.fullName || 'Scholar',
-            type,
+
+        // Use a freshly subscribed channel to broadcast call-invite so that
+        // GlobalCallListener (which uses supabaseRealtime) receives it.
+        const inviteChannel = supabaseRealtime.channel(`room-${rid}`);
+        inviteChannel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            inviteChannel.send({
+              type: 'broadcast',
+              event: 'call-invite',
+              payload: {
+                callerId: user.id,
+                callerName: user.user_metadata?.fullName || user.user_metadata?.full_name || 'Scholar',
+                type,
+              }
+            }).catch(() => {});
+            // Detach after sending — GlobalCallListener has its own persistent subscription
+            setTimeout(() => supabaseRealtime.removeChannel(inviteChannel), 3000);
           }
-        }).catch(() => {});
+        });
         
         if (pUserId) {
             fetch('/api/chat/notify', {

@@ -67,8 +67,9 @@ export default function GlobalCallListener() {
       channelsRef.current.splice(roomChannelIndex, 1);
     }
 
-    dismissCall();
-    router.push(`/chat/${roomId}?incoming=1&autoAccept=1`);
+    // Embed callType and callerId so the chat page can startCall immediately
+    // without having to look up variables that are out of scope.
+    router.push(`/chat/${roomId}?incoming=1&autoAccept=1&callType=${call.type}&callerId=${call.callerId}&callerName=${encodeURIComponent(call.callerName)}`);
   };
 
   const declineCall = async () => {
@@ -104,8 +105,12 @@ export default function GlobalCallListener() {
           supabaseRealtime.removeChannel(channelsRef.current[roomChannelIndex]);
           channelsRef.current.splice(roomChannelIndex, 1);
         }
+        const call = incomingCallRef.current;
         dismissCall();
-        router.push(`/chat/${roomId}?incoming=1&autoAccept=1`);
+        const callType = call?.type || 'voice';
+        const callerId = call?.callerId || '';
+        const callerName = encodeURIComponent(call?.callerName || 'Scholar');
+        router.push(`/chat/${roomId}?incoming=1&autoAccept=1&callType=${callType}&callerId=${callerId}&callerName=${callerName}`);
       });
 
       IncomingCallKit.addListener('callDeclined', async (event) => {

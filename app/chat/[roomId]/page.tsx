@@ -324,9 +324,11 @@ function ChatRoomContent() {
         const createdAt = new Date(lastMsg.created_at).getTime();
         if (Date.now() - createdAt < 45000) { // Active call timeframe
           processedCallIdRef.current = lastMsg.id;
-          const type = lastMsg.content.split(':')[1] as 'voice' | 'video';
+          const type = (searchParams.get('callType') as 'voice' | 'video') || lastMsg.content.split(':')[1] as 'voice' | 'video';
+          const callerId = searchParams.get('callerId') || participant?.user_id;
+          const callerName = searchParams.get('callerName') ? decodeURIComponent(searchParams.get('callerName')!) : (participant?.full_name || 'Scholar');
           if (searchParams.get('autoAccept') === '1' && callCtx.callState === 'idle') {
-                callCtx.startCall(roomId, type, pRes.data?.[0]?.user_id, prof?.full_name || 'Scholar', true);
+                callCtx.startCall(roomId, type, callerId, callerName, true);
             }
         }
       }
@@ -397,9 +399,12 @@ function ChatRoomContent() {
           const createdAt = new Date(lastMsg.created_at).getTime();
           if (Date.now() - createdAt < 45000) { // Call active within last 45s
             processedCallIdRef.current = lastMsg.id;
-            const type = lastMsg.content.split(':')[1] as 'voice' | 'video';
+            // Prefer type from URL params (set by GlobalCallListener), fall back to message
+            const type = (searchParams.get('callType') as 'voice' | 'video') || lastMsg.content.split(':')[1] as 'voice' | 'video';
+            const callerId = searchParams.get('callerId') || pRes.data?.[0]?.user_id;
+            const callerName = searchParams.get('callerName') ? decodeURIComponent(searchParams.get('callerName')!) : (prof?.full_name || 'Scholar');
             if (searchParams.get('autoAccept') === '1' && callCtx.callState === 'idle') {
-                callCtx.startCall(roomId, type, pRes.data?.[0]?.user_id, prof?.full_name || 'Scholar', true);
+                callCtx.startCall(roomId, type, callerId, callerName, true);
             }
           }
         }
@@ -446,9 +451,11 @@ function ChatRoomContent() {
         if (msg.content.startsWith('__CALL_STARTED__')) {
           if (msg.sender_id !== user.id) {
             processedCallIdRef.current = msg.id;
-            const type = msg.content.split(':')[1] as 'voice' | 'video';
+            const type = (searchParams.get('callType') as 'voice' | 'video') || msg.content.split(':')[1] as 'voice' | 'video';
+            const callerId = searchParams.get('callerId') || participant?.user_id;
+            const callerName = searchParams.get('callerName') ? decodeURIComponent(searchParams.get('callerName')!) : (participant?.full_name || 'Scholar');
             if (searchParams.get('autoAccept') === '1' && callCtx.callState === 'idle') {
-                callCtx.startCall(roomId, type, pRes.data?.[0]?.user_id, prof?.full_name || 'Scholar', true);
+                callCtx.startCall(roomId, type, callerId, callerName, true);
             }
             playNotifSound();
             vibrate('medium');
