@@ -275,6 +275,7 @@ function ChatRoomContent() {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [showMultiDeleteSheet, setShowMultiDeleteSheet] = useState(false);
+  const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
   // Incoming call banner — shown when the OTHER party starts a call while we are
   // already on this chat page (GlobalCallListener skips this room in that case)
   const [incomingCallBanner, setIncomingCallBanner] = useState<{type:'voice'|'video', callerId: string} | null>(null);
@@ -586,6 +587,29 @@ function ChatRoomContent() {
     setSelectedIds([]);
   };
 
+  // ─── Clear Chat ───────────────────────────────────────────────────────────
+  const clearChat = async () => {
+    if (!user) return;
+    const myMsgIds  = messages.filter(m => m.sender_id === user.id).map(m => m.id);
+    const theirIds  = messages.filter(m => m.sender_id !== user.id).map(m => m.id);
+
+    // Hard-delete MY messages from DB
+    if (myMsgIds.length) {
+      await supabase.from('chat_messages').delete().in('id', myMsgIds);
+    }
+    // Soft-delete THEIR messages (hidden for me only, via localStorage)
+    if (theirIds.length) {
+      const roomDeletedKey = `deleted_for_me_${roomId}`;
+      const existing = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
+      localStorage.setItem(roomDeletedKey, JSON.stringify([...new Set([...existing, ...theirIds])]));
+    }
+
+    // Clear cache
+    localStorage.removeItem(`chat_messages_${roomId}`);
+    setMessages([]);
+    setShowClearChatConfirm(false);
+  };
+
   // ─── Image upload ─────────────────────────────────────────────────────────
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -717,6 +741,12 @@ function ChatRoomContent() {
                   <button onClick={() => { setShowHeaderMenu(false); setIsSelectionMode(true); }}
                     className="w-full text-left px-4 py-3.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 active:bg-slate-100">
                     Select Messages
+                  </button>
+                  <button
+                    onClick={() => { setShowHeaderMenu(false); setShowClearChatConfirm(true); }}
+                    className="w-full text-left px-4 py-3.5 text-sm font-semibold text-rose-500 hover:bg-red-50 dark:hover:bg-rose-900/10 flex items-center gap-3 active:bg-red-50 border-t border-slate-100 dark:border-slate-800"
+                  >
+                    <Trash2 className="w-4 h-4" /> Clear Chat
                   </button>
                   <button
                     onClick={async () => {
@@ -1042,6 +1072,42 @@ function ChatRoomContent() {
         </div>
       </div>
       <audio id="chat-notif-audio" src="/universfield-new-notification-040-493469.mp3" preload="auto" />
+
+      {/* ── Clear Chat confirmation sheet ─────────────────────────────────── */}
+      {showClearChatConfirm && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowClearChatConfirm(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 w-full max-w-md rounded-t-3xl p-6 pb-10 shadow-2xl animate-in slide-in-from-bottom duration-200"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-center mb-5">
+              <div className="w-14 h-14 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+                <Trash2 className="w-7 h-7 text-rose-500" />
+              </div>
+            </div>
+            <h3 className="text-center text-lg font-black text-slate-900 dark:text-white mb-1">Clear Chat?</h3>
+            <p className="text-center text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+              Your messages will be <strong>permanently deleted</strong> for everyone.<br />
+              Their messages will be hidden <strong>only for you</strong>.
+            </p>
+            <button
+              onClick={clearChat}
+              className="w-full py-3.5 rounded-2xl bg-rose-500 text-white font-bold text-base active:scale-95 transition-transform mb-3"
+            >
+              Clear Chat
+            </button>
+            <button
+              onClick={() => setShowClearChatConfirm(false)}
+              className="w-full py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-base active:scale-95 transition-transform"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
