@@ -4,7 +4,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import { Swords, Clock, CheckCircle, XCircle, Trophy, Loader2, ArrowLeft, Flame } from 'lucide-react';
+import {
+    Swords, Clock, XCircle, Trophy, Loader2,
+    Flame, ChevronLeft, ChevronRight
+} from 'lucide-react';
 
 type DuelEntry = {
     id: string;
@@ -21,33 +24,32 @@ type DuelEntry = {
     opponent: { id: string; name: string; username: string; avatar: string | null };
 };
 
-function OpponentAvatar({ name, avatar }: { name: string; avatar: string | null }) {
-    if (avatar) return <img src={avatar} alt={name} className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-700" />;
+function OppAvatar({ name, avatar }: { name: string; avatar: string | null }) {
+    if (avatar) return <img src={avatar} alt={name} className="w-9 h-9 rounded-full object-cover ring-2 ring-indigo-100 dark:ring-slate-700" />;
     return (
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-rose-500 text-white font-black flex items-center justify-center text-sm ring-2 ring-slate-700">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-rose-500 text-white font-black flex items-center justify-center text-sm ring-2 ring-indigo-100 dark:ring-slate-700">
             {name?.[0]?.toUpperCase()}
         </div>
     );
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-    pending:   { label: 'Pending',   color: 'text-amber-400 bg-amber-400/10' },
-    accepted:  { label: 'Live ⚡',   color: 'text-orange-400 bg-orange-400/10' },
-    completed: { label: 'Done',      color: 'text-slate-400 bg-slate-800' },
-    rejected:  { label: 'Declined',  color: 'text-rose-400 bg-rose-400/10' },
-    expired:   { label: 'Expired',   color: 'text-slate-500 bg-slate-800' },
-};
-
 const FILTERS = ['All', 'Pending', 'Active', 'Done'] as const;
 type Filter = typeof FILTERS[number];
 
-function filterDuels(duels: DuelEntry[], f: Filter) {
-    if (f === 'All') return duels;
+function applyFilter(duels: DuelEntry[], f: Filter) {
     if (f === 'Pending') return duels.filter(d => d.status === 'pending');
-    if (f === 'Active') return duels.filter(d => d.status === 'accepted');
-    if (f === 'Done') return duels.filter(d => d.status === 'completed' || d.status === 'rejected' || d.status === 'expired');
+    if (f === 'Active')  return duels.filter(d => d.status === 'accepted');
+    if (f === 'Done')    return duels.filter(d => ['completed', 'rejected', 'expired'].includes(d.status));
     return duels;
 }
+
+const STATUS_PILL: Record<string, { label: string; class: string }> = {
+    pending:   { label: 'Pending',  class: 'bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400' },
+    accepted:  { label: 'Live ⚡',  class: 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400' },
+    completed: { label: 'Done',     class: 'bg-slate-100 dark:bg-slate-800 text-slate-500' },
+    rejected:  { label: 'Declined', class: 'bg-red-100 dark:bg-red-900/20 text-rose-600 dark:text-rose-400' },
+    expired:   { label: 'Expired',  class: 'bg-slate-100 dark:bg-slate-800 text-slate-400' },
+};
 
 export default function MyDuelsPage() {
     const router = useRouter();
@@ -58,112 +60,125 @@ export default function MyDuelsPage() {
     const fetchDuels = useCallback(async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) { router.push('/login'); return; }
-        const res = await fetch('/api/duel/mine', { headers: { Authorization: `Bearer ${session.access_token}` } });
+        const res = await fetch('/api/duel/mine', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+        });
         if (res.ok) setDuels((await res.json()).duels || []);
         setLoading(false);
     }, [router]);
 
     useEffect(() => { fetchDuels(); }, [fetchDuels]);
 
-    const filtered = filterDuels(duels, filter);
-    const pendingCount = duels.filter(d => d.status === 'pending').length;
-    const liveCount = duels.filter(d => d.status === 'accepted').length;
+    const filtered = applyFilter(duels, filter);
+    const pendingCount = duels.filter(d => d.status === 'pending' && !d.isChallenger).length;
+    const liveCount   = duels.filter(d => d.status === 'accepted' && !d.isChallenger).length;
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white pb-24">
-            {/* Header */}
-            <div className="bg-slate-900 border-b border-slate-800 px-4 pt-12 pb-4">
-                <button onClick={() => router.back()} className="text-slate-500 hover:text-white mb-3 flex items-center gap-1.5 text-sm transition-colors">
-                    <ArrowLeft className="w-4 h-4" /> Back
-                </button>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center">
-                            <Swords className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-black">My Duels</h1>
-                            <p className="text-slate-500 text-xs">1v1 Challenges</p>
-                        </div>
+        <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 pb-24">
+            <main className="max-w-lg mx-auto px-4 pt-5 space-y-4">
+
+                {/* Page header */}
+                <div className="flex items-center gap-3">
+                    <button onClick={() => router.back()}
+                        className="w-8 h-8 rounded-full flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors">
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <div className="flex-1">
+                        <h1 className="text-xl font-black text-slate-900 dark:text-white">My Duels</h1>
+                        <p className="text-xs text-slate-500">1v1 Challenges</p>
                     </div>
                     <div className="flex gap-2">
                         {liveCount > 0 && (
-                            <span className="flex items-center gap-1 text-[11px] font-black px-2 py-1 bg-orange-500/10 text-orange-400 rounded-full border border-orange-500/20">
+                            <span className="flex items-center gap-1 text-[10px] font-black px-2 py-1 bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-full border border-orange-200 dark:border-orange-800/30">
                                 <Flame className="w-3 h-3" />{liveCount} Live
                             </span>
                         )}
                         {pendingCount > 0 && (
-                            <span className="text-[11px] font-black px-2 py-1 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20">
-                                {pendingCount} Pending
+                            <span className="text-[10px] font-black px-2 py-1 bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-full border border-amber-200 dark:border-amber-800/30">
+                                {pendingCount} Action
                             </span>
                         )}
                     </div>
                 </div>
-            </div>
 
-            <div className="max-w-lg mx-auto px-4 pt-4 space-y-3">
                 {/* Filter tabs */}
                 <div className="flex gap-2">
                     {FILTERS.map(f => (
                         <button key={f} onClick={() => setFilter(f)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-black transition-all ${filter === f ? 'bg-orange-500 text-white' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'}`}>
+                            className={`px-3 py-1.5 rounded-full text-xs font-black transition-all ${
+                                filter === f
+                                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
+                            }`}>
                             {f}
                         </button>
                     ))}
                 </div>
 
-                {/* List */}
+                {/* Duel list */}
                 {loading ? (
-                    <div className="flex justify-center py-20"><Loader2 className="w-7 h-7 animate-spin text-orange-500" /></div>
+                    <div className="flex justify-center py-20">
+                        <Loader2 className="w-7 h-7 animate-spin text-orange-500" />
+                    </div>
                 ) : filtered.length === 0 ? (
-                    <div className="text-center py-20 space-y-3">
-                        <div className="text-5xl">⚔️</div>
-                        <p className="font-black text-slate-300">{filter === 'All' ? 'No duels yet' : `No ${filter.toLowerCase()} duels`}</p>
-                        <p className="text-slate-600 text-sm">Tap ⚔️ Duel on any MCQ in the feed</p>
-                        <Link href="/" className="inline-block mt-2 px-5 py-2.5 rounded-xl bg-orange-500 text-white font-black text-sm">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm p-12 text-center space-y-3">
+                        <Swords className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600" />
+                        <p className="font-black text-slate-700 dark:text-slate-300">
+                            {filter === 'All' ? 'No duels yet' : `No ${filter.toLowerCase()} duels`}
+                        </p>
+                        <p className="text-slate-400 text-sm">Tap ⚔️ Duel on any MCQ in the feed</p>
+                        <Link href="/"
+                            className="inline-block mt-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 text-white font-black text-sm shadow-md shadow-orange-200 dark:shadow-orange-900/20">
                             Browse Questions
                         </Link>
                     </div>
                 ) : (
-                    <div className="space-y-2">
-                        {filtered.map(duel => {
-                            const cfg = STATUS_CONFIG[duel.status] || STATUS_CONFIG.expired;
-                            const needsAction = duel.status === 'pending' && !duel.isChallenger;
-                            const isLive = duel.status === 'accepted' && !duel.isChallenger;
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                        {filtered.map((duel) => {
+                            const pill = STATUS_PILL[duel.status] ?? STATUS_PILL.expired;
+                            const needsAction = (duel.status === 'pending' || duel.status === 'accepted') && !duel.isChallenger;
+
                             return (
                                 <Link key={duel.id} href={`/duel/${duel.id}`}
-                                    className={`flex items-center gap-3 p-4 rounded-2xl border transition-all ${needsAction || isLive ? 'bg-orange-950/20 border-orange-800/30 hover:border-orange-700/50' : 'bg-slate-900 border-slate-800 hover:border-slate-700'}`}>
-                                    <OpponentAvatar name={duel.opponent.name} avatar={duel.opponent.avatar} />
+                                    className={`flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group ${needsAction ? 'bg-orange-50/50 dark:bg-orange-900/5' : ''}`}>
+                                    <OppAvatar name={duel.opponent.name} avatar={duel.opponent.avatar} />
+
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                                            <p className="font-bold text-sm text-white truncate">
-                                                {duel.isChallenger ? `You challenged ${duel.opponent.name.split(' ')[0]}` : `${duel.opponent.name.split(' ')[0]} challenged you`}
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                                                {duel.isChallenger
+                                                    ? `You → ${duel.opponent.name.split(' ')[0]}`
+                                                    : `${duel.opponent.name.split(' ')[0]} → You`}
                                             </p>
-                                            {(needsAction || isLive) && (
-                                                <span className="text-[10px] font-black text-orange-400 animate-pulse">● ACTION</span>
-                                            )}
+                                            {needsAction && <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shrink-0" />}
                                         </div>
                                         {duel.question && (
-                                            <p className="text-xs text-slate-500 truncate">{duel.question.title}</p>
+                                            <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
+                                                {duel.question.subject && <><span className="text-indigo-500">{duel.question.subject}</span> · </>}
+                                                {duel.question.title}
+                                            </p>
                                         )}
                                     </div>
+
                                     <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${cfg.color}`}>{cfg.label}</span>
+                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${pill.class}`}>{pill.label}</span>
                                         {duel.status === 'completed' && (
                                             duel.iWon
-                                                ? <span className="flex items-center gap-0.5 text-[10px] font-black text-yellow-400"><Trophy className="w-3 h-3" />Win</span>
-                                                : <span className="flex items-center gap-0.5 text-[10px] font-black text-rose-400"><XCircle className="w-3 h-3" />Loss</span>
+                                                ? <span className="flex items-center gap-0.5 text-[10px] font-black text-yellow-500">🏆 Win</span>
+                                                : <span className="flex items-center gap-0.5 text-[10px] font-black text-rose-500"><XCircle className="w-3 h-3" />Loss</span>
                                         )}
-                                        <span className="text-[9px] text-slate-600">
+                                        <span className="text-[9px] text-slate-400 dark:text-slate-600">
                                             {new Date(duel.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                                         </span>
                                     </div>
+
+                                    <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-400 transition-colors shrink-0" />
                                 </Link>
                             );
                         })}
                     </div>
                 )}
-            </div>
+            </main>
         </div>
     );
 }
