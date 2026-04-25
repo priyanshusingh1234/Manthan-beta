@@ -212,7 +212,25 @@ export default function NotificationsPage() {
                                     exit={{ opacity: 0, scale: 0.95 }}
                                     className="group"
                                 >
-                                    {notif.type === 'coop_challenge' ? (
+                                    {notif.type === 'coop_challenge' && notif.href?.startsWith('/duel/') ? (
+                                        <button
+                                            onClick={() => handleNotifClick(notif)}
+                                            className={`w-full text-left p-4 flex gap-4 items-start relative transition-colors ${!notif.read ? 'bg-orange-50/30 dark:bg-orange-950/10' : 'bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900/50'}`}
+                                        >
+                                            {!notif.read && <div className="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-orange-500 rounded-full" />}
+                                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center shrink-0 shadow-sm">
+                                                <span className="text-xl">⚔️</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0 pt-0.5">
+                                                <div className="flex items-center justify-between gap-2 mb-1">
+                                                    <p className={`text-[13px] leading-tight flex-1 ${!notif.read ? 'font-black text-slate-900 dark:text-white' : 'font-bold text-slate-600 dark:text-slate-400'}`}>{notif.title}</p>
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight shrink-0">{timeAgo(notif.created_at)}</span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal line-clamp-2">{notif.body}</p>
+                                            </div>
+                                            <ChevronRight className="w-4 h-4 text-slate-300 self-center shrink-0" />
+                                        </button>
+                                    ) : notif.type === 'coop_challenge' ? (
                                         <div className="py-2">
                                             <CoopNotifCard notif={notif} compact={false} onNavigate={() => handleNotifClick(notif)} />
                                         </div>

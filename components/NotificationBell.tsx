@@ -224,7 +224,28 @@ export default function NotificationBell({ isMobile = false }: { isMobile?: bool
                         </div>
                     ) : (
                         filtered.map(n => (
-                            n.type === 'coop_challenge' ? (
+                            n.type === 'coop_challenge' && n.href?.startsWith('/duel/') ? (
+                                // ── Duel notification — simple clickable card ──
+                                <div
+                                    key={n.id}
+                                    onClick={() => handleNotifClick(n)}
+                                    className={`px-4 py-3 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-900/50 relative group ${!n.read ? 'bg-indigo-50/20 dark:bg-indigo-900/10' : ''}`}
+                                >
+                                    {!n.read && <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500" />}
+                                    <div className="flex gap-3 items-start">
+                                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center shrink-0 shadow-sm">
+                                            <Swords className="w-4 h-4 text-white" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-xs mb-0.5 line-clamp-1 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors ${!n.read ? 'font-black text-slate-900 dark:text-slate-100' : 'font-bold text-slate-600 dark:text-slate-400'}`}>
+                                                {n.title}
+                                            </p>
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">{n.body}</p>
+                                            <p className="text-[9px] font-bold text-slate-300 dark:text-slate-600 mt-1 uppercase tracking-wider">{timeAgo(n.created_at)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : n.type === 'coop_challenge' ? (
                                 <div key={n.id} className="border-b border-slate-50 dark:border-slate-100 dark:border-slate-900">
                                     <CoopNotifCard 
                                         notif={n} 
