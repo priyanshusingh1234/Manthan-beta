@@ -487,8 +487,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isChatPage = pathname?.startsWith('/chat');
   const isStorePage = pathname?.startsWith('/store');
 
-  const hideMainSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isSearchPage || isIndividualTest || isChatPage;
-  const hideBottomNav = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isIndividualTest || isChatPage || isStorePage;
+  const isSinglePostPage = pathname?.startsWith('/posts/') && pathname !== '/posts';
+  const hideMainSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isSearchPage || isIndividualTest || isChatPage || isSinglePostPage;
+  const hideBottomNav = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isIndividualTest || isChatPage || isStorePage || isSinglePostPage;
 
   if (needsOnboarding) {
     return <CompleteProfileOverlay onComplete={() => setNeedsOnboarding(false)} />;

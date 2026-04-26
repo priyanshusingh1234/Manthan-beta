@@ -193,11 +193,15 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, compact =
 
             {/* Play/Pause Overlay */}
             {!playing && (
-                <div onClick={togglePlay} className="absolute inset-0 flex items-center justify-center cursor-pointer">
+                <button 
+                    onClick={togglePlay} 
+                    className="absolute inset-0 flex items-center justify-center cursor-pointer z-10 w-full h-full bg-transparent border-none appearance-none"
+                    aria-label="Play video"
+                >
                     <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center shadow-2xl border border-white/10 transition-transform scale-100 hover:scale-110">
                         <Play className="w-7 h-7 text-white ml-1" fill="white" />
                     </div>
-                </div>
+                </button>
             )}
 
             {/* Top right floating: Mute / Menu */}

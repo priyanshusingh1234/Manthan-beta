@@ -1,15 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { MessageCircle, Send, Loader2, ChevronDown } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Send, Loader2, User, Clock, ChevronDown, X } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import VideoClipCard from '@/components/VideoClipCard';
 import PostCard from '@/components/PostCard';
 import Link from 'next/link';
 import Image from 'next/image';
 import BadgedName from '@/components/BadgedName';
-import { Clock, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function SinglePostClient({ postId }: { postId: string }) {
@@ -22,6 +21,7 @@ export default function SinglePostClient({ postId }: { postId: string }) {
     const [loadingComments, setLoadingComments] = useState(false);
     const [newComment, setNewComment] = useState('');
     const [submittingComment, setSubmittingComment] = useState(false);
+    const [showComments, setShowComments] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -88,33 +88,36 @@ export default function SinglePostClient({ postId }: { postId: string }) {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0a0a0a]">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-10 h-10 border-3 border-violet-500/20 border-t-violet-500 rounded-full animate-spin" />
-                    <p className="text-slate-400 font-bold text-sm animate-pulse">Loading…</p>
-                </div>
+            <div className="fixed inset-0 flex items-center justify-center bg-black">
+                <div className="w-10 h-10 border-3 border-violet-500/20 border-t-violet-500 rounded-full animate-spin" />
             </div>
         );
     }
 
     if (!post) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
+            <div className="min-h-[100dvh] flex items-center justify-center bg-white dark:bg-slate-950">
                 <p className="text-slate-400 font-bold">Post not found.</p>
             </div>
         );
     }
 
-    // ── Video Page ───────────────────────────────────────────────────────────
+    // ── Immersive Video View (Mobile Specific) ──────────────────────────
     if (post.video_url) {
         return (
-            <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col items-center py-6 px-4">
+            <div className="fixed inset-0 bg-black z-[100] flex flex-col md:flex-row overflow-hidden">
                 
-                {/* Shorts-style Vertical Player Shell */}
-                <div className="flex flex-col lg:flex-row gap-8 w-full max-w-6xl justify-center items-stretch lg:max-h-[85vh]">
-                    
-                    {/* The Video Container - no fixed headers here, global header is above */}
-                    <div className="relative w-full max-w-[420px] aspect-[9/16] mx-auto lg:mx-0 bg-black shadow-2xl rounded-[2rem] overflow-hidden border border-slate-200 dark:border-white/5 shrink-0">
+                {/* Floating Back Button (Top Left) - Always visible */}
+                <button 
+                    onClick={() => router.back()} 
+                    className="fixed top-[max(1rem,env(safe-area-inset-top))] left-4 z-[110] p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white active:scale-90 transition-transform"
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
+
+                {/* The Immersive Player Shell */}
+                <div className="relative flex-1 h-[100dvh] flex items-center justify-center bg-black">
+                    <div className="w-full h-full max-w-[450px] aspect-[9/16] relative">
                         <VideoClipCard
                             post={post}
                             currentUserId={currentUserId}
@@ -125,95 +128,134 @@ export default function SinglePostClient({ postId }: { postId: string }) {
                             compact={false}
                         />
                     </div>
-
-                    {/* Integrated Comments Section (Visible on all screens in standard layout) */}
-                    <div className="flex-1 flex flex-col bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-[2rem] overflow-hidden min-h-[400px] lg:min-h-0 shadow-sm transition-colors">
-                        <div className="p-6 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-                            <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                                <MessageCircle className="w-5 h-5 text-violet-500" />
-                                Comments
-                                <span className="text-xs bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white/60 px-2 py-0.5 rounded-full ml-auto">
-                                    {post.comments_count || 0}
-                                </span>
-                            </h2>
-                        </div>
-
-                        {/* Comments List */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                            {loadingComments ? (
-                                <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-300 dark:text-white/10">
-                                    <Loader2 className="w-8 h-8 animate-spin" />
-                                    <p className="font-bold text-sm">Loading discussions...</p>
-                                </div>
-                            ) : comments.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-center p-8 opacity-40 text-slate-400 dark:text-white/40">
-                                    <div className="text-4xl mb-2">💬</div>
-                                    <p className="font-bold">No comments yet</p>
-                                    <p className="text-xs">Be the first to share your thoughts!</p>
-                                </div>
-                            ) : (
-                                comments.map((c: any) => (
-                                    <div key={c.id} className="flex gap-3 group">
-                                        <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 shrink-0">
-                                            {c.author?.avatar_url ? <img src={c.author.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-white/30 text-[10px]">{(c.author?.name || 'U')[0]}</div>}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="bg-white dark:bg-white/5 rounded-2xl p-4 shadow-sm border border-slate-50 dark:border-white/[0.02]">
-                                                <p className="font-black text-slate-900 dark:text-white text-[13px] mb-0.5">{c.author?.name || 'Scholar'}</p>
-                                                <p className="text-slate-600 dark:text-white/70 text-[14px] leading-relaxed">{c.content}</p>
-                                            </div>
-                                            <span className="text-[10px] text-slate-400 dark:text-white/30 font-bold mt-1.5 px-1 inline-block">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-                        {/* Comment Input */}
-                        {currentUserId && (
-                            <form onSubmit={submitComment} className="p-4 border-t border-slate-100 dark:border-white/5 bg-white dark:bg-white/[0.01]">
-                                <div className="relative flex items-center">
-                                    <input
-                                        value={newComment}
-                                        onChange={e => setNewComment(e.target.value)}
-                                        placeholder="Add to the conversation..."
-                                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-14 text-slate-900 dark:text-white text-sm outline-none focus:border-violet-500 dark:focus:border-violet-400 transition-all placeholder:text-slate-400 dark:placeholder:text-white/20"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={!newComment.trim() || submittingComment}
-                                        className="absolute right-2 p-2.5 bg-violet-600 rounded-xl text-white hover:bg-violet-500 disabled:opacity-40 transition-all shadow-lg shadow-violet-500/20"
-                                    >
-                                        {submittingComment ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-                    </div>
                 </div>
 
-                {/* Vertical Scroll Hint for Mobile */}
-                <div className="lg:hidden mt-8 flex flex-col items-center opacity-40">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-white/50 mb-1">Scroll for Details</p>
-                    <ChevronDown className="w-4 h-4 text-slate-400 dark:text-white/30 animate-bounce" />
+                {/* Desktop Side Panel: Comments (Hidden on mobile) */}
+                <div className="hidden md:flex flex-col w-[400px] border-l border-white/10 bg-[#0a0a0a] h-full">
+                    <div className="p-6 border-b border-white/5 bg-white/[0.02]">
+                        <h2 className="text-lg font-black text-white flex items-center gap-2">
+                            <MessageCircle className="w-5 h-5 text-violet-400" />
+                            Discussion
+                            <span className="text-xs bg-violet-600 px-2 py-0.5 rounded-full ml-auto">{post.comments_count || 0}</span>
+                        </h2>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                        {comments.map((c: any) => (
+                            <div key={c.id} className="flex gap-3">
+                                <div className="w-9 h-9 rounded-full overflow-hidden bg-white/5 border border-white/10 shrink-0">
+                                    {c.author?.avatar_url ? <img src={c.author.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-[10px]">{(c.author?.name || 'U')[0]}</div>}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="bg-white/5 rounded-2xl p-3 border border-white/[0.03]">
+                                        <p className="font-black text-white text-[13px] mb-0.5">{c.author?.name || 'Scholar'}</p>
+                                        <p className="text-white/70 text-[14px] leading-relaxed">{c.content}</p>
+                                    </div>
+                                    <span className="text-[10px] text-white/30 font-bold mt-1 px-1">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    {currentUserId && (
+                        <form onSubmit={submitComment} className="p-4 border-t border-white/5">
+                            <div className="relative flex items-center">
+                                <input
+                                    value={newComment}
+                                    onChange={e => setNewComment(e.target.value)}
+                                    placeholder="Add a reply..."
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 pr-12 text-white text-sm outline-none focus:border-violet-500 transition-all"
+                                />
+                                <button type="submit" disabled={!newComment.trim()} className="absolute right-2 p-2 bg-violet-600 rounded-xl text-white">
+                                    <Send className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </form>
+                    )}
+                </div>
+
+                {/* Mobile Bottom Comments Sheet (Native-style slide up) */}
+                <div className="md:hidden">
+                    {/* View Comments Trigger (Floating label, bottom center) */}
+                    <button 
+                        onClick={() => setShowComments(true)}
+                        className="fixed bottom-[max(2rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-[105] bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-full px-6 py-2.5 font-black text-sm flex items-center gap-2 active:scale-95 transition-transform"
+                    >
+                        <MessageCircle className="w-4 h-4" />
+                        {post.comments_count || 0} Comments
+                    </button>
+
+                    {showComments && (
+                        <div className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-[2px] flex items-end animate-in fade-in duration-300" onClick={() => setShowComments(false)}>
+                            <div 
+                                className="w-full bg-[#0a0a0a] rounded-t-[2.5rem] border-t border-white/10 p-6 pt-2 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col h-[75vh] animate-in slide-in-from-bottom duration-500"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mt-2 mb-6 shrink-0" onClick={() => setShowComments(false)} />
+                                <div className="flex items-center justify-between mb-6 shrink-0">
+                                    <h3 className="font-black text-xl text-white">Discussions</h3>
+                                    <button onClick={() => setShowComments(false)} className="p-2 -mr-2 bg-white/5 rounded-full text-white/40"><X className="w-5 h-5" /></button>
+                                </div>
+                                <div className="flex-1 overflow-y-auto space-y-5 mb-4">
+                                    {comments.map((c: any) => (
+                                        <div key={c.id} className="flex gap-3">
+                                            <div className="w-10 h-10 rounded-full overflow-hidden bg-white/5 border border-white/10 shrink-0">
+                                                {c.author?.avatar_url ? <img src={c.author.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white/30 text-xs">{(c.author?.name || 'U')[0]}</div>}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="bg-white/5 rounded-[1.25rem] rounded-tl-none p-4">
+                                                    <p className="font-black text-white text-[14px] mb-1 truncate">{c.author?.name || 'Scholar'}</p>
+                                                    <p className="text-white/80 text-[15px] leading-relaxed break-words">{c.content}</p>
+                                                </div>
+                                                <span className="text-[10px] text-white/20 font-black mt-1 px-1 uppercase tracking-wider">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {comments.length === 0 && (
+                                        <div className="h-40 flex flex-col items-center justify-center text-white/20">
+                                            <MessageCircle className="w-10 h-10 mb-2 opacity-20" />
+                                            <p className="font-bold text-sm italic">Be the first to reply!</p>
+                                        </div>
+                                    )}
+                                </div>
+                                {currentUserId && (
+                                    <form onSubmit={submitComment} className="relative flex items-center shrink-0">
+                                        <input
+                                            value={newComment}
+                                            onChange={e => setNewComment(e.target.value)}
+                                            placeholder="Add comments..."
+                                            className="w-full bg-white/10 border border-white/10 rounded-2xl px-6 py-4 pr-16 text-white text-base outline-none focus:bg-white/20 transition-all shadow-xl"
+                                        />
+                                        <button type="submit" disabled={!newComment.trim()} className="absolute right-2.5 p-3 bg-violet-600 rounded-xl text-white shadow-lg active:scale-90 transition-transform">
+                                            <Send className="w-5 h-5" />
+                                        </button>
+                                    </form>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         );
     }
 
-    // ── Regular text/image post ────────────────────────────────────────────
+    // ── Regular Text Post View (Standard Scrollable Page) ────────────────
     const profileUrl = post.author?.isTeacher && post.author?.username
         ? `/teacher/${post.author.username}`
         : post.author?.username ? `/user/${post.author.username}` : '#';
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-            {/* Global Header is already handled by ClientLayout */}
-            <main className="max-w-3xl mx-auto pt-6 px-4">
+        <div className="min-h-[100dvh] bg-white dark:bg-slate-950 pb-20">
+             <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/60 px-4 py-3 flex items-center gap-4 text-slate-900 dark:text-white">
+                <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors">
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
+                <h1 className="font-black text-lg tracking-tight">Discussion</h1>
+            </div>
+            
+            <main className="max-w-3xl mx-auto pt-20 px-4">
                 <div className="mb-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4">
                     <div className="flex items-center gap-3 mb-2">
                         <Link href={profileUrl}>
-                            <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-800 shrink-0">
+                            <div className="relative w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-800 shrink-0">
                                 {post.author?.avatar_url
                                     ? <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
                                     : <User className="w-5 h-5 absolute inset-0 m-auto text-slate-400" />
@@ -222,20 +264,16 @@ export default function SinglePostClient({ postId }: { postId: string }) {
                         </Link>
                         <div className="flex flex-col min-w-0">
                             <BadgedName
-                                name={post.author?.name || 'Unknown Scholar'}
+                                name={post.author?.name || 'Scholar'}
                                 userId={post.author?.id}
-                                isTeacher={post.author?.is_teacher || post.author?.isTeacher}
+                                isTeacher={post.author?.isTeacher}
                                 totalPoints={Number(post.author?.totalPoints)}
-                                nameClassName="font-black text-[14px] sm:text-[16px] text-slate-900 dark:text-slate-100"
+                                nameClassName="font-black text-[16px] text-slate-900 dark:text-slate-100"
                                 className="flex items-center gap-1.5 min-w-0"
                             />
-                            <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 uppercase tracking-tight">
-                                <Clock className="w-2.5 h-2.5" />
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight">
                                 {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                             </p>
-                        </div>
-                        <div className="ml-auto text-xs text-slate-400 flex items-center gap-1">
-                            <MessageCircle className="w-3 h-3" /> {post.comments_count || 0}
                         </div>
                     </div>
                 </div>

@@ -399,8 +399,12 @@ export default function PublicProfileTabs({
                     onClick={(e) => {
                       // only navigate if NOT clicking an interactive element inside the card
                       const target = e.target as HTMLElement;
-                      const interactive = target.closest('button, a[href]:not([href="#"])');
-                      if (interactive && interactive !== e.currentTarget) e.preventDefault();
+                      // Include 'video' and 'button' specifically to allow play/pause toggle in feed
+                      const interactive = target.closest('button, a[href]:not([href="#"]), video');
+                      if (interactive && interactive !== e.currentTarget) {
+                        e.preventDefault();
+                        return;
+                      }
                     }}
                   >
                     <VideoClipCard
