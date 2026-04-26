@@ -115,7 +115,7 @@ export default function SocialFeedPage() {
             if (fbRes.ok) {
                 const fbData = await fbRes.json();
                 const newPosts = Array.isArray(fbData) ? fbData : [];
-                
+
                 if (newPosts.length === 0) {
                     setHasMore(false);
                 } else {
@@ -313,7 +313,7 @@ export default function SocialFeedPage() {
 
             const data = await uploadRes.json();
             setVideoUploadProgress(100);
-            
+
             return {
                 videoUrl: data.secure_url,
                 thumbnailUrl: data.secure_url
@@ -527,7 +527,14 @@ export default function SocialFeedPage() {
                                 {/* Video Preview */}
                                 {videoPreview && (
                                     <div className="mx-4 mb-3 relative rounded-2xl overflow-hidden border border-violet-200 dark:border-violet-800/40 bg-slate-950 group" style={{ aspectRatio: '9/16', maxHeight: 280 }}>
-                                        <video src={videoPreview} className="w-full h-full object-contain" muted playsInline controls />
+                                        <video 
+                                            key={videoPreview}
+                                            src={videoPreview} 
+                                            className="w-full h-full object-contain" 
+                                            muted 
+                                            playsInline 
+                                            controls 
+                                        />
                                         <button
                                             type="button"
                                             onClick={removeVideo}
@@ -603,11 +610,10 @@ export default function SocialFeedPage() {
                                             <button
                                                 type="submit"
                                                 disabled={!canPost}
-                                                className={`flex items-center gap-1.5 px-5 py-2 rounded-full font-black text-sm transition-all ${
-                                                    canPost
+                                                className={`flex items-center gap-1.5 px-5 py-2 rounded-full font-black text-sm transition-all ${canPost
                                                         ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md hover:shadow-indigo-500/30 hover:scale-[1.03] active:scale-95'
                                                         : 'bg-indigo-200 dark:bg-indigo-900/40 text-indigo-400 dark:text-indigo-600 cursor-not-allowed'
-                                                }`}
+                                                    }`}
                                             >
                                                 {submitting ? (
                                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -659,7 +665,7 @@ export default function SocialFeedPage() {
                                     />
                                 ))}
                             </div>
-                            
+
                             {/* Infinite scroll sentinel */}
                             <div ref={observerTarget} className="py-6 flex justify-center">
                                 {loadingMore ? (
