@@ -244,23 +244,71 @@ export async function POST(req: Request) {
         const battlesAttempted = (Number(userMeta.battlesAttempted) || 0) + 1;
         const battlesWon = (Number(userMeta.battlesWon) || 0) + (isCorrect ? 1 : 0);
 
-        // SYNC BOTH: Auth & Profiles
-        await supabaseAdmin.auth.admin.updateUserById(userId, {
-            user_metadata: {
-                ...userMeta,
-                totalPoints: newTotal,
-                battlesAttempted,
-                battlesWon
-            }
-        });
+        // ── 2-question-per-day streak engine ─────────────────────────────
+        // We use the profiles table (DB) as the source of truth to avoid
+        // stale JWT metadata causing double-counts.
+        const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000); // UTC+5:30
+        const todayStr = nowIST.toISOString().slice(0, 10);          // "YYYY-MM-DD"
 
-        await upsertProfile(userId, {
+        const dbDailySolveDate  = (profile as any)?.daily_solve_date  || null;
+        const dbDailySolveCount = Number((profile as any)?.daily_solve_count) || 0;
+        const dbStreakCount     = Number((profile as any)?.streak_count) || 0;
+        const dbStreakLongest   = Number((profile as any)?.streak_longest) || 0;
+        const dbLastStreakAt    = (profile as any)?.last_streak_at || null;
+
+        // Compute yesterday string to detect a missed day
+        const yesterdayIST = new Date(nowIST);
+        yesterdayIST.setDate(yesterdayIST.getDate() - 1);
+        const yesterdayStr = yesterdayIST.toISOString().slice(0, 10);
+
+        let newDailySolveCount = dbDailySolveCount;
+        let newStreakCount     = dbStreakCount;
+        let newStreakLongest   = dbStreakLongest;
+        let newLastStreakAt    = dbLastStreakAt;
+
+        if (dbDailySolveDate === todayStr) {
+            // Same day — just increment daily count
+            newDailySolveCount = dbDailySolveCount + 1;
+        } else {
+            // New day — reset daily counter
+            newDailySolveCount = 1;
+
+            // If they missed yesterday (last solve wasn't yesterday) → break streak
+            if (dbLastStreakAt && dbDailySolveDate !== yesterdayStr && dbDailySolveDate !== todayStr) {
+                newStreakCount = 0; // streak broken
+            }
+        }
+
+        // Promote streak when user crosses the 2-question threshold for today
+        const DAILY_GOAL = 2;
+        if (newDailySolveCount === DAILY_GOAL) {
+            // Only increment streak once per day (when they hit exactly the goal)
+            if (dbDailySolveDate !== todayStr || dbDailySolveCount < DAILY_GOAL) {
+                newStreakCount = newStreakCount + 1;
+                newLastStreakAt = new Date().toISOString();
+                newStreakLongest = Math.max(newStreakLongest, newStreakCount);
+            }
+        }
+        // ────────────────────────────────────────────────────────────────
+
+        const updatedMeta = {
             ...userMeta,
             totalPoints: newTotal,
             battlesAttempted,
-            battlesWon
-        });
+            battlesWon,
+            streakCount: newStreakCount,
+            streakLongest: newStreakLongest,
+            lastStreakAt: newLastStreakAt,
+            dailySolveCount: newDailySolveCount,
+            dailySolveDate: todayStr,
+        };
+
+        // SYNC BOTH: Auth & Profiles
+        await supabaseAdmin.auth.admin.updateUserById(userId, { user_metadata: updatedMeta });
+
+        await upsertProfile(userId, updatedMeta);
         leaderboardCache.invalidate();
+
 
         // 5. Save attempt or update existing if they already solved it previously
         if (existingAttempt) {
@@ -353,7 +401,15 @@ export async function POST(req: Request) {
             isCorrect,
             correctOption: correctOpt,
             pointsChange: pointsChangeDisplay,
-            newTotal
+            newTotal,
+            streak: {
+                current: newStreakCount,
+                longest: newStreakLongest,
+                dailySolveCount: newDailySolveCount,
+                dailyGoal: 2,
+                goalMetToday: newDailySolveCount >= 2,
+                streakEarnedToday: newDailySolveCount === 2, // true only on the exact question that crossed threshold
+            }
         });
     } catch (err: any) {
         console.error(err);

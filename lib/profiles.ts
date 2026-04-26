@@ -17,7 +17,10 @@ export interface Profile {
     school_id: string | null;
     is_teacher: boolean;
     streak_count: number;
+    streak_longest: number;
     last_streak_at: string | null;
+    daily_solve_count: number;
+    daily_solve_date: string | null;
     daily_solved: number;
     total_points: number;
     username: string | null;
@@ -84,7 +87,10 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         school_id: meta.school_id ? String(meta.school_id) : null,
         is_teacher: meta.isTeacher === true,
         streak_count: Number(meta.streakCount) || 0,
+        streak_longest: Number(meta.streakLongest) || 0,
         last_streak_at: meta.lastStreakAt || null,
+        daily_solve_count: Number(meta.dailySolveCount) || 0,
+        daily_solve_date: meta.dailySolveDate || null,
         daily_solved: Number(meta.dailySolved) || 0,
         total_points: preserveDBPoints && dbPoints !== undefined ? dbPoints : (Number(meta.totalPoints) || 0),
         username: meta.username || null,
