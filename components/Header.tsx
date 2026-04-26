@@ -291,7 +291,6 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
             {user ? (
               <>
                 <div className="flex items-center gap-2">
-                  <StreakPill />
                   <NotificationBell isMobile={true} />
                 </div>
                 {user?.user_metadata?.isTeacher && (
@@ -466,7 +465,6 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                   {/* Desktop Icons */}
                   <div className="hidden lg:flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <StreakPill />
                       <NotificationBell isMobile={false} />
                     </div>
 
