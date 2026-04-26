@@ -24,6 +24,7 @@ import {
   ShieldAlert,
   Share2,
   Zap,
+  PlaySquare,
 } from 'lucide-react';
 import { Share } from '@capacitor/share';
 import TeacherBadge from '@/ticks/teacher';
@@ -166,6 +167,7 @@ export default function DesktopSidebar() {
   const NAV: NavItem[] = [
     { label: 'Home', href: '/', icon: Home },
     { label: 'Feed', href: '/feed', icon: Compass },
+    { label: 'Clips', href: '/clips', icon: PlaySquare },
     { label: 'Community', href: '/posts', icon: MessageSquare },
     { label: 'Chat', href: '/chat', icon: MessageSquare },
     { label: 'My Faction', href: '/my-school', icon: ShieldAlert },

@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search, MessageSquare, Compass, Zap, Flame } from 'lucide-react';
+import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search, MessageSquare, Compass, Zap, Flame, PlaySquare } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 import { supabase } from '@/lib/supabaseClient';
@@ -328,6 +328,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
               { label: 'Duels ⚔️', href: '/duels', icon: Swords },
               { label: 'Arena', href: '/tests', icon: Zap },
               { label: 'Search', href: '/search', icon: Search },
+              { label: 'Clips', href: '/clips', icon: PlaySquare },
               { label: 'Community', href: '/posts', icon: MessageSquare },
               { label: 'Chat', href: '/chat', icon: MessageSquare },
               { label: 'Top Schools', href: '/top-schools', icon: GraduationCap },
