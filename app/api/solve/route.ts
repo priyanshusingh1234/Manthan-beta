@@ -414,51 +414,35 @@ export async function POST(req: Request) {
             }
         });
 
-        // ── Fire-and-forget streak_friend notifications ───────────────────
-        // When a user just earned their daily streak, send a motivational nudge
-        // to all their followers who haven't completed today's goal yet.
+        // ── streak_friend notifications ────────────────────────────────────
+        // Notify followers who haven't met today's goal that this user just earned
+        // their streak. Must be awaited — Vercel kills un-awaited promises on return.
         if (streakEarnedToday) {
-            (async () => {
-                try {
-                    const todayForNotif = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            try {
+                const todayForNotif = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-                    // Get the solver's profile (name, avatar, username)
-                    const { data: solverProfile } = await supabaseAdmin
-                        .from('profiles')
-                        .select('full_name, username, avatar_url')
-                        .eq('id', userId)
-                        .single();
+                const [{ data: solverProfile }, { data: followerRows }] = await Promise.all([
+                    supabaseAdmin.from('profiles').select('full_name, username, avatar_url').eq('id', userId).single(),
+                    supabaseAdmin.from('follows').select('follower_id').eq('following_id', userId),
+                ]);
 
-                    const solverName = solverProfile?.full_name || 'Your friend';
-                    const solverUsername = solverProfile?.username || null;
-                    const solverAvatar = solverProfile?.avatar_url || null;
+                const solverName = solverProfile?.full_name || 'Your friend';
+                const solverAvatar = solverProfile?.avatar_url || null;
 
-                    // Get all followers of this user
-                    const { data: followerRows } = await supabaseAdmin
-                        .from('follows')
-                        .select('follower_id')
-                        .eq('following_id', userId);
+                if (followerRows && followerRows.length > 0) {
+                    const followerIds = followerRows.map((r: any) => r.follower_id);
 
-                    if (!followerRows || followerRows.length === 0) return;
-
-                    const followerIds = followerRows.map(r => r.follower_id);
-
-                    // Fetch the streak status of each follower (batch)
                     const { data: followerProfiles } = await supabaseAdmin
                         .from('profiles')
                         .select('id, daily_solve_date, daily_solve_count')
                         .in('id', followerIds);
 
-                    if (!followerProfiles) return;
-
-                    // Only notify followers who HAVEN'T met today's goal yet
-                    const pendingFollowers = followerProfiles.filter(fp => {
+                    const pendingFollowers = (followerProfiles || []).filter((fp: any) => {
                         const metGoal = fp.daily_solve_date === todayForNotif && Number(fp.daily_solve_count) >= 2;
                         return !metGoal;
                     });
 
-                    // Send notification to each pending follower in parallel
-                    await Promise.allSettled(pendingFollowers.map(fp =>
+                    await Promise.allSettled(pendingFollowers.map((fp: any) =>
                         createNotification({
                             userId: fp.id,
                             type: 'streak_friend',
@@ -470,10 +454,10 @@ export async function POST(req: Request) {
                             actorAvatar: solverAvatar ?? undefined,
                         })
                     ));
-                } catch (e) {
-                    console.error('[solve] streak_friend notif error:', e);
                 }
-            })();
+            } catch (e) {
+                console.error('[solve] streak_friend notif error:', e);
+            }
         }
         // ─────────────────────────────────────────────────────────────────
 

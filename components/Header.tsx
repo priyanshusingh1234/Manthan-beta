@@ -425,6 +425,18 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                       <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-400 rounded-full border border-white shadow-sm" />
                     )}
                   </Link>
+                  <Link
+                    href="/streaks"
+                    className={`hidden md:flex items-center gap-1.5 px-3 h-10 rounded-full border text-sm font-black transition-all active:scale-95 ${
+                      pathname === '/streaks'
+                        ? 'bg-orange-500 border-orange-400 text-white shadow-lg shadow-orange-500/30'
+                        : 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
+                    }`}
+                    title="My Streak"
+                  >
+                    <Flame className={`w-4 h-4 ${pathname === '/streaks' ? 'text-white' : 'text-orange-400'}`} fill={pathname === '/streaks' ? 'white' : '#fb923c'} />
+                    <span>Streak</span>
+                  </Link>
                   <button
                     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                     className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all active:scale-95"

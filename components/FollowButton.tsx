@@ -30,7 +30,8 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                 const { count: cCount } = await supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', profileUserId);
                 if (cCount !== null) setFollowingCount(cCount);
 
-                const { data: { user } } = await supabase.auth.getUser();
+                const { data: { session } } = await supabase.auth.getSession();
+                const user = session?.user ?? null;
 
                 if (user) {
                     setCurrentUser(user);
