@@ -221,7 +221,7 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
                 )}
 
                 {/* Toolbar (Only show in non-compact or simplified in compact) */}
-                <div className="absolute top-4 right-4 flex flex-col gap-4 z-10">
+                <div className="absolute top-[max(1.5rem,env(safe-area-inset-top))] right-4 flex flex-col gap-4 z-10">
                     <button onClick={toggleMute} className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white border border-white/10">
                         {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                     </button>
@@ -242,7 +242,7 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
                 </div>
 
                 {/* Interaction Stack (Vertical Right) */}
-                <div className={`absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-4 flex flex-col items-center gap-6 z-20`}>
+                <div className={`absolute bottom-[max(2rem,env(safe-area-inset-bottom))] right-4 flex flex-col items-center gap-6 z-20`}>
                     {compact && (
                         <Link href={singlePostUrl} className="flex flex-col items-center gap-1.5 group">
                             <div className="w-12 h-12 rounded-full bg-violet-600 shadow-lg flex items-center justify-center group-hover:scale-110 active:scale-90 transition-all border-2 border-white/20">
@@ -280,7 +280,7 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
                 </div>
 
                 {/* Info Overlay (Bottom Left) */}
-                <div className="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-4 right-16 z-20 pointer-events-none mb-1">
+                <div className="absolute bottom-[max(2rem,env(safe-area-inset-bottom))] left-4 right-16 z-20 pointer-events-none mb-1">
                     {!compact && (
                         <Link href={authorProfileUrl} className="flex items-center gap-3 mb-4 pointer-events-auto group">
                             <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/30 shadow-xl group-hover:scale-105 transition-transform duration-300">
