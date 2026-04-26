@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, MessageCircle, Send, Loader2, User, Clock, ChevronDown, X } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Send, Loader2, User, X } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import VideoClipCard from '@/components/VideoClipCard';
 import PostCard from '@/components/PostCard';
@@ -106,10 +106,10 @@ export default function SinglePostClient({ postId }: { postId: string }) {
     if (post.video_url) {
         return (
             <div className="fixed inset-0 bg-black z-[100] flex flex-col md:flex-row overflow-hidden">
-                
+
                 {/* Floating Back Button (Top Left) - Always visible */}
-                <button 
-                    onClick={() => router.back()} 
+                <button
+                    onClick={() => router.back()}
                     className="fixed top-[max(1rem,env(safe-area-inset-top))] left-4 z-[110] p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white active:scale-90 transition-transform"
                 >
                     <ArrowLeft className="w-5 h-5" />
@@ -175,7 +175,7 @@ export default function SinglePostClient({ postId }: { postId: string }) {
                 {/* Mobile Bottom Comments Sheet (Native-style slide up) */}
                 <div className="md:hidden">
                     {/* View Comments Trigger (Floating label, bottom center) */}
-                    <button 
+                    <button
                         onClick={() => setShowComments(true)}
                         className="fixed bottom-[max(2rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-[105] bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-full px-6 py-2.5 font-black text-sm flex items-center gap-2 active:scale-95 transition-transform"
                     >
@@ -185,7 +185,7 @@ export default function SinglePostClient({ postId }: { postId: string }) {
 
                     {showComments && (
                         <div className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-[2px] flex items-end animate-in fade-in duration-300" onClick={() => setShowComments(false)}>
-                            <div 
+                            <div
                                 className="w-full bg-[#0a0a0a] rounded-t-[2.5rem] border-t border-white/10 p-6 pt-2 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col h-[75vh] animate-in slide-in-from-bottom duration-500"
                                 onClick={e => e.stopPropagation()}
                             >
@@ -244,13 +244,13 @@ export default function SinglePostClient({ postId }: { postId: string }) {
 
     return (
         <div className="min-h-[100dvh] bg-white dark:bg-slate-950 pb-20">
-             <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/60 px-4 py-3 flex items-center gap-4 text-slate-900 dark:text-white">
+            <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/60 px-4 py-3 flex items-center gap-4 text-slate-900 dark:text-white">
                 <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors">
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <h1 className="font-black text-lg tracking-tight">Discussion</h1>
             </div>
-            
+
             <main className="max-w-3xl mx-auto pt-20 px-4">
                 <div className="mb-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4">
                     <div className="flex items-center gap-3 mb-2">
