@@ -147,7 +147,7 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
     if (isHidden) return null;
 
     return (
-        <div className={`relative bg-black w-full overflow-hidden ${compact ? 'rounded-[2rem] aspect-[9/16]' : 'h-full flex items-center shadow-2xl overflow-visible'}`}>
+        <div className={`relative bg-black overflow-hidden mx-auto ${compact ? 'rounded-[2.5rem] aspect-[9/16] w-full max-w-[340px] shadow-lg border border-slate-100 dark:border-white/5' : 'h-full w-full flex items-center shadow-2xl overflow-visible'}`}>
             <video
                 ref={videoRef}
                 src={post.video_url}
