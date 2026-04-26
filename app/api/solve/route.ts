@@ -396,7 +396,9 @@ export async function POST(req: Request) {
         }
         // ────────────────────────────────────────────────
 
-        return NextResponse.json({
+        const streakEarnedToday = newDailySolveCount === 2;
+
+        const response = NextResponse.json({
             success: true,
             isCorrect,
             correctOption: correctOpt,
@@ -408,9 +410,74 @@ export async function POST(req: Request) {
                 dailySolveCount: newDailySolveCount,
                 dailyGoal: 2,
                 goalMetToday: newDailySolveCount >= 2,
-                streakEarnedToday: newDailySolveCount === 2, // true only on the exact question that crossed threshold
+                streakEarnedToday,
             }
         });
+
+        // ── Fire-and-forget streak_friend notifications ───────────────────
+        // When a user just earned their daily streak, send a motivational nudge
+        // to all their followers who haven't completed today's goal yet.
+        if (streakEarnedToday) {
+            (async () => {
+                try {
+                    const todayForNotif = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+                    // Get the solver's profile (name, avatar, username)
+                    const { data: solverProfile } = await supabaseAdmin
+                        .from('profiles')
+                        .select('full_name, username, avatar_url')
+                        .eq('id', userId)
+                        .single();
+
+                    const solverName = solverProfile?.full_name || 'Your friend';
+                    const solverUsername = solverProfile?.username || null;
+                    const solverAvatar = solverProfile?.avatar_url || null;
+
+                    // Get all followers of this user
+                    const { data: followerRows } = await supabaseAdmin
+                        .from('follows')
+                        .select('follower_id')
+                        .eq('following_id', userId);
+
+                    if (!followerRows || followerRows.length === 0) return;
+
+                    const followerIds = followerRows.map(r => r.follower_id);
+
+                    // Fetch the streak status of each follower (batch)
+                    const { data: followerProfiles } = await supabaseAdmin
+                        .from('profiles')
+                        .select('id, daily_solve_date, daily_solve_count')
+                        .in('id', followerIds);
+
+                    if (!followerProfiles) return;
+
+                    // Only notify followers who HAVEN'T met today's goal yet
+                    const pendingFollowers = followerProfiles.filter(fp => {
+                        const metGoal = fp.daily_solve_date === todayForNotif && Number(fp.daily_solve_count) >= 2;
+                        return !metGoal;
+                    });
+
+                    // Send notification to each pending follower in parallel
+                    await Promise.allSettled(pendingFollowers.map(fp =>
+                        createNotification({
+                            userId: fp.id,
+                            type: 'streak_friend',
+                            title: `🔥 ${solverName} just earned their streak!`,
+                            body: `Don't fall behind — solve 2 questions to keep your streak alive too!`,
+                            href: '/streaks',
+                            actorId: userId,
+                            actorName: solverName,
+                            actorAvatar: solverAvatar ?? undefined,
+                        })
+                    ));
+                } catch (e) {
+                    console.error('[solve] streak_friend notif error:', e);
+                }
+            })();
+        }
+        // ─────────────────────────────────────────────────────────────────
+
+        return response;
     } catch (err: any) {
         console.error(err);
         return NextResponse.json({ error: err.message || "Failed to submit answer" }, { status: 500 });

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
     Bell, CheckCheck, Trash2, UserPlus, CheckCircle2, 
     XCircle, Zap, BookOpen, Sparkles, ArrowLeft, 
-    Users, BarChart3, Loader2, ChevronRight, AtSign 
+    Users, BarChart3, Loader2, ChevronRight, AtSign, Flame 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
@@ -50,6 +50,7 @@ function NotifIconBadge({ type, size = 'md' }: { type: string; size?: 'sm' | 'md
     if (type === 'coop_challenge') return <div className={`${dim} ${rounded} bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-sm`}><Users className={iconDim} /></div>;
     if (type === 'weekly_report') return <div className={`${dim} ${rounded} bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 shadow-sm`}><BarChart3 className={iconDim} /></div>;
     if (type === 'post_mention') return <div className={`${dim} ${rounded} bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-sm`}><AtSign className={iconDim} /></div>;
+    if (type === 'streak_friend') return <div className={`${dim} ${rounded} bg-gradient-to-br from-orange-500 to-rose-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/30`}><Flame className={iconDim} fill="white" /></div>;
     return <div className={`${dim} ${rounded} bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0 shadow-sm`}><Sparkles className={iconDim} /></div>;
 }
 
@@ -234,6 +235,53 @@ export default function NotificationsPage() {
                                         <div className="py-2">
                                             <CoopNotifCard notif={notif} compact={false} onNavigate={() => handleNotifClick(notif)} />
                                         </div>
+                                    ) : notif.type === 'streak_friend' ? (
+                                        // ── Special streak_friend card ─────────────────────
+                                        <button
+                                            onClick={() => handleNotifClick(notif)}
+                                            className="w-full text-left"
+                                        >
+                                            <div className={`relative m-1 rounded-2xl overflow-hidden transition-all ${
+                                                !notif.read ? 'ring-2 ring-orange-400/60' : 'opacity-90'
+                                            }`}>
+                                                {/* Gradient background */}
+                                                <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-rose-500 to-pink-600" />
+                                                <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" xmlns=\"http://www.w3.org/2000/svg\"  %3E%3Crect width=\"1\" height=\"1\" fill=\"rgba(255,255,255,0.05)\"/%3E%3C/svg%3E')]" />
+
+                                                <div className="relative p-4 flex gap-3 items-start">
+                                                    {/* Avatar + flame overlay */}
+                                                    <div className="relative shrink-0">
+                                                        {notif.actor_avatar ? (
+                                                            // eslint-disable-next-line @next/next/no-img-element
+                                                            <img src={notif.actor_avatar} alt="" className="w-12 h-12 rounded-2xl object-cover border-2 border-white/30 shadow-lg" />
+                                                        ) : (
+                                                            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
+                                                                <Flame className="w-6 h-6 text-white" fill="white" />
+                                                            </div>
+                                                        )}
+                                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-md">
+                                                            <Flame className="w-3 h-3 text-orange-500" fill="#f97316" />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Text */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-[13px] font-black text-white leading-tight">
+                                                            {notif.title}
+                                                        </p>
+                                                        <p className="text-[11px] text-white/80 mt-0.5 leading-normal line-clamp-2">
+                                                            {notif.body}
+                                                        </p>
+                                                        <div className="mt-2.5 flex items-center gap-2">
+                                                            <span className="px-3 py-1 bg-white text-orange-600 font-black text-[11px] rounded-full shadow-sm">
+                                                                🔥 Solve Now
+                                                            </span>
+                                                            <span className="text-[10px] text-white/60 font-bold">{timeAgo(notif.created_at)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </button>
                                     ) : (
                                         <button
                                             onClick={() => handleNotifClick(notif)}

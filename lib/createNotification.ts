@@ -29,7 +29,8 @@ export type NotificationType =
     | 'weekly_report'
     | 'incoming_call'
     | 'missed_call'
-    | 'chat_message';
+    | 'chat_message'
+    | 'streak_friend';
 
 interface CreateNotificationParams {
     userId: string;          // who receives the notification

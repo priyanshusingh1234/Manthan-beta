@@ -385,21 +385,6 @@ export default function StreakPage() {
                             </div>
                         </div>
 
-                        {/* Stats */}
-                        <div className="grid grid-cols-3 gap-3">
-                            {[
-                                { icon: Trophy, label: 'Longest', value: longest, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/10' },
-                                { icon: Zap, label: 'Accuracy', value: `${accuracy}%`, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/10' },
-                                { icon: Star, label: 'Solved', value: totalAttempts, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/10' },
-                            ].map(({ icon: Icon, label, value, color, bg }) => (
-                                <div key={label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col items-center gap-2 shadow-sm">
-                                    <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center`}><Icon className={`w-5 h-5 ${color}`} /></div>
-                                    <p className="text-xl font-black text-slate-900 dark:text-white">{value}</p>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
-                                </div>
-                            ))}
-                        </div>
-
                         {/* ── Friends Streak Board ── */}
                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm p-5 space-y-3">
                             <div className="flex items-center gap-2">
@@ -413,6 +398,21 @@ export default function StreakPage() {
                                 myUsername={myUsername}
                                 myAvatar={myAvatar}
                             />
+                        </div>
+
+                        {/* Stats */}
+                        <div className="grid grid-cols-3 gap-3">
+                            {[
+                                { icon: Trophy, label: 'Longest', value: longest, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/10' },
+                                { icon: Zap, label: 'Accuracy', value: `${accuracy}%`, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/10' },
+                                { icon: Star, label: 'Solved', value: totalAttempts, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/10' },
+                            ].map(({ icon: Icon, label, value, color, bg }) => (
+                                <div key={label} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col items-center gap-2 shadow-sm">
+                                    <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center`}><Icon className={`w-5 h-5 ${color}`} /></div>
+                                    <p className="text-xl font-black text-slate-900 dark:text-white">{value}</p>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
+                                </div>
+                            ))}
                         </div>
 
                         {/* Milestones */}
