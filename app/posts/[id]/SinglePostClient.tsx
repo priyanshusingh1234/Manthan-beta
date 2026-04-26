@@ -125,6 +125,7 @@ export default function SinglePostClient({ postId }: { postId: string }) {
                                 if (!updated) router.back();
                                 else refreshPost();
                             }}
+                            onCommentClick={() => setShowComments(true)}
                             compact={false}
                         />
                     </div>

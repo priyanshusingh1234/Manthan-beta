@@ -61,16 +61,38 @@ export async function generateMetadata({ params }: Props): Promise<any> {
                     url: finalImageUrl,
                     width: 1200,
                     height: 630,
+                    alt: title,
                 }
             ],
-            type: 'article',
+            videos: isVideo ? [
+                {
+                    url: post.video_url,
+                    secureUrl: post.video_url,
+                    width: 720,
+                    height: 1280,
+                    type: 'video/mp4',
+                }
+            ] : undefined,
+            type: isVideo ? 'video.movie' : 'article',
+            siteName: 'Dheeyudha',
         },
         twitter: {
-            card: 'summary_large_image',
-            title,
-            description,
+            card: 'player', // Twitter Player card is better for video
+            title: title,
+            description: description,
             images: [finalImageUrl],
-        }
+            //@ts-ignore
+            player: isVideo ? post.video_url : undefined,
+            stream: isVideo ? post.video_url : undefined,
+        },
+        other: isVideo ? {
+            'og:video:url': post.video_url,
+            'og:video:secure_url': post.video_url,
+            'og:video:type': 'video/mp4',
+            'og:video:width': '720',
+            'og:video:height': '1280',
+            'fb:app_id': 'your_fb_app_id', // Optional but helps with Meta crawlers
+        } : {}
     };
 }
 
