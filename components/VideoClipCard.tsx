@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import {
     Play, Pause, Volume2, VolumeX, Heart, MessageCircle,
-    Share2, Download, BadgeCheck, MoreVertical, Trash2
+    Share2, Download, BadgeCheck, MoreVertical, Trash2, Maximize
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { Capacitor } from '@capacitor/core';
@@ -234,6 +234,17 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, compact =
 
             {/* YouTube Shorts style right-side buttons */}
             <div className="absolute bottom-6 right-3 flex flex-col items-center gap-5 z-10">
+                
+                {/* See Full Video (Specific request) - only in compact */}
+                {compact && (
+                    <Link href={singlePostUrl} className="flex flex-col items-center gap-1 group">
+                        <div className="w-11 h-11 rounded-full bg-violet-600/80 backdrop-blur-sm flex items-center justify-center group-hover:bg-violet-500 transition-colors shadow-lg">
+                            <Maximize className="w-[20px] h-[20px] text-white" />
+                        </div>
+                        <span className="text-[10px] text-white font-black drop-shadow-md">Full Video</span>
+                    </Link>
+                )}
+
                 {/* Like */}
                 <button onClick={handleLike} className="flex flex-col items-center gap-1 group">
                     <div className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/10 transition-colors">
@@ -259,11 +270,13 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, compact =
                 </button>
 
                 {/* Download */}
-                <button onClick={handleDownload} className="flex flex-col items-center gap-1 group">
-                    <div className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/10 transition-colors">
-                        <Download className="w-[22px] h-[22px] text-white" />
-                    </div>
-                </button>
+                {!compact && (
+                     <button onClick={handleDownload} className="flex flex-col items-center gap-1 group">
+                        <div className="w-11 h-11 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                            <Download className="w-[22px] h-[22px] text-white" />
+                        </div>
+                    </button>
+                )}
             </div>
 
             {/* Bottom Left Info Overlays */}
