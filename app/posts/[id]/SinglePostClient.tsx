@@ -109,7 +109,7 @@ export default function SinglePostClient({ postId }: { postId: string }) {
 
                 {/* Floating Back Button (Top Left) - Always visible */}
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => router.push('/clips')}
                     className="fixed top-[max(1rem,env(safe-area-inset-top))] left-4 z-[110] p-3 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white active:scale-90 transition-transform"
                 >
                     <ArrowLeft className="w-5 h-5" />

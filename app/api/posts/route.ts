@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
         const url = new URL(req.url);
         const before = url.searchParams.get('before'); // ISO timestamp cursor
         const limit = Math.min(Number(url.searchParams.get('limit') || '20'), 50);
+        const clipsOnly = url.searchParams.get('clipsOnly') === 'true';
 
         const authHeader = req.headers.get('Authorization');
         let currentUserId = null;
@@ -29,6 +30,10 @@ export async function GET(req: NextRequest) {
             .select('*, post_likes ( user_id )')
             .order('created_at', { ascending: false })
             .limit(limit);
+
+        if (clipsOnly) {
+            query = query.not('video_url', 'is', null);
+        }
 
         if (before) {
             query = query.lt('created_at', before);
