@@ -7,6 +7,7 @@ import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import TopperBadge from '@/ticks/topper';
 import { useTopRanks } from '@/hooks/useTopRanks';
 import PostCard from './PostCard';
+import VideoClipCard from './VideoClipCard';
 import { supabase } from '@/lib/supabaseClient';
 
 const iconsMapping: Record<string, any> = {
@@ -382,18 +383,36 @@ export default function PublicProfileTabs({
           ) : (
             <div>
               {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🎬</span>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white">Clips</h3>
-                  <span className="text-xs font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{userClips.length}</span>
-                </div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl">🎬</span>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Clips</h3>
+                <span className="text-xs font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{userClips.length}</span>
               </div>
 
-              {/* Instagram-style 3-col grid */}
-              <div className="grid grid-cols-3 gap-1 sm:gap-2">
+              {/* Full VideoClipCard stack — same card as community feed */}
+              <div className="flex flex-col gap-3 max-w-sm mx-auto">
                 {userClips.map((clip) => (
-                  <ClipThumbnailTile key={clip.id} clip={clip} />
+                  <Link
+                    key={clip.id}
+                    href={`/posts/${clip.id}`}
+                    className="block rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-violet-200/40 dark:hover:shadow-violet-900/30 hover:border-violet-200 dark:hover:border-violet-800 transition-all duration-200"
+                    onClick={(e) => {
+                      // only navigate if NOT clicking an interactive element inside the card
+                      const target = e.target as HTMLElement;
+                      const interactive = target.closest('button, a[href]:not([href="#"])');
+                      if (interactive && interactive !== e.currentTarget) e.preventDefault();
+                    }}
+                  >
+                    <VideoClipCard
+                      post={clip}
+                      currentUserId={currentUserId}
+                      onUpdate={(updated) => {
+                        if (!updated) setUserClips(prev => prev.filter(c => c.id !== clip.id));
+                        else setUserClips(prev => prev.map(c => c.id === updated.id ? updated : c));
+                      }}
+                      compact={true}
+                    />
+                  </Link>
                 ))}
               </div>
             </div>
