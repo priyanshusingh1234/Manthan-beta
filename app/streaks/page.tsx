@@ -3,13 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import { Flame, Trophy, Zap, Star, TrendingUp, ChevronLeft, CheckCircle, Circle, Calendar } from 'lucide-react';
+import { Flame, Trophy, Zap, Star, TrendingUp, ChevronLeft, CheckCircle, Circle, Calendar, Crown, Medal, Users } from 'lucide-react';
+import Link from 'next/link';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
-function daysSince(dateStr: string | null): number {
-    if (!dateStr) return 999;
-    return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-}
 function getIST() { return new Date(Date.now() + 5.5 * 60 * 60 * 1000); }
 function todayIST() { return getIST().toISOString().slice(0, 10); }
 
@@ -100,20 +97,190 @@ function Heatmap({ activeDays }: { activeDays: Set<string> }) {
     );
 }
 
+// ── Friends Streak Board ─────────────────────────────────────────────────────
+type FriendStreak = {
+    id: string;
+    name: string;
+    username: string;
+    avatar: string | null;
+    streak: number;
+    goalMetToday: boolean;
+    rank: number;
+};
+
+function RankIcon({ rank }: { rank: number }) {
+    if (rank === 1) return <Crown className="w-4 h-4 text-yellow-500" fill="#eab308" />;
+    if (rank === 2) return <Medal className="w-4 h-4 text-slate-400" fill="#94a3b8" />;
+    if (rank === 3) return <Medal className="w-4 h-4 text-amber-600" fill="#d97706" />;
+    return <span className="text-[11px] font-black text-slate-400 w-4 text-center">#{rank}</span>;
+}
+
+function FriendsStreakBoard({ myId, myStreak, myName, myUsername, myAvatar }: {
+    myId: string; myStreak: number; myName: string; myUsername: string; myAvatar: string | null;
+}) {
+    const [friends, setFriends] = useState<FriendStreak[]>([]);
+    const [loading, setLoading] = useState(true);
+    const today = todayIST();
+
+    useEffect(() => {
+        const load = async () => {
+            // 1. Get IDs of people I follow
+            const { data: followRows } = await supabase
+                .from('follows')
+                .select('following_id')
+                .eq('follower_id', myId);
+
+            if (!followRows || followRows.length === 0) { setLoading(false); return; }
+            const followingIds = followRows.map(r => r.following_id);
+
+            // 2. Fetch their profiles (streak data)
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, full_name, username, avatar_url, streak_count, daily_solve_count, daily_solve_date')
+                .in('id', followingIds);
+
+            if (!profiles) { setLoading(false); return; }
+
+            const friendList: FriendStreak[] = profiles.map(p => ({
+                id: p.id,
+                name: p.full_name || `@${p.username}` || 'User',
+                username: p.username || '',
+                avatar: p.avatar_url || null,
+                streak: Number(p.streak_count) || 0,
+                goalMetToday: p.daily_solve_date === today && (Number(p.daily_solve_count) || 0) >= 2,
+                rank: 0,
+            }));
+
+            // Add self
+            friendList.push({
+                id: myId,
+                name: myName,
+                username: myUsername,
+                avatar: myAvatar,
+                streak: myStreak,
+                goalMetToday: false, // will be overridden by parent's real data
+                rank: 0,
+            });
+
+            // Sort by streak desc
+            friendList.sort((a, b) => b.streak - a.streak);
+            friendList.forEach((f, i) => { f.rank = i + 1; });
+
+            setFriends(friendList);
+            setLoading(false);
+        };
+        load();
+    }, [myId, myStreak, myName, myUsername, myAvatar, today]);
+
+    const myEntry = friends.find(f => f.id === myId);
+
+    if (loading) return (
+        <div className="flex items-center justify-center h-20">
+            <Flame className="w-5 h-5 text-orange-400 animate-pulse" />
+        </div>
+    );
+
+    if (friends.length <= 1) return (
+        <div className="flex flex-col items-center gap-2 py-6 text-center">
+            <Users className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+            <p className="text-sm font-bold text-slate-400">Follow friends to see their streaks here!</p>
+            <Link href="/search" className="text-xs font-black text-orange-500 hover:underline">Find People →</Link>
+        </div>
+    );
+
+    return (
+        <div className="space-y-1.5">
+            {/* My rank banner */}
+            {myEntry && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800/30 mb-3">
+                    <Flame className="w-4 h-4 text-orange-500" fill="#f97316" />
+                    <span className="text-sm font-black text-orange-700 dark:text-orange-400">
+                        You're #{myEntry.rank} among friends with a {myEntry.streak}-day streak
+                    </span>
+                </div>
+            )}
+
+            {friends.map((friend, idx) => {
+                const isMe = friend.id === myId;
+                return (
+                    <Link
+                        key={friend.id}
+                        href={friend.username ? `/user/${friend.username}` : '#'}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all ${
+                            isMe
+                                ? 'bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800/30'
+                                : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent'
+                        }`}
+                    >
+                        {/* Rank */}
+                        <div className="w-5 flex items-center justify-center shrink-0">
+                            <RankIcon rank={friend.rank} />
+                        </div>
+
+                        {/* Avatar */}
+                        <div className="relative shrink-0">
+                            {friend.avatar ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={friend.avatar} alt={friend.name}
+                                    className="w-9 h-9 rounded-full object-cover border-2 border-white dark:border-slate-900 shadow-sm" />
+                            ) : (
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white font-black text-sm border-2 border-white dark:border-slate-900">
+                                    {friend.name[0]?.toUpperCase() || '?'}
+                                </div>
+                            )}
+                            {/* Goal met indicator */}
+                            {friend.goalMetToday && (
+                                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-orange-500 border-2 border-white dark:border-slate-900 flex items-center justify-center">
+                                    <span className="text-[6px]">🔥</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Name + info */}
+                        <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-bold truncate ${isMe ? 'text-orange-700 dark:text-orange-300' : 'text-slate-800 dark:text-slate-200'}`}>
+                                {friend.name}{isMe ? ' (you)' : ''}
+                            </p>
+                            {friend.goalMetToday && (
+                                <p className="text-[10px] font-bold text-orange-500">✅ Goal met today</p>
+                            )}
+                        </div>
+
+                        {/* Streak count */}
+                        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
+                            friend.streak > 0
+                                ? 'bg-orange-100 dark:bg-orange-900/20'
+                                : 'bg-slate-100 dark:bg-slate-800'
+                        }`}>
+                            <Flame className={`w-3.5 h-3.5 ${friend.streak > 0 ? 'text-orange-500' : 'text-slate-400'}`}
+                                fill={friend.streak > 0 ? '#f97316' : 'none'} />
+                            <span className={`text-sm font-black ${friend.streak > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-slate-400'}`}>
+                                {friend.streak}
+                            </span>
+                        </div>
+                    </Link>
+                );
+            })}
+        </div>
+    );
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function StreakPage() {
     const router = useRouter();
     const [profile, setProfile] = useState<any>(null);
+    const [session, setSession] = useState<any>(null);
     const [attempts, setAttempts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const load = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) { router.push('/login'); return; }
+            const { data: { session: s } } = await supabase.auth.getSession();
+            if (!s) { router.push('/login'); return; }
+            setSession(s);
             const [{ data: prof }, { data: atts }] = await Promise.all([
-                supabase.from('profiles').select('*').eq('id', session.user.id).single(),
-                supabase.from('question_attempts').select('created_at, is_correct').eq('user_id', session.user.id).order('created_at', { ascending: false }).limit(500),
+                supabase.from('profiles').select('*').eq('id', s.user.id).single(),
+                supabase.from('question_attempts').select('created_at, is_correct').eq('user_id', s.user.id).order('created_at', { ascending: false }).limit(500),
             ]);
             setProfile(prof);
             setAttempts(atts || []);
@@ -127,7 +294,7 @@ export default function StreakPage() {
             <Flame className="w-8 h-8 text-orange-500 animate-pulse" />
         </div>
     );
-    if (!profile) return null;
+    if (!profile || !session) return null;
 
     // ── Derived stats ───────────────────────────────────────────────────────
     const streak = Number(profile.streak_count) || 0;
@@ -176,6 +343,10 @@ export default function StreakPage() {
         { label: '30-day streak', target: 30, emoji: '🏆' },
         { label: '100-day streak', target: 100, emoji: '👑' },
     ];
+
+    const myName = profile.full_name || session.user.user_metadata?.fullName || 'You';
+    const myUsername = profile.username || '';
+    const myAvatar = profile.avatar_url || null;
 
     return (
         <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 pb-24">
@@ -227,6 +398,21 @@ export default function StreakPage() {
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
                                 </div>
                             ))}
+                        </div>
+
+                        {/* ── Friends Streak Board ── */}
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm p-5 space-y-3">
+                            <div className="flex items-center gap-2">
+                                <Users className="w-4 h-4 text-orange-500" />
+                                <p className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">Friends Streak Board</p>
+                            </div>
+                            <FriendsStreakBoard
+                                myId={session.user.id}
+                                myStreak={streak}
+                                myName={myName}
+                                myUsername={myUsername}
+                                myAvatar={myAvatar}
+                            />
                         </div>
 
                         {/* Milestones */}

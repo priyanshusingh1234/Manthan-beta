@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import supabaseAdmin from '@/lib/supabaseAdmin';
-import { Trophy, Target, Zap, Star, MapPin, GraduationCap, TrendingUp, BookOpen, Users, ChevronRight } from 'lucide-react';
+import { Trophy, Target, Zap, Star, MapPin, GraduationCap, TrendingUp, BookOpen, Users, ChevronRight, Flame } from 'lucide-react';
 import TeacherBadge from '@/ticks/teacher';
 import TopperBadge from '@/ticks/topper';
 import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
@@ -93,7 +93,7 @@ export default async function StudentProfilePage({ params }: Props) {
         // Fast, case-insensitive ID lookup from profiles table
         const { data: profile } = await supabaseAdmin
             .from('profiles')
-            .select('id, total_points, is_teacher, avatar_url') 
+            .select('id, total_points, is_teacher, avatar_url, streak_count, streak_longest, daily_solve_count, daily_solve_date') 
             .ilike('username', username)
             .single();
 
@@ -168,11 +168,17 @@ export default async function StudentProfilePage({ params }: Props) {
         // follow-up sync (e.g. WAR bonuses).  The profiles table is always kept in
         // sync by every point-awarding API route via upsertProfile().
         const totalPoints = Number(profile?.total_points) || Number(meta.totalPoints) || 0;
-        // Use profiles.avatar_url first (written by /api/profile/sync), then fallback to auth meta.
         const avatar = (profile?.avatar_url as string | null) || fetchedUser.avatar_url || meta.avatar_url || meta.avatar || null;
         const battlesAttempted = Number(meta.battlesAttempted) || 0;
         const battlesWon = Number(meta.battlesWon) || 0;
         const winRate = battlesAttempted > 0 ? Math.round((battlesWon / battlesAttempted) * 100) : 0;
+
+        // Streak
+        const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+        const todayIST = nowIST.toISOString().slice(0, 10);
+        const streakCount = Number((profile as any)?.streak_count) || 0;
+        const streakLongest = Number((profile as any)?.streak_longest) || streakCount;
+        const streakGoalMetToday = (profile as any)?.daily_solve_date === todayIST && (Number((profile as any)?.daily_solve_count) || 0) >= 2;
 
         // Fetch Global Rank
         const isStudentProfile = !profile?.is_teacher;
@@ -352,6 +358,33 @@ export default async function StudentProfilePage({ params }: Props) {
                             </div>
 
                             {bio && <p className="mt-5 text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl mx-auto sm:mx-0 w-full">{bio}</p>}
+
+                            {/* Streak badge */}
+                            {streakCount > 0 && (
+                                <Link href={`/user/${username}`}
+                                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-2xl border transition-all w-fit cursor-default"
+                                    style={{
+                                        background: streakGoalMetToday ? 'linear-gradient(135deg,#fff7ed,#fff)' : undefined,
+                                        borderColor: streakGoalMetToday ? '#fed7aa' : '#e2e8f0',
+                                    }}
+                                >
+                                    <Flame
+                                        className={`w-5 h-5 ${streakGoalMetToday ? 'text-orange-500 animate-pulse' : 'text-slate-400'}`}
+                                        fill={streakGoalMetToday ? '#f97316' : 'none'}
+                                    />
+                                    <span className={`text-sm font-black ${streakGoalMetToday ? 'text-orange-700' : 'text-slate-500 dark:text-slate-400'}`}>
+                                        {streakCount}-day streak
+                                    </span>
+                                    {streakLongest > streakCount && (
+                                        <span className="text-[10px] font-bold text-slate-400">
+                                            · Best {streakLongest}
+                                        </span>
+                                    )}
+                                    {streakGoalMetToday && (
+                                        <span className="text-[10px] font-black text-orange-500">🔥 Active today</span>
+                                    )}
+                                </Link>
+                            )}
 
                             <div className="mt-6">
                                 <FollowButton profileUserId={fetchedUser.id} initialFollowers={initialFollowers} initialFollowing={initialFollowing} />
