@@ -316,32 +316,49 @@ export default function SocialFeedPage() {
         form.append('folder', folder);
         form.append('transformation', transformation);
 
-        try {
-            const apiURL = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
-            const uploadRes = await fetch(apiURL, {
-                method: 'POST',
-                body: form,
-            });
+        const apiURL = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', apiURL, true);
 
-            if (!uploadRes.ok) {
-                const errorBody = await uploadRes.json().catch(() => ({}));
-                console.error('Cloudinary Upload Error Body:', errorBody);
-                throw new Error(errorBody?.error?.message || `Upload failed with status ${uploadRes.status}`);
-            }
-
-            const data = await uploadRes.json();
-            setVideoUploadProgress(100);
-
-            return {
-                videoUrl: data.secure_url,
-                thumbnailUrl: data.secure_url
-                    .replace(/\.[^.]+$/, '.jpg')
-                    .replace('/video/upload/', '/video/upload/w_720,q_auto,so_0/'),
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded * 100) / e.total);
+                    // Cloudinary does processing after 100%, so we cap it slightly
+                    setVideoUploadProgress(Math.min(percent, 95));
+                }
             };
-        } catch (err: any) {
-            console.error('Upload catch block:', err);
-            throw new Error(err.message || 'Network error during video upload. Check your connection.');
-        }
+
+            xhr.onerror = () => reject(new Error('Network error during video upload. Check your connection.'));
+            xhr.ontimeout = () => reject(new Error('Upload timed out.'));
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        setVideoUploadProgress(100);
+                        resolve({
+                            videoUrl: data.secure_url,
+                            thumbnailUrl: data.secure_url
+                                .replace(/\.[^.]+$/, '.jpg')
+                                .replace('/video/upload/', '/video/upload/w_720,q_auto,so_0/'),
+                        });
+                    } catch (e) {
+                        reject(new Error('Failed to parse upload response'));
+                    }
+                } else {
+                    let errMessage = `Upload failed with status ${xhr.status}`;
+                    try {
+                        const errBody = JSON.parse(xhr.responseText);
+                        errMessage = errBody?.error?.message || errMessage;
+                    } catch (e) {}
+                    console.error('Cloudinary Upload Error XHR:', xhr.responseText);
+                    reject(new Error(errMessage));
+                }
+            };
+
+            xhr.send(form);
+        });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
