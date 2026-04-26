@@ -1,10 +1,11 @@
 "use client";
-import React from 'react';
-import { Home, Compass, LucideIcon, ShieldAlert, MessageSquare, FileText, Settings } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Home, Compass, LucideIcon, ShieldAlert, MessageSquare, FileText, Settings, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Capacitor } from '@capacitor/core';
+import { supabase } from '@/lib/supabaseClient';
 
 interface NavItem {
   href: string;
@@ -15,6 +16,28 @@ interface NavItem {
 
 const BottomNav: React.FC = () => {
   const pathname = usePathname();
+  const [streakCount, setStreakCount] = useState(0);
+  const [goalMet, setGoalMet] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || cancelled) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('streak_count, daily_solve_count, daily_solve_date')
+        .eq('id', session.user.id)
+        .single();
+      if (!data || cancelled) return;
+      const today = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      setStreakCount(Number(data.streak_count) || 0);
+      setGoalMet(data.daily_solve_date === today && (Number(data.daily_solve_count) || 0) >= 2);
+    };
+    load();
+    window.addEventListener('streak_earned', load);
+    return () => { cancelled = true; window.removeEventListener('streak_earned', load); };
+  }, []);
 
   const handleNavClick = () => {
     if (Capacitor.isNativePlatform()) {
@@ -75,6 +98,9 @@ const BottomNav: React.FC = () => {
             );
           }
 
+          // Streak badge on Home tab
+          const isHome = item.href === '/';
+
           return (
             <Link
               key={item.href}
@@ -91,6 +117,20 @@ const BottomNav: React.FC = () => {
               {/* Active Indicator Background */}
               {isActive && (
                 <div className="absolute top-2 w-10 h-8 bg-blue-50 dark:bg-blue-900/40 rounded-xl -z-10 transition-all duration-300 transform scale-100 opacity-100 border border-blue-100/50 dark:border-blue-800/50" />
+              )}
+
+              {/* Streak pill above Home icon */}
+              {isHome && streakCount > 0 && (
+                <Link href="/streaks"
+                  onClick={e => e.stopPropagation()}
+                  className={`absolute top-1 right-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-black z-10 transition-all ${
+                    goalMet
+                      ? 'bg-orange-500 text-white shadow-sm shadow-orange-500/40'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                  }`}>
+                  <Flame className="w-2.5 h-2.5" fill={goalMet ? 'white' : 'none'} />
+                  <span>{streakCount}</span>
+                </Link>
               )}
 
               <div className={`

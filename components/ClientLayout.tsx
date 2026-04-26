@@ -18,6 +18,7 @@ import { CallProvider } from '@/components/CallProvider';
 
 
 import CompleteProfileOverlay from '@/components/CompleteProfileOverlay';
+import StreakToast from '@/components/StreakToast';
 
 let nativePushInitialized = false;
 
@@ -509,6 +510,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {isAuthenticated && <GlobalChatListener />}
       <GlobalCallListener />
       <GlobalPrefetcher isAuthenticated={isAuthenticated} />
+      {isAuthenticated && <StreakToast />}
     </CallProvider>
   );
 }

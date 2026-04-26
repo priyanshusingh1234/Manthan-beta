@@ -130,8 +130,14 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             }
 
             setResult(data);
-            
-            // 🔥 Track activity locally for algorithmic feed improvements
+
+            // 🔥 Fire global streak toast when daily goal is completed
+            if (data?.streak?.streakEarnedToday) {
+                window.dispatchEvent(new CustomEvent('streak_earned', {
+                    detail: { streak: data.streak.current }
+                }));
+            }
+
             if (question.subject) {
                  const timeTaken = Math.max(0, question.time_limit * 60 - timeLeft);
                  await ActivityTracker.trackSolve(

@@ -5,12 +5,55 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search, MessageSquare, Compass, Zap } from 'lucide-react';
+import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search, MessageSquare, Compass, Zap, Flame } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 import { supabase } from '@/lib/supabaseClient';
 import NotificationBell from './NotificationBell';
 import { User as SupabaseUser } from '@supabase/supabase-js';
+
+// ── Streak pill shown next to NotificationBell ───────────────────────────────
+function StreakPill() {
+  const [streak, setStreak] = React.useState(0);
+  const [goalMet, setGoalMet] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || cancelled) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('streak_count, daily_solve_count, daily_solve_date')
+        .eq('id', session.user.id)
+        .single();
+      if (!data || cancelled) return;
+      const today = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      setStreak(Number(data.streak_count) || 0);
+      setGoalMet(data.daily_solve_date === today && (Number(data.daily_solve_count) || 0) >= 2);
+    };
+    load();
+    // Refresh after every solve (streak_earned event)
+    const onEarned = () => load();
+    window.addEventListener('streak_earned', onEarned);
+    return () => { cancelled = true; window.removeEventListener('streak_earned', onEarned); };
+  }, []);
+
+  if (streak === 0 && !goalMet) return null;
+
+  return (
+    <Link href="/streaks" title="My streak">
+      <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black transition-all active:scale-95 ${
+        goalMet
+          ? 'bg-orange-500/20 border border-orange-400/40 text-orange-300'
+          : 'bg-white/10 border border-white/20 text-white/80'
+      }`}>
+        <Flame className={`w-3.5 h-3.5 ${goalMet ? 'text-orange-400 animate-pulse' : 'text-white/60'}`} fill={goalMet ? '#fb923c' : 'none'} />
+        <span>{streak}</span>
+      </span>
+    </Link>
+  );
+}
 
 interface HeaderProps {
   isMobile?: boolean;
@@ -248,6 +291,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
             {user ? (
               <>
                 <div className="flex items-center gap-2">
+                  <StreakPill />
                   <NotificationBell isMobile={true} />
                 </div>
                 {user?.user_metadata?.isTeacher && (
@@ -404,6 +448,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                   {/* Desktop Icons */}
                   <div className="hidden lg:flex items-center gap-4">
                     <div className="flex items-center gap-2">
+                      <StreakPill />
                       <NotificationBell isMobile={false} />
                     </div>
 
