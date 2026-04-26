@@ -277,50 +277,53 @@ export default function SocialFeedPage() {
         setVideoUploadProgress(0);
     };
 
-    // Upload video directly to Cloudinary using signed params
     const uploadVideoToCloudinary = async (token: string): Promise<{ videoUrl: string; thumbnailUrl: string }> => {
         if (!videoFile) throw new Error('No video file');
 
-        // 1. Get signed upload params from our API
         const signRes = await fetch('/api/clips/sign', {
             headers: { Authorization: `Bearer ${token}` },
         });
-        if (!signRes.ok) throw new Error('Failed to get upload signature');
+        if (!signRes.ok) {
+            const errData = await signRes.json().catch(() => ({}));
+            throw new Error(errData.error || 'Failed to get upload signature');
+        }
         const { cloudName, apiKey, timestamp, signature, folder, transformation } = await signRes.json();
 
-        // 2. Build multipart form for Cloudinary
         const form = new FormData();
-        form.append('file', videoFile);
+        // Modern mobile browsers sometimes strip filenames; force one to ensure Cloudinary accepts it
+        form.append('file', videoFile, 'clip.mp4');
         form.append('api_key', apiKey);
         form.append('timestamp', String(timestamp));
         form.append('signature', signature);
         form.append('folder', folder);
         form.append('transformation', transformation);
-        form.append('resource_type', 'video');
 
-        // 3. Upload with XHR so we can track progress
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) setVideoUploadProgress(Math.round((e.loaded / e.total) * 90));
+        try {
+            const apiURL = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
+            const uploadRes = await fetch(apiURL, {
+                method: 'POST',
+                body: form,
+            });
+
+            if (!uploadRes.ok) {
+                const errorBody = await uploadRes.json().catch(() => ({}));
+                console.error('Cloudinary Upload Error Body:', errorBody);
+                throw new Error(errorBody?.error?.message || `Upload failed with status ${uploadRes.status}`);
+            }
+
+            const data = await uploadRes.json();
+            setVideoUploadProgress(100);
+            
+            return {
+                videoUrl: data.secure_url,
+                thumbnailUrl: data.secure_url
+                    .replace(/\.[^.]+$/, '.jpg')
+                    .replace('/video/upload/', '/video/upload/w_720,q_auto,so_0/'),
             };
-            xhr.onload = () => {
-                setVideoUploadProgress(100);
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    const data = JSON.parse(xhr.responseText);
-                    resolve({
-                        videoUrl: data.secure_url,
-                        // Cloudinary auto-generates a .jpg thumbnail at the same public_id
-                        thumbnailUrl: data.secure_url.replace(/\.[^.]+$/, '.jpg').replace('/video/upload/', '/image/upload/w_720,q_auto/'),
-                    });
-                } else {
-                    reject(new Error('Cloudinary upload failed'));
-                }
-            };
-            xhr.onerror = () => reject(new Error('Network error during video upload'));
-            xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`);
-            xhr.send(form);
-        });
+        } catch (err: any) {
+            console.error('Upload catch block:', err);
+            throw new Error(err.message || 'Network error during video upload. Check your connection.');
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
