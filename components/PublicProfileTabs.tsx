@@ -7,6 +7,7 @@ import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import TopperBadge from '@/ticks/topper';
 import { useTopRanks } from '@/hooks/useTopRanks';
 import PostCard from './PostCard';
+import VideoClipCard from './VideoClipCard';
 import { supabase } from '@/lib/supabaseClient';
 
 const iconsMapping: Record<string, any> = {
@@ -41,16 +42,19 @@ export default function PublicProfileTabs({
   weeklyReport
 }: PublicProfileTabsProps) {
   const { getRank } = useTopRanks();
-  const [activeTab, setActiveTab] = useState<'stats' | 'badges' | 'solved' | 'posts'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'badges' | 'solved' | 'posts' | 'clips'>('stats');
   const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [userClips, setUserClips] = useState<any[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
+  const [loadingClips, setLoadingClips] = useState(false);
   const [hasFetchedPosts, setHasFetchedPosts] = useState(false);
+  const [hasFetchedClips, setHasFetchedClips] = useState(false);
   const [postsFetchError, setPostsFetchError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-        setCurrentUserId(user?.id || null);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        setCurrentUserId(session?.user?.id || null);
     });
   }, []);
 
@@ -85,11 +89,28 @@ export default function PublicProfileTabs({
     }
   };
 
+  // Fetch clips (posts with video_url)
+  const fetchUserClips = async (force = false) => {
+    if (loadingClips) return;
+    if (!force && hasFetchedClips) return;
+    setLoadingClips(true);
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(`/api/posts/user/${userId}?t=${Date.now()}`, {
+          headers: { ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}) }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            setUserClips((Array.isArray(data) ? data : []).filter((p: any) => !!p.video_url));
+            setHasFetchedClips(true);
+        }
+    } catch (err) { console.error(err); }
+    finally { setLoadingClips(false); }
+  };
+
   useEffect(() => {
-    if (activeTab === 'posts') {
-        // Always fetch fresh when tab is opened
-        fetchUserPosts(true);
-    }
+    if (activeTab === 'posts') fetchUserPosts(true);
+    if (activeTab === 'clips') fetchUserClips(true);
   }, [activeTab]);
 
   const liveRank = userId ? getRank(userId) : null;
@@ -128,6 +149,12 @@ export default function PublicProfileTabs({
             className={`relative z-10 px-6 py-2.5 text-sm font-black rounded-xl transition-all duration-300 flex items-center gap-2 ${activeTab === 'posts' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
           >
             Posts
+          </button>
+          <button
+            onClick={() => setActiveTab('clips')}
+            className={`relative z-10 px-6 py-2.5 text-sm font-black rounded-xl transition-all duration-300 flex items-center gap-2 ${activeTab === 'clips' ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+          >
+            🎬 Clips
           </button>
           <button
             onClick={() => setActiveTab('badges')}
@@ -294,6 +321,31 @@ export default function PublicProfileTabs({
                     ))}
                 </div>
             )}
+        </div>
+      )}
+
+      {/* ── Clips tab ──────────────────────────────────────────────────────── */}
+      {activeTab === 'clips' && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {loadingClips ? (
+            <div className="py-20 text-center flex flex-col items-center gap-4">
+              <Loader2 className="w-10 h-10 animate-spin text-violet-500" />
+              <p className="text-slate-500 font-bold italic">Loading clips…</p>
+            </div>
+          ) : userClips.length === 0 ? (
+            <div className="py-20 text-center flex flex-col items-center gap-4 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
+              <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-4xl">🎬</div>
+              <p className="text-slate-400 font-bold italic">No clips posted yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+              {userClips.map((clip) => (
+                <div key={clip.id} className="rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm">
+                  <VideoClipCard post={clip} currentUserId={currentUserId} compact={true} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
-import { ImageIcon, X, Sparkles, User, Send } from 'lucide-react';
+import { ImageIcon, X, Sparkles, User, Send, Video, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { compressImage } from '@/utils/compressImage';
 import { Check } from 'lucide-react';
@@ -26,6 +26,10 @@ export default function SocialFeedPage() {
     const [content, setContent] = useState('');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    // Video clip state
+    const [videoFile, setVideoFile] = useState<File | null>(null);
+    const [videoPreview, setVideoPreview] = useState<string | null>(null);
+    const [videoUploadProgress, setVideoUploadProgress] = useState(0); // 0-100
     const [submitting, setSubmitting] = useState(false);
     const [postError, setPostError] = useState('');
     const [focused, setFocused] = useState(false);
@@ -35,6 +39,7 @@ export default function SocialFeedPage() {
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const videoInputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
 
     // ── Auto-grow textarea ──────────────────────────────────────────────────
@@ -232,15 +237,104 @@ export default function SocialFeedPage() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // ── Submit ──────────────────────────────────────────────────────────────
+    // ── Video handling ──────────────────────────────────────────────────────
+    const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate it's a video
+        if (!file.type.startsWith('video/')) { setPostError('Please select a video file.'); return; }
+
+        // Validate size (< 200MB  — Cloudinary free tier limit)
+        if (file.size > 200 * 1024 * 1024) { setPostError('Video exceeds 200MB.'); return; }
+
+        // Client-side duration check (30s hard limit)
+        const url = URL.createObjectURL(file);
+        const vid = document.createElement('video');
+        vid.preload = 'metadata';
+        vid.src = url;
+        await new Promise<void>(resolve => { vid.onloadedmetadata = () => resolve(); });
+
+        if (vid.duration > 31) { // small buffer for encoding variance
+            URL.revokeObjectURL(url);
+            setPostError(`Clip too long (${Math.round(vid.duration)}s). Max 30 seconds.`);
+            if (videoInputRef.current) videoInputRef.current.value = '';
+            return;
+        }
+
+        setPostError('');
+        setVideoFile(file);
+        setVideoPreview(url);
+        // Clear any image if video selected
+        removeImage();
+    };
+
+    const removeVideo = () => {
+        setVideoFile(null);
+        if (videoPreview) URL.revokeObjectURL(videoPreview);
+        setVideoPreview(null);
+        if (videoInputRef.current) videoInputRef.current.value = '';
+        setVideoUploadProgress(0);
+    };
+
+    // Upload video directly to Cloudinary using signed params
+    const uploadVideoToCloudinary = async (token: string): Promise<{ videoUrl: string; thumbnailUrl: string }> => {
+        if (!videoFile) throw new Error('No video file');
+
+        // 1. Get signed upload params from our API
+        const signRes = await fetch('/api/clips/sign', {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!signRes.ok) throw new Error('Failed to get upload signature');
+        const { cloudName, apiKey, timestamp, signature, folder, transformation } = await signRes.json();
+
+        // 2. Build multipart form for Cloudinary
+        const form = new FormData();
+        form.append('file', videoFile);
+        form.append('api_key', apiKey);
+        form.append('timestamp', String(timestamp));
+        form.append('signature', signature);
+        form.append('folder', folder);
+        form.append('transformation', transformation);
+        form.append('resource_type', 'video');
+
+        // 3. Upload with XHR so we can track progress
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) setVideoUploadProgress(Math.round((e.loaded / e.total) * 90));
+            };
+            xhr.onload = () => {
+                setVideoUploadProgress(100);
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    const data = JSON.parse(xhr.responseText);
+                    resolve({
+                        videoUrl: data.secure_url,
+                        // Cloudinary auto-generates a .jpg thumbnail at the same public_id
+                        thumbnailUrl: data.secure_url.replace(/\.[^.]+$/, '.jpg').replace('/video/upload/', '/image/upload/w_720,q_auto/'),
+                    });
+                } else {
+                    reject(new Error('Cloudinary upload failed'));
+                }
+            };
+            xhr.onerror = () => reject(new Error('Network error during video upload'));
+            xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`);
+            xhr.send(form);
+        });
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!content.trim() && !imageFile) return;
+        if (!content.trim() && !imageFile && !videoFile) return;
         if (!session) return;
         setSubmitting(true);
         setPostError('');
         try {
             let imageUrl = null;
+            let videoUrl = null;
+            let videoThumbnail = null;
+
+            // Upload image if present
             if (imageFile) {
                 const ext = (imageFile.name || 'post-image.jpg').split('.').pop() || 'webp';
                 const form = new FormData();
@@ -259,13 +353,21 @@ export default function SocialFeedPage() {
                 imageUrl = upData.url;
             }
 
+            // Upload video if present
+            if (videoFile) {
+                setVideoUploadProgress(1);
+                const result = await uploadVideoToCloudinary(session.access_token);
+                videoUrl = result.videoUrl;
+                videoThumbnail = result.thumbnailUrl;
+            }
+
             const res = await fetch('/api/posts', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${session.access_token}`,
                 },
-                body: JSON.stringify({ content: content.trim(), imageUrl }),
+                body: JSON.stringify({ content: content.trim(), imageUrl, videoUrl, videoThumbnail }),
             });
             if (!res.ok) throw new Error((await res.json()).error || 'Failed');
             const newPostRaw = await res.json();
@@ -286,6 +388,8 @@ export default function SocialFeedPage() {
                 type: 'post',
                 content: content.trim(),
                 image_url: imageUrl,
+                video_url: videoUrl,
+                video_thumbnail: videoThumbnail,
                 likes_count: 0,
                 comments_count: 0,
                 created_at: newPostRaw.created_at || new Date().toISOString(),
@@ -304,6 +408,7 @@ export default function SocialFeedPage() {
             // Reset composer
             setContent('');
             removeImage();
+            removeVideo();
             setFocused(false);
             if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
@@ -320,7 +425,7 @@ export default function SocialFeedPage() {
     };
 
     const charsLeft = MAX_CHARS - content.length;
-    const canPost = (content.trim() || imageFile) && !submitting;
+    const canPost = (content.trim() || imageFile || videoFile) && !submitting;
     const meta = session?.user?.user_metadata || {};
     const avatarUrl = (meta.avatar_url && !meta.avatar_url.includes('googleusercontent.com'))
         ? meta.avatar_url
@@ -416,13 +521,46 @@ export default function SocialFeedPage() {
                                     </div>
                                 )}
 
+                                {/* Video Preview */}
+                                {videoPreview && (
+                                    <div className="mx-4 mb-3 relative rounded-2xl overflow-hidden border border-violet-200 dark:border-violet-800/40 bg-slate-950 group" style={{ aspectRatio: '9/16', maxHeight: 280 }}>
+                                        <video src={videoPreview} className="w-full h-full object-contain" muted playsInline controls />
+                                        <button
+                                            type="button"
+                                            onClick={removeVideo}
+                                            className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full backdrop-blur transition-colors"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                        <span className="absolute bottom-2 left-2 text-[10px] font-black bg-violet-600 text-white px-2 py-0.5 rounded-full">🎬 30s clip</span>
+                                    </div>
+                                )}
+
+                                {/* Upload progress bar (only during submission with video) */}
+                                {submitting && videoFile && videoUploadProgress > 0 && (
+                                    <div className="mx-4 mb-3">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Loader2 className="w-3.5 h-3.5 text-violet-500 animate-spin" />
+                                            <span className="text-[11px] font-black text-violet-600 dark:text-violet-400">
+                                                Uploading clip… {videoUploadProgress}%
+                                            </span>
+                                        </div>
+                                        <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 transition-all duration-300 rounded-full"
+                                                style={{ width: `${videoUploadProgress}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Error */}
                                 {postError && (
                                     <p className="mx-4 mb-2 text-xs font-bold text-red-500">{postError}</p>
                                 )}
 
                                 {/* Action bar — only visible when focused or has content */}
-                                {(focused || content || imagePreview) && (
+                                {(focused || content || imagePreview || videoPreview) && (
                                     <div className="flex items-center justify-between px-4 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800">
                                         <div className="flex items-center gap-1">
                                             {/* Image attach */}
@@ -430,11 +568,23 @@ export default function SocialFeedPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => fileInputRef.current?.click()}
-                                                disabled={submitting}
-                                                className="p-2 rounded-full text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+                                                disabled={submitting || !!videoFile}
+                                                className="p-2 rounded-full text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors disabled:opacity-40"
                                                 title="Add image"
                                             >
                                                 <ImageIcon className="w-5 h-5" />
+                                            </button>
+
+                                            {/* Video clip attach */}
+                                            <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} />
+                                            <button
+                                                type="button"
+                                                onClick={() => videoInputRef.current?.click()}
+                                                disabled={submitting || !!imageFile}
+                                                className="p-2 rounded-full text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors disabled:opacity-40"
+                                                title="Add 30s clip"
+                                            >
+                                                <Video className="w-5 h-5" />
                                             </button>
                                         </div>
 

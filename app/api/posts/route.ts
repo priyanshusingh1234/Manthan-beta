@@ -51,6 +51,8 @@ export async function GET(req: NextRequest) {
                     id: p.id,
                     content: p.content,
                     image_url: p.image_url,
+                    video_url: p.video_url || null,
+                    video_thumbnail: p.video_thumbnail || null,
                     likes_count: likesCount,
                     comments_count: p.comments_count || 0,
                     created_at: p.created_at,
@@ -85,18 +87,20 @@ export async function POST(req: NextRequest) {
         const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
         if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { content, imageUrl } = await req.json();
+        const { content, imageUrl, videoUrl, videoThumbnail } = await req.json();
 
-        if (!content || !content.trim()) {
-            return NextResponse.json({ error: 'Post must contain text.' }, { status: 400 });
+        if (!content?.trim() && !videoUrl) {
+            return NextResponse.json({ error: 'Post must contain text or a video.' }, { status: 400 });
         }
 
         const { data: post, error } = await supabaseAdmin
             .from('posts')
             .insert({
                 author_id: user.id,
-                content: content.trim(),
-                image_url: imageUrl || null
+                content: content?.trim() || '',
+                image_url: imageUrl || null,
+                video_url: videoUrl || null,
+                video_thumbnail: videoThumbnail || null,
             })
             .select()
             .single();

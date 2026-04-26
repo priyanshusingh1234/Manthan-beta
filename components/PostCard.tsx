@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import VideoClipCard from './VideoClipCard';
 
 const TeacherBadge = dynamic(() => import('@/ticks/teacher'), { ssr: false });
 const TopperBadge = dynamic(() => import('@/ticks/topper'), { ssr: false });
@@ -345,6 +346,18 @@ export default function PostCard({
     };
 
     if (isHidden) return null;
+
+    // ── Video clip posts get their own specialised card ─────────────────────
+    if (post.video_url) {
+        return (
+            <VideoClipCard
+                post={post}
+                currentUserId={currentUserId}
+                onUpdate={onUpdate}
+                compact={!isSinglePost}
+            />
+        );
+    }
 
     return (
         <div className={`group/card relative bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 transition-colors duration-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 ${isSinglePost ? 'border-none' : 'last:border-0'}`}>
