@@ -59,11 +59,45 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
         check();
     }, []);
 
+    // IntersectionObserver for auto-play/pause
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                const v = videoRef.current;
+                if (!v) return;
+                // Play if at least 60% visible
+                if (entry.intersectionRatio > 0.6) {
+                    v.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+                } else {
+                    v.pause();
+                    setPlaying(false);
+                }
+            },
+            { threshold: [0.6] }
+        );
+
+        if (videoRef.current) observer.observe(videoRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    // Global mute sync
+    useEffect(() => {
+        const handleGlobalMute = (e: any) => {
+            const isMuted = e.detail?.muted;
+            if (typeof isMuted === 'boolean') {
+                setMuted(isMuted);
+                if (videoRef.current) videoRef.current.muted = isMuted;
+            }
+        };
+        window.addEventListener('dheeyudha-video-mute', handleGlobalMute);
+        return () => window.removeEventListener('dheeyudha-video-mute', handleGlobalMute);
+    }, []);
+
     const togglePlay = (e: React.MouseEvent) => {
         e.stopPropagation();
         const v = videoRef.current;
         if (!v) return;
-        if (v.paused) { v.play(); setPlaying(true); }
+        if (v.paused) { v.play().then(() => setPlaying(true)).catch(() => setPlaying(false)); }
         else { v.pause(); setPlaying(false); }
     };
 
@@ -71,8 +105,14 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
         e.stopPropagation();
         const v = videoRef.current;
         if (!v) return;
-        v.muted = !v.muted;
-        setMuted(v.muted);
+        const newMuted = !v.muted;
+        v.muted = newMuted;
+        setMuted(newMuted);
+        
+        // Sync to all other video players
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('dheeyudha-video-mute', { detail: { muted: newMuted } }));
+        }
     };
 
     const handleTimeUpdate = () => {
