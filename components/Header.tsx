@@ -324,6 +324,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
         {user && (
           <div className="mt-3 overflow-x-auto scrollbar-hide flex items-center gap-1.5 pb-1 snap-x">
             {[
+              { label: 'Streak 🔥', href: '/streaks', icon: Flame },
               { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
               { label: 'Duels ⚔️', href: '/duels', icon: Swords },
               { label: 'Arena', href: '/tests', icon: Zap },
@@ -341,14 +342,19 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
                 <Link
                   key={nav.label}
                   href={nav.href}
-                  className={`flex-shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all relative ${active
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                  className={`flex-shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all relative ${
+                    active
+                      ? nav.href === '/streaks'
+                        ? 'bg-orange-500 border-orange-500 text-white shadow-md'
+                        : 'bg-blue-600 border-blue-600 text-white shadow-md'
                       : nav.label === 'Search' && isFirstSearch
                         ? 'bg-blue-500/20 border-blue-400 text-blue-600 animate-pulse shadow-[0_0_10px_rgba(59,130,246,0.3)]'
-                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
-                    }`}
+                        : nav.href === '/streaks'
+                          ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800/40 text-orange-600 dark:text-orange-400'
+                          : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
+                  }`}
                 >
-                  <nav.icon className={`w-3.5 h-3.5 ${nav.label === 'Search' && isFirstSearch && !active ? 'text-blue-600' : ''}`} />
+                  <nav.icon className={`w-3.5 h-3.5 ${nav.href === '/streaks' ? 'text-orange-500' : nav.label === 'Search' && isFirstSearch && !active ? 'text-blue-600' : ''}`} />
                   <span>{nav.label}</span>
                   {nav.label === 'Search' && isFirstSearch && !active && (
                     <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 border border-white dark:border-slate-900 rounded-full" />

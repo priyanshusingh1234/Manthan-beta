@@ -246,7 +246,7 @@ export default function NotificationsPage() {
                                             }`}>
                                                 {/* Gradient background */}
                                                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-rose-500 to-pink-600" />
-                                                <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" xmlns=\"http://www.w3.org/2000/svg\"  %3E%3Crect width=\"1\" height=\"1\" fill=\"rgba(255,255,255,0.05)\"/%3E%3C/svg%3E')]" />
+                                                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
 
                                                 <div className="relative p-4 flex gap-3 items-start">
                                                     {/* Avatar + flame overlay */}
