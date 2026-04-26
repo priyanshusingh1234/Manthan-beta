@@ -160,16 +160,24 @@ export async function POST(req: NextRequest) {
         const followerIds = Array.from(new Set((followers || []).map((f: any) => String(f.follower_id)).filter(id => id && id !== user.id && !taggedUserIds.includes(id))));
 
         if (followerIds.length > 0) {
-            const bodyText = excerpt
-                ? `${authorName} posted: "${excerpt}"`
-                : `${authorName} shared a new post.`;
+            const isClip = !!videoUrl;
+            const followerTitle = isClip
+                ? `🎬 ${authorName} posted a new clip`
+                : `${authorName} shared a new post`;
+            const followerBody = isClip
+                ? (excerpt
+                    ? `${authorName}: "${excerpt}"`
+                    : `${authorName} just dropped a 30-second clip. Watch it now!`)
+                : (excerpt
+                    ? `${authorName} posted: "${excerpt}"`
+                    : `${authorName} shared a new post.`);
 
             await Promise.allSettled(
                 followerIds.map((followerId) => createNotification({
                     userId: followerId,
                     type: 'following_post',
-                    title: `${authorName} shared a new post`,
-                    body: bodyText,
+                    title: followerTitle,
+                    body: followerBody,
                     href: `/posts/${post.id}`,
                     actorId: user.id,
                     actorName: authorName,

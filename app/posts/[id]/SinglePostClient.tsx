@@ -8,6 +8,7 @@ import { ArrowLeft, Clock, MessageCircle, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
+import VideoClipCard from '@/components/VideoClipCard';
 import BadgedName from '@/components/BadgedName';
 
 export default function SinglePostClient({ postId }: { postId: string }) {
@@ -66,7 +67,7 @@ export default function SinglePostClient({ postId }: { postId: string }) {
             <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-10 h-10 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin" />
-                    <p className="font-bold animate-pulse">Loading discussion...</p>
+                    <p className="font-bold animate-pulse">Loading…</p>
                 </div>
             </div>
         );
@@ -76,8 +77,46 @@ export default function SinglePostClient({ postId }: { postId: string }) {
         return <div className="p-20 text-center font-bold text-slate-500">Post not found.</div>;
     }
 
-    const profileUrl = post.author?.isTeacher && post.author?.username ? `/teacher/${post.author.username}` : post.author?.username ? `/user/${post.author.username}` : '#';
+    const profileUrl = post.author?.isTeacher && post.author?.username
+        ? `/teacher/${post.author.username}`
+        : post.author?.username
+            ? `/user/${post.author.username}`
+            : '#';
 
+    // ── Video clip — dedicated fullscreen experience ──────────────────────────
+    if (post.video_url) {
+        return (
+            <div className="min-h-screen bg-black flex flex-col">
+                {/* Sticky header — dark glass */}
+                <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center gap-4">
+                    <button
+                        onClick={() => router.back()}
+                        className="p-2 rounded-full hover:bg-white/10 transition-colors text-white"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <h1 className="font-black text-lg tracking-tight text-white">🎬 Clip</h1>
+                </div>
+
+                {/* Centred video player — phone-width column */}
+                <main className="flex-1 flex items-start justify-center py-4 px-0 sm:px-4 pb-24">
+                    <div className="w-full max-w-sm">
+                        <VideoClipCard
+                            post={post}
+                            currentUserId={currentUserId}
+                            onUpdate={(updated) => {
+                                if (!updated) router.back();  // deleted — go back
+                                else refreshPost();
+                            }}
+                            compact={false}
+                        />
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    // ── Regular post ───────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-white dark:bg-slate-950 pb-20">
             <div className="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/60 px-4 py-3 flex items-center gap-4">

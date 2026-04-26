@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Trophy, Award, Star, Medal, Sword, Brain, Shield, Target, Zap, LayoutGrid, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Trophy, Award, Star, Medal, Sword, Brain, Shield, Target, Zap, LayoutGrid, Loader2, Play } from 'lucide-react';
 import Link from 'next/link';
 import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import TopperBadge from '@/ticks/topper';
 import { useTopRanks } from '@/hooks/useTopRanks';
 import PostCard from './PostCard';
-import VideoClipCard from './VideoClipCard';
 import { supabase } from '@/lib/supabaseClient';
 
 const iconsMapping: Record<string, any> = {
@@ -30,6 +29,48 @@ interface PublicProfileTabsProps {
   isTeacher: boolean;
   weeklyReport?: any;
 }
+
+// ─── Clip thumbnail tile for the 3-col grid ────────────────────────────────
+function ClipThumbnailTile({ clip }: { clip: any }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [duration, setDuration] = useState(0);
+  const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+  return (
+    <Link href={`/posts/${clip.id}`} className="group relative block aspect-[9/16] bg-slate-900 overflow-hidden rounded-lg sm:rounded-xl">
+      {clip.video_thumbnail ? (
+        <img src={clip.video_thumbnail} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+      ) : (
+        <video
+          ref={videoRef}
+          src={clip.video_url}
+          className="w-full h-full object-cover"
+          muted
+          playsInline
+          preload="metadata"
+          onLoadedMetadata={() => { if (videoRef.current) setDuration(videoRef.current.duration); }}
+        />
+      )}
+      {/* Dark overlay on hover */}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200" />
+      {/* Play icon on hover */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+          <Play className="w-5 h-5 text-white ml-0.5" fill="white" />
+        </div>
+      </div>
+      {/* Duration badge */}
+      {duration > 0 && (
+        <span className="absolute bottom-2 right-2 text-[10px] font-black bg-black/70 text-white px-1.5 py-0.5 rounded-full backdrop-blur-sm">
+          {fmtTime(duration)}
+        </span>
+      )}
+      {/* Gradient at bottom */}
+      <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+    </Link>
+  );
+}
+// ──────────────────────────────────────────────────────────────────────────────
 
 export default function PublicProfileTabs({ 
   userId,
@@ -334,16 +375,27 @@ export default function PublicProfileTabs({
             </div>
           ) : userClips.length === 0 ? (
             <div className="py-20 text-center flex flex-col items-center gap-4 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
-              <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-4xl">🎬</div>
-              <p className="text-slate-400 font-bold italic">No clips posted yet.</p>
+              <div className="w-20 h-20 bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30 rounded-full flex items-center justify-center text-4xl shadow-inner">🎬</div>
+              <p className="text-slate-400 font-bold italic tracking-tight">No clips posted yet.</p>
+              <p className="text-slate-400 text-sm max-w-xs">When this scholar posts a 30-second clip, it will appear here.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
-              {userClips.map((clip) => (
-                <div key={clip.id} className="rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm">
-                  <VideoClipCard post={clip} currentUserId={currentUserId} compact={true} />
+            <div>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🎬</span>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white">Clips</h3>
+                  <span className="text-xs font-black text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{userClips.length}</span>
                 </div>
-              ))}
+              </div>
+
+              {/* Instagram-style 3-col grid */}
+              <div className="grid grid-cols-3 gap-1 sm:gap-2">
+                {userClips.map((clip) => (
+                  <ClipThumbnailTile key={clip.id} clip={clip} />
+                ))}
+              </div>
             </div>
           )}
         </div>
