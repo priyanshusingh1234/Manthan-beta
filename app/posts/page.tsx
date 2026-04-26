@@ -242,31 +242,49 @@ export default function SocialFeedPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validate it's a video
         if (!file.type.startsWith('video/')) { setPostError('Please select a video file.'); return; }
-
-        // Validate size (< 200MB  — Cloudinary free tier limit)
         if (file.size > 200 * 1024 * 1024) { setPostError('Video exceeds 200MB.'); return; }
 
-        // Client-side duration check (30s hard limit)
+        setPostError('');
         const url = URL.createObjectURL(file);
-        const vid = document.createElement('video');
-        vid.preload = 'metadata';
-        vid.src = url;
-        await new Promise<void>(resolve => { vid.onloadedmetadata = () => resolve(); });
-
-        if (vid.duration > 31) { // small buffer for encoding variance
-            URL.revokeObjectURL(url);
-            setPostError(`Clip too long (${Math.round(vid.duration)}s). Max 30 seconds.`);
-            if (videoInputRef.current) videoInputRef.current.value = '';
+        
+        // Show preview instantly
+        setVideoPreview(url);
+        
+        // Read file into persistent Blob to prevent Android WebView from revoking access
+        // before the upload actually starts.
+        try {
+            const buffer = await file.arrayBuffer();
+            const persistentBlob = new Blob([buffer], { type: file.type });
+            setVideoFile(persistentBlob as any);
+        } catch (err) {
+            setPostError('Failed to read video file.');
             return;
         }
 
-        setPostError('');
-        setVideoFile(file);
-        setVideoPreview(url);
-        // Clear any image if video selected
         removeImage();
+
+        // Perform duration check in background
+        try {
+            const vid = document.createElement('video');
+            vid.preload = 'metadata';
+            vid.src = url;
+
+            const duration = await Promise.race([
+                new Promise<number>((resolve) => {
+                    vid.onloadedmetadata = () => resolve(vid.duration);
+                    vid.onerror = () => resolve(0);
+                }),
+                new Promise<number>((resolve) => setTimeout(() => resolve(0), 4000))
+            ]);
+
+            if (duration > 31) {
+                setPostError(`Clip too long (${Math.round(duration)}s). Max 30 seconds.`);
+                removeVideo();
+            }
+        } catch (err) {
+            console.warn('Metadata check failed, continuing:', err);
+        }
     };
 
     const removeVideo = () => {
