@@ -24,7 +24,14 @@ function getRatingLabel(totalScore: number) {
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization');
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET;
+
+  console.log('[WeeklyCron] Triggered. Secret configured:', !!cronSecret);
+  console.log('[WeeklyCron] Auth header present:', !!authHeader);
+
+  // If CRON_SECRET is set, enforce it. If not set, allow through (dev/manual trigger).
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    console.error('[WeeklyCron] Unauthorized — header mismatch.');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -54,6 +61,8 @@ export async function GET(req: Request) {
     const userIds = new Set<string>();
     (attempts || []).forEach((a: any) => userIds.add(String(a.user_id)));
     (activities || []).forEach((a: any) => userIds.add(String(a.user_id)));
+
+    console.log(`[WeeklyCron] Active users found: ${userIds.size}`);
 
     if (userIds.size === 0) {
       return NextResponse.json({ success: true, sent: 0, message: 'No active users for previous week.' });
@@ -106,14 +115,20 @@ export async function GET(req: Request) {
       const consistencyScore = Math.min(activeDays * 4, 20);
       const totalScore = accuracyScore + volumeScore + consistencyScore;
 
-      await createNotification({
-        userId,
-        type: 'weekly_report',
-        title: 'Weekly Report Card Ready',
-        body: `You scored ${getRatingLabel(totalScore)} this week. Tap to view your full report.`,
-        href: '/report',
-      });
-      sent += 1;
+      console.log(`[WeeklyCron] Sending notification to userId=${userId}, score=${Math.round(totalScore)}, rating=${getRatingLabel(totalScore)}`);
+      try {
+        await createNotification({
+          userId,
+          type: 'weekly_report',
+          title: '📊 Weekly Report Card Ready!',
+          body: `You rated ${getRatingLabel(totalScore)} this week! Tap to see your full breakdown vs last week.`,
+          href: '/report',
+        });
+        sent += 1;
+        console.log(`[WeeklyCron] ✅ Sent to ${userId}`);
+      } catch (notifErr) {
+        console.error(`[WeeklyCron] ❌ Failed for ${userId}:`, notifErr);
+      }
     }
 
     return NextResponse.json({
