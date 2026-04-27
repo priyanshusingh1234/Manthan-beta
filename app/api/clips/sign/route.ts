@@ -41,9 +41,11 @@ export async function GET(req: NextRequest) {
 
         const timestamp = Math.round(Date.now() / 1000);
 
-        // Folder per user, transformation pipeline for max compression
+        // Folder per user, transformation pipeline for intelligent compression
         const folder = `dheeyudha/clips/${userId}`;
-        const transformation = 'f_auto,q_auto:low,vc_h264,w_720,br_400k,du_30';
+        // q_auto:eco intelligently compresses without hard limits, removing pixelation
+        // while still saving space compared to raw uploads.
+        const transformation = 'f_auto,q_auto:eco,vc_h264,w_720,du_30';
 
         // Params must be sorted alphabetically for Cloudinary signature
         const paramsToSign = `folder=${folder}&timestamp=${timestamp}&transformation=${transformation}`;
