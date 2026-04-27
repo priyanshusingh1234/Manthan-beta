@@ -211,7 +211,7 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
                     </p>
                 </div>
             </Link>
-            {(isOwner || isAdmin) && (
+            {isOwner && (
                 <div className="relative">
                     <button onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }} className="p-2 -mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
                         <MoreVertical className="w-5 h-5" />
@@ -265,7 +265,7 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
                     <button onClick={toggleMute} className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white border border-white/10">
                         {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                     </button>
-                    {!compact && (isOwner || isAdmin) && (
+                    {!compact && isOwner && (
                         <div className="relative">
                             <button onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }} className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center text-white border border-white/10">
                                 <MoreVertical className="w-5 h-5" />

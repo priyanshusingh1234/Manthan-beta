@@ -86,6 +86,25 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 }
 
+import crypto from 'crypto';
+
+// Extract Cloudinary public_id from secure_url (removes domain, upload/, versions, transforms, and extension)
+function extractCloudinaryPublicId(url: string) {
+    if (!url || !url.includes('cloudinary.com')) return null;
+    try {
+        const parts = url.split('/upload/');
+        if (parts.length < 2) return null;
+        let p = parts[1];
+        if (p.match(/^[a-z_0-9:,]+.*?\//)) {
+            p = p.replace(/^[a-z_0-9:,]+\//, ''); // drop eager transforms
+        }
+        p = p.replace(/^v\d+\//, ''); // drop version
+        return p.substring(0, p.lastIndexOf('.')); // drop extension
+    } catch {
+        return null;
+    }
+}
+
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
     try {
         const authHeader = req.headers.get('Authorization');
@@ -106,19 +125,25 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
         const { data: post, error: postError } = await supabaseAdmin
             .from('posts')
-            .select('id, author_id, image_url')
+            .select('id, author_id, image_url, video_url')
             .eq('id', postId)
             .maybeSingle();
 
         if (postError) throw postError;
         if (!post) return NextResponse.json({ ok: true, alreadyDeleted: true });
-        if (post.author_id !== user.id) {
+        
+        // Let admins override to delete any post (for pinned/spam control)
+        const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim());
+        const isAdmin = user.email && adminEmails.includes(user.email);
+        
+        if (!isAdmin && post.author_id !== user.id) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         await supabaseAdmin.from('post_comments').delete().eq('post_id', postId);
         await supabaseAdmin.from('post_likes').delete().eq('post_id', postId);
 
+        // Delete Image from Supabase Db
         if (post.image_url) {
             const storagePath = getStoragePathFromPublicUrl(post.image_url);
             if (storagePath) {
@@ -126,11 +151,36 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
             }
         }
 
+        // Delete Video from Cloudinary Db
+        if (post.video_url) {
+            const public_id = extractCloudinaryPublicId(post.video_url);
+            const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+            const apiKey = process.env.CLOUDINARY_API_KEY;
+            const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+            if (public_id && cloudName && apiKey && apiSecret) {
+                const timestamp = Math.round(Date.now() / 1000);
+                const paramsToSign = `public_id=${public_id}&timestamp=${timestamp}`;
+                const signature = crypto
+                    .createHash('sha1')
+                    .update(paramsToSign + apiSecret)
+                    .digest('hex');
+
+                const cloudUrl = `https://api.cloudinary.com/v1_1/${cloudName}/video/destroy`;
+                const form = new FormData();
+                form.append('public_id', public_id);
+                form.append('timestamp', String(timestamp));
+                form.append('api_key', apiKey);
+                form.append('signature', signature);
+
+                await fetch(cloudUrl, { method: 'POST', body: form }).catch(console.error);
+            }
+        }
+
         const { error: deletePostError } = await supabaseAdmin
             .from('posts')
             .delete()
-            .eq('id', postId)
-            .eq('author_id', user.id);
+            .eq('id', postId); // Handled permissions above with isAdmin
 
         if (deletePostError) throw deletePostError;
 
