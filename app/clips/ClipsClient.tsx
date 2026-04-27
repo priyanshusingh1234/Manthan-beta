@@ -183,9 +183,9 @@ export default function ClipsClient() {
 
             {/* Mobile Bottom Comments Sheet (Native-style slide up) */}
             {activeCommentPostId && (
-                <div className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-[2px] flex items-end animate-in fade-in duration-300" onClick={() => setActiveCommentPostId(null)}>
+                <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-[2px] flex items-end animate-in fade-in duration-300" onClick={() => setActiveCommentPostId(null)}>
                     <div
-                        className="w-full bg-[#0a0a0a] rounded-t-[2.5rem] border-t border-white/10 p-6 pt-2 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col h-[75vh] animate-in slide-in-from-bottom duration-500"
+                        className="w-full bg-[#0a0a0a] rounded-t-[2.5rem] border-t border-white/10 p-6 pt-2 pb-[calc(max(2rem,env(safe-area-inset-bottom))+6rem)] flex flex-col h-[75vh] animate-in slide-in-from-bottom duration-500"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mt-2 mb-6 shrink-0" onClick={() => setActiveCommentPostId(null)} />
