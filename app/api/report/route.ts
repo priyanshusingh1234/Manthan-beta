@@ -19,9 +19,10 @@ async function getVerifiedUser(bearer?: string | null) {
 }
 
 async function computeStats(userId: string, from: Date, to: Date) {
+    // Fetch attempts joined with question data (subject, created_by, teacher name)
     const { data: attempts } = await supabaseAdmin
         .from('question_attempts')
-        .select('question_id, is_correct, created_at')
+        .select('question_id, is_correct, created_at, questions(subject, created_by, created_by_name)')
         .eq('user_id', userId)
         .gte('created_at', from.toISOString())
         .lt('created_at', to.toISOString());
@@ -35,7 +36,7 @@ async function computeStats(userId: string, from: Date, to: Date) {
             .gte('created_at', from.toISOString())
             .lt('created_at', to.toISOString());
         if (!res.error) activities = res.data || [];
-    } catch { /* table may not exist */ }
+    } catch { /* optional table */ }
 
     const allTimestamps = [
         ...(attempts || []).map((a: any) => a.created_at),
@@ -52,7 +53,7 @@ async function computeStats(userId: string, from: Date, to: Date) {
     const consistencyScore = Math.min(activeDays * 4, 20);
     const totalScore = accuracyScore + volumeScore + consistencyScore;
 
-    // Per-day breakdown for bar chart
+    // Per-day breakdown
     const dailyMap: Record<string, { total: number; correct: number }> = {};
     for (const a of (attempts || [])) {
         const day = new Date((a as any).created_at).toISOString().split('T')[0];
@@ -67,23 +68,64 @@ async function computeStats(userId: string, from: Date, to: Date) {
         return { label, total: dailyMap[key]?.total ?? 0, correct: dailyMap[key]?.correct ?? 0 };
     });
 
-    return {
-        totalAttempts,
-        correctAttempts,
-        accuracy: Math.round(accuracy),
-        activeDays,
-        score: Math.round(totalScore),
-        daily,
-    };
+    // Subject breakdown
+    const subjectMap: Record<string, { total: number; correct: number }> = {};
+    for (const a of (attempts || [])) {
+        const subject = (a as any).questions?.subject || 'General';
+        if (!subjectMap[subject]) subjectMap[subject] = { total: 0, correct: 0 };
+        subjectMap[subject].total += 1;
+        if ((a as any).is_correct) subjectMap[subject].correct += 1;
+    }
+    const subjects = Object.entries(subjectMap)
+        .map(([name, v]) => ({ name, ...v, accuracy: v.total > 0 ? Math.round((v.correct / v.total) * 100) : 0 }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+
+    // Teacher breakdown – get names from profiles table
+    const teacherMap: Record<string, { total: number; correct: number; name: string }> = {};
+    for (const a of (attempts || [])) {
+        const teacherId = (a as any).questions?.created_by;
+        if (!teacherId) continue;
+        if (!teacherMap[teacherId]) {
+            teacherMap[teacherId] = {
+                total: 0,
+                correct: 0,
+                name: (a as any).questions?.created_by_name || 'Teacher',
+            };
+        }
+        teacherMap[teacherId].total += 1;
+        if ((a as any).is_correct) teacherMap[teacherId].correct += 1;
+    }
+
+    // Resolve teacher names from profiles if not embedded
+    const teacherIds = Object.keys(teacherMap);
+    if (teacherIds.length > 0) {
+        const { data: profiles } = await supabaseAdmin
+            .from('profiles')
+            .select('id, full_name, username, avatar_url')
+            .in('id', teacherIds);
+        for (const p of (profiles || [])) {
+            if (teacherMap[p.id]) {
+                teacherMap[p.id].name = p.full_name || p.username || teacherMap[p.id].name;
+            }
+        }
+    }
+
+    const teachers = Object.entries(teacherMap)
+        .map(([id, v]) => ({ id, ...v, accuracy: v.total > 0 ? Math.round((v.correct / v.total) * 100) : 0 }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 3);
+
+    return { totalAttempts, correctAttempts, accuracy: Math.round(accuracy), activeDays, score: Math.round(totalScore), daily, subjects, teachers };
 }
 
 function buildRating(score: number, attempts: number) {
-    if (score >= 80) return { label: 'Excellent', color: 'text-purple-500', message: 'Incredible work this week! You dominated. 🔥' };
-    if (score >= 60) return { label: 'Very Good', color: 'text-green-500', message: 'Solid effort! A few more and you hit Excellent.' };
-    if (score >= 40) return { label: 'Good', color: 'text-blue-500', message: 'Decent week. Try answering more questions next time.' };
-    if (score >= 20) return { label: 'Not Bad', color: 'text-orange-500', message: 'You started — there is so much more you can do!' };
-    if (attempts > 0) return { label: 'Poor', color: 'text-red-500', message: 'Rough week. Dust yourself off and try again!' };
-    return { label: 'Not Rated', color: 'text-slate-500', message: 'Solve some questions to unlock your rating.' };
+    if (score >= 80) return { label: 'Excellent', color: 'purple', message: 'Incredible work! You dominated this week. 🔥' };
+    if (score >= 60) return { label: 'Very Good', color: 'green', message: 'Solid effort! A few more and you hit Excellent.' };
+    if (score >= 40) return { label: 'Good', color: 'blue', message: 'Decent week. Try answering more questions next time.' };
+    if (score >= 20) return { label: 'Not Bad', color: 'orange', message: 'You started — there is so much more you can do!' };
+    if (attempts > 0) return { label: 'Poor', color: 'red', message: 'Rough week. Dust yourself off and try again!' };
+    return { label: 'Not Rated', color: 'slate', message: 'Solve some questions to unlock your rating.' };
 }
 
 export async function GET(req: NextRequest) {
