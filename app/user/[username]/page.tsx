@@ -8,7 +8,7 @@ import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import BadgedName from '@/components/BadgedName';
 import PublicProfileTabs from '@/components/PublicProfileTabs';
 import FollowButton from '@/components/FollowButton';
-import { getLevel } from '@/components/XPBar';
+import { getLevel } from '@/lib/xp';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
