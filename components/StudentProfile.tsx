@@ -21,6 +21,7 @@ import CropModal from '@/components/profile/CropModal';
 import EditProfileModal from '@/components/profile/EditProfileModal';
 import MyPostsSection from '@/components/MyPostsSection';
 import { useTopRanks } from '@/hooks/useTopRanks';
+import XPBar from '@/components/XPBar';
 
 type BadgeKey = 'gold' | 'silver' | 'bronze' | 'topper';
 
@@ -40,6 +41,7 @@ const StudentProfile: React.FC = () => {
     username: '',
     usernameUpdates: [] as number[],
     totalPoints: 0,
+    xp: 0,
     battlesAttempted: 0,
     battlesWon: 0,
     showWeeklyReport: true,
@@ -222,6 +224,7 @@ const StudentProfile: React.FC = () => {
         username: metaUsername,
         usernameUpdates: Array.isArray(meta.username_updates) ? meta.username_updates : [],
         totalPoints: Number(meta.totalPoints) || 0,
+        xp: Number(meta.xp) || 0,
         battlesAttempted: Number(meta.battlesAttempted) || 0,
         battlesWon: Number(meta.battlesWon) || 0,
         showWeeklyReport: meta.showWeeklyReport !== false,
@@ -281,6 +284,7 @@ const StudentProfile: React.FC = () => {
           avatar: bestAvatar || s.avatar,
           username: dbProfile.username || s.username,
           totalPoints: freshPoints,
+          xp: Number(dbProfile.xp) || Number(meta.xp) || 0,
           battlesAttempted: Number(meta.battlesAttempted) || 0,
           battlesWon: Number(meta.battlesWon) || 0,
         }));
@@ -810,6 +814,11 @@ const StudentProfile: React.FC = () => {
                   nameClassName="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tighter"
                 />
                 <p className="text-slate-500 text-sm font-bold tracking-tight mt-0.5">@{userData.username || 'username'}</p>
+
+                {/* XP Bar */}
+                <div className="mt-3 mb-1 max-w-xs">
+                  <XPBar xp={userData.xp} />
+                </div>
 
                 <div className="mt-3 flex flex-col gap-1">
                   <p className="text-slate-700 dark:text-slate-300 text-sm font-semibold">

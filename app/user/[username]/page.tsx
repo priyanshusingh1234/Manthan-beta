@@ -8,6 +8,7 @@ import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import BadgedName from '@/components/BadgedName';
 import PublicProfileTabs from '@/components/PublicProfileTabs';
 import FollowButton from '@/components/FollowButton';
+import { getLevel } from '@/components/XPBar';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -93,7 +94,7 @@ export default async function StudentProfilePage({ params }: Props) {
         // Fast, case-insensitive ID lookup from profiles table
         const { data: profile } = await supabaseAdmin
             .from('profiles')
-            .select('id, total_points, is_teacher, avatar_url, streak_count, streak_longest, daily_solve_count, daily_solve_date') 
+            .select('id, total_points, xp, is_teacher, avatar_url, streak_count, streak_longest, daily_solve_count, daily_solve_date') 
             .ilike('username', username)
             .single();
 
@@ -168,6 +169,8 @@ export default async function StudentProfilePage({ params }: Props) {
         // follow-up sync (e.g. WAR bonuses).  The profiles table is always kept in
         // sync by every point-awarding API route via upsertProfile().
         const totalPoints = Number(profile?.total_points) || Number(meta.totalPoints) || 0;
+        const profileXp = Number((profile as any)?.xp) || Number(meta.xp) || 0;
+        const xpLevel = getLevel(profileXp);
         const avatar = (profile?.avatar_url as string | null) || fetchedUser.avatar_url || meta.avatar_url || meta.avatar || null;
         const battlesAttempted = Number(meta.battlesAttempted) || 0;
         const battlesWon = Number(meta.battlesWon) || 0;
@@ -341,6 +344,40 @@ export default async function StudentProfilePage({ params }: Props) {
                                 className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3"
                             />
                             <p className="text-lg font-mono text-indigo-500 dark:text-indigo-400 mt-1 font-semibold">@{username}</p>
+
+                            {/* XP Level Bar — server-rendered static version */}
+                            {(() => {
+                                const LEVEL_COLORS = [
+                                    { from: '#94a3b8', to: '#64748b', label: 'Rookie' },
+                                    { from: '#22d3ee', to: '#0891b2', label: 'Scholar' },
+                                    { from: '#34d399', to: '#059669', label: 'Expert' },
+                                    { from: '#818cf8', to: '#4f46e5', label: 'Master' },
+                                    { from: '#fb923c', to: '#ea580c', label: 'Champion' },
+                                    { from: '#f472b6', to: '#db2777', label: 'Legend' },
+                                    { from: '#fbbf24', to: '#d97706', label: 'Mythic' },
+                                ];
+                                const c = LEVEL_COLORS[Math.min(xpLevel.level - 1, 6)];
+                                return (
+                                    <div className="mt-3 flex items-center gap-2 max-w-xs mx-auto sm:mx-0">
+                                        <div
+                                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-white shrink-0 text-xs font-black"
+                                            style={{ background: `linear-gradient(135deg, ${c.from}, ${c.to})` }}
+                                        >
+                                            ⚡ Lv.{xpLevel.level} · {c.label}
+                                        </div>
+                                        <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full"
+                                                style={{
+                                                    width: `${xpLevel.progressPct}%`,
+                                                    background: `linear-gradient(90deg, ${c.from}, ${c.to})`,
+                                                }}
+                                            />
+                                        </div>
+                                        <span className="text-[10px] text-slate-400 font-bold shrink-0">{xpLevel.xpInLevel}/50</span>
+                                    </div>
+                                );
+                            })()}
 
                             <div className="flex flex-wrap gap-4 mt-4 justify-center sm:justify-start text-sm font-medium text-slate-600 dark:text-slate-400 w-full">
                                 {school && (

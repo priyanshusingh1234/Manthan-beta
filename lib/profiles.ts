@@ -23,6 +23,7 @@ export interface Profile {
     daily_solve_date: string | null;
     daily_solved: number;
     total_points: number;
+    xp: number;
     username: string | null;
     updated_at: string;
     cosmetics?: string[] | null;
@@ -60,7 +61,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         try {
             const { data: existing } = await supabaseAdmin
                 .from('profiles')
-                .select('avatar_url, total_points, cosmetics')
+                .select('avatar_url, total_points, xp, cosmetics')
                 .eq('id', userId)
                 .maybeSingle();
 
@@ -93,6 +94,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         daily_solve_date: meta.dailySolveDate || null,
         daily_solved: Number(meta.dailySolved) || 0,
         total_points: preserveDBPoints && dbPoints !== undefined ? dbPoints : (Number(meta.totalPoints) || 0),
+        xp: Number(meta.xp) || 0,
         username: meta.username || null,
         updated_at: new Date().toISOString(),
         cosmetics: meta.cosmetics || [],

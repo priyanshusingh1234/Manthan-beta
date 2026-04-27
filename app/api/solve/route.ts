@@ -244,6 +244,11 @@ export async function POST(req: Request) {
         const battlesAttempted = (Number(userMeta.battlesAttempted) || 0) + 1;
         const battlesWon = (Number(userMeta.battlesWon) || 0) + (isCorrect ? 1 : 0);
 
+        // ── XP: 2 XP per correct answer (never penalised) ───────────────
+        const XP_PER_CORRECT = 2;
+        const currentXp = Number(userMeta.xp) || 0;
+        const newXp = isCorrect && !existingAttempt ? currentXp + XP_PER_CORRECT : currentXp;
+
         // ── 2-question-per-day streak engine ─────────────────────────────
         // We use the profiles table (DB) as the source of truth to avoid
         // stale JWT metadata causing double-counts.
@@ -294,6 +299,7 @@ export async function POST(req: Request) {
         const updatedMeta = {
             ...userMeta,
             totalPoints: newTotal,
+            xp: newXp,
             battlesAttempted,
             battlesWon,
             streakCount: newStreakCount,
@@ -404,6 +410,8 @@ export async function POST(req: Request) {
             correctOption: correctOpt,
             pointsChange: pointsChangeDisplay,
             newTotal,
+            xpGained: isCorrect && !existingAttempt ? XP_PER_CORRECT : 0,
+            newXp,
             streak: {
                 current: newStreakCount,
                 longest: newStreakLongest,
