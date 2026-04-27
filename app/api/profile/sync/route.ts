@@ -20,10 +20,14 @@ export async function POST(req: NextRequest) {
         if (authErr || !user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
 
         let callerAvatarUrl: string | null = null;
+        let callerBannerUrl: string | null = null;
         try {
             const body = await req.json().catch(() => ({}));
             if (body?.avatarUrl && typeof body.avatarUrl === 'string' && !isGoogleUrl(body.avatarUrl)) {
                 callerAvatarUrl = body.avatarUrl;
+            }
+            if (body?.bannerUrl && typeof body.bannerUrl === 'string') {
+                callerBannerUrl = body.bannerUrl;
             }
         } catch { /* no body is fine */ }
 
@@ -47,6 +51,11 @@ export async function POST(req: NextRequest) {
                 
             if (dbUpdateErr) console.error("Force caller DB update failed:", dbUpdateErr);
             leaderboardCache.invalidate();
+        }
+
+        if (callerBannerUrl) {
+            finalMeta.banner_url = callerBannerUrl;
+            metaNeedsUpdate = true;
         }
 
         const { data: dbProfile } = await supabaseAdmin

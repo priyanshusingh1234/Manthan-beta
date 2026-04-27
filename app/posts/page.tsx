@@ -305,7 +305,7 @@ export default function SocialFeedPage() {
             const errData = await signRes.json().catch(() => ({}));
             throw new Error(errData.error || 'Failed to get upload signature');
         }
-        const { cloudName, apiKey, timestamp, signature, folder, transformation } = await signRes.json();
+        const { cloudName, apiKey, timestamp, signature, folder, eager, eagerAsync } = await signRes.json();
 
         const form = new FormData();
         // Modern mobile browsers sometimes strip filenames; force one to ensure Cloudinary accepts it
@@ -314,7 +314,8 @@ export default function SocialFeedPage() {
         form.append('timestamp', String(timestamp));
         form.append('signature', signature);
         form.append('folder', folder);
-        form.append('transformation', transformation);
+        form.append('eager', eager);
+        form.append('eager_async', eagerAsync ? 'true' : 'false');
 
         const apiURL = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
         return new Promise((resolve, reject) => {
@@ -337,11 +338,17 @@ export default function SocialFeedPage() {
                     try {
                         const data = JSON.parse(xhr.responseText);
                         setVideoUploadProgress(100);
+                        
+                        let finalVideoUrl = data.secure_url;
+                        if (data.eager && data.eager.length > 0) {
+                            finalVideoUrl = data.eager[0].secure_url;
+                        }
+
                         resolve({
-                            videoUrl: data.secure_url,
-                            thumbnailUrl: data.secure_url
+                            videoUrl: finalVideoUrl,
+                            thumbnailUrl: finalVideoUrl
                                 .replace(/\.[^.]+$/, '.jpg')
-                                .replace('/video/upload/', '/video/upload/w_720,q_auto,so_0/'),
+                                .replace('/video/upload/', '/video/upload/so_0/'),
                         });
                     } catch (e) {
                         reject(new Error('Failed to parse upload response'));

@@ -59,18 +59,17 @@ export default async function TeacherProfilePage({ params }: Props) {
     }
 
     const meta = (fetchedUser as any)?.user_metadata ?? (fetchedUser as any)?.user?.user_metadata ?? {};
-    const isTeacher = !!profile?.is_teacher || !!meta?.isTeacher || !!meta?.is_teacher;
-    if (!isTeacher) {
-        const { redirect } = await import('next/navigation');
-        redirect(`/user/${targetUsername}`);
-    }
-
     const name = meta?.fullName || meta?.full_name || meta?.name || (fetchedUser as any)?.email || 'Teacher';
     const avatar = (profile as any)?.avatar_url || meta?.avatar_url || meta?.avatar || null;
     const bio = meta?.bio || null;
     const mainSubject = meta?.mainSubject || meta?.main_subject || null;
     const username = meta?.username || null;
     const teacherId = fetchedUser?.id || fetchedUser?.user?.id;
+
+    const isTeacher = !!profile?.is_teacher || !!meta?.isTeacher || !!meta?.is_teacher;
+    if (!isTeacher) {
+      throw new Error("NOT_A_TEACHER");
+    }
 
     let initialFollowers = 0;
     let initialFollowing = 0;
@@ -215,7 +214,11 @@ export default async function TeacherProfilePage({ params }: Props) {
         </div>
       </div>
     );
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.message === "NOT_A_TEACHER") {
+      const { redirect } = await import('next/navigation');
+      redirect(`/user/${targetUsername}`);
+    }
     return (<div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Profile not available</div>);
   }
 }

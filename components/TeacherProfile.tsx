@@ -305,7 +305,11 @@ const TeacherProfile: React.FC = () => {
             Authorization: `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(type === 'avatar' ? { avatarUrl: publicUrl } : {}),
+          body: JSON.stringify(
+            type === 'avatar' 
+              ? { avatarUrl: publicUrl } 
+              : { bannerUrl: publicUrl }
+          ),
         }).catch(console.error);
         
         // Force the browser to grab a completely new JWT from the server.

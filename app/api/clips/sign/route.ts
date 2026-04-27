@@ -45,10 +45,11 @@ export async function GET(req: NextRequest) {
         const folder = `dheeyudha/clips/${userId}`;
         // q_auto:eco intelligently compresses without hard limits, removing pixelation
         // while still saving space compared to raw uploads.
-        const transformation = 'f_auto,q_auto:eco,vc_h264,w_720,du_30';
+        const eager = 'f_auto,q_auto:eco,vc_h264,w_720,du_30';
+        const eager_async = true;
 
         // Params must be sorted alphabetically for Cloudinary signature
-        const paramsToSign = `folder=${folder}&timestamp=${timestamp}&transformation=${transformation}`;
+        const paramsToSign = `eager=${eager}&eager_async=true&folder=${folder}&timestamp=${timestamp}`;
 
         const signature = crypto
             .createHash('sha1')
@@ -61,7 +62,8 @@ export async function GET(req: NextRequest) {
             timestamp,
             signature,
             folder,
-            transformation,
+            eager,
+            eagerAsync: eager_async
         });
     } catch (err: any) {
         console.error('[clips/sign] error:', err);
