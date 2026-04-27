@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Trophy, Target, TrendingUp, TrendingDown, Calendar,
     AlertTriangle, ArrowLeft, Share2, Minus,
-    ChevronUp, ChevronDown, BookOpen, User
+    ChevronUp, ChevronDown, BookOpen, User, Users, ExternalLink
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import ShareReportSheet from '@/components/ShareReportSheet';
 
 /* ── Paired bar chart (CSS only) ──────────────────────────────── */
 function BarChart({ current, previous }: {
@@ -121,6 +122,8 @@ export default function WeeklyReportPage() {
     const router = useRouter();
     const [report, setReport] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [shareMenuOpen, setShareMenuOpen] = useState(false);
+    const [shareSheetOpen, setShareSheetOpen] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -151,9 +154,10 @@ export default function WeeklyReportPage() {
     const { stats, prevStats, rating } = report;
     const gradient = RATING_GRADIENT[rating.color] ?? RATING_GRADIENT.slate;
 
-    const handleShare = async () => {
+    const handleNativeShare = async () => {
+        setShareMenuOpen(false);
         const text = `My Dheeyudha Weekly Report: ${rating.label}! Score: ${stats.score}/100 • Accuracy: ${stats.accuracy}% • Favourite Subject: ${stats.subjects?.[0]?.name ?? '—'}. Can you beat me? 🔥`;
-        try { if (navigator.share) { await navigator.share({ title: 'My Report Card', text }); return; } await navigator.clipboard.writeText(text); } catch { }
+        try { if (navigator.share) { await navigator.share({ title: 'My Report Card', text }); return; } await navigator.clipboard.writeText(text); alert('Copied to clipboard!'); } catch { }
     };
 
     return (
@@ -165,9 +169,54 @@ export default function WeeklyReportPage() {
                     <ArrowLeft className="w-5 h-5 text-slate-700 dark:text-white" />
                 </button>
                 <h1 className="font-black text-base text-slate-900 dark:text-white flex-1">Weekly Report Card</h1>
-                <button onClick={handleShare} className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center active:scale-90 transition-transform">
-                    <Share2 className="w-4 h-4 text-white" />
-                </button>
+                <div className="relative">
+                    <button
+                        onClick={() => setShareMenuOpen(v => !v)}
+                        className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center active:scale-90 transition-transform"
+                    >
+                        <Share2 className="w-4 h-4 text-white" />
+                    </button>
+                    <AnimatePresence>
+                        {shareMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShareMenuOpen(false)} />
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9, y: -8 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9, y: -8 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="absolute right-0 top-11 z-50 w-52 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden"
+                                >
+                                    <button
+                                        onClick={() => { setShareMenuOpen(false); setShareSheetOpen(true); }}
+                                        className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left"
+                                    >
+                                        <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                                            <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-black text-slate-800 dark:text-white">Post to Community</p>
+                                            <p className="text-[10px] text-slate-400 font-medium">Share in your feed</p>
+                                        </div>
+                                    </button>
+                                    <div className="h-px bg-slate-100 dark:bg-slate-700 mx-4" />
+                                    <button
+                                        onClick={handleNativeShare}
+                                        className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left"
+                                    >
+                                        <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                            <ExternalLink className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-black text-slate-800 dark:text-white">Share / Copy</p>
+                                            <p className="text-[10px] text-slate-400 font-medium">WhatsApp, copy link…</p>
+                                        </div>
+                                    </button>
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             <div className="px-4 pt-4 max-w-lg mx-auto space-y-4">
@@ -314,6 +363,16 @@ export default function WeeklyReportPage() {
                 </motion.button>
 
             </div>
+
+            {/* Share to Community sheet */}
+            {report && (
+                <ShareReportSheet
+                    isOpen={shareSheetOpen}
+                    onClose={() => setShareSheetOpen(false)}
+                    report={report}
+                />
+            )}
+
         </div>
     );
 }
