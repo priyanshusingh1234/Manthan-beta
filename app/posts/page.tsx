@@ -559,43 +559,50 @@ export default function SocialFeedPage() {
                                     </div>
                                 )}
 
-                                {/* Video Preview */}
+                                {/* Video Preview / Uploading State */}
                                 {videoPreview && (
                                     <div className="mx-4 mb-3 relative rounded-2xl overflow-hidden border border-violet-200 dark:border-violet-800/40 bg-slate-950 group" style={{ aspectRatio: '9/16', maxHeight: 280 }}>
-                                        <video 
-                                            key={videoPreview}
-                                            src={videoPreview} 
-                                            className="w-full h-full object-contain" 
-                                            muted 
-                                            playsInline 
-                                            controls 
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={removeVideo}
-                                            className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full backdrop-blur transition-colors"
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                        <span className="absolute bottom-2 left-2 text-[10px] font-black bg-violet-600 text-white px-2 py-0.5 rounded-full">🎬 30s clip</span>
-                                    </div>
-                                )}
-
-                                {/* Upload progress bar (only during submission with video) */}
-                                {submitting && videoFile && videoUploadProgress > 0 && (
-                                    <div className="mx-4 mb-3">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <Loader2 className="w-3.5 h-3.5 text-violet-500 animate-spin" />
-                                            <span className="text-[11px] font-black text-violet-600 dark:text-violet-400">
-                                                Uploading clip… {videoUploadProgress}%
-                                            </span>
-                                        </div>
-                                        <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-gradient-to-r from-violet-500 to-indigo-500 transition-all duration-300 rounded-full"
-                                                style={{ width: `${videoUploadProgress}%` }}
-                                            />
-                                        </div>
+                                        {submitting ? (
+                                            <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-slate-900 absolute inset-0 z-10">
+                                                <div className="w-12 h-12 rounded-full bg-violet-600/20 flex items-center justify-center mb-3 animate-pulse">
+                                                    <Video className="w-6 h-6 text-violet-500" />
+                                                </div>
+                                                <span className="text-[14px] font-black text-violet-400 mb-4 text-center tracking-tight">
+                                                    Optimizing & Uploading...
+                                                </span>
+                                                <div className="w-full max-w-[200px]">
+                                                    <div className="flex justify-between text-xs font-black text-slate-400 mb-1.5 px-1">
+                                                        <span>Progress</span>
+                                                        <span>{videoUploadProgress}%</span>
+                                                    </div>
+                                                    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden w-full">
+                                                        <div 
+                                                            className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-300 ease-out" 
+                                                            style={{ width: `${videoUploadProgress}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <video 
+                                                    key={videoPreview}
+                                                    src={videoPreview} 
+                                                    className="w-full h-full object-contain" 
+                                                    muted 
+                                                    playsInline 
+                                                    controls 
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={removeVideo}
+                                                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full backdrop-blur transition-colors z-10"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                                <span className="absolute bottom-2 left-2 text-[10px] font-black bg-violet-600 text-white px-2 py-0.5 rounded-full z-10 shadow-lg">🎬 30s clip</span>
+                                            </>
+                                        )}
                                     </div>
                                 )}
 
