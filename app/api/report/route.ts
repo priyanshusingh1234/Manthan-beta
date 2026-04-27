@@ -19,13 +19,17 @@ async function getVerifiedUser(bearer?: string | null) {
 }
 
 async function computeStats(userId: string, from: Date, to: Date) {
-    // Fetch attempts joined with question data (subject, created_by, teacher name)
-    const { data: attempts } = await supabaseAdmin
+    // ── Step 1: Basic attempt data (no join — safe) ────────────────
+    const { data: attempts, error: attemptsError } = await supabaseAdmin
         .from('question_attempts')
-        .select('question_id, is_correct, created_at, questions(subject, created_by, created_by_name)')
+        .select('question_id, is_correct, created_at')
         .eq('user_id', userId)
         .gte('created_at', from.toISOString())
         .lt('created_at', to.toISOString());
+
+    if (attemptsError) {
+        console.error('[Report API] attempts error:', attemptsError.message);
+    }
 
     let activities: any[] = [];
     try {
@@ -38,14 +42,17 @@ async function computeStats(userId: string, from: Date, to: Date) {
         if (!res.error) activities = res.data || [];
     } catch { /* optional table */ }
 
+    const safeAttempts = attempts || [];
+
+    // ── Step 2: Core stats ─────────────────────────────────────────
     const allTimestamps = [
-        ...(attempts || []).map((a: any) => a.created_at),
+        ...safeAttempts.map((a: any) => a.created_at),
         ...activities.map((a: any) => a.created_at),
     ];
     const activeDays = new Set(allTimestamps.map(ts => new Date(ts).toISOString().split('T')[0])).size;
 
-    const totalAttempts = (attempts || []).length;
-    const correctAttempts = (attempts || []).filter((a: any) => a.is_correct).length;
+    const totalAttempts = safeAttempts.length;
+    const correctAttempts = safeAttempts.filter((a: any) => a.is_correct).length;
     const accuracy = totalAttempts > 0 ? (correctAttempts / totalAttempts) * 100 : 0;
 
     const accuracyScore = totalAttempts > 0 ? (accuracy / 100) * 40 : 0;
@@ -53,9 +60,9 @@ async function computeStats(userId: string, from: Date, to: Date) {
     const consistencyScore = Math.min(activeDays * 4, 20);
     const totalScore = accuracyScore + volumeScore + consistencyScore;
 
-    // Per-day breakdown
+    // ── Step 3: Daily breakdown ────────────────────────────────────
     const dailyMap: Record<string, { total: number; correct: number }> = {};
-    for (const a of (attempts || [])) {
+    for (const a of safeAttempts) {
         const day = new Date((a as any).created_at).toISOString().split('T')[0];
         if (!dailyMap[day]) dailyMap[day] = { total: 0, correct: 0 };
         dailyMap[day].total += 1;
@@ -68,53 +75,78 @@ async function computeStats(userId: string, from: Date, to: Date) {
         return { label, total: dailyMap[key]?.total ?? 0, correct: dailyMap[key]?.correct ?? 0 };
     });
 
-    // Subject breakdown
-    const subjectMap: Record<string, { total: number; correct: number }> = {};
-    for (const a of (attempts || [])) {
-        const subject = (a as any).questions?.subject || 'General';
-        if (!subjectMap[subject]) subjectMap[subject] = { total: 0, correct: 0 };
-        subjectMap[subject].total += 1;
-        if ((a as any).is_correct) subjectMap[subject].correct += 1;
-    }
-    const subjects = Object.entries(subjectMap)
-        .map(([name, v]) => ({ name, ...v, accuracy: v.total > 0 ? Math.round((v.correct / v.total) * 100) : 0 }))
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 5);
+    // ── Step 4: Subject + Teacher breakdown (separate query, non-blocking) ──
+    let subjects: any[] = [];
+    let teachers: any[] = [];
 
-    // Teacher breakdown – get names from profiles table
-    const teacherMap: Record<string, { total: number; correct: number; name: string }> = {};
-    for (const a of (attempts || [])) {
-        const teacherId = (a as any).questions?.created_by;
-        if (!teacherId) continue;
-        if (!teacherMap[teacherId]) {
-            teacherMap[teacherId] = {
-                total: 0,
-                correct: 0,
-                name: (a as any).questions?.created_by_name || 'Teacher',
-            };
-        }
-        teacherMap[teacherId].total += 1;
-        if ((a as any).is_correct) teacherMap[teacherId].correct += 1;
-    }
+    if (safeAttempts.length > 0) {
+        const questionIds = [...new Set(safeAttempts.map((a: any) => a.question_id).filter(Boolean))];
 
-    // Resolve teacher names from profiles if not embedded
-    const teacherIds = Object.keys(teacherMap);
-    if (teacherIds.length > 0) {
-        const { data: profiles } = await supabaseAdmin
-            .from('profiles')
-            .select('id, full_name, username, avatar_url')
-            .in('id', teacherIds);
-        for (const p of (profiles || [])) {
-            if (teacherMap[p.id]) {
-                teacherMap[p.id].name = p.full_name || p.username || teacherMap[p.id].name;
+        try {
+            const { data: questions } = await supabaseAdmin
+                .from('questions')
+                .select('id, subject, created_by')
+                .in('id', questionIds);
+
+            if (questions && questions.length > 0) {
+                // Build question lookup map
+                const qMap = new Map(questions.map((q: any) => [q.id, q]));
+
+                // Attach question info to each attempt
+                const enriched = safeAttempts.map((a: any) => ({
+                    ...a,
+                    question: qMap.get(a.question_id) || null,
+                }));
+
+                // Subject breakdown
+                const subjectMap: Record<string, { total: number; correct: number }> = {};
+                for (const a of enriched) {
+                    const subject = a.question?.subject || 'General';
+                    if (!subjectMap[subject]) subjectMap[subject] = { total: 0, correct: 0 };
+                    subjectMap[subject].total += 1;
+                    if (a.is_correct) subjectMap[subject].correct += 1;
+                }
+                subjects = Object.entries(subjectMap)
+                    .map(([name, v]) => ({ name, ...v, accuracy: v.total > 0 ? Math.round((v.correct / v.total) * 100) : 0 }))
+                    .sort((a, b) => b.total - a.total)
+                    .slice(0, 5);
+
+                // Teacher breakdown
+                const teacherMap: Record<string, { total: number; correct: number }> = {};
+                for (const a of enriched) {
+                    const tid = a.question?.created_by;
+                    if (!tid) continue;
+                    if (!teacherMap[tid]) teacherMap[tid] = { total: 0, correct: 0 };
+                    teacherMap[tid].total += 1;
+                    if (a.is_correct) teacherMap[tid].correct += 1;
+                }
+
+                const teacherIds = Object.keys(teacherMap);
+                if (teacherIds.length > 0) {
+                    const { data: profiles } = await supabaseAdmin
+                        .from('profiles')
+                        .select('id, full_name, username')
+                        .in('id', teacherIds);
+
+                    const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+                    teachers = teacherIds
+                        .map(id => {
+                            const p = profileMap.get(id);
+                            return {
+                                id,
+                                name: p?.full_name || p?.username || 'Teacher',
+                                ...teacherMap[id],
+                                accuracy: teacherMap[id].total > 0 ? Math.round((teacherMap[id].correct / teacherMap[id].total) * 100) : 0,
+                            };
+                        })
+                        .sort((a, b) => b.total - a.total)
+                        .slice(0, 3);
+                }
             }
+        } catch (e) {
+            console.warn('[Report API] Subject/teacher enrichment failed (non-fatal):', e);
         }
     }
-
-    const teachers = Object.entries(teacherMap)
-        .map(([id, v]) => ({ id, ...v, accuracy: v.total > 0 ? Math.round((v.correct / v.total) * 100) : 0 }))
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 3);
 
     return { totalAttempts, correctAttempts, accuracy: Math.round(accuracy), activeDays, score: Math.round(totalScore), daily, subjects, teachers };
 }
