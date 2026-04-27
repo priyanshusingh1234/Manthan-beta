@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send, Users, Trophy } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Haptics } from '@capacitor/haptics';
 import { ActivityTracker } from '@/lib/activityTracker';
 import { supabase } from "@/lib/supabaseClient";
@@ -22,8 +23,9 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState<number>(question.time_limit * 60);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [result, setResult] = useState<{ isCorrect: boolean, newTotal: number, correctOption: number, pointsChange: number } | null>(null);
+    const [result, setResult] = useState<{ isCorrect: boolean, newTotal: number, correctOption: number, pointsChange: number, xpGained?: number, newXp?: number } | null>(null);
     const [startedAt] = useState(() => new Date().toISOString());
+    const [showXpBurst, setShowXpBurst] = useState(false);
 
     const [authChecked, setAuthChecked] = useState(false);
     const [alreadyAttempted, setAlreadyAttempted] = useState<any>(null);
@@ -159,6 +161,12 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                         ),
                         { duration: 5000 }
                     );
+
+                    // XP burst animation
+                    if (data.xpGained && data.xpGained > 0) {
+                        setShowXpBurst(true);
+                        setTimeout(() => setShowXpBurst(false), 1800);
+                    }
 
                     Haptics.vibrate({ duration: 100 }).catch(() => {});
                 } catch (e) {
@@ -383,6 +391,38 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
     if (result) {
         return (
+            <div className="relative">
+            {/* ── Floating +XP burst (fixed overlay, rises from bottom-centre) ── */}
+            <AnimatePresence>
+                {showXpBurst && result.xpGained && result.xpGained > 0 && (
+                    <motion.div
+                        key="xp-burst"
+                        className="fixed z-[9999] left-1/2 -translate-x-1/2 pointer-events-none"
+                        initial={{ y: 0, opacity: 1, scale: 0.6, bottom: '40%' }}
+                        animate={{ y: -120, opacity: 0, scale: 1.2 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
+                        style={{ bottom: '40%' }}
+                    >
+                        <div className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black text-lg px-5 py-2.5 rounded-2xl shadow-2xl shadow-indigo-500/40">
+                            <Zap className="w-5 h-5 fill-yellow-300 text-yellow-300" />
+                            +{result.xpGained} XP
+                        </div>
+                        {/* Sparkle dots */}
+                        <motion.div
+                            className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full"
+                            animate={{ scale: [1, 1.6, 0], opacity: [1, 1, 0] }}
+                            transition={{ duration: 0.8, delay: 0.1 }}
+                        />
+                        <motion.div
+                            className="absolute -bottom-1 -left-1 w-2 h-2 bg-pink-400 rounded-full"
+                            animate={{ scale: [1, 1.6, 0], opacity: [1, 1, 0] }}
+                            transition={{ duration: 0.8, delay: 0.2 }}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 shadow-sm border border-slate-100 dark:border-slate-800 text-center space-y-6 animate-in fade-in zoom-in-95">
                 <div className="flex justify-center">
                     {result.isCorrect ? (
@@ -409,6 +449,20 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl inline-block w-full max-w-sm border border-slate-200 dark:border-slate-700">
                     <div className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Total Points</div>
                     <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400">{result.newTotal}</div>
+                    {/* XP earned badge */}
+                    {result.isCorrect && result.xpGained && result.xpGained > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.7, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            transition={{ delay: 0.3, type: 'spring', stiffness: 400, damping: 20 }}
+                            className="mt-3 flex items-center justify-center gap-1.5"
+                        >
+                            <div className="flex items-center gap-1.5 bg-gradient-to-r from-violet-500 to-indigo-600 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-lg shadow-indigo-400/30">
+                                <Zap className="w-3.5 h-3.5 fill-yellow-300 text-yellow-300" />
+                                +{result.xpGained} XP earned
+                            </div>
+                        </motion.div>
+                    )}
                 </div>
 
                 {!result.isCorrect && question.options && result.correctOption !== undefined && result.correctOption !== null && (
@@ -486,6 +540,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                         currentUserId={currentUserId}
                     />
                 )}
+            </div>
             </div>
         );
     }
