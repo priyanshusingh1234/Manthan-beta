@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
         const folder = `dheeyudha/clips/${userId}`;
         // q_auto:eco intelligently compresses without hard limits, removing pixelation
         // while still saving space compared to raw uploads.
-        const eager = 'f_auto,q_auto:eco,vc_h264,w_720,du_30';
+        const eager = 'q_auto:eco,w_720,du_30';
         const eager_async = true;
 
         // Params must be sorted alphabetically for Cloudinary signature
