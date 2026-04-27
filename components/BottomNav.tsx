@@ -45,7 +45,7 @@ const BottomNav: React.FC = () => {
     }
   };
 
-  if (pathname?.startsWith('/store')) return null;
+  if (pathname?.startsWith('/store') || pathname?.startsWith('/clips') || (pathname?.startsWith('/posts/') && pathname !== '/posts/create')) return null;
 
   const navItems: NavItem[] = [
     { href: '/', icon: Home, label: 'Home' },

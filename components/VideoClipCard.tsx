@@ -282,7 +282,7 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
                 </div>
 
                 {/* Interaction Stack (Vertical Right) */}
-                <div className={`absolute bottom-[calc(max(2rem,env(safe-area-inset-bottom))+4.5rem)] right-4 flex flex-col items-center gap-6 z-20`}>
+                <div className={`absolute bottom-[max(2rem,env(safe-area-inset-bottom))] right-4 flex flex-col items-center gap-6 z-20`}>
                     {compact && (
                         <Link href={singlePostUrl} className="flex flex-col items-center gap-1.5 group">
                             <div className="w-12 h-12 rounded-full bg-violet-600 shadow-lg flex items-center justify-center group-hover:scale-110 active:scale-90 transition-all border-2 border-white/20">
@@ -320,7 +320,7 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
                 </div>
 
                 {/* Info Overlay (Bottom Left) */}
-                <div className="absolute bottom-[calc(max(2rem,env(safe-area-inset-bottom))+4.5rem)] left-4 right-16 z-20 pointer-events-none mb-1">
+                <div className="absolute bottom-[max(2rem,env(safe-area-inset-bottom))] left-4 right-16 z-20 pointer-events-none mb-1">
                     {!compact && (
                         <Link href={authorProfileUrl} className="flex items-center gap-3 mb-4 pointer-events-auto group">
                             <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/30 shadow-xl group-hover:scale-105 transition-transform duration-300">
