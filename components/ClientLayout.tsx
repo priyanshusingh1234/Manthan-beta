@@ -19,6 +19,7 @@ import { CallProvider } from '@/components/CallProvider';
 
 import CompleteProfileOverlay from '@/components/CompleteProfileOverlay';
 import StreakToast from '@/components/StreakToast';
+import { Toaster } from 'react-hot-toast';
 
 let nativePushInitialized = false;
 

@@ -10,6 +10,8 @@ import TeacherBadge from "@/ticks/teacher";
 import ChallengeFriendModal from "@/components/ChallengeFriendModal";
 import CoopChallengeHeader from "@/components/CoopChallengeHeader";
 import CoopSpectatorScreen from "@/components/CoopSpectatorScreen";
+import confetti from 'canvas-confetti';
+import toast from 'react-hot-toast';
 
 
 export default function SolveQuestionClient({ question }: { question: any }) {
@@ -136,6 +138,32 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 window.dispatchEvent(new CustomEvent('streak_earned', {
                     detail: { streak: data.streak.current }
                 }));
+            }
+
+            // EXTREME VISUAL GRATIFICATION: Confetti & Rank up Toast
+            if (data.isCorrect) {
+                try {
+                    confetti({
+                        particleCount: 150,
+                        spread: 100,
+                        origin: { y: 0.6 },
+                        colors: ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6']
+                    });
+                    
+                    toast.success(
+                        (t) => (
+                          <div className="flex flex-col gap-1">
+                            <span className="font-black text-lg">Epic Solve! 🔥</span>
+                            <span className="text-sm font-medium opacity-90">You just ranked up on the global leaderboard. Keep dominating!</span>
+                          </div>
+                        ),
+                        { duration: 5000 }
+                    );
+
+                    Haptics.vibrate({ duration: 100 }).catch(() => {});
+                } catch (e) {
+                    // Ignore haptics/confetti errors on unsupported devices
+                }
             }
 
             if (question.subject) {
