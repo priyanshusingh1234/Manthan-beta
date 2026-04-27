@@ -251,16 +251,9 @@ export default function SocialFeedPage() {
         // Show preview instantly
         setVideoPreview(url);
         
-        // Read file into persistent Blob to prevent Android WebView from revoking access
-        // before the upload actually starts.
-        try {
-            const buffer = await file.arrayBuffer();
-            const persistentBlob = new Blob([buffer], { type: file.type });
-            setVideoFile(persistentBlob as any);
-        } catch (err) {
-            setPostError('Failed to read video file.');
-            return;
-        }
+        // Just save the file object reference directly.
+        // Reading it entirely into an arrayBuffer creates a high risk of out-of-memory crashes on mobile devices.
+        setVideoFile(file);
 
         removeImage();
 
