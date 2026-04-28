@@ -379,7 +379,7 @@ export default function PostCard({
                             )}
                             <div className={`relative w-full h-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 transition-opacity hover:opacity-80 ${effectiveAuthor?.cosmetics?.includes('avatar_glow') ? 'shadow-[0_0_15px_rgba(99,102,241,0.5)] border-2 border-transparent' : ''}`}>
                                 {effectiveAuthor?.avatar_url ? (
-                                    <Image src={effectiveAuthor.avatar_url} alt="avatar" fill className="object-cover" />
+                                    <Image src={effectiveAuthor.avatar_url} alt="avatar" fill unoptimized className="object-cover" />
                                 ) : (
                                     <User className="w-6 h-6 absolute inset-0 m-auto text-slate-400" />
                                 )}
@@ -590,7 +590,7 @@ export default function PostCard({
                                                 )}
                                                 <div className={`relative w-full h-full rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 border-2 ${effectiveCommentAuthor?.cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'border-white dark:border-slate-900'}`}>
                                                     {effectiveCommentAuthor?.avatar_url ? (
-                                                        <Image src={effectiveCommentAuthor.avatar_url} alt="avatar" width={40} height={40} className="object-cover w-full h-full" />
+                                                        <Image src={effectiveCommentAuthor.avatar_url} alt="avatar" width={40} height={40} unoptimized className="object-cover w-full h-full" />
                                                     ) : (
                                                         <User className="w-5 h-5 m-auto text-slate-400 mt-2" />
                                                     )}
@@ -678,7 +678,7 @@ export default function PostCard({
                                             className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
                                         >
                                             <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-slate-100">
-                                                {u.avatar_url ? <Image src={u.avatar_url} alt="av" width={32} height={32} /> : <User className="w-4 h-4 m-auto mt-2" />}
+                                                {u.avatar_url ? <Image src={u.avatar_url} alt="av" width={32} height={32} unoptimized /> : <User className="w-4 h-4 m-auto mt-2" />}
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="text-sm font-bold truncate">{u.full_name}</p>

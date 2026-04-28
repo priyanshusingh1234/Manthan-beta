@@ -35,7 +35,7 @@ function Avatar({ src, name, size = 8 }: { src: string | null; name: string; siz
   if (src) {
     return (
       <div className={`${sizeClass} rounded-full overflow-hidden border-2 border-white dark:border-slate-800 shadow-sm shrink-0`}>
-        <Image src={src} alt={name} width={32} height={32} className="object-cover w-full h-full" />
+        <Image src={src} alt={name} width={32} height={32} unoptimized className="object-cover w-full h-full" />
       </div>
     );
   }
