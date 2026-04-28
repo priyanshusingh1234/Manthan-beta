@@ -150,9 +150,10 @@ export default function PostCard({
         return user?.isTeacher || user?.is_teacher || user?.user_metadata?.isTeacher || false;
     }
 
-    function formatMentions(text: string) {
+    function formatTextWithLinks(text: string) {
         if (!text) return null;
-        const parts = text.split(/(@[\w.-]+)/g);
+        // Split by both @username and #hashtag
+        const parts = text.split(/(@[\w.-]+|#\w+)/g);
         return parts.map((part, i) => {
             if (part.startsWith('@')) {
                 const username = part.substring(1);
@@ -160,11 +161,18 @@ export default function PostCard({
                     <Link
                         key={i}
                         href={`/user/${username}`}
-                        className="text-sky-500 dark:text-sky-400 font-medium hover:underline"
+                        className="text-sky-500 dark:text-sky-400 font-bold hover:underline"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {part}
                     </Link>
+                );
+            }
+            if (part.startsWith('#')) {
+                return (
+                    <span key={i} className="text-sky-500 dark:text-sky-400 font-black">
+                        {part}
+                    </span>
                 );
             }
             return <span key={i}>{part}</span>;
@@ -476,7 +484,7 @@ export default function PostCard({
                     {/* Post Text */}
                     <Link href={`/posts/${post.id}`}>
                         <div className="text-slate-800 dark:text-slate-200 text-[15px] sm:text-[16px] leading-[1.6] whitespace-pre-wrap font-normal mb-3 sm:mb-4">
-                            {formatMentions(post.content)}
+                                {formatTextWithLinks(post.content)}
                         </div>
                     </Link>
 
@@ -606,7 +614,7 @@ export default function PostCard({
                                             </div>
                                             <div className="text-[14px] sm:text-[15px] text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
                                                 <span className="text-sky-500 mr-1 font-medium">@{getUsername(effectiveAuthor)}</span>
-                                                {formatMentions(comment.content)}
+                                                {formatTextWithLinks(comment.content)}
                                             </div>
                                             
                                             <div className="flex items-center gap-6 mt-2.5 text-slate-500">

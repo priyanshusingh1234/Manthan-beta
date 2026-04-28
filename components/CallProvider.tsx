@@ -381,7 +381,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
                                   </>
                                 ) : null}
 
-                                <button onClick={endCall} className="w-16 h-16 rounded-full bg-rose-500 flex items-center justify-center shadow-xl shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all ml-2">
+                                <button onClick={() => endCall()} className="w-16 h-16 rounded-full bg-rose-500 flex items-center justify-center shadow-xl shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all ml-2">
                                   <PhoneOff className="w-7 h-7 text-white" />
                                 </button>
                              </div>

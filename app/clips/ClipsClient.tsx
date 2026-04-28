@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import VideoClipCard from '@/components/VideoClipCard';
 import { ArrowLeft, Loader2, MessageCircle, Send, X } from 'lucide-react';
@@ -22,10 +22,11 @@ export default function ClipsClient() {
     const [loadingComments, setLoadingComments] = useState(false);
     const [newComment, setNewComment] = useState('');
     const [submittingComment, setSubmittingComment] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<{ username: string; userId: string } | null>(null);
 
     const observerTarget = useRef<HTMLDivElement>(null);
 
-    const fetchFeed = useCallback(async (isInitial = true) => {
+    const fetchFeed = useCallback(async (isInitial = true, targetPostId?: string) => {
         try {
             if (isInitial) setLoading(true);
             else setLoadingMore(true);
@@ -34,9 +35,23 @@ export default function ClipsClient() {
             const token = session?.access_token || null;
             if (isInitial) setCurrentUserId(session?.user?.id || null);
 
+            let newExclude = [...excludeIds];
+            let initialTargetPost: any = null;
+
+            // If we have a specific target postId (from URL), fetch it specifically first
+            if (isInitial && targetPostId) {
+                const res = await fetch(`/api/posts/${targetPostId}`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {}
+                });
+                if (res.ok) {
+                    initialTargetPost = await res.json();
+                    if (initialTargetPost) newExclude.push(targetPostId);
+                }
+            }
+
             let url = `/api/clips/feed?limit=10&t=${Date.now()}`;
-            if (!isInitial && excludeIds.length > 0) {
-                url += `&exclude=${excludeIds.join(',')}`;
+            if (newExclude.length > 0) {
+                url += `&exclude=${newExclude.join(',')}`;
             }
 
             const res = await fetch(url, {
@@ -46,19 +61,23 @@ export default function ClipsClient() {
 
             if (!res.ok) throw new Error(await res.text());
             const data = await res.json();
-            const newPosts = data.posts || [];
+            const fetchedPosts = data.posts || [];
 
-            if (newPosts.length === 0) {
+            if (fetchedPosts.length === 0 && !initialTargetPost) {
                 setHasMore(false);
             } else {
                 setExcludeIds(data.excludeIds || []);
                 setPosts(prev => {
-                    if (isInitial) return newPosts;
+                    const combined = initialTargetPost 
+                        ? [initialTargetPost, ...fetchedPosts] 
+                        : fetchedPosts;
+
+                    if (isInitial) return combined;
                     const existingIds = new Set(prev.map(p => p.id));
-                    const uniqueNew = newPosts.filter((p: any) => !existingIds.has(p.id));
+                    const uniqueNew = combined.filter((p: any) => !existingIds.has(p.id));
                     return [...prev, ...uniqueNew];
                 });
-                if (newPosts.length < 5) setHasMore(false);
+                if (fetchedPosts.length < 5) setHasMore(false);
             }
         } catch (err) {
             console.error('Clips fetch error:', err);
@@ -68,8 +87,11 @@ export default function ClipsClient() {
         }
     }, [excludeIds]);
 
+    const searchParams = useSearchParams();
+    const targetPostId = searchParams.get('postId');
+
     useEffect(() => {
-        fetchFeed(true);
+        fetchFeed(true, targetPostId || undefined);
     }, []);
 
     useEffect(() => {
@@ -105,21 +127,22 @@ export default function ClipsClient() {
             const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch(`/api/posts/${activeCommentPostId}/comments`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ content: newComment }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({ 
+                    content: newComment,
+                    replying_to_user_id: replyingTo?.userId,
+                })
             });
+
             if (res.ok) {
-                const c = await res.json();
-                setComments(prev => [c, ...prev]);
+                const comment = await res.json();
+                setComments(prev => [comment, ...prev]);
                 setNewComment('');
-                
-                // Update post comments count locally
-                setPosts(prev => prev.map(p => {
-                    if (p.id === activeCommentPostId) {
-                        return { ...p, comments_count: (p.comments_count || 0) + 1 };
-                    }
-                    return p;
-                }));
+                setReplyingTo(null);
+                setPosts(prev => prev.map(p => p.id === activeCommentPostId ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p));
             }
         } finally { setSubmittingComment(false); }
     };
@@ -187,7 +210,7 @@ export default function ClipsClient() {
             {activeCommentPostId && (
                 <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-[2px] flex items-end animate-in fade-in duration-300" onClick={() => setActiveCommentPostId(null)}>
                     <div
-                        className="w-full bg-[#0a0a0a] rounded-t-[2.5rem] border-t border-white/10 p-6 pt-2 pb-[calc(max(2rem,env(safe-area-inset-bottom))+6rem)] flex flex-col h-[75vh] animate-in slide-in-from-bottom duration-500"
+                        className="w-full bg-[#0a0a0a] rounded-t-[2.5rem] border-t border-white/10 p-6 pt-2 pb-[calc(max(1rem,env(safe-area-inset-bottom))+1rem)] flex flex-col h-[75vh] animate-in slide-in-from-bottom duration-500"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mt-2 mb-6 shrink-0" onClick={() => setActiveCommentPostId(null)} />
@@ -204,9 +227,23 @@ export default function ClipsClient() {
                                     <div className="flex-1 min-w-0">
                                         <div className="bg-white/5 rounded-[1.25rem] rounded-tl-none p-4">
                                             <p className="font-black text-white text-[14px] mb-1 truncate">{c.author?.name || 'Scholar'}</p>
-                                            <p className="text-white/80 text-[15px] leading-relaxed break-words">{c.content}</p>
+                                            <p className="text-white/80 text-[15px] leading-relaxed break-words">
+                                                {c.content.split(' ').map((word: string, i: number) => word.startsWith('@') ? <span key={i} className="text-violet-400 font-bold">{word} </span> : word + ' ')}
+                                            </p>
                                         </div>
-                                        <span className="text-[10px] text-white/20 font-black mt-1 px-1 uppercase tracking-wider">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
+                                        <div className="flex items-center gap-4 mt-1 px-1">
+                                            <span className="text-[10px] text-white/20 font-black uppercase tracking-wider">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
+                                            <button
+                                                onClick={() => {
+                                                    const username = c.author?.username || c.author?.name?.replace(/\s+/g, '') || 'scholar';
+                                                    setReplyingTo({ username, userId: c.author?.id });
+                                                    setNewComment(`@${username} `);
+                                                }}
+                                                className="text-[11px] font-black text-white/40 hover:text-white transition-colors uppercase tracking-widest"
+                                            >
+                                                Reply
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -223,17 +260,29 @@ export default function ClipsClient() {
                             )}
                         </div>
                         {currentUserId && (
-                            <form onSubmit={submitComment} className="relative flex items-center shrink-0">
-                                <input
-                                    value={newComment}
-                                    onChange={e => setNewComment(e.target.value)}
-                                    placeholder="Add comments..."
-                                    className="w-full bg-white/10 border border-white/10 rounded-2xl px-6 py-4 pr-16 text-white text-base outline-none focus:bg-white/20 transition-all shadow-xl"
-                                />
-                                <button type="submit" disabled={!newComment.trim() || submittingComment} className="absolute right-2.5 p-3 bg-violet-600 rounded-xl text-white shadow-lg active:scale-90 transition-transform">
-                                    <Send className="w-5 h-5" />
-                                </button>
-                            </form>
+                            <div className="relative flex flex-col shrink-0 mt-2">
+                                {replyingTo && (
+                                    <div className="flex items-center justify-between px-2 mb-2 bg-white/5 py-1.5 rounded-lg border border-white/10">
+                                        <span className="text-[11px] font-bold text-violet-400">Replying to @{replyingTo.username}</span>
+                                        <button onClick={() => setReplyingTo(null)} className="text-white/40 hover:text-white p-1"><X className="w-3 h-3" /></button>
+                                    </div>
+                                )}
+                                <form onSubmit={submitComment} className="relative flex items-center w-full">
+                                    <input
+                                        value={newComment}
+                                        onChange={e => setNewComment(e.target.value)}
+                                        placeholder="Add a comment..."
+                                        className="w-full bg-[#111] text-white rounded-2xl px-5 py-4 outline-none border border-white/5 focus:border-white/10 transition-colors"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={!newComment.trim() || submittingComment}
+                                        className="absolute right-2 w-10 h-10 rounded-full bg-violet-600 active:scale-95 disabled:bg-white/10 disabled:text-white/30 text-white flex items-center justify-center transition-all"
+                                    >
+                                        {submittingComment ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}
+                                    </button>
+                                </form>
+                            </div>
                         )}
                     </div>
                 </div>

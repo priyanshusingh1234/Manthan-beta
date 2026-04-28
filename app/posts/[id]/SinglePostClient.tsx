@@ -36,7 +36,16 @@ export default function SinglePostClient({ postId }: { postId: string }) {
                 if (!mounted) return;
                 const data = res.ok ? await res.json() : null;
                 setPost(data);
-                if (data?.video_url) fetchComments();
+                
+                // --- NEW REDIRECT LOGIC ---
+                // If this is a video post, we don't show the single page.
+                // Instead, we teleport the user to the interactive Clips Feed.
+                if (data?.video_url) {
+                    router.replace(`/clips?postId=${postId}`);
+                    return;
+                }
+
+                fetchComments();
             } catch {
                 if (mounted) setPost(null);
             } finally {

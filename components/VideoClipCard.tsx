@@ -11,6 +11,7 @@ import { Share } from '@capacitor/share';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import BadgedName from './BadgedName';
+import { useRouter } from 'next/navigation';
 
 function buildWatermarkedUrl(videoUrl: string): string {
     if (!videoUrl.includes('cloudinary.com')) return videoUrl;
@@ -29,6 +30,7 @@ interface VideoClipCardProps {
 }
 
 export default function VideoClipCard({ post, currentUserId, onUpdate, onCommentClick, compact = true }: VideoClipCardProps) {
+    const router = useRouter();
     const videoRef = useRef<HTMLVideoElement>(null);
     const [playing, setPlaying] = useState(false);
     const [muted, setMuted] = useState(true);
@@ -183,7 +185,16 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
     };
 
     const authorProfileUrl = post.author?.username ? `/user/${post.author.username}` : '#';
-    const singlePostUrl = `/posts/${post.id}`;
+    const clipsUrl = `/clips?postId=${post.id}`;
+
+    const renderContent = (text: string) => {
+        const parts = text.split(/(#\w+)/g);
+        return parts.map((part, i) => 
+            part.startsWith('#') 
+                ? <span key={i} className="text-violet-400 font-black">{part}</span>
+                : part
+        );
+    };
 
     if (isHidden) return null;
 
@@ -284,7 +295,7 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
                 {/* Interaction Stack (Vertical Right) */}
                 <div className={`absolute bottom-[max(2rem,env(safe-area-inset-bottom))] right-4 flex flex-col items-center gap-6 z-20`}>
                     {compact && (
-                        <Link href={singlePostUrl} className="flex flex-col items-center gap-1.5 group">
+                        <Link href={clipsUrl} className="flex flex-col items-center gap-1.5 group">
                             <div className="w-12 h-12 rounded-full bg-violet-600 shadow-lg flex items-center justify-center group-hover:scale-110 active:scale-90 transition-all border-2 border-white/20">
                                 <Maximize className="w-5 h-5 text-white" />
                             </div>
@@ -300,7 +311,7 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
 
                     <div className="flex flex-col items-center gap-1">
                         <button 
-                            onClick={(e) => { e.stopPropagation(); if (onCommentClick) onCommentClick(); else if (compact) window.location.href = singlePostUrl; }} 
+                            onClick={(e) => { e.stopPropagation(); if (onCommentClick) onCommentClick(); else if (compact) router.push(clipsUrl); }} 
                             className="w-12 h-12 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center border border-white/10 hover:bg-white/10 active:scale-90 transition-all"
                         >
                             <MessageCircle className="w-6 h-6 text-white" />
@@ -338,7 +349,7 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
                     {post.content && (
                         <div className="pointer-events-auto">
                             <p className="text-[14px] text-white font-bold drop-shadow-2xl leading-relaxed line-clamp-3">
-                                {post.content}
+                                {renderContent(post.content)}
                             </p>
                         </div>
                     )}

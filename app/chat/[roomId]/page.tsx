@@ -377,9 +377,11 @@ function ChatRoomContent() {
         supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: false }).limit(80),
       ]);
 
+      let profData: any = null;
       if (pRes.data?.[0]?.user_id) {
         const { data: prof } = await supabase.from('profiles').select('full_name, avatar_url, username, is_teacher').eq('id', pRes.data[0].user_id).single();
         if (prof) {
+          profData = prof;
           const p = { user_id: pRes.data[0].user_id, ...prof } as Participant;
           setParticipant(p);
           localStorage.setItem(PARTICIPANT_CACHE_KEY(roomId), JSON.stringify(p));
@@ -416,7 +418,7 @@ function ChatRoomContent() {
             const callerId = searchParams.get('callerId') || pRes.data?.[0]?.user_id;
             const callerName = searchParams.get('callerName')
               ? decodeURIComponent(searchParams.get('callerName')!)
-              : (prof?.full_name || 'Scholar');
+              : (profData?.full_name || 'Scholar');
             // startCall has its own internal guard too — this is belt-and-suspenders
             callCtx.startCall(roomId, type, callerId, callerName, true);
           }
@@ -850,7 +852,7 @@ function ChatRoomContent() {
                   supabase.from('chat_messages').insert({
                     room_id: roomId, sender_id: user.id,
                     content: '__CALL_ENDED__: Call declined', message_type: 'text'
-                  }).catch(() => {});
+                  }).then(null, () => {});
                 }
               }}
               className="h-10 w-10 rounded-full bg-red-500 flex items-center justify-center active:scale-95 transition-transform"

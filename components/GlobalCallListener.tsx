@@ -182,7 +182,7 @@ export default function GlobalCallListener() {
         sender_id: userRef.current.id,
         content: '__CALL_ENDED__: Call declined',
         message_type: 'text'
-      }).catch(() => {});
+      }).then(null, () => {});
 
       const ch = channelsRef.current.find(
         c => c.topic === `realtime:room-${call.roomId}`
@@ -227,7 +227,7 @@ export default function GlobalCallListener() {
           sender_id: userRef.current.id,
           content: '__CALL_ENDED__: Call declined',
           message_type: 'text'
-        }).catch(() => {});
+        }).then(null, () => {});
         const ch = channelsRef.current.find(c => c.topic === `realtime:room-${roomId}`);
         if (ch) {
           ch.send({ type: 'broadcast', event: 'call-ended', payload: { roomId } }).catch(() => {});
@@ -297,6 +297,7 @@ export default function GlobalCallListener() {
                   callType,
                   msg.id,
                 );
+              });
           }
         );
 
