@@ -272,6 +272,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
     if (pathname.startsWith('/notifications')) return { title: 'Notifications', icon: Bell };
     if (pathname.startsWith('/chat')) return { title: 'Messages', icon: MessageSquare };
     if (pathname.startsWith('/duels') || pathname.startsWith('/duel')) return { title: 'My Duels', icon: Swords };
+    if (pathname.startsWith('/gauntlet')) return { title: 'Chapter Gauntlet', icon: BookOpen };
     return null;
   };
 
@@ -325,6 +326,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
             {[
               { label: 'Streak 🔥', href: '/streaks', icon: Flame },
               { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
+              { label: 'Gauntlet 📖', href: '/gauntlet', icon: BookOpen },
               { label: 'Duels ⚔️', href: '/duels', icon: Swords },
               { label: 'Arena', href: '/tests', icon: Zap },
               { label: 'Search', href: '/search', icon: Search },

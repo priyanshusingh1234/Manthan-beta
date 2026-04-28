@@ -31,6 +31,7 @@ export default function GauntletEngine({ chapterId, title, levels }: { chapterId
   const [unlockedLevel, setUnlockedLevel] = useState(1);
   const [activeLevel, setActiveLevel] = useState<number | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(true);
+  const [completedToast, setCompletedToast] = useState(false);
 
   useEffect(() => {
     const fetchProgress = async () => {
@@ -103,12 +104,31 @@ export default function GauntletEngine({ chapterId, title, levels }: { chapterId
     }
   };
 
+  const handleNodeClick = (level: MapLevel) => {
+    const isCompleted = unlockedLevel > level.id;
+    const isUnlocked = unlockedLevel >= level.id;
+    if (!isUnlocked) return;
+    if (isCompleted) {
+      setCompletedToast(true);
+      setTimeout(() => setCompletedToast(false), 2500);
+      return;
+    }
+    setActiveLevel(level.id);
+  };
+
   if (loadingProgress) {
     return <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center font-black text-slate-400 dark:text-slate-600">Loading your progress...</div>;
   }
 
   return (
     <div className="fixed inset-0 z-[9999] bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans overflow-hidden flex flex-col items-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+
+      {/* Completed Level Toast */}
+      {completedToast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] bg-emerald-600 text-white text-sm font-bold px-5 py-3 rounded-2xl shadow-xl animate-bounce">
+          ✅ Level already completed! Keep going.
+        </div>
+      )}
       
       <div className="w-full max-w-md bg-white dark:bg-slate-900 shadow-sm px-4 py-3 sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
         <button onClick={() => window.history.back()} className="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
@@ -155,12 +175,13 @@ export default function GauntletEngine({ chapterId, title, levels }: { chapterId
               </div>
 
               <button
-                onClick={() => { if (isUnlocked) setActiveLevel(level.id); }}
+                onClick={() => handleNodeClick(level)}
                 disabled={!isUnlocked}
                 className={`
                   w-[80px] h-[80px] rounded-2xl flex flex-col items-center justify-center text-3xl shadow-lg transition-transform relative
                   ${isUnlocked ? 'active:scale-95 cursor-pointer' : 'grayscale opacity-60 cursor-not-allowed'}
                   ${isCurrent ? 'ring-4 ring-offset-4 ring-sky-300 animate-pulse' : ''}
+                  ${isCompleted ? 'cursor-not-allowed' : ''}
                 `}
                 style={{ 
                   background: isCompleted ? '#10b981' : (isUnlocked ? level.color : '#cbd5e1'),
@@ -326,7 +347,9 @@ function StudyNotesModal({ level, onClose, onWin }: { level: MapLevel; onClose: 
             ${phase === 'quiz' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : ''}
           `}
         >
-          {phase === 'study' ? <><BookOpen className="w-5 h-5" /> Take the Knowledge Check</> : phase === 'quiz' ? 'Select an answer' : 'Continue'}
+          {phase === 'study' ? <><BookOpen className="w-5 h-5" /> Take the Knowledge Check</> : phase === 'quiz' ? 'Select an answer' : (
+            <span className="text-white dark:text-white">Continue</span>
+          )}
         </motion.button>
       </div>
     </motion.div>

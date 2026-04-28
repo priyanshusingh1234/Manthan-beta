@@ -25,6 +25,7 @@ import {
   Share2,
   Zap,
   PlaySquare,
+  BookOpen,
 } from 'lucide-react';
 import { Share } from '@capacitor/share';
 import TeacherBadge from '@/ticks/teacher';
@@ -175,6 +176,7 @@ export default function DesktopSidebar() {
     { label: 'Search', href: '/search', icon: Search },
     { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
     { label: 'Arena', href: '/tests', icon: Zap },
+    { label: 'Gauntlet', href: '/gauntlet', icon: BookOpen },
     { label: 'Checker Feed', href: '/checker-feed', icon: Shield },
     { label: 'Solved', href: '/solved', icon: CheckSquare },
     { label: 'Notifications', href: '/notifications', icon: Bell, badge: unreadCount },
