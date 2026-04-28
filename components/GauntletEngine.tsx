@@ -1,3 +1,4 @@
+'use client';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -107,7 +108,7 @@ export default function GauntletEngine({ chapterId, title, levels }: { chapterId
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#F9FAFB] text-slate-800 font-sans overflow-hidden flex flex-col items-center">
+    <div className="fixed inset-0 z-[9999] bg-[#F9FAFB] text-slate-800 font-sans overflow-hidden flex flex-col items-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       
       <div className="w-full max-w-md bg-white shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] px-4 py-3 sticky top-0 z-10 flex items-center justify-between border-b border-slate-200">
         <button onClick={() => window.history.back()} className="p-2 -ml-2 text-slate-400 hover:text-slate-600 transition-colors">
@@ -234,7 +235,7 @@ function StudyNotesModal({ level, onClose, onWin }: { level: MapLevel; onClose: 
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed inset-0 z-50 bg-[#F9FAFB] flex flex-col"
+      className="fixed inset-0 z-[10000] bg-[#F9FAFB] flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
     >
       <div className="flex items-center justify-between p-4 bg-white border-b border-slate-200 shadow-sm z-10 shrink-0">
         <button onClick={onClose} className="p-2 -ml-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors">
