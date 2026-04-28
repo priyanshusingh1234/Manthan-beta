@@ -11,7 +11,9 @@ const nextConfig = {
       'api.dicebear.com', 
       'i.pinimg.com',
       'lh3.googleusercontent.com',
-      'avatars.githubusercontent.com'
+      'avatars.githubusercontent.com',
+      'res.cloudinary.com',
+      'cloudinary.com',
     ],
   },
   // Force SWC transforms and avoid native SWC minifier to use WASM on ARM
