@@ -244,15 +244,21 @@ export default function SinglePostClient({ postId }: { postId: string }) {
         : post.author?.username ? `/user/${post.author.username}` : '#';
 
     return (
-        <div className="min-h-[100dvh] bg-white dark:bg-slate-950 pb-20">
-            <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/60 px-4 py-3 flex items-center gap-4 text-slate-900 dark:text-white">
+        <div className="min-h-[100dvh] bg-white dark:bg-slate-950 flex flex-col">
+            <div 
+                className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/60 px-4 py-3 flex items-center gap-4 text-slate-900 dark:text-white"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}
+            >
                 <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors">
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <h1 className="font-black text-lg tracking-tight">Discussion</h1>
             </div>
 
-            <main className="max-w-3xl mx-auto pt-20 px-4">
+            <main 
+                className="flex-1 w-full max-w-3xl mx-auto px-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top) + 4.5rem)' }}
+            >
                 <div className="mb-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4">
                     <div className="flex items-center gap-3 mb-2">
                         <Link href={profileUrl}>

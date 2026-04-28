@@ -192,27 +192,23 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         });
 
         // ── Secondary trigger: broadcast (fast path, best-effort) ─────────
-        // Sync session to supabaseRealtime first so the broadcast is authenticated
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            await supabaseRealtime.auth.setSession({
-              access_token: session.access_token,
-              refresh_token: session.refresh_token,
+        const broadcastChannel = supabaseRealtime.channel(`room-${rid}`);
+        broadcastChannel.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await broadcastChannel.send({
+              type: 'broadcast',
+              event: 'call-invite',
+              payload: {
+                callerId: user.id,
+                callerName: user.user_metadata?.fullName || user.user_metadata?.full_name || 'Scholar',
+                type,
+                ts: Date.now(),
+              }
             });
+            // After sending, we don't need this temporary channel anymore
+            supabaseRealtime.removeChannel(broadcastChannel);
           }
-        } catch {}
-        supabaseRealtime.channel(`room-${rid}`).send({
-          type: 'broadcast',
-          event: 'call-invite',
-          payload: {
-            callerId: user.id,
-            callerName: user.user_metadata?.fullName || user.user_metadata?.full_name || 'Scholar',
-            type,
-            ts: Date.now(),
-          }
-        }).catch(() => {});
-
+        });
 
         if (pUserId) {
           const callerName = user.user_metadata?.fullName || user.user_metadata?.full_name || 'Scholar';

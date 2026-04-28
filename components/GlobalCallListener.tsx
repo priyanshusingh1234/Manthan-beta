@@ -43,6 +43,15 @@ export default function GlobalCallListener() {
       Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
     }, 1500);
     (window as any)._activeCallHapticInterval = hapticInterval;
+
+    // Start Ringtone for Web
+    if (!Capacitor.isNativePlatform()) {
+      const ringtone = new Audio('/universfield-new-notification-040-493469.mp3');
+      ringtone.loop = true;
+      ringtone.play().catch(() => {});
+      (window as any)._activeCallRingtone = ringtone;
+    }
+
     return hapticInterval;
   };
 
@@ -52,10 +61,19 @@ export default function GlobalCallListener() {
     }
     setIncomingCall(null);
     incomingCallRef.current = null;
+
+    // Stop Haptics
     if ((window as any)._activeCallHapticInterval) {
       clearInterval((window as any)._activeCallHapticInterval);
       delete (window as any)._activeCallHapticInterval;
     }
+    
+    // Stop Ringtone
+    if ((window as any)._activeCallRingtone) {
+      (window as any)._activeCallRingtone.pause();
+      delete (window as any)._activeCallRingtone;
+    }
+
     if (callTimeoutRef.current) {
       clearTimeout(callTimeoutRef.current);
       callTimeoutRef.current = null;
@@ -279,7 +297,6 @@ export default function GlobalCallListener() {
                   callType,
                   msg.id,
                 );
-              });
           }
         );
 
@@ -294,12 +311,17 @@ export default function GlobalCallListener() {
 
     setup();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         await supabaseRealtime.auth.setSession({
           access_token: session.access_token,
           refresh_token: session.refresh_token,
         });
+
+        // Re-setup listeners if signed in or session initials
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          setup();
+        }
       }
     });
 
