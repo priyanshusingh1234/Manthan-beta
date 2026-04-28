@@ -4,18 +4,87 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { X, Star, Heart, CheckCircle2, ChevronRight, ArrowLeft, BookOpen } from 'lucide-react';
 import { ALL_LEVELS, MapLevel } from './data';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function StudyNotesGauntlet() {
   const [unlockedLevel, setUnlockedLevel] = useState(1);
   const [activeLevel, setActiveLevel] = useState<number | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(true);
+
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch('/api/gauntlet/progress', {
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        });
+        const json = await res.json();
+        if (json.success && json.unlockedLevel) {
+          setUnlockedLevel(Math.max(1, json.unlockedLevel));
+        }
+      } catch (e) {
+        console.error('Failed to load gauntlet progress', e);
+      } finally {
+        setLoadingProgress(false);
+      }
+    };
+    fetchProgress();
+  }, []);
+
+  const saveProgress = async (newLevel: number) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch('/api/gauntlet/progress', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ unlockedLevel: newLevel })
+      });
+    } catch (e) {
+      console.error('Failed to save progress', e);
+    }
+  };
+
+  const grantRewards = async (xp: number, points: number) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch('/api/gauntlet/reward', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ xp, points })
+      });
+    } catch (e) {
+      console.error('Failed to grant rewards', e);
+    }
+  };
 
   const handleWin = (id: number) => {
     setActiveLevel(null);
-    if (unlockedLevel <= id) {
-      setUnlockedLevel(id + 1);
+    if (unlockedLevel === id) {
+      const newLevel = id + 1;
+      setUnlockedLevel(newLevel);
       confetti({ particleCount: 150, zIndex: 10000, spread: 90, colors: ['#4f46e5', '#ec4899', '#f59e0b'] });
+      saveProgress(newLevel);
+      
+      // BOSS Rewards (Level 10)
+      if (id === 10) {
+        grantRewards(5, 10); // 5 Bonus XP, 10 Points for beating boss
+        alert("🎉 INCREDIBLE! You defeated the Gauntlet Exam and mastered Nationalism in Europe! +10 Points, +5 XP!");
+      }
     }
   };
+
+  if (loadingProgress) {
+    return <div className="min-h-[100dvh] bg-[#F9FAFB] flex flex-col items-center justify-center font-black text-slate-400">Loading your progress...</div>;
+  }
 
   return (
     <div className="min-h-[100dvh] bg-[#F9FAFB] text-slate-800 font-sans overflow-hidden flex flex-col items-center">

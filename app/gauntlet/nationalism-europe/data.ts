@@ -403,5 +403,40 @@ export const LEVEL_9: MapLevel = {
   ]
 };
 
-// We export an array of all levels (Now containing 1 through 9)
-export const ALL_LEVELS: MapLevel[] = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9];
+export const LEVEL_10: MapLevel = {
+  id: 10,
+  title: 'BOSS: The Gauntlet Exam',
+  icon: '💀',
+  color: '#000000',
+  notes: [
+    { type: 'heading', content: 'Final Boss: The Nationalist Gauntlet' },
+    { type: 'narrative', content: 'Kabir closed his book. "That’s it. That’s the movie. But watching the movie isn’t enough. You have to pass the ultimate test. 20 questions. The hardest details from the entire chapter. One mistake could cost you your rank. Let’s see what you’re made of."' },
+    { type: 'paragraph', content: 'This is the final trial. You must answer 20 consecutive questions covering all 9 levels of the Rise of Nationalism in Europe. Defeating this boss will grant you immense XP, points, and signify your absolute mastery of this chapter.' },
+    { type: 'highlight', content: 'REWARDS: 10 Points + 5 Bonus XP for victory.' }
+  ],
+  questions: [
+    { q: "Under the new constitution of 1789, who were legally defined as 'active citizens'?", opts: ["All adult men/women", "Only Clergy/Nobility", "Men > 25 paying 3 days wage in taxes", "Revolutionary fighters"], ans: 2, explain: "Only tax-paying men over 25 were active citizens." },
+    { q: "What regressive feature existed in the Napoleonic Code?", opts: ["Reintroduced feudalism", "Stripped women of rights, treating them as minors", "Restored Clergy privileges", "Banned property"], ans: 1, explain: "Women lost rights and were subjected to fathers/husbands." },
+    { q: "Why did initial European enthusiasm for French armies turn hostile?", opts: ["Language suppression", "Increased taxation, censorship, forced conscription", "British alliances", "Banned business"], ans: 1, explain: "Heavy taxes and forced drafting of locals turned them against Napoleon." },
+    { q: "Who were the 'Red Shirts'?", opts: ["Austrian snipers", "Pope's guard", "Garibaldi's armed volunteers", "Prussian merchants"], ans: 2, explain: "Garibaldi led his volunteer army, the Red Shirts, to drive the Spanish Bourbon kings out of southern Italy." },
+    { q: "What was the purpose of the Zollverein (1834)?", opts: ["War pact", "German Parliament", "Abolish tariffs for economic unification", "Press censorship"], ans: 2, explain: "The customs union unified German states economically." },
+    { q: "What did Metternich mean when he said 'When France sneezes, Europe catches cold'?", opts: ["Disease spreading", "Revolutions starting in France inspire rebellions across Europe", "Economic inflation", "Weather patterns"], ans: 1, explain: "French rebellions triggered chain reactions across Europe." },
+    { q: "How did Romanticism view nation-building?", opts: ["Through Blood & Iron", "Through the 'volksgeist' found in peasant folk songs/culture", "Through royal decrees", "Through industrialization"], ans: 1, explain: "Romanticism emphasized emotion, peasant folklore, and poetry." },
+    { q: "Who hosted the Congress of Vienna (1815)?", opts: ["Napoleon", "Mazzini", "Duke Metternich", "Kaiser William I"], ans: 2, explain: "Austrian Chancellor Metternich hosted it to restore conservative rule." },
+    { q: "Which empire did Greece break away from (1821-1832)?", opts: ["British", "Habsburg", "Ottoman", "Russian"], ans: 2, explain: "Greece was ruled by the Muslim Ottoman Empire since the 15th century." },
+    { q: "What was Mazzini's core belief?", opts: ["Italy should sell territories", "Papal rule", "God intended nations to be natural units, requiring a single unified republic", "Return to Bourbon kings"], ans: 2, explain: "Mazzini fought for a single, unified Italian Republic." },
+    { q: "What caused the Silesian Weavers' revolt (1845)?", opts: ["Voting rights", "Contractors slashing payments to unlivable wages", "Banning German language", "Protesting the King"], ans: 1, explain: "Contractors slashed payments down to starvation levels." },
+    { q: "Why did the Frankfurt Parliament (1848) fail?", opts: ["French invasion", "Friedrich Wilhelm IV rejected a democratic crown & crushed them", "Ran out of money", "Banned women"], ans: 1, explain: "The Prussian king rejected it and crushed the parliament with troops." },
+    { q: "What was women's status at the Frankfurt Parliament?", opts: ["Half-votes", "Elected MPs", "Denied voting rights, admitted only as observers", "Military strategists"], ans: 2, explain: "Liberal men hypocritically denied women suffrage rights." },
+    { q: "Who engineered German Unification with 'Blood and Iron'?", opts: ["William I", "Metternich", "Bismarck", "Cavour"], ans: 2, explain: "Otto von Bismarck unified Germany through military might." },
+    { q: "Which 3 countries did Prussia defeat to unify Germany?", opts: ["Britain/Russia/Spain", "Denmark/Austria/France", "Italy/Greece/Ottomans", "Poland/Swiss/Belgium"], ans: 1, explain: "Prussia defeated Denmark, Austria, and France." },
+    { q: "Where was the German Empire proclaimed in 1871?", opts: ["Frankfurt", "Palace of Versailles", "Vatican", "Vienna"], ans: 1, explain: "Declared inside the Palace of Versailles to humiliate the French." },
+    { q: "Which was the ONLY Italian state ruled by a native Italian prince before unification?", opts: ["Papal States", "Sicilies", "Sardinia-Piedmont", "Venetia"], ans: 2, explain: "King Victor Emmanuel II ruled Sardinia-Piedmont." },
+    { q: "Who used an alliance with France to defeat Austria in northern Italy (1859)?", opts: ["Mazzini", "Cavour", "Garibaldi", "Victor Emmanuel"], ans: 1, explain: "Chief Minister Cavour used brilliant diplomacy over revolution." },
+    { q: "How was the British nation formed?", opts: ["Bloody 1-year revolution", "Long gradual process of English parliament dominating neighbors", "Papal decree", "Napoleonic conquest"], ans: 1, explain: "England slowly assimilated Wales, Scotland, and Ireland." },
+    { q: "What happened to Ireland in 1801?", opts: ["Freed", "English backed Protestants to crush Catholics, absorbing Ireland into the UK", "Split in two", "Sold to France"], ans: 1, explain: "The English exploited religious divisions and forcibly absorbed Ireland." }
+  ]
+};
+
+// We export an array of all levels (Now containing 1 through 10)
+export const ALL_LEVELS: MapLevel[] = [LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, LEVEL_8, LEVEL_9, LEVEL_10];
