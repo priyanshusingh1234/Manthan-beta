@@ -1,94 +1,159 @@
-export interface Q { q: string; opts: string[]; ans: number; explain: string; }
-export interface Panel { bg: string; icon: string; scene: string; title: string; text: string; bullets: string[]; color: string; }
+// Advanced Competitive Notes for Levels 1 to 3
+export type NoteBlock = {
+  type: 'heading' | 'subheading' | 'paragraph' | 'highlight' | 'quote' | 'bullet' | 'narrative';
+  content?: string;
+  title?: string;
+};
 
-export const Q_SOLDIER: Q[] = [
-  { q: "In what year did the French Revolution begin?", opts: ["1776", "1789", "1804", "1815"], ans: 1, explain: "1789 — The French people overthrew the absolute monarchy, shifting power to citizens." },
-  { q: "What does 'La Patrie' mean?", opts: ["The Citizen", "The Fatherland", "The Republic", "The Senate"], ans: 1, explain: "La Patrie = 'The Fatherland'. It was used to build a sense of collective French identity." },
-  { q: "What flag replaced the royal standard after 1789?", opts: ["Red Banner", "Black Eagle", "French Tricolour", "White Cross"], ans: 2, explain: "The French Tricolour replaced the royal standard as a powerful new national symbol." },
-];
+export type Question = {
+  q: string;
+  opts: string[];
+  ans: number;
+  explain: string;
+};
 
-export const Q_GENERAL: Q[] = [
-  { q: "The Napoleonic Code (1804) abolished which system?", opts: ["The Republic", "The Feudal System", "The Church", "The Monarchy"], ans: 1, explain: "The Napoleonic Code abolished the feudal system, freeing peasants from serfdom." },
-  { q: "Who hosted the Treaty of Vienna in 1815?", opts: ["Napoleon", "Duke Metternich", "Giuseppe Mazzini", "Friedrich Wilhelm IV"], ans: 1, explain: "Duke Metternich, Austrian Chancellor, hosted the Treaty of Vienna to restore monarchies." },
-  { q: "Where did Mazzini secretly found 'Young Italy' after exile?", opts: ["Rome", "Vienna", "Marseilles", "Berne"], ans: 2, explain: "After being exiled in 1831, Mazzini secretly founded Young Italy in Marseilles, France." },
-];
+export type MapLevel = {
+  id: number;
+  title: string;
+  icon: string;
+  color: string;
+  notes: NoteBlock[];
+  questions: Question[];
+};
 
-export const Q_BOSS: Q[] = [
-  { q: "Frankfurt Parliament was convened on which date in 1848?", opts: ["January 18", "May 18", "July 4", "March 15"], ans: 1, explain: "On May 18, 1848, 831 elected representatives marched to the Church of St. Paul." },
-  { q: "What was Otto von Bismarck's famous strategy called?", opts: ["Liberty or Death", "Blood and Iron", "Bread and Roses", "Fire and Sword"], ans: 1, explain: "Bismarck's strategy was 'Blood and Iron' — relying on the Prussian army, not speeches." },
-  { q: "The THREE heroes of Italian unification were:", opts: ["Napoleon, Cavour, Mazzini", "Mazzini, Cavour, Garibaldi", "Garibaldi, Bismarck, Cavour", "Victor Emmanuel, Wellington, Mazzini"], ans: 1, explain: "Mazzini (the Heart), Cavour (the Brain), and Garibaldi (the Sword) united Italy." },
-  { q: "Act of Union (1707): England united with which country?", opts: ["Ireland", "Wales", "Scotland", "France"], ans: 2, explain: "The Act of Union in 1707 united England and Scotland, creating 'Great Britain'." },
-  { q: "Where was Kaiser Wilhelm I proclaimed German Emperor in 1871?", opts: ["Berlin Cathedral", "Church of St. Paul, Frankfurt", "Hall of Mirrors, Versailles", "Buckingham Palace"], ans: 2, explain: "On Jan 18, 1871, in the Hall of Mirrors at Versailles — the German Empire was born." },
-];
+export const LEVEL_1: MapLevel = {
+  id: 1,
+  title: 'The French Spark (1789)',
+  icon: '🔥',
+  color: '#0ea5e9',
+  notes: [
+    { type: 'narrative', content: 'Kabir opened his heavily annotated history journal. "You want to clear NTSE? Boards? Then you can\'t just memorize dates. You have to understand the socio-economic tectonic plates that crushed the Bourbon monarchy," he said.' },
+    { type: 'heading', content: 'Scene 1: The French Revolution and the Idea of the Nation' },
+    { type: 'highlight', content: 'Core Concept: The Shift of Sovereignty' },
+    { type: 'paragraph', content: 'The first clear expression of nationalism came with the French Revolution in 1789. France was a full-fledged territorial state under the rule of an absolute monarch (King Louis XVI of the Bourbon dynasty). The political and constitutional changes that came in the wake of the French Revolution led to the transfer of sovereignty from the monarchy to a body of French citizens.' },
+    { type: 'quote', content: '"Sovereignty resides essentially in the Nation. No body, no individual can exercise authority that does not expressly emanate from it." — Declaration of the Rights of Man and of the Citizen (1789)' },
+    { type: 'subheading', content: 'Creating a Collective Identity (Psychological Warfare)' },
+    { type: 'paragraph', content: 'A nation isn\'t built on borders alone; it is built on a shared consciousness. The French revolutionaries introduced various measures and practices that could create a sense of collective identity among the French people:' },
+    { type: 'bullet', title: '1. La Patrie and Le Citoyen', content: 'The ideas of la patrie (the fatherland) and le citoyen (the citizen) emphasized the notion of a united community enjoying equal rights under a constitution. This actively dismantled the old feudal hierarchy of estates (Clergy, Nobility, Commoners).' },
+    { type: 'bullet', title: '2. The Tricolour Flag', content: 'A new French flag, the tricolour, was chosen to replace the former royal standard. Visual symbols bypass literacy barriers and unite illiterate peasant masses under one banner.' },
+    { type: 'bullet', title: '3. The National Assembly', content: 'The Estates General (which was heavily rigged in favor of the rich) was elected by the body of active citizens and renamed the National Assembly. Note for exams: Only men above 25 who paid equal to 3 days of a labourer\'s wage in taxes were "active citizens".' },
+    { type: 'bullet', title: '4. Centralized Administration', content: 'New hymns were composed, oaths taken, and martyrs commemorated, all in the name of the nation. A centralized administrative system was put in place and it formulated uniform laws for all citizens within its territory.' },
+    { type: 'bullet', title: '5. Economic & Linguistic Unification', content: 'Internal customs duties and dues were abolished. A uniform system of weights and measures was adopted. Regional dialects were discouraged, and French, as it was spoken and written in Paris, became the common language of the nation.' },
+    { type: 'highlight', content: 'The Mission to Liberate Europe' },
+    { type: 'paragraph', content: 'The revolutionaries further declared that it was the mission and the destiny of the French nation to liberate the peoples of Europe from despotism. When the news of the events in France reached the different cities of Europe, students and other members of educated middle classes began setting up Jacobin clubs.' },
+    { type: 'paragraph', content: 'Their activities and campaigns prepared the way for the French armies which moved into Holland, Belgium, Switzerland, and much of Italy in the 1790s. With the outbreak of the revolutionary wars, the French armies began to carry the idea of nationalism abroad.' }
+  ],
+  questions: [
+    {
+      q: "Under the new constitution of 1789, who were legally defined as 'active citizens'?",
+      opts: ["All adult men and women in France", "Only the Clergy and Nobility", "Men above 25 paying taxes equal to at least 3 days of a labourer's wage", "Anyone who actively fought in the revolution"],
+      ans: 2,
+      explain: "The right to vote was restricted. Only tax-paying men over 25 were 'active citizens', showing the bourgeois (middle class) nature of the early revolution."
+    },
+    {
+      q: "How did the French revolutionaries deal with internal economics and trade barriers?",
+      opts: ["They doubled internal customs to fund the war", "They abolished internal customs duties and standardized weights and measures", "They banned all domestic trade outside of Paris", "They returned all trade control to the guilds"],
+      ans: 1,
+      explain: "To unify the nation economically, they abolished internal tariffs and adopted uniform weights and measures, promoting a unified national market."
+    },
+    {
+      q: "What was the international consequence of the formation of Jacobin clubs across European cities?",
+      opts: ["They invited the British to invade France", "They paved the way for French revolutionary armies to enter Holland, Belgium, and Italy", "They restored local monarchs to power", "They forced the Pope to excommunicate France"],
+      ans: 1,
+      explain: "Educated middle classes setting up Jacobin clubs essentially acted as a fifth column, preparing their countries to welcome the French armies carrying the idea of nationalism."
+    }
+  ]
+};
 
-export const PANELS_ACT1: Panel[] = [
-  {
-    bg: "radial-gradient(ellipse at top, #7f1d1d 0%, #1c1917 60%)",
-    icon: "🔥", scene: "Scene 1 · 1789", title: "The French Spark",
-    text: "Imagine it's the late 1700s. You are a PEASANT. You work all day, and some king in a palace takes all your money just because God supposedly put him there. That was absolute monarchy. But in 1789, the French people SNAPPED. The French Revolution happened — power shifted from the monarchy to the citizens.",
-    bullets: ["🏛️ La Patrie (Fatherland) + Le Citoyen (Citizen) — united the people", "🚩 New French Tricolour replaced the royal flag", "🗣️ French promoted as the one national language", "📜 Estates General renamed the National Assembly"],
-    color: "#fb923c",
-  },
-  {
-    bg: "radial-gradient(ellipse at top, #1e1b4b 0%, #0f172a 60%)",
-    icon: "👑", scene: "Scene 2 · 1799–1804", title: "Enter Napoleon Bonaparte",
-    text: "By 1799, a military genius named Napoleon takes over and crowns himself Emperor. He was a dictator — but an incredibly SMART one. In 1804, he introduced the Napoleonic Code, spreading it across all of Europe with his armies.",
-    bullets: ["⚖️ Equality before the law for all citizens", "🏚️ Feudal system ABOLISHED — peasants freed!", "🏭 Guild restrictions removed in towns", "🛣️ Transport & communication massively improved"],
-    color: "#818cf8",
-  },
-  {
-    bg: "radial-gradient(ellipse at top, #3b0764 0%, #0f172a 60%)",
-    icon: "🗺️", scene: "Scene 3 · 1815", title: "Napoleon Falls — Europe is a Mess",
-    text: "Napoleon got greedy. By 1815, Britain, Russia, Prussia, and Austria teamed up and crushed him at the BATTLE OF WATERLOO. But the Europe they were left with had no 'Germany', no 'Italy' — just kingdoms ruled by autocratic kings.",
-    bullets: ["⚔️ No unified Germany, no unified Italy — just kingdoms!", "🏔️ Habsburg Empire: patchwork of German, Italian, Polish speakers", "👑 Two extremes: Rich Aristocracy vs. Mass Peasantry", "💡 A new player rises: The Middle Class (liberals)"],
-    color: "#c084fc",
-  },
-];
+export const LEVEL_2: MapLevel = {
+  id: 2,
+  title: 'Napoleon & The Civil Code',
+  icon: '👑',
+  color: '#3b82f6',
+  notes: [
+    { type: 'heading', content: 'Scene 2: The Ambiguous Legacy of Napoleon (1799 - 1815)' },
+    { type: 'paragraph', content: 'Within the wide swathe of territory that came under his control, Napoleon set about introducing many of the reforms that he had already introduced in France. Through a return to monarchy, Napoleon had, no doubt, destroyed democracy in France, but in the administrative field, he had incorporated revolutionary principles.' },
+    { type: 'highlight', content: 'The Napoleonic Code (Civil Code of 1804)' },
+    { type: 'paragraph', content: 'This code is arguably Napoleon\'s most lasting legacy. It sought to rationalize the legal system and make it efficient. For competitive exams, remember the exact pillars of this code:' },
+    { type: 'bullet', title: '1. Privileges Abolished', content: 'It did away with all privileges based on birth. The aristocracy could no longer command special courts or tax exemptions.' },
+    { type: 'bullet', title: '2. Equality Before the Law', content: 'It established equality before the law and secured the right to property. (However, it reduced women to the status of a minor, subject to the authority of fathers and husbands).' },
+    { type: 'bullet', title: '3. Feudalism Destroyed Abroad', content: 'In the Dutch Republic, in Switzerland, in Italy and Germany, Napoleon simplified administrative divisions, abolished the feudal system and freed peasants from serfdom and manorial dues.' },
+    { type: 'bullet', title: '4. Urban Modernization', content: 'In the towns too, guild restrictions were removed. Transport and communication systems were improved. Artisans, peasants, workers and new businessmen enjoyed a new-found freedom.' },
+    { type: 'subheading', content: 'The Double-Edged Sword of French Conquest' },
+    { type: 'paragraph', content: 'Initially, in many places such as Holland and Switzerland, as well as in certain cities like Brussels, Mainz, Milan and Warsaw, the French armies were welcomed as harbingers of liberty. Businessmen and small-scale producers of goods, in particular, began to realize that uniform laws, standardized weights and measures, and a common national currency would facilitate the movement and exchange of goods and capital.' },
+    { type: 'quote', content: '"Liberty is traded for efficiency." — Historians on Napoleon\'s rule.' },
+    { type: 'paragraph', content: 'However, the initial enthusiasm soon turned to hostility, as it became clear that the new administrative arrangements did not go hand in hand with political freedom. Why did the Europeans turn against Napoleon?' },
+    { type: 'bullet', title: 'Increased Taxation', content: 'Running a massive continental empire and fighting constant wars requires deep pockets. Napoleon heavily taxed the newly conquered territories.' },
+    { type: 'bullet', title: 'Censorship', content: 'Political freedom was crushed. The press was highly restricted.' },
+    { type: 'bullet', title: 'Forced Conscription', content: 'This was the fatal flaw. Napoleon forced men from conquered regions into the French armies to conquer the rest of Europe. The bloodshed turned the common folk against him.' }
+  ],
+  questions: [
+    {
+      q: "What was a major regressive feature of the otherwise modern Napoleonic Code (1804)?",
+      opts: ["It restored the privileges of the clergy", "It reintroduced the feudal system in Italy", "It reduced women to the status of a minor, subject to fathers and husbands", "It banned all forms of private property"],
+      ans: 2,
+      explain: "Despite making men equal before the law, the Code actively stripped women of rights, treating them as legal minors."
+    },
+    {
+      q: "Why did the initial European enthusiasm for French armies quickly turn into hostility?",
+      opts: ["Because the French forced everyone to speak English", "Due to increased taxation, censorship, and forced conscription", "Because Napoleon gave away conquered lands to Britain", "Because they disbanded all local businesses"],
+      ans: 1,
+      explain: "Administrative efficiency was outweighed by heavy taxes, strict censorship, and the forced drafting of locals into the French army."
+    },
+    {
+      q: "Which specific groups in conquered European towns benefited the MOST initially from Napoleon's reforms?",
+      opts: ["Aristocrats and the Clergy", "Businessmen, artisans, and small-scale producers", "The Bourbon monarchy supporters", "British spies"],
+      ans: 1,
+      explain: "The removal of guild restrictions, common currency, and standardized weights/measures massively benefited artisans and businessmen dealing in trade."
+    }
+  ]
+};
 
-export const PANELS_ACT2: Panel[] = [
-  {
-    bg: "radial-gradient(ellipse at top, #064e3b 0%, #0f172a 60%)",
-    icon: "📜", scene: "Scene 4 · 1815", title: "The Treaty of Vienna",
-    text: "The conservatives held a massive power meeting: the Treaty of Vienna. Hosted by the ultimate mastermind, Austrian Chancellor Duke Metternich. Their single goal? Undo EVERYTHING Napoleon did and restore the old kings.",
-    bullets: ["👑 Bourbon dynasty restored to power in France", "🛡️ New buffer states created on France's borders", "🗺️ Prussia & Russia rewarded with massive new territories", "🔇 Press censored — liberals locked up"],
-    color: "#34d399",
-  },
-  {
-    bg: "radial-gradient(ellipse at top, #500724 0%, #0f172a 60%)",
-    icon: "🗡️", scene: "Scene 5 · 1831", title: "The Underground Resistance",
-    text: "When you crush freedom, it goes UNDERGROUND. Enter our rebel hero: Giuseppe Mazzini — exiled from Italy but relentlessly building secret revolutionary networks. Metternich called him 'the most dangerous enemy of our social order.'",
-    bullets: ["🤫 Exiled from Italy in 1831", "🇮🇹 Founded Young Italy in Marseilles, France", "🌍 Founded Young Europe in Berne, Switzerland", "💬 Believed God intended nations as the natural units of mankind"],
-    color: "#fb7185",
-  },
-  {
-    bg: "radial-gradient(ellipse at top, #451a03 0%, #0f172a 60%)",
-    icon: "🎵", scene: "Scene 6 · 1830s", title: "Culture as a Weapon",
-    text: "You can't defeat an empire with swords alone — you use a SONG. The Romantic movement used poetry, art, and folk music to build emotional national identity. In Poland, simply speaking your own language became an act of hardcore political rebellion.",
-    bullets: ["📚 Russia wiped Polish language from ALL schools", "✝️ Clergy used Polish for church gatherings", "🚂 Thousands of Polish priests sent to Siberian prisons!", "🗣️ Speaking Polish = an act of rebellion against the Russian Empire"],
-    color: "#fbbf24",
-  },
-];
+export const LEVEL_3: MapLevel = {
+  id: 3,
+  title: 'The Making of Nationalism',
+  icon: '🌍',
+  color: '#8b5cf6',
+  notes: [
+    { type: 'heading', content: 'Scene 3: Pre-Revolutionary Europe & The Clash of Classes' },
+    { type: 'paragraph', content: 'If you look at the map of mid-eighteenth-century Europe, you will find that there were no "nation-states" as we know them today. What we know today as Germany, Italy and Switzerland were divided into kingdoms, duchies and cantons whose rulers had their autonomous territories.' },
+    { type: 'highlight', content: 'The Habsburg Empire: A Case Study in Fragmentation' },
+    { type: 'paragraph', content: 'The Habsburg Empire that ruled over Austria-Hungary was a patchwork of many different regions and peoples. It included the Alpine regions — the Tyrol, Austria and the Sudetenland — as well as Bohemia, where the aristocracy was predominantly German-speaking. It also included the Italian-speaking provinces of Lombardy and Venetia. In Hungary, half of the population spoke Magyar while the other half spoke a variety of dialects. The ONLY tie binding these diverse groups together was a common allegiance to the emperor.' },
+    { type: 'subheading', content: 'The Aristocracy and the New Middle Class' },
+    { type: 'paragraph', content: 'Socially and politically, a landed aristocracy was the dominant class on the continent.' },
+    { type: 'bullet', title: 'The Aristocrats', content: 'They were united by a common way of life that cut across regional divisions. They owned estates in the countryside and town-houses. They spoke French for purposes of diplomacy and in high society. Their families were often connected by ties of marriage. However, this powerful aristocracy was numerically a very small group.' },
+    { type: 'bullet', title: 'The Peasantry', content: 'The majority of the population was made up of the peasantry. To the west, the bulk of the land was farmed by tenants and small owners, while in Eastern and Central Europe the pattern of landholding was characterized by vast estates cultivated by serfs.' },
+    { type: 'highlight', content: 'Industrialization Creates a New Player' },
+    { type: 'paragraph', content: 'In Western and parts of Central Europe the growth of industrial production and trade meant the growth of towns and the emergence of commercial classes. Industrialization began in England in the second half of the 18th century, but in France and Germany, it occurred only during the 19th century.' },
+    { type: 'paragraph', content: 'In its wake, new social groups came into being: a working-class population, and middle classes made up of industrialists, businessmen, and professionals. It was among the educated, liberal middle classes that ideas of national unity following the abolition of aristocratic privileges gained popularity.' },
+    { type: 'subheading', content: 'What did Liberal Nationalism Stand for?' },
+    { type: 'paragraph', content: 'The term "liberalism" derives from the Latin root *liber*, meaning free. For the new middle classes, liberalism stood for freedom for the individual and equality of all before the law.' },
+    { type: 'bullet', title: 'Political Liberalism', content: 'It emphasized the concept of government by consent. Since the French Revolution, liberalism had stood for the end of autocracy and clerical privileges, a constitution and representative government through parliament.' },
+    { type: 'bullet', title: 'Economic Liberalism', content: 'In the economic sphere, liberalism stood for the freedom of markets and the abolition of state-imposed restrictions on the movement of goods and capital.' },
+    { type: 'quote', content: 'Example of Economic Chaos: In 1833, a merchant travelling from Hamburg to Nuremberg to sell his goods had to pass through 11 customs barriers and pay a customs duty of about 5% at each one of them! Duties were levied according to the weight or measurement of the goods. As each region had its own system of weights, this involved time-consuming calculations.' },
+    { type: 'paragraph', content: 'To solve this, in 1834, a customs union or *Zollverein* was formed at the initiative of Prussia and joined by most of the German states. The union abolished tariff barriers and reduced the number of currencies from over thirty to two. A wave of economic nationalism strengthened the wider nationalist sentiments growing at the time.' }
+  ],
+  questions: [
+    {
+      q: "Culturally, how did the powerful Aristocracy across divided European kingdoms maintain a unified identity?",
+      opts: ["By all serving in the military together", "By speaking French, owning countryside estates, and connecting through marriage", "By forcing the peasants to adopt their religion", "By attending the same universities in London"],
+      ans: 1,
+      explain: "Despite the fragmented borders, the Aristocrats formed a unified, elite network across Europe by speaking French and intermarrying."
+    },
+    {
+      q: "What was the primary purpose of the 'Zollverein' formed in 1834?",
+      opts: ["To declare war on France", "To establish a German Parliament", "To abolish tariff barriers and reduce currencies for economic unification", "To enforce strict press censorship"],
+      ans: 2,
+      explain: "The Zollverein was a customs union that unified the German states economically, speeding up trade and fostering a sense of national unity."
+    },
+    {
+      q: "What does the Latin root 'liber' in the term 'Liberal Nationalism' mean?",
+      opts: ["Free", "King", "Nation", "Law"],
+      ans: 0,
+      explain: "Liber means 'free', underscoring the middle-class desire for freedom of the individual and free markets."
+    }
+  ]
+};
 
-export const PANELS_ACT3: Panel[] = [
-  {
-    bg: "radial-gradient(ellipse at top, #0c4a6e 0%, #0f172a 60%)",
-    icon: "🏭", scene: "Scene 7 · 1845", title: "Weavers' Revolt — Desperation Ignites",
-    text: "A population boom + cheap English machine goods were destroying local livelihoods. Silesian Weavers had enough. June 4th, 1845: they marched to the contractor's mansion demanding higher wages. He refused. They smashed the place.",
-    bullets: ["😠 Weavers exploited: wages slashed by contractors", "🚶 Marched to mansion demanding fair pay", "💥 Smashed furniture and destroyed stored cloth", "💀 Army called in — ELEVEN weavers shot dead"],
-    color: "#22d3ee",
-  },
-  {
-    bg: "radial-gradient(ellipse at top, #3b0764 0%, #0f172a 60%)",
-    icon: "🏛️", scene: "Scene 8 · 1848", title: "The Frankfurt Heartbreak",
-    text: "1848 was the year of Liberal Revolution. Middle classes across Europe rose up. In Germany, 831 elected representatives marched to the Frankfurt Parliament, drafted a constitution, and offered the German crown to the King of Prussia. He laughed in their faces and rejected it.",
-    bullets: ["🏛️ Frankfurt Parliament, Church of St. Paul — May 18, 1848", "👑 Crown offered to Friedrich Wilhelm IV — REJECTED!", "⚔️ Military crushed the elected assembly", "👩 Women could only stand in the VISITOR'S GALLERY!"],
-    color: "#a78bfa",
-  },
-  {
-    bg: "radial-gradient(ellipse at top, #1c1917 0%, #0a0a0a 60%)",
-    icon: "⚔️", scene: "Scene 9 · 1860–1871", title: "Blood, Iron & Red Shirts",
-    text: "Liberals failed. Democracy failed. Now the BIG GUNS take over. Bismarck uses real armies. Garibaldi's Red Shirts march through Italy. The modern map of Europe is being drawn in blood.",
-    bullets: ["⚔️ Bismarck won 3 wars vs Denmark, Austria, France", "🇩🇪 Jan 18, 1871 — German Empire proclaimed at Hall of Mirrors, Versailles!", "🔴 Garibaldi's Red Shirts marched into South Italy (1860)", "🇮🇹 Victor Emmanuel II — King of united Italy (1861)"],
-    color: "#94a3b8",
-  },
-];
+// We will export an array of all levels (Currently 1 to 3, but extensible)
+export const ALL_LEVELS: MapLevel[] = [LEVEL_1, LEVEL_2, LEVEL_3];
