@@ -36,11 +36,14 @@ export default function SocialFeedPage() {
     const [suggestions, setSuggestions] = useState<any[]>([]);
     const [mentionSearch, setMentionSearch] = useState<string | null>(null);
     const [mentionIndex, setMentionIndex] = useState<number | null>(null);
-
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
+
+    const CATEGORIES = ['education', 'lifestyle', 'news', 'funny', 'general'];
+    const [selectedCategory, setSelectedCategory] = useState<string>('general');
+
 
     // ── Auto-grow textarea ──────────────────────────────────────────────────
     const autoGrow = () => {
@@ -399,13 +402,15 @@ export default function SocialFeedPage() {
                 videoThumbnail = result.thumbnailUrl;
             }
 
+            const finalContent = (content.trim() + (videoFile && selectedCategory !== 'general' ? ` #${selectedCategory}` : '')).trim();
+
             const res = await fetch('/api/posts', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${session.access_token}`,
                 },
-                body: JSON.stringify({ content: content.trim(), imageUrl, videoUrl, videoThumbnail }),
+                body: JSON.stringify({ content: finalContent, imageUrl, videoUrl, videoThumbnail }),
             });
             if (!res.ok) throw new Error((await res.json()).error || 'Failed');
             const newPostRaw = await res.json();
@@ -424,7 +429,7 @@ export default function SocialFeedPage() {
             const optimisticPost: any = {
                 id: newPostRaw.id,
                 type: 'post',
-                content: content.trim(),
+                content: finalContent,
                 image_url: imageUrl,
                 video_url: videoUrl,
                 video_thumbnail: videoThumbnail,
@@ -447,6 +452,7 @@ export default function SocialFeedPage() {
             setContent('');
             removeImage();
             removeVideo();
+            setSelectedCategory('general');
             setFocused(false);
             if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
@@ -603,6 +609,29 @@ export default function SocialFeedPage() {
                                                 <span className="absolute bottom-2 left-2 text-[10px] font-black bg-violet-600 text-white px-2 py-0.5 rounded-full z-10 shadow-lg">🎬 30s clip</span>
                                             </>
                                         )}
+                                    </div>
+                                )}
+                                
+                                {/* Category Selection for Video Clips */}
+                                {videoPreview && !submitting && (
+                                    <div className="mx-4 mb-3">
+                                        <p className="text-xs font-bold text-slate-500 mb-2">Category for this clip:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {CATEGORIES.map(cat => (
+                                                <button
+                                                    key={cat}
+                                                    type="button"
+                                                    onClick={() => setSelectedCategory(cat)}
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                                                        selectedCategory === cat 
+                                                            ? 'bg-violet-600 text-white shadow-md' 
+                                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                    }`}
+                                                >
+                                                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
 

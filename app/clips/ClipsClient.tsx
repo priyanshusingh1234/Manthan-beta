@@ -14,6 +14,7 @@ export default function ClipsClient() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [excludeIds, setExcludeIds] = useState<string[]>([]);
 
     // Comment Sheet State
     const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
@@ -33,10 +34,9 @@ export default function ClipsClient() {
             const token = session?.access_token || null;
             if (isInitial) setCurrentUserId(session?.user?.id || null);
 
-            let url = `/api/posts?clipsOnly=true&limit=10&t=${Date.now()}`;
-            if (!isInitial && posts.length > 0) {
-                const cursor = posts[posts.length - 1].created_at;
-                url += `&before=${encodeURIComponent(cursor)}`;
+            let url = `/api/clips/feed?limit=10&t=${Date.now()}`;
+            if (!isInitial && excludeIds.length > 0) {
+                url += `&exclude=${excludeIds.join(',')}`;
             }
 
             const res = await fetch(url, {
@@ -45,18 +45,20 @@ export default function ClipsClient() {
             });
 
             if (!res.ok) throw new Error(await res.text());
-            const newPosts = await res.json();
+            const data = await res.json();
+            const newPosts = data.posts || [];
 
             if (newPosts.length === 0) {
                 setHasMore(false);
             } else {
+                setExcludeIds(data.excludeIds || []);
                 setPosts(prev => {
                     if (isInitial) return newPosts;
                     const existingIds = new Set(prev.map(p => p.id));
                     const uniqueNew = newPosts.filter((p: any) => !existingIds.has(p.id));
                     return [...prev, ...uniqueNew];
                 });
-                if (newPosts.length < 10) setHasMore(false);
+                if (newPosts.length < 5) setHasMore(false);
             }
         } catch (err) {
             console.error('Clips fetch error:', err);
@@ -64,7 +66,7 @@ export default function ClipsClient() {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [posts]);
+    }, [excludeIds]);
 
     useEffect(() => {
         fetchFeed(true);
