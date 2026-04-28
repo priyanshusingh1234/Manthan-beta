@@ -47,14 +47,14 @@ const CHAPTERS = [
 
 export default function GauntletIndexPage() {
   return (
-    <div className="min-h-[100dvh] bg-[#F9FAFB] pb-24 flex flex-col items-center text-slate-800 font-sans"
-         style={{ backgroundImage: 'radial-gradient(#e2e8f0 2px, transparent 2px)', backgroundSize: '30px 30px' }}>
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 pb-24 flex flex-col items-center text-slate-800 dark:text-slate-100 font-sans"
+         style={{ backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)', backgroundSize: '30px 30px', opacity: 0.9 }}>
       
       {/* Header */}
       <div className="w-full max-w-md px-4 pt-8 pb-6 text-center z-10">
         <motion.div animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 3 }} className="text-5xl mb-3 drop-shadow-md">🎓</motion.div>
-        <h1 className="text-3xl font-black text-slate-800 tracking-tight">Chapter Gauntlets</h1>
-        <p className="text-sm text-slate-500 font-medium mt-2 max-w-xs mx-auto leading-relaxed">
+        <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Chapter Gauntlets</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-2 max-w-xs mx-auto leading-relaxed">
           The ultimate competitive study modules. Read deep narrative notes and survive the final boss exams.
         </p>
       </div>
@@ -71,23 +71,23 @@ export default function GauntletIndexPage() {
             {ch.unlocked ? (
               <Link href={`/gauntlet/${ch.id}`}>
                 <div
-                  className="rounded-3xl overflow-hidden border p-5 active:scale-95 transition-all cursor-pointer shadow-lg hover:shadow-xl bg-white"
-                  style={{ borderColor: ch.bgLight, borderBottomWidth: '6px', borderBottomColor: ch.color }}
+                  className="rounded-3xl overflow-hidden border p-5 active:scale-95 transition-all cursor-pointer shadow-lg hover:shadow-xl bg-white dark:bg-slate-900 dark:border-slate-800"
+                  style={{ borderBottomWidth: '6px', borderBottomColor: ch.color }}
                 >
                   <div className="flex items-start gap-4">
-                    <div className="text-4xl shrink-0 mt-1 bg-slate-50 p-3 rounded-2xl shadow-inner border border-slate-100">{ch.emoji}</div>
+                    <div className="text-4xl shrink-0 mt-1 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl shadow-inner border border-slate-100 dark:border-slate-800">{ch.emoji}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: ch.color, backgroundColor: ch.bgLight }}>
+                        <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ color: ch.color, backgroundColor: ch.color + '22' }}>
                           {ch.grade} · {ch.subject}
                         </span>
                       </div>
-                      <h2 className="text-lg font-black text-slate-800 leading-snug mb-1">{ch.title}</h2>
-                      <p className="text-xs text-slate-500 font-medium leading-relaxed mb-4">{ch.description}</p>
+                      <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 leading-snug mb-1">{ch.title}</h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed mb-4">{ch.description}</p>
 
                       {/* Stats row */}
-                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                        <div className="flex gap-4 text-xs font-bold text-slate-500">
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+                        <div className="flex gap-4 text-xs font-bold text-slate-500 dark:text-slate-400">
                           <span className="flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5" /> {ch.acts} Levels</span>
                           <span className="flex items-center gap-1.5 text-rose-500">💀 {ch.battles} Boss</span>
                         </div>
@@ -101,15 +101,15 @@ export default function GauntletIndexPage() {
               </Link>
             ) : (
               <div
-                className="rounded-3xl overflow-hidden border border-slate-200 p-5 opacity-60 cursor-not-allowed bg-slate-50"
+                className="rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 p-5 opacity-60 cursor-not-allowed bg-slate-50 dark:bg-slate-900"
               >
                 <div className="flex items-start gap-4">
                   <div className="text-4xl shrink-0 mt-1 grayscale p-3">{ch.emoji}</div>
                   <div className="flex-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 block">{ch.grade} · {ch.subject}</span>
-                    <h2 className="text-lg font-black text-slate-600 leading-snug mb-1">{ch.title}</h2>
-                    <p className="text-xs text-slate-400 font-medium mb-3">{ch.description}</p>
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 pt-3 border-t border-slate-200/50">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5 block">{ch.grade} · {ch.subject}</span>
+                    <h2 className="text-lg font-black text-slate-600 dark:text-slate-300 leading-snug mb-1">{ch.title}</h2>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mb-3">{ch.description}</p>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 dark:text-slate-500 pt-3 border-t border-slate-200/50 dark:border-slate-800/50">
                       <Lock className="w-3.5 h-3.5" /> Coming Soon
                     </div>
                   </div>

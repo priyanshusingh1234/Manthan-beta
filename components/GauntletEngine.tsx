@@ -104,21 +104,21 @@ export default function GauntletEngine({ chapterId, title, levels }: { chapterId
   };
 
   if (loadingProgress) {
-    return <div className="min-h-[100dvh] bg-[#F9FAFB] flex flex-col items-center justify-center font-black text-slate-400">Loading your progress...</div>;
+    return <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center font-black text-slate-400 dark:text-slate-600">Loading your progress...</div>;
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#F9FAFB] text-slate-800 font-sans overflow-hidden flex flex-col items-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed inset-0 z-[9999] bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans overflow-hidden flex flex-col items-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       
-      <div className="w-full max-w-md bg-white shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07)] px-4 py-3 sticky top-0 z-10 flex items-center justify-between border-b border-slate-200">
-        <button onClick={() => window.history.back()} className="p-2 -ml-2 text-slate-400 hover:text-slate-600 transition-colors">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 shadow-sm px-4 py-3 sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+        <button onClick={() => window.history.back()} className="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div className="flex-1 text-center">
-          <div className="font-extrabold text-slate-800 text-lg">{title}</div>
+          <div className="font-extrabold text-slate-800 dark:text-slate-100 text-lg">{title}</div>
           <div className="text-[10px] font-bold text-sky-500 uppercase tracking-widest leading-none">Competitive Study Notes</div>
         </div>
-        <div className="flex items-center gap-1 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
+        <div className="flex items-center gap-1 bg-amber-100 dark:bg-amber-500/20 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-500/30">
           <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
           <span className="font-black text-amber-600">{(unlockedLevel - 1) * 20}</span>
         </div>
@@ -128,8 +128,8 @@ export default function GauntletEngine({ chapterId, title, levels }: { chapterId
            style={{ backgroundImage: 'radial-gradient(#e2e8f0 2px, transparent 2px)', backgroundSize: '30px 30px' }}>
         
         <svg className="absolute inset-0 w-full h-[1800px] pointer-events-none" preserveAspectRatio="none" style={{ top: 'auto', bottom: 0 }}>
-          <path d="M 200,1700 C 50,1500 350,1300 200,1100 C 50,900 350,700 200,500 C 50,300 350,150 200,50" fill="none" stroke="#e2e8f0" strokeWidth="20" strokeLinecap="round" />
-          <path d="M 200,1700 C 50,1500 350,1300 200,1100 C 50,900 350,700 200,500 C 50,300 350,150 200,50" fill="none" stroke="#f1f5f9" strokeWidth="12" strokeLinecap="round" />
+          <path d="M 200,1700 C 50,1500 350,1300 200,1100 C 50,900 350,700 200,500 C 50,300 350,150 200,50" fill="none" className="stroke-slate-200 dark:stroke-slate-800" strokeWidth="20" strokeLinecap="round" />
+          <path d="M 200,1700 C 50,1500 350,1300 200,1100 C 50,900 350,700 200,500 C 50,300 350,150 200,50" fill="none" className="stroke-slate-100 dark:stroke-slate-900" strokeWidth="12" strokeLinecap="round" />
         </svg>
 
         {levels.map((level, index) => {
@@ -149,9 +149,9 @@ export default function GauntletEngine({ chapterId, title, levels }: { chapterId
               style={{ transform: `translateX(${xOffset})`, zIndex: 5 }}
               className="relative group block"
             >
-              <div className="absolute -top-11 left-1/2 -translate-x-1/2 bg-white px-4 py-2 rounded-lg text-xs font-bold text-slate-800 whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-slate-200">
+              <div className="absolute -top-11 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg text-xs font-bold text-slate-800 dark:text-slate-100 whitespace-nowrap shadow-md border border-slate-200 dark:border-slate-700">
                 {level.title}
-                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-r border-b border-slate-200"></div>
+                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-slate-800 rotate-45 border-r border-b border-slate-200 dark:border-slate-700"></div>
               </div>
 
               <button
@@ -235,17 +235,17 @@ function StudyNotesModal({ level, onClose, onWin }: { level: MapLevel; onClose: 
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed inset-0 z-[10000] bg-[#F9FAFB] flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-0 z-[10000] bg-slate-50 dark:bg-slate-950 flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="flex items-center justify-between p-4 bg-white border-b border-slate-200 shadow-sm z-10 shrink-0">
-        <button onClick={onClose} className="p-2 -ml-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors">
+      <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm z-10 shrink-0">
+        <button onClick={onClose} className="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
           <X className="w-6 h-6" />
         </button>
         <div className="flex flex-col items-center">
-          <span className="text-[10px] font-black uppercase text-indigo-500 tracking-widest bg-indigo-50 px-2 py-0.5 rounded-full mb-0.5">Study Notes</span>
-          <span className="font-extrabold text-base text-slate-800 leading-none">{level.title}</span>
+          <span className="text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-400 tracking-widest bg-indigo-50 dark:bg-indigo-500/20 px-2 py-0.5 rounded-full mb-0.5">Study Notes</span>
+          <span className="font-extrabold text-base text-slate-800 dark:text-slate-100 leading-none">{level.title}</span>
         </div>
-        <div className="flex items-center gap-1 bg-rose-50 px-2 py-1 rounded-full border border-rose-100 flex-shrink-0">
+        <div className="flex items-center gap-1 bg-rose-50 dark:bg-rose-500/20 px-2 py-1 rounded-full border border-rose-100 dark:border-rose-500/30 flex-shrink-0">
           <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
           <span className="font-black text-rose-600">{lives}</span>
         </div>
@@ -256,21 +256,21 @@ function StudyNotesModal({ level, onClose, onWin }: { level: MapLevel; onClose: 
           <div className="absolute inset-0 overflow-y-auto p-6 lg:px-12 pb-32">
             <div className="max-w-2xl mx-auto space-y-6">
               {level.notes.map((note, i) => {
-                if (note.type === 'heading') return <h2 key={i} className="text-2xl font-black text-slate-800 mt-8 mb-2 leading-tight font-serif">{note.content}</h2>;
-                if (note.type === 'subheading') return <h3 key={i} className="text-lg font-bold text-slate-700 mt-6 mb-1">{note.content}</h3>;
-                if (note.type === 'paragraph') return <p key={i} className="text-slate-600 leading-relaxed text-[15px]">{note.content}</p>;
-                if (note.type === 'highlight') return <div key={i} className="inline-block bg-yellow-100 text-yellow-800 font-bold px-2 py-0.5 rounded text-sm mb-1 mt-4">{note.content}</div>;
-                if (note.type === 'quote') return <blockquote key={i} className="border-l-4 border-indigo-400 bg-indigo-50/50 pl-4 py-3 pr-4 rounded-r-xl italic text-slate-600 my-4 text-sm font-medium">{note.content}</blockquote>;
+                if (note.type === 'heading') return <h2 key={i} className="text-2xl font-black text-slate-800 dark:text-slate-100 mt-8 mb-2 leading-tight font-serif">{note.content}</h2>;
+                if (note.type === 'subheading') return <h3 key={i} className="text-lg font-bold text-slate-700 dark:text-slate-300 mt-6 mb-1">{note.content}</h3>;
+                if (note.type === 'paragraph') return <p key={i} className="text-slate-600 dark:text-slate-400 leading-relaxed text-[15px]">{note.content}</p>;
+                if (note.type === 'highlight') return <div key={i} className="inline-block bg-yellow-100 dark:bg-yellow-500/20 text-yellow-800 dark:text-yellow-200 font-bold px-2 py-0.5 rounded text-sm mb-1 mt-4">{note.content}</div>;
+                if (note.type === 'quote') return <blockquote key={i} className="border-l-4 border-indigo-400 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-500/10 pl-4 py-3 pr-4 rounded-r-xl italic text-slate-600 dark:text-slate-400 my-4 text-sm font-medium">{note.content}</blockquote>;
                 if (note.type === 'bullet') return (
-                    <div key={i} className="flex gap-3 my-3 bg-white p-4 rounded-xl border border-slate-100 shadow-sm shadow-slate-200/40">
+                    <div key={i} className="flex gap-3 my-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
                       <div className="mt-1.5 w-2 h-2 rounded-full bg-indigo-500 shrink-0 shadow-sm" />
                       <div>
-                        {note.title && <span className="font-bold text-slate-800 mr-2">{note.title}:</span>}
-                        <span className="text-slate-600 text-[15px] leading-relaxed">{note.content}</span>
+                        {note.title && <span className="font-bold text-slate-800 dark:text-slate-200 mr-2">{note.title}:</span>}
+                        <span className="text-slate-600 dark:text-slate-400 text-[15px] leading-relaxed">{note.content}</span>
                       </div>
                     </div>
                 );
-                if (note.type === 'narrative') return <div key={i} className="text-center italic text-slate-400 text-sm my-8 font-serif px-8">{note.content}</div>;
+                if (note.type === 'narrative') return <div key={i} className="text-center italic text-slate-400 dark:text-slate-500 text-sm my-8 font-serif px-8">{note.content}</div>;
                 return null;
               })}
             </div>
@@ -278,17 +278,17 @@ function StudyNotesModal({ level, onClose, onWin }: { level: MapLevel; onClose: 
         )}
 
         {phase === 'quiz' && (
-          <div className="absolute inset-0 overflow-y-auto p-6 flex flex-col justify-center bg-slate-50">
+          <div className="absolute inset-0 overflow-y-auto p-6 flex flex-col justify-center bg-slate-50 dark:bg-slate-950">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-8 max-w-2xl mx-auto w-full">
-              <div className="inline-block bg-sky-100 text-sky-700 font-black text-xs uppercase px-3 py-1 rounded-full mb-4 border border-sky-200">
+              <div className="inline-block bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 font-black text-xs uppercase px-3 py-1 rounded-full mb-4 border border-sky-200 dark:border-sky-500/30">
                 Knowledge Check • {qIndex + 1}/{level.questions.length}
               </div>
-              <h3 className="text-2xl font-black text-slate-800 leading-snug font-serif">{q.q}</h3>
+              <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-snug font-serif">{q.q}</h3>
             </motion.div>
             <div className="space-y-3 max-w-2xl mx-auto w-full">
               {q.opts.map((opt, i) => (
-                <motion.button key={i} whileTap={{ scale: 0.98 }} onClick={() => handleAnswer(i)} className="w-full text-left p-5 rounded-2xl border border-slate-200 bg-white font-semibold text-slate-700 hover:border-sky-400 hover:bg-sky-50 transition-all flex items-start gap-4">
-                  <span className="bg-slate-100 text-slate-400 font-bold px-3 py-1 rounded-lg text-sm shrink-0">{['A','B','C','D'][i]}</span>
+                <motion.button key={i} whileTap={{ scale: 0.98 }} onClick={() => handleAnswer(i)} className="w-full text-left p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-semibold text-slate-700 dark:text-slate-300 hover:border-sky-400 dark:hover:border-sky-500 hover:bg-sky-50 dark:hover:bg-slate-800 transition-all flex items-start gap-4">
+                  <span className="bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold px-3 py-1 rounded-lg text-sm shrink-0">{['A','B','C','D'][i]}</span>
                   <span className="mt-0.5 leading-snug">{opt}</span>
                 </motion.button>
               ))}
@@ -297,23 +297,23 @@ function StudyNotesModal({ level, onClose, onWin }: { level: MapLevel; onClose: 
         )}
 
         {phase === 'feedback' && (
-          <div className={`absolute inset-0 flex flex-col justify-center p-6 ${selected === q.ans ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+          <div className={`absolute inset-0 flex flex-col justify-center p-6 ${selected === q.ans ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'bg-rose-50 dark:bg-rose-950/30'}`}>
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl mx-auto">
-              <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 bg-white shadow-xl">
+              <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-800">
                 {selected === q.ans ? <CheckCircle2 className="w-12 h-12 text-emerald-500" /> : <X className="w-12 h-12 text-rose-500" />}
               </div>
-              <h3 className={`text-4xl font-black mb-6 font-serif ${selected === q.ans ? 'text-emerald-700' : 'text-rose-700'}`}>
+              <h3 className={`text-4xl font-black mb-6 font-serif ${selected === q.ans ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
                 {selected === q.ans ? 'Correct!' : 'Incorrect'}
               </h3>
-              <div className={`p-6 rounded-2xl border text-left ${selected === q.ans ? 'bg-white border-emerald-200' : 'bg-white border-rose-200'}`}>
-                <p className="font-medium text-lg text-slate-700 leading-relaxed"><span className="font-black text-slate-800">Explanation:</span> {q.explain}</p>
+              <div className={`p-6 rounded-2xl border text-left ${selected === q.ans ? 'bg-white dark:bg-slate-900 border-emerald-200 dark:border-emerald-900' : 'bg-white dark:bg-slate-900 border-rose-200 dark:border-rose-900'}`}>
+                <p className="font-medium text-lg text-slate-700 dark:text-slate-300 leading-relaxed"><span className="font-black text-slate-800 dark:text-slate-100">Explanation:</span> {q.explain}</p>
               </div>
             </motion.div>
           </div>
         )}
       </div>
 
-      <div className="p-4 bg-white border-t border-slate-100 shrink-0 z-20">
+      <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shrink-0 z-20">
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={phase === 'study' ? () => setPhase('quiz') : handleNextQuiz}
