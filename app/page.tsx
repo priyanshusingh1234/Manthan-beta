@@ -11,6 +11,7 @@ import LandingPage from '@/components/LandingPage';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import GauntletProgressCard from '@/components/GauntletProgressCard';
+import RecentDuelsCard from '@/components/RecentDuelsCard';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -67,6 +68,7 @@ export default function Home() {
           {/* Questions feed placed on the home screen */}
           <div className="mt-6">
             <GauntletProgressCard />
+            <RecentDuelsCard />
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Your Feed</h2>
               <Link
