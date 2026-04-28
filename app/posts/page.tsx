@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
@@ -12,6 +13,7 @@ import { Check } from 'lucide-react';
 const MAX_CHARS = 500;
 
 export default function SocialFeedPage() {
+    const router = useRouter();
     const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -456,7 +458,14 @@ export default function SocialFeedPage() {
             setFocused(false);
             if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
-            // Prepend the new post immediately so it's visible right away
+            // If it's a video clip, redirect to the Clips view with this post pinned first.
+            // ClipsClient already handles ?postId= by fetching that specific post first.
+            if (videoUrl) {
+                router.push(`/clips?postId=${newPostRaw.id}`);
+                return;  // no need to refresh the social feed
+            }
+
+            // For regular (non-video) posts: prepend immediately + background sync
             setPosts(prev => [optimisticPost, ...prev.filter(p => p.id !== optimisticPost.id)]);
 
             // Then silently refresh in the background to sync full db state

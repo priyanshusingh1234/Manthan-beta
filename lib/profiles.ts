@@ -115,9 +115,10 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
 export async function getProfilesMap(userIds: string[]): Promise<Map<string, Profile>> {
     if (!userIds.length) return new Map();
 
+    // Select only the columns used by callers to reduce payload size
     const { data, error } = await supabaseAdmin
         .from('profiles')
-        .select('*')
+        .select('id, full_name, avatar_url, username, school, is_teacher, total_points, xp, cosmetics, is_ghost')
         .in('id', userIds);
 
     if (error) {

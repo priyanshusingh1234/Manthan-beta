@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { getProfilesMap } from '@/lib/profiles';
-import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,11 +9,8 @@ async function getVerifiedUser(bearer?: string | null) {
     try {
         if (!bearer) return null;
         const token = bearer.replace(/^Bearer\s+/i, '');
-        const supabaseAnon = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-        const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
+        // Re-use supabaseAdmin — avoids creating a new client per request
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
         if (error || !user) return null;
         return user;
     } catch { return null; }
@@ -165,7 +161,7 @@ export async function GET(req: NextRequest) {
         const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 60 * 60 * 1000).toISOString();
         const CORE_SUBJECTS = ['Mathematics', 'Science', 'English', 'SST', 'English Literature', 'G.K'];
 
-        // ── Step 1: User context — ALL in parallel ────────────────────────────
+        // ── Step 1: User context — ALL in parallel ────────────────────────
         let userGrade: string | null = targetClass || null;
         let userSchoolName: string | null = null;
         let followingIds: string[] = [];
@@ -243,7 +239,7 @@ export async function GET(req: NextRequest) {
             };
         }
 
-        // ── Step 3: Launch ALL heavy queries in parallel ───────────────────────
+        // ── Step 3: Launch ALL heavy queries in ONE parallel batch ─────────────
         const bucketsFetch = subject
             ? fetchSubjectTimeBuckets(subject, userGrade)
             : Promise.all(CORE_SUBJECTS.map(sub => fetchSubjectTimeBuckets(sub, userGrade)));
@@ -290,13 +286,27 @@ export async function GET(req: NextRequest) {
             ])
             : Promise.resolve(null);
 
-        // Wait for ALL parallel fetches at once
-        const [bucketsRaw, schoolmatesRes, followingRaw, hardStatsRes, postsRaw] = await Promise.all([
+        // Layer 2: SRS review IDs (prefetch missed questions so Layer 2 needs no serial await)
+        const failedArr = userFailed.size > 0 ? shuffle(Array.from(userFailed)).slice(0, 2) : [];
+        const srsReviewFetch = failedArr.length > 0
+            ? supabaseAdmin.from('questions').select('*').in('id', failedArr)
+            : Promise.resolve(null);
+
+        // Layer 5: Stretch questions (one grade up) — also prefetch
+        const nextGrade = userGrade ? String(Number(userGrade) + 1) : null;
+        const stretchFetch = nextGrade
+            ? baseQ().eq('class_grade', nextGrade).order('created_at', { ascending: false }).limit(Math.ceil(limit * 0.10) * 2)
+            : Promise.resolve(null);
+
+        // Wait for EVERYTHING at once — single await point
+        const [bucketsRaw, schoolmatesRes, followingRaw, hardStatsRes, postsRaw, srsRes, stretchRes] = await Promise.all([
             bucketsFetch,
             schoolmatesFetch,
             followingAttemptsFetch,
             hardStatsFetch,
             postsFetch,
+            srsReviewFetch,
+            stretchFetch,
         ]);
 
         const bucketsData = subject
@@ -308,7 +318,7 @@ export async function GET(req: NextRequest) {
             if (b) b.isWeakness = true;
         }
 
-        // ── Step 4: Build the pool from fetched data ───────────────────────────
+        // ── Step 4: Build the pool from fetched data — NO more serial awaits ──
         let pool: any[] = [];
         const overFetch = subject ? 1 : 1.5;
 
@@ -352,30 +362,66 @@ export async function GET(req: NextRequest) {
             if (!addedInRound) runningL1 = false;
         }
 
-        // Layer 2 — SRS review (from already-fetched data, no extra query)
-        if (userFailed.size > 0 || userAttempted.size > 0) {
-            const failedArr = shuffle(Array.from(userFailed)).slice(0, 5);
-            const pickArr = failedArr.slice(0, 2);
-            if (pickArr.length > 0) {
-                const { data } = await supabaseAdmin.from('questions').select('*').in('id', pickArr);
-                shuffle(data || []).forEach((r: any) => {
-                    pool.push({ ...r, _layer: 2, _label: '🔄 Review: You missed this', _score: 95 });
-                });
-            }
+        // Layer 2 — SRS review (data already pre-fetched in parallel above)
+        if (srsRes && (srsRes as any).data?.length > 0) {
+            shuffle((srsRes as any).data).forEach((r: any) => {
+                pool.push({ ...r, _layer: 2, _label: '🔄 Review: You missed this', _score: 95 });
+            });
         }
 
-        // Layer 3 — Schoolmate trending (data already fetched in parallel)
-        if (schoolmatesRes && (schoolmatesRes as any).data?.length > 0) {
-            const schoolmateIds = ((schoolmatesRes as any).data || []).map((u: any) => u.id);
-            const { data: peerAttempts } = await supabaseAdmin
-                .from('question_attempts')
-                .select('question_id')
-                .in('user_id', schoolmateIds)
-                .eq('is_correct', true)
-                .order('created_at', { ascending: false })
-                .limit(40);
+        // Layer 3 — Schoolmate trending
+        // We have schoolmatesRes already. We now need their attempts — but this is
+        // a secondary query. We fire it as part of a small parallel batch with layer 4 & 5.
+        // Layer 4 hard-trending and layer 5 stretch also need secondary queries.
+        // Build up all secondary queries and fire them together.
+        const layer3SecondaryFetch = (schoolmatesRes && (schoolmatesRes as any).data?.length > 0)
+            ? (() => {
+                const schoolmateIds = ((schoolmatesRes as any).data || []).map((u: any) => u.id);
+                return supabaseAdmin.from('question_attempts')
+                    .select('question_id')
+                    .in('user_id', schoolmateIds)
+                    .eq('is_correct', true)
+                    .order('created_at', { ascending: false })
+                    .limit(40);
+            })()
+            : Promise.resolve(null);
 
-            const peerQIds = [...new Set((peerAttempts || []).map((a: any) => String(a.question_id)))]
+        // Layer 4 secondary — fetch actual hard questions from the stats
+        let trendingHardIds: string[] = [];
+        if (hardStatsRes && (hardStatsRes as any).data) {
+            const allAttempts = (hardStatsRes as any).data || [];
+            const statsMap: Record<string, { total: number; correct: number }> = {};
+            allAttempts.forEach((a: any) => {
+                const id = String(a.question_id);
+                if (!statsMap[id]) statsMap[id] = { total: 0, correct: 0 };
+                statsMap[id].total++;
+                if (a.is_correct) statsMap[id].correct++;
+            });
+            trendingHardIds = Object.entries(statsMap)
+                .filter(([, s]) => s.total >= 5 && s.correct / s.total < 0.4)
+                .sort(([, a], [, b]) => b.total - a.total)
+                .map(([id]) => id)
+                .filter(id => !userAttempted.has(id))
+                .slice(0, Math.ceil(limit * 0.10) * 3);
+        }
+
+        const layer4SecondaryFetch = (trendingHardIds.length > 0 && userGrade)
+            ? (() => {
+                let query = supabaseAdmin.from('questions').select('*').in('id', trendingHardIds).eq('class_grade', userGrade);
+                query = applyCommonFilters(query, subject, difficulty, chapter);
+                return query.limit(Math.ceil(limit * 0.10));
+            })()
+            : Promise.resolve(null);
+
+        // Layer 3 & 4 secondary queries fire in parallel
+        const [layer3AttemptsRes, layer4DataRes] = await Promise.all([
+            layer3SecondaryFetch,
+            layer4SecondaryFetch,
+        ]);
+
+        // Layer 3 — process results (need one more query for question details by IDs)
+        if (layer3AttemptsRes && (layer3AttemptsRes as any).data) {
+            const peerQIds = [...new Set(((layer3AttemptsRes as any).data || []).map((a: any) => String(a.question_id)))]
                 .filter(id => !userAttempted.has(id))
                 .slice(0, Math.ceil(limit * 0.15));
 
@@ -386,36 +432,16 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        // Layer 4 — Hard trending (data already fetched in parallel)
-        if (hardStatsRes && (hardStatsRes as any).data) {
-            const allAttempts = (hardStatsRes as any).data || [];
-            const statsMap: Record<string, { total: number; correct: number }> = {};
-            allAttempts.forEach((a: any) => {
-                const id = String(a.question_id);
-                if (!statsMap[id]) statsMap[id] = { total: 0, correct: 0 };
-                statsMap[id].total++;
-                if (a.is_correct) statsMap[id].correct++;
-            });
-            const trendingHard = Object.entries(statsMap)
-                .filter(([, s]) => s.total >= 5 && s.correct / s.total < 0.4)
-                .sort(([, a], [, b]) => b.total - a.total)
-                .map(([id]) => id)
-                .filter(id => !userAttempted.has(id))
-                .slice(0, Math.ceil(limit * 0.10) * 3);
-
-            if (trendingHard.length > 0 && userGrade) {
-                let query = supabaseAdmin.from('questions').select('*').in('id', trendingHard).eq('class_grade', userGrade);
-                query = applyCommonFilters(query, subject, difficulty, chapter);
-                const { data } = await query.limit(Math.ceil(limit * 0.10));
-                (data || []).forEach((r: any) => pool.push({ ...r, _layer: 4, _label: '🔥 Everyone\'s Struggling With This', _score: 85 }));
-            }
+        // Layer 4 — Hard trending (data from parallel fetch)
+        if (layer4DataRes && (layer4DataRes as any).data) {
+            ((layer4DataRes as any).data || []).forEach((r: any) =>
+                pool.push({ ...r, _layer: 4, _label: '🔥 Everyone\'s Struggling With This', _score: 85 })
+            );
         }
 
-        // Layer 5 — Stretch questions (one grade up)
-        if (userGrade) {
-            const nextGrade = String(Number(userGrade) + 1);
-            const { data } = await baseQ().eq('class_grade', nextGrade).order('created_at', { ascending: false }).limit(Math.ceil(limit * 0.10) * 2);
-            shuffle(data || []).slice(0, Math.ceil(limit * 0.10)).forEach((r: any) =>
+        // Layer 5 — Stretch questions (data already pre-fetched)
+        if (stretchRes && (stretchRes as any).data) {
+            shuffle((stretchRes as any).data).slice(0, Math.ceil(limit * 0.10)).forEach((r: any) =>
                 pool.push({ ...r, _layer: 5, _label: '🚀 Stretch: Class ' + nextGrade, _score: 80 })
             );
         }
@@ -540,11 +566,14 @@ export async function GET(req: NextRequest) {
         const qIds = finalPool.filter(r => r.type !== 'post').map(r => String(r.id));
         const creatorIds = [...new Set(finalPool.filter(r => r.type !== 'post').map(r => r.created_by).filter(Boolean))] as string[];
 
-        // Both in parallel
+        // Both in parallel, with a reasonable row cap on attempts
         const [profilesMap, attemptsRowsRes] = await Promise.all([
             getProfilesMap(creatorIds),
             qIds.length > 0
-                ? supabaseAdmin.from('question_attempts').select('question_id, is_correct').in('question_id', qIds)
+                ? supabaseAdmin.from('question_attempts')
+                    .select('question_id, is_correct')
+                    .in('question_id', qIds)
+                    .limit(2000)               // cap: enough for ~60 questions × reasonable attempts
                 : Promise.resolve({ data: [] })
         ]);
 
