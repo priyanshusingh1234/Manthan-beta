@@ -2,8 +2,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Star, BookOpen, AlertCircle, Share2, Check, Copy } from 'lucide-react';
+import { ChevronRight, Star, BookOpen, AlertCircle, Share2, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 
 const BASE_URL = 'https://dheeyudha.vercel.app';
 const CHAPTER  = 'Rise of Nationalism in Europe';
@@ -55,19 +57,38 @@ export default function GauntletProgressCard() {
       ? `💀 I reached the BOSS FIGHT in the "${CHAPTER}" Gauntlet on Dheeyudha! Come challenge me! #Dheeyudha`
       : `⚔️ I'm ${pct}% through the "${CHAPTER}" Gauntlet on Dheeyudha — Level ${level}/${TOTAL_LEVELS}! Join the battle! #Dheeyudha #StudyGoals`;
 
-    // Try native Web Share API first (mobile)
-    if (navigator.share) {
+    // Use Capacitor Share on native (Android/iOS) — same as rest of app
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Share.share({
+          title: 'My Gauntlet Progress — Dheeyudha',
+          text,
+          url: shareUrl,
+          dialogTitle: 'Share your Gauntlet progress',
+        });
+        setShared(true);
+        setTimeout(() => setShared(false), 2500);
+        return;
+      } catch (err) {
+        // User dismissed — do nothing
+        return;
+      }
+    }
+
+    // Web: try navigator.share (desktop PWA / Chrome) then fall to clipboard
+    if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({ title: 'My Gauntlet Progress — Dheeyudha', text, url: shareUrl });
         setShared(true);
         setTimeout(() => setShared(false), 2500);
         return;
-      } catch (err) {
-        // User cancelled — fall through to clipboard
+      } catch (err: any) {
+        // AbortError = user dismissed, not a real failure — don't copy clipboard
+        if (err?.name === 'AbortError') return;
       }
     }
 
-    // Desktop fallback: copy link to clipboard
+    // Clipboard fallback (desktop browsers without Web Share)
     try {
       await navigator.clipboard.writeText(`${text}\n${shareUrl}`);
       setCopied(true);
