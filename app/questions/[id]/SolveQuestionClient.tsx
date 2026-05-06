@@ -13,6 +13,7 @@ import CoopChallengeHeader from "@/components/CoopChallengeHeader";
 import CoopSpectatorScreen from "@/components/CoopSpectatorScreen";
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
+import { queueAchievementUnlock } from '@/components/AchievementUnlockOverlay';
 
 
 export default function SolveQuestionClient({ question }: { question: any }) {
@@ -178,6 +179,16 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 setShowWrongFlash(true);
                 setTimeout(() => setShowWrongFlash(false), 700);
             }
+
+            // ── Check achievement thresholds after every answer ──
+            try {
+                const meta = (await supabase.auth.getUser()).data.user?.user_metadata || {};
+                const attempts = Number(meta.battlesAttempted) || 0;
+                const wins = Number(meta.battlesWon) || 0;
+                if (attempts === 1)  queueAchievementUnlock('first_victory');
+                if (wins === 5)      queueAchievementUnlock('duel_hero');
+                if (attempts === 20) queueAchievementUnlock('final_boss');
+            } catch { /* non-fatal */ }
 
             if (question.subject) {
                  const timeTaken = Math.max(0, question.time_limit * 60 - timeLeft);

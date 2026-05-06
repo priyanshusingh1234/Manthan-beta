@@ -20,6 +20,7 @@ import { CallProvider } from '@/components/CallProvider';
 import CompleteProfileOverlay from '@/components/CompleteProfileOverlay';
 import StreakToast from '@/components/StreakToast';
 import { Toaster } from 'react-hot-toast';
+import AchievementUnlockOverlay from '@/components/AchievementUnlockOverlay';
 
 let nativePushInitialized = false;
 
@@ -513,6 +514,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       <GlobalCallListener />
       <GlobalPrefetcher isAuthenticated={isAuthenticated} />
       {isAuthenticated && <StreakToast />}
+      {isAuthenticated && <AchievementUnlockOverlay />}
     </CallProvider>
   );
 }

@@ -9,6 +9,7 @@ import { useTopRanks } from '@/hooks/useTopRanks';
 import PostCard from './PostCard';
 import VideoClipCard from './VideoClipCard';
 import { supabase } from '@/lib/supabaseClient';
+import AchievementCards from '@/components/AchievementCards';
 
 const iconsMapping: Record<string, any> = {
     trophy: Trophy,
@@ -168,12 +169,9 @@ export default function PublicProfileTabs({
       ? normalizedServerRank
       : normalizedServerRank ?? normalizedLiveRank;
 
-  const achievementsArr = [
-    { icon: Medal, title: 'First Victory', description: 'Won your first battle', earned: true },
-    { icon: Sword, title: 'Battle Master', description: 'Won 100 battles', earned: totalPoints > 1000 },
-    { icon: Brain, title: 'Quiz Genius', description: 'Perfect score in 10 quizzes', earned: true },
-    { icon: Award, title: 'Top Tier', description: 'Ranked in top 50 globally', earned: (effectiveRank || 99999) <= 50 },
-  ];
+  // battlesAttempted & battlesWon come through the `stats` array passed from the server
+  const battlesAttempted = parseInt(stats.find(s => s.icon === 'zap')?.value || '0', 10);
+  const battlesWon       = parseInt(stats.find(s => s.icon === 'trophy')?.value || '0', 10);
 
   return (
     <div className="w-full">
@@ -287,38 +285,15 @@ export default function PublicProfileTabs({
             )}
 
             {!isTeacher && (
-              <div className="mt-8 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
+              <div className="mt-8 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-6 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="p-3.5 bg-blue-50 dark:bg-blue-900/40 rounded-2xl border border-blue-100 dark:border-blue-800 shadow-inner group-hover:scale-110 transition-transform">
-                    <Award className="w-6 h-6 text-blue-600 dark:text-blue-400 drop-shadow-sm" />
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="p-3.5 bg-blue-50 dark:bg-blue-900/40 rounded-2xl border border-blue-100 dark:border-blue-800 shadow-inner">
+                    <Award className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Achievements</h2>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Achievements</h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {achievementsArr.map((achievement, index) => (
-                    <div
-                      key={index}
-                      className={`flex items-center p-5 rounded-2xl border transition-all duration-300 ${achievement.earned
-                        ? 'border-transparent bg-slate-50 dark:bg-slate-800/50'
-                        : 'border-slate-100 dark:border-slate-800 bg-transparent opacity-60'
-                        }`}
-                    >
-                      <div
-                        className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center mr-4 shadow-sm ${achievement.earned
-                          ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                          }`}
-                      >
-                        <achievement.icon className="w-6 h-6 drop-shadow-sm" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-slate-900 dark:text-white truncate uppercase text-xs tracking-wider">{achievement.title}</h3>
-                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">{achievement.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <AchievementCards battlesWon={battlesWon} battlesAttempted={battlesAttempted} />
               </div>
             )}
         </div>
