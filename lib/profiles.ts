@@ -28,6 +28,9 @@ export interface Profile {
     updated_at: string;
     cosmetics?: string[] | null;
     is_ghost?: boolean;
+    login_bonus_day: number;
+    last_login_claim_date: string | null;
+    login_bonus_completed: boolean;
 }
 
 /**
@@ -99,6 +102,9 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         username: meta.username || null,
         updated_at: new Date().toISOString(),
         cosmetics: meta.cosmetics || [],
+        login_bonus_day: Number(meta.loginBonusDay) || 0,
+        last_login_claim_date: meta.lastLoginClaimDate || null,
+        login_bonus_completed: meta.loginBonusCompleted === true,
     }, { onConflict: 'id' });
 
 

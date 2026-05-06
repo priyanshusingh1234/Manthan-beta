@@ -5,8 +5,9 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search, MessageSquare, Compass, Zap, Flame, PlaySquare } from 'lucide-react';
+import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search, MessageSquare, Compass, Zap, Flame, PlaySquare, Gift } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import LoginBonusModal from './LoginBonusModal';
 
 import { supabase } from '@/lib/supabaseClient';
 import NotificationBell from './NotificationBell';
@@ -67,6 +68,7 @@ interface PageInfo {
 const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [bonusModalOpen, setBonusModalOpen] = useState(false);
   const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const avatarButtonRef = useRef<HTMLButtonElement>(null);
@@ -277,9 +279,11 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
   };
 
   const pageInfo = getPageInfo();
+  const showBonusButton = user && user.user_metadata?.loginBonusCompleted !== true;
 
   return (
     <>
+      {bonusModalOpen && <LoginBonusModal onClose={() => setBonusModalOpen(false)} />}
       {/* Professional Mobile-Only Header */}
       <header className="md:hidden sticky top-0 z-[60] bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800/80 px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-3">
         <div className="flex items-center justify-between">
@@ -323,6 +327,15 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
         {/* Reddit-like Horizontal Links Slider */}
         {user && (
           <div className="mt-3 overflow-x-auto scrollbar-hide flex items-center gap-1.5 pb-1 snap-x">
+            {showBonusButton && (
+              <button
+                onClick={() => setBonusModalOpen(true)}
+                className="flex-shrink-0 snap-start flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all relative bg-gradient-to-r from-indigo-500 to-purple-500 border-indigo-400 text-white shadow-[0_0_10px_rgba(99,102,241,0.4)] animate-pulse"
+              >
+                <Gift className="w-3.5 h-3.5 text-white" />
+                <span>Daily Bonus</span>
+              </button>
+            )}
             {[
               { label: 'Streak 🔥', href: '/streaks', icon: Flame },
               { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
@@ -417,6 +430,16 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
 
               {isMounted && (
                 <div className="flex items-center gap-2">
+                  {showBonusButton && (
+                    <button
+                      onClick={() => setBonusModalOpen(true)}
+                      className="hidden md:flex items-center gap-1.5 px-3 h-10 rounded-full border text-sm font-black transition-all active:scale-95 bg-gradient-to-r from-indigo-500 to-purple-500 border-indigo-400 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)] animate-pulse"
+                      title="Daily Bonus"
+                    >
+                      <Gift className="w-4 h-4 text-white" />
+                      <span>Bonus</span>
+                    </button>
+                  )}
                   <Link
                     href="/search"
                     className={`hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all active:scale-95 relative ${isFirstSearch ? 'animate-pulse bg-white/30 border-white/50 shadow-[0_0_15px_rgba(255,255,255,0.4)]' : ''}`}
