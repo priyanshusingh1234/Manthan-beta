@@ -186,28 +186,17 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             notification: isIncomingCall ? undefined : {
                                                 channelId,
                                                 color,
-                                                icon: 'ic_notification',  // white monochrome in res/drawable
-                                                // Large icon = sender avatar (shows on right side on Android)
+                                                icon: 'ic_notification',
                                                 ...(params.actorAvatar ? { imageUrl: params.actorAvatar } : {}),
-                                                // BigText style — shows full body when pulled down
                                                 body: params.body,
                                                 title: params.title,
                                                 clickAction: 'OPEN_APP',
-                                                sound: isIncomingCall ? 'ringtone' : (channelId === 'duels' ? 'battle' : 'default'),
+                                                sound: channelId === 'duels' ? 'default' : 'default',
                                                 tag: params.type,
                                                 notificationCount: 1,
                                                 visibility: 'public',
                                                 ticker: params.title,
-                                                // ⚔️ Action buttons — only for duel challenges
-                                                // These show as tappable buttons on the lock screen & shade
-                                                ...(isDuel ? {
-                                                    actions: [
-                                                        { action: 'accept_duel',  title: '⚔️ Accept'  },
-                                                        { action: 'decline_duel', title: '❌ Decline' },
-                                                    ]
-                                                } : {}),
                                             },
-
                                         },
 
                                         apns: {
