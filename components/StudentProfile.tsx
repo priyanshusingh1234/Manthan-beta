@@ -20,7 +20,6 @@ import FollowButton from '@/components/FollowButton';
 import CropModal from '@/components/profile/CropModal';
 import EditProfileModal from '@/components/profile/EditProfileModal';
 import MyPostsSection from '@/components/MyPostsSection';
-import { useTopRanks } from '@/hooks/useTopRanks';
 import XPBar from '@/components/XPBar';
 import AchievementCards from '@/components/AchievementCards';
 
@@ -29,7 +28,7 @@ type BadgeKey = 'gold' | 'silver' | 'bronze' | 'topper';
 const MAX_EQUIPPED_BADGES = 3;
 
 const StudentProfile: React.FC = () => {
-  const { getRank } = useTopRanks();
+  const [exactRank, setExactRank] = useState<number | null>(null);
   const [userData, setUserData] = useState({
     name: 'Guest',
     school: '',
@@ -76,7 +75,7 @@ const StudentProfile: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const profileUserId = currentUser?.id;
-  const profileRank = profileUserId ? getRank(profileUserId) : null;
+  const profileRank = exactRank;
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -198,6 +197,14 @@ const StudentProfile: React.FC = () => {
       supabase.auth.getUser().then(({ data: fUser }) => {
         if (fUser?.user && mounted) setCurrentUser(fUser.user);
       });
+
+      // Async fetch exact global rank
+      fetch(`/api/user-rank/${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+           if (data.rank && mounted) setExactRank(data.rank);
+        })
+        .catch(err => console.error("Failed to fetch exact rank", err));
 
       // ── Step 1: Render immediately from metadata (instant) ──
       const meta = user.user_metadata || {};
