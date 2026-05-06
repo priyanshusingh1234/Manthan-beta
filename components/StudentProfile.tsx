@@ -22,6 +22,7 @@ import EditProfileModal from '@/components/profile/EditProfileModal';
 import MyPostsSection from '@/components/MyPostsSection';
 import { useTopRanks } from '@/hooks/useTopRanks';
 import XPBar from '@/components/XPBar';
+import AchievementCards from '@/components/AchievementCards';
 
 type BadgeKey = 'gold' | 'silver' | 'bronze' | 'topper';
 
@@ -240,17 +241,17 @@ const StudentProfile: React.FC = () => {
         if (syncRes.ok) {
           const { meta: syncedMeta } = await syncRes.json();
           if (syncedMeta) {
-              // The sync route might have "rescued" the avatar from DB to overwite a Google login.
-              // We must update the browser's UI cache to match the server IMMEDIATELY.
-              if (typeof window !== 'undefined') {
-                 localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(syncedMeta));
-                 window.dispatchEvent(new Event('user_metadata_updated'));
-              }
-              // Also update Step 1's meta so Step 3 freshPoints logic knows the restored values
-              Object.assign(meta, syncedMeta);
-              if (syncedMeta.avatar_url && !syncedMeta.avatar_url.includes('googleusercontent')) {
-                  metaAvatar = syncedMeta.avatar_url;
-              }
+            // The sync route might have "rescued" the avatar from DB to overwite a Google login.
+            // We must update the browser's UI cache to match the server IMMEDIATELY.
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(syncedMeta));
+              window.dispatchEvent(new Event('user_metadata_updated'));
+            }
+            // Also update Step 1's meta so Step 3 freshPoints logic knows the restored values
+            Object.assign(meta, syncedMeta);
+            if (syncedMeta.avatar_url && !syncedMeta.avatar_url.includes('googleusercontent')) {
+              metaAvatar = syncedMeta.avatar_url;
+            }
           }
         }
       } catch { /* non-blocking */ }
@@ -301,14 +302,14 @@ const StudentProfile: React.FC = () => {
         // This guarantees the browser's actual JWT is permanently purged of the Google avatar.
         const { data: freshUserData } = await supabase.auth.getUser();
         await supabase.auth.refreshSession();
-        
+
         if (freshUserData?.user && mounted) {
           const freshMeta = freshUserData.user.user_metadata || {};
           const freshAttempted = Number(freshMeta.battlesAttempted);
           const freshWon = Number(freshMeta.battlesWon);
-          
-          const guaranteedAvatar = dbProfile?.avatar_url && !dbProfile.avatar_url.includes('googleusercontent') 
-            ? dbProfile.avatar_url 
+
+          const guaranteedAvatar = dbProfile?.avatar_url && !dbProfile.avatar_url.includes('googleusercontent')
+            ? dbProfile.avatar_url
             : freshMeta.avatar_url;
 
           setUserData((s) => ({
@@ -432,7 +433,7 @@ const StudentProfile: React.FC = () => {
     const urlKey = `${type}_url`;
     const customUrlKey = `custom_${type}_url`;
     const maybeUrl = (currentUser.user_metadata?.[customUrlKey] || currentUser.user_metadata?.[urlKey]) as string | undefined;
-    
+
     // If we have an avatar_path / banner_path, use it. 
     // Fallback: Parse it from the URL if it's a Supabase public URL.
     if (!oldPath && maybeUrl && typeof maybeUrl === 'string') {
@@ -769,15 +770,15 @@ const StudentProfile: React.FC = () => {
                     <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-xl opacity-70 animate-pulse transition-opacity"></div>
                   )}
                   <div className={`relative w-24 h-24 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 sm:border-[5px] shadow-2xl bg-white dark:bg-slate-800 transition-transform duration-300 ${currentUser?.user_metadata?.cosmetics?.includes('avatar_glow')
-                      ? 'border-transparent shadow-indigo-500/50'
-                      : 'border-white dark:border-slate-900'
+                    ? 'border-transparent shadow-indigo-500/50'
+                    : 'border-white dark:border-slate-900'
                     }`}>
                     {typeof userData.avatar === 'string' && userData.avatar.startsWith('http') ? (
                       <Image src={userData.avatar} alt="avatar" width={144} height={144} className={`object-cover w-full h-full transition-opacity ${avatarUploading ? 'opacity-30' : 'opacity-100'}`} />
                     ) : (
                       <div className={`w-full h-full flex items-center justify-center text-4xl sm:text-5xl transition-opacity ${avatarUploading ? 'opacity-30' : 'opacity-100'}`}>{userData.avatar}</div>
                     )}
-                    
+
                     {avatarUploading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/5">
                         <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
@@ -1064,11 +1065,26 @@ const StudentProfile: React.FC = () => {
               {/* Achievements */}
               <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm p-8 border border-slate-100 dark:border-slate-800 relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                <div className="flex items-center gap-4 mb-8">
+                <div className="flex items-center gap-4 mb-6">
                   <div className="p-3.5 bg-blue-50 dark:bg-blue-900/40 rounded-2xl border border-blue-100 dark:border-blue-800 shadow-inner group-hover:scale-110 transition-transform">
                     <Award className="w-6 h-6 text-blue-600 dark:text-blue-400 drop-shadow-sm" />
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Achievements</h2>
+                </div>
+
+                {/* ── Animated COD-skin achievement cards ── */}
+                <div className="mb-6">
+                  <AchievementCards
+                    battlesWon={userData.battlesWon}
+                    battlesAttempted={userData.battlesAttempted}
+                  />
+                </div>
+
+                {/* ── Divider ── */}
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">More Achievements</span>
+                  <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
                 </div>
                 <div className="space-y-4">
                   {achievements.map((achievement, index) => (

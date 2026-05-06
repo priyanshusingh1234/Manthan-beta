@@ -26,6 +26,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const [result, setResult] = useState<{ isCorrect: boolean, newTotal: number, correctOption: number, pointsChange: number, xpGained?: number, newXp?: number } | null>(null);
     const [startedAt] = useState(() => new Date().toISOString());
     const [showXpBurst, setShowXpBurst] = useState(false);
+    const [showWrongFlash, setShowWrongFlash] = useState(false);
 
     const [authChecked, setAuthChecked] = useState(false);
     const [alreadyAttempted, setAlreadyAttempted] = useState<any>(null);
@@ -172,6 +173,10 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 } catch (e) {
                     // Ignore haptics/confetti errors on unsupported devices
                 }
+            } else {
+                // ── Wrong answer: red flash overlay ──
+                setShowWrongFlash(true);
+                setTimeout(() => setShowWrongFlash(false), 700);
             }
 
             if (question.subject) {
@@ -392,6 +397,52 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     if (result) {
         return (
             <div className="relative">
+
+            {/* ── Red flash overlay (wrong answer) ── */}
+            <AnimatePresence>
+                {showWrongFlash && (
+                    <motion.div
+                        key="wrong-flash"
+                        className="fixed inset-0 z-[9998] pointer-events-none bg-red-500"
+                        initial={{ opacity: 0.45 }}
+                        animate={{ opacity: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.65, ease: 'easeOut' }}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* ── Floating -N pts burst (sinks from centre, wrong answer) ── */}
+            <AnimatePresence>
+                {!result.isCorrect && result.pointsChange !== 0 && (
+                    <motion.div
+                        key="pts-drop"
+                        className="fixed z-[9999] left-1/2 -translate-x-1/2 pointer-events-none"
+                        initial={{ y: 0, opacity: 1, scale: 0.7 }}
+                        animate={{ y: 80, opacity: 0, scale: 1.1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                        style={{ top: '42%' }}
+                    >
+                        <div className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 text-white font-black text-lg px-5 py-2.5 rounded-2xl shadow-2xl shadow-red-500/40">
+                            <XCircle className="w-5 h-5" />
+                            {result.pointsChange} pts
+                        </div>
+                        {/* Smoke dots */}
+                        <motion.div
+                            className="absolute -top-1 -right-1 w-3 h-3 bg-red-300 rounded-full"
+                            animate={{ scale: [1, 1.6, 0], opacity: [1, 0.6, 0] }}
+                            transition={{ duration: 0.7, delay: 0.1 }}
+                        />
+                        <motion.div
+                            className="absolute -bottom-1 -left-1 w-2 h-2 bg-rose-400 rounded-full"
+                            animate={{ scale: [1, 1.8, 0], opacity: [1, 0.6, 0] }}
+                            transition={{ duration: 0.7, delay: 0.2 }}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* ── Floating +XP burst (fixed overlay, rises from bottom-centre) ── */}
             <AnimatePresence>
                 {showXpBurst && result.xpGained && result.xpGained > 0 && (
@@ -430,9 +481,27 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                             <CheckCircle2 className="w-10 h-10" />
                         </div>
                     ) : (
-                        <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center">
-                            <XCircle className="w-10 h-10" />
-                        </div>
+                        <motion.div
+                            className="relative flex items-center justify-center"
+                            initial={{ scale: 0.4, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 18 }}
+                        >
+                            {/* Pulsing red glow ring */}
+                            <motion.div
+                                className="absolute w-28 h-28 rounded-full bg-red-400/30"
+                                animate={{ scale: [1, 1.5, 1], opacity: [0.6, 0, 0.6] }}
+                                transition={{ duration: 1.4, repeat: 2, ease: 'easeInOut' }}
+                            />
+                            {/* Shake + icon */}
+                            <motion.div
+                                className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center relative z-10"
+                                animate={{ x: [0, -10, 10, -8, 8, -5, 5, 0] }}
+                                transition={{ duration: 0.55, delay: 0.05, ease: 'easeInOut' }}
+                            >
+                                <XCircle className="w-10 h-10" />
+                            </motion.div>
+                        </motion.div>
                     )}
                 </div>
                 <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">
