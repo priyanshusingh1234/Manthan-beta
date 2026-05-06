@@ -37,6 +37,7 @@ export function queueAchievementUnlock(id: AchievementId) {
   const shown: AchievementId[] = JSON.parse(localStorage.getItem('shown_achievements') || '[]');
   if (!existing.includes(id) && !shown.includes(id)) {
     localStorage.setItem(QUEUE_KEY, JSON.stringify([...existing, id]));
+    window.dispatchEvent(new Event('check_achievements'));
   }
 }
 
@@ -65,18 +66,31 @@ export default function AchievementUnlockOverlay() {
   const [current, setCurrent] = useState<AchievementId | null>(null);
   const [showContent, setShowContent] = useState(false);
 
-  // Check queue on mount + after navigation
+  // Check queue on mount + after navigation + on custom event
   useEffect(() => {
     const check = () => {
-      const next = popNextAchievement();
-      if (next) {
-        setCurrent(next);
-        setTimeout(() => setShowContent(true), 400);
-      }
+      // Don't pop if we are already showing one
+      setCurrent((prev) => {
+          if (prev) return prev;
+          const next = popNextAchievement();
+          if (next) {
+              setTimeout(() => setShowContent(true), 400);
+              return next;
+          }
+          return null;
+      });
     };
+    
     // Small delay so the home page renders first
     const t = setTimeout(check, 1200);
-    return () => clearTimeout(t);
+    
+    // Listen for real-time unlocks
+    window.addEventListener('check_achievements', check);
+    
+    return () => {
+        clearTimeout(t);
+        window.removeEventListener('check_achievements', check);
+    };
   }, []);
 
   const dismiss = () => {

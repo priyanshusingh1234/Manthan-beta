@@ -187,8 +187,8 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     const meta = user.user_metadata || {};
                     const attempts = Number(meta.battlesAttempted) || 0;
 
-                    if (attempts === 1)  queueAchievementUnlock('first_victory');
-                    if (attempts === 20) queueAchievementUnlock('final_boss');
+                    if (attempts >= 1)  queueAchievementUnlock('first_victory');
+                    if (attempts >= 20) queueAchievementUnlock('final_boss');
 
                     // Duel Hero: count real 1v1 duel wins
                     const { count: duelWins } = await supabase
@@ -196,7 +196,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                         .select('*', { count: 'exact', head: true })
                         .eq('winner_id', user.id)
                         .eq('status', 'completed');
-                    if ((duelWins ?? 0) === 5) queueAchievementUnlock('duel_hero');
+                    if ((duelWins ?? 0) >= 5) queueAchievementUnlock('duel_hero');
                 }
             } catch { /* non-fatal */ }
 
