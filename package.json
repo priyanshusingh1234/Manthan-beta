@@ -20,6 +20,7 @@
     "@capacitor/share": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capgo/capacitor-incoming-call-kit": "^8.1.1",
+    "@capgo/capacitor-share-target": "^8.0.30",
     "@google/genai": "^1.42.0",
     "@google/generative-ai": "^0.24.1",
     "@react-three/drei": "^10.7.7",

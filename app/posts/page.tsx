@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
@@ -9,11 +9,13 @@ import { ImageIcon, X, Sparkles, User, Send, Video, Loader2 } from 'lucide-react
 import Image from 'next/image';
 import { compressImage } from '@/utils/compressImage';
 import { Check } from 'lucide-react';
+import { Suspense } from 'react';
 
 const MAX_CHARS = 500;
 
-export default function SocialFeedPage() {
+function SocialFeedContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -172,6 +174,16 @@ export default function SocialFeedPage() {
         });
         return () => { mounted = false; };
     }, [fetchFeed]);
+
+    // Handle incoming shared text
+    useEffect(() => {
+        const shareText = searchParams?.get('share');
+        if (shareText && !content) {
+            setContent(shareText);
+            setFocused(true);
+            setTimeout(autoGrow, 100);
+        }
+    }, [searchParams]);
 
     // ── Mention logic ───────────────────────────────────────────────────────
     useEffect(() => {
@@ -775,5 +787,13 @@ export default function SocialFeedPage() {
                 </div>
             </main>
         </div>
+    );
+}
+
+export default function SocialFeedPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div></div>}>
+            <SocialFeedContent />
+        </Suspense>
     );
 }

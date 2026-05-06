@@ -211,6 +211,21 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       if (path) safeNavigate(path, navigate);
     });
 
+    // ── Handle Incoming Android Shares (WhatsApp, etc.) ──
+    try {
+      const { ShareTarget } = await import('@capgo/capacitor-share-target');
+      ShareTarget.addListener('shareReceived', (data) => {
+        console.log('[NativePush] shareReceived:', data);
+        const text = data.text || data.url || data.title || '';
+        if (text) {
+          // Send them to the posts page and trigger the compose modal with the shared text
+          safeNavigate(`/posts?share=${encodeURIComponent(text)}`, navigate);
+        }
+      });
+    } catch (e) {
+      console.log('ShareTarget not supported/installed', e);
+    }
+
     // ── Check permissions and register ──
     let permStatus = await PushNotifications.checkPermissions();
     if (permStatus.receive === 'prompt') {
