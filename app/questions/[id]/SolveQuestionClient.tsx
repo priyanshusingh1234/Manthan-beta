@@ -180,13 +180,13 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 setTimeout(() => setShowWrongFlash(false), 700);
             }
 
-            // ── Check achievement thresholds after every answer ──
+            // ── Check achievement thresholds (lifetime totals) ──
             try {
                 const meta = (await supabase.auth.getUser()).data.user?.user_metadata || {};
                 const attempts = Number(meta.battlesAttempted) || 0;
-                const wins = Number(meta.battlesWon) || 0;
+                const wins     = Number(meta.battlesWon)      || 0;
                 if (attempts === 1)  queueAchievementUnlock('first_victory');
-                if (wins === 5)      queueAchievementUnlock('duel_hero');
+                if (wins     === 5)  queueAchievementUnlock('duel_hero');
                 if (attempts === 20) queueAchievementUnlock('final_boss');
             } catch { /* non-fatal */ }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { Sword, Swords, Lock, CheckCircle2 } from 'lucide-react';
 
@@ -368,9 +368,20 @@ export function CardFinalBoss({ earned, progress, current }: { earned: boolean; 
 export default function AchievementCards({ battlesWon, battlesAttempted }: { battlesWon: number; battlesAttempted: number }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 16 }}>
-      <CardFirstVictory earned={battlesAttempted >= 1} progress={Math.min(battlesAttempted, 1)} />
-      <CardDuelHero earned={battlesWon >= 5} progress={Math.min(battlesWon / 5, 1)} current={battlesWon} />
-      <CardFinalBoss earned={battlesAttempted >= 20} progress={Math.min(battlesAttempted / 20, 1)} current={battlesAttempted} />
+      <CardFirstVictory
+        earned={battlesAttempted >= 1}
+        progress={Math.min(battlesAttempted / 1, 1)}
+      />
+      <CardDuelHero
+        earned={battlesWon >= 5}
+        progress={Math.min(battlesWon / 5, 1)}
+        current={battlesWon}
+      />
+      <CardFinalBoss
+        earned={battlesAttempted >= 20}
+        progress={Math.min(battlesAttempted / 20, 1)}
+        current={battlesAttempted}
+      />
     </div>
   );
 }
