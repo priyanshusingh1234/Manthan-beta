@@ -89,13 +89,79 @@ export async function createNotification(params: CreateNotificationParams): Prom
                         if (sub.p256dh_key === 'native') {
                             if (firebaseAdmin.apps.length > 0) {
                                 try {
-                                     await firebaseAdmin.messaging().send({
+                                    // ─── Per-type channel & color mapping ──────────────────
+                                    // Each channel is pre-created in the Capacitor app with
+                                    // its own sound/vibration profile so Android shows the
+                                    // right behavior without any extra code here.
+                                    type ChannelId = 'duels' | 'social' | 'academic' | 'alerts' | 'calls' | 'default';
+                                    const CHANNEL_MAP: Record<string, ChannelId> = {
+                                        coop_challenge:       'duels',
+                                        new_follower:         'social',
+                                        following_post:       'social',
+                                        social_comment:       'social',
+                                        post_mention:         'social',
+                                        streak_friend:        'social',
+                                        answer_approved:      'academic',
+                                        answer_flagged:       'academic',
+                                        ai_confirmed_correct: 'academic',
+                                        ai_confirmed_wrong:   'academic',
+                                        new_question:         'academic',
+                                        points_earned:        'alerts',
+                                        weekly_report:        'alerts',
+                                        war_declared:         'duels',
+                                        war_preparation:      'duels',
+                                        war_started:          'duels',
+                                        incoming_call:        'calls',
+                                        missed_call:          'calls',
+                                        chat_message:         'social',
+                                    };
+                                    const COLOR_MAP: Record<string, string> = {
+                                        coop_challenge:       '#f97316', // orange — battle
+                                        new_follower:         '#ec4899', // pink — social
+                                        social_comment:       '#3b82f6', // blue
+                                        post_mention:         '#3b82f6',
+                                        following_post:       '#6366f1',
+                                        streak_friend:        '#f97316',
+                                        answer_approved:      '#10b981', // emerald — correct
+                                        ai_confirmed_correct: '#10b981',
+                                        answer_flagged:       '#ef4444', // red — wrong
+                                        ai_confirmed_wrong:   '#ef4444',
+                                        new_question:         '#6366f1', // indigo — academic
+                                        points_earned:        '#f59e0b', // amber — reward
+                                        weekly_report:        '#06b6d4', // cyan
+                                        war_declared:         '#dc2626',
+                                        war_preparation:      '#d97706',
+                                        war_started:          '#dc2626',
+                                        incoming_call:        '#6366f1',
+                                        chat_message:         '#3b82f6',
+                                    };
+
+                                    const channelId: ChannelId = CHANNEL_MAP[params.type] || 'default';
+                                    const color = COLOR_MAP[params.type] || '#4f46e5';
+                                    const isDuel = params.type === 'coop_challenge';
+                                    const isIncomingCall = params.type === 'incoming_call';
+
+                                    // Action buttons (Android only — shown in notification shade)
+                                    const actions: admin.messaging.AndroidFcmOptions[] = [];
+                                    // We pass actions via data so Capacitor/FCM can register them
+                                    const actionsData: Record<string, string> = {};
+                                    if (isDuel) {
+                                        actionsData['action_1_id']    = 'accept_duel';
+                                        actionsData['action_1_title'] = '⚔️ Accept';
+                                        actionsData['action_1_url']   = params.href || '/duels';
+                                        actionsData['action_2_id']    = 'decline_duel';
+                                        actionsData['action_2_title'] = '❌ Decline';
+                                    }
+
+                                    await firebaseAdmin.messaging().send({
                                         token: sub.endpoint,
-                                        // Data-only push is required for Incoming Call on Android to wake JS
-                                        notification: params.type === 'incoming_call' ? undefined : {
+
+                                        // Incoming call uses data-only to wake JS (IncomingCallKit)
+                                        notification: isIncomingCall ? undefined : {
                                             title: params.title,
                                             body: params.body,
                                         },
+
                                         data: {
                                             title: params.title,
                                             body: params.body,
@@ -104,29 +170,55 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             link: params.href || '/',
                                             deep_link: params.href || '/',
                                             type: params.type,
-                                            // Extract roomId from href so IncomingCallKit can use it
                                             roomId: params.href?.split('/chat/')?.[1]?.split('?')?.[0] || '',
                                             callerName: params.actorName || params.title || 'Scholar',
+                                            // Actor info — used by the app to show avatar in notification
+                                            actor_name:   params.actorName   || '',
+                                            actor_avatar: params.actorAvatar || '',
                                             click_action: 'OPEN_APP',
+                                            // Action buttons (handled by Capacitor PushNotifications listener)
+                                            ...actionsData,
                                         },
+
                                         android: {
-                                            priority: 'high',
-                                            notification: params.type === 'incoming_call' ? undefined : {
-                                                channelId: 'default',
-                                                color: '#4f46e5',
+                                            priority: (isIncomingCall || isDuel) ? 'high' : 'normal',
+                                            collapseKey: channelId, // group same-channel notifications
+                                            notification: isIncomingCall ? undefined : {
+                                                channelId,
+                                                color,
+                                                icon: 'ic_notification',  // white monochrome in res/drawable
+                                                // Large icon = sender avatar (shows on right side on Android)
+                                                ...(params.actorAvatar ? { imageUrl: params.actorAvatar } : {}),
+                                                // BigText style — shows full body when pulled down
+                                                body: params.body,
+                                                title: params.title,
                                                 clickAction: 'OPEN_APP',
-                                                tag: (params.type === 'missed_call') ? 'incoming_call' : params.type,
-                                                icon: 'ic_notification',
-                                                sound: params.type === 'missed_call' ? undefined : 'default'
-                                            }
+                                                sound: isIncomingCall ? 'ringtone' : (channelId === 'duels' ? 'battle' : 'default'),
+                                                tag: params.type, // replaces previous notif of same type (dedupes)
+                                                // Notification group — Android bundles these together
+                                                notificationCount: 1,
+                                                // Visibility on lock screen: PUBLIC = show full content
+                                                visibility: 'public',
+                                                // Show ticker text in status bar
+                                                ticker: params.title,
+                                            },
                                         },
+
                                         apns: {
                                             payload: {
                                                 aps: {
-                                                    category: params.type === 'incoming_call' ? 'incoming_call' : undefined
+                                                    alert: { title: params.title, body: params.body },
+                                                    sound: isDuel ? 'battle.caf' : 'default',
+                                                    badge: 1,
+                                                    category: isIncomingCall ? 'incoming_call' : (isDuel ? 'duel_challenge' : undefined),
+                                                    'mutable-content': 1,
                                                 }
-                                            }
-                                        }
+                                            },
+                                            headers: {
+                                                // High priority for time-sensitive notifications
+                                                'apns-priority': (isIncomingCall || isDuel) ? '10' : '5',
+                                            },
+                                        },
                                     });
                                 } catch (fcmErr) {
                                     console.error('[createNotification] FCM Push failed:', fcmErr);

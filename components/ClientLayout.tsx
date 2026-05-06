@@ -208,11 +208,66 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
     if (permStatus.receive === 'granted') {
       await PushNotifications.createChannel({
         id: 'default',
-        name: 'Alerts',
-        description: 'Important notifications like follows and challenges',
+        name: 'General',
+        description: 'General notifications',
+        importance: 3,
+        visibility: 1,
+        vibration: true,
+      });
+      await PushNotifications.createChannel({
+        id: 'duels',
+        name: '⚔️ Duels & Battles',
+        description: 'Duel challenges, war declarations, and battle results',
+        importance: 5,       // IMPORTANCE_HIGH — heads-up notification
+        visibility: 1,       // VISIBILITY_PUBLIC — show on lock screen
+        vibration: true,
+        sound: 'battle',     // res/raw/battle.mp3 in the Android project
+        lights: true,
+        lightColor: '#f97316', // orange
+      });
+      await PushNotifications.createChannel({
+        id: 'social',
+        name: '👥 Social',
+        description: 'Follows, comments, mentions, streaks, and chats',
+        importance: 4,
+        visibility: 1,
+        vibration: true,
+        sound: 'default',
+        lights: true,
+        lightColor: '#3b82f6', // blue
+      });
+      await PushNotifications.createChannel({
+        id: 'academic',
+        name: '📚 Academic',
+        description: 'Answer reviews, new questions, and AI feedback',
+        importance: 4,
+        visibility: 1,
+        vibration: true,
+        sound: 'default',
+        lights: true,
+        lightColor: '#6366f1', // indigo
+      });
+      await PushNotifications.createChannel({
+        id: 'alerts',
+        name: '🏆 Rewards & Alerts',
+        description: 'Points earned, weekly reports, and achievements',
+        importance: 3,
+        visibility: 1,
+        vibration: false,
+        sound: 'default',
+        lights: true,
+        lightColor: '#f59e0b', // amber
+      });
+      await PushNotifications.createChannel({
+        id: 'calls',
+        name: '📞 Calls',
+        description: 'Incoming and missed voice calls',
         importance: 5,
         visibility: 1,
-        vibration: true
+        vibration: true,
+        sound: 'ringtone',
+        lights: true,
+        lightColor: '#6366f1',
       });
       await PushNotifications.registerActionTypes({
         types: [
