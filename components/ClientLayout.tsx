@@ -222,7 +222,7 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
         id: 'default',
         name: 'General',
         description: 'General notifications',
-        importance: 3,
+        importance: 4,
         visibility: 1,
         vibration: true,
       });
@@ -263,9 +263,9 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
         id: 'alerts',
         name: '🏆 Rewards & Alerts',
         description: 'Points earned, weekly reports, and achievements',
-        importance: 3,
+        importance: 4,
         visibility: 1,
-        vibration: false,
+        vibration: true,
         sound: 'default',
         lights: true,
         lightColor: '#f59e0b', // amber

@@ -181,7 +181,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         },
 
                                         android: {
-                                            priority: (isIncomingCall || isDuel) ? 'high' : 'normal',
+                                            priority: 'high',
                                             collapseKey: channelId, // group same-channel notifications
                                             notification: isIncomingCall ? undefined : {
                                                 channelId,

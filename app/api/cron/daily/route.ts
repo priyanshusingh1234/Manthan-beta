@@ -88,7 +88,7 @@ export async function GET(req: Request) {
                     
                     await createNotification({
                         userId: p.id,
-                        type: 'system',
+                        type: 'points_earned',
                         title: '🎁 Daily Bonus Ready!',
                         body: `Don't break your streak! Claim ${reward} today in your Daily Bonus window.`,
                         href: '/',
