@@ -157,6 +157,18 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       const data = action.notification?.data || {};
       const url = data.url || data.href || data.link || data.deep_link;
 
+      // ── Duel action buttons ──────────────────────────────────────────────
+      if (action.actionId === 'accept_duel') {
+        // Navigate to the duel page directly
+        const path = normalizeInAppPath(data.action_1_url || url || '/duels');
+        if (path) safeNavigate(path, navigate);
+        return;
+      } else if (action.actionId === 'decline_duel') {
+        // Just dismiss — no navigation needed
+        return;
+      }
+
+      // ── Call action buttons ──────────────────────────────────────────────
       if (action.actionId === 'answer') {
         if (url && url.includes('/chat/')) {
           const path = normalizeInAppPath(url);
@@ -167,7 +179,6 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
         const roomIdMatch = url?.match(/\/chat\/([^?]+)/);
         if (roomIdMatch && roomIdMatch[1]) {
           const roomId = roomIdMatch[1];
-          // End call silently without opening foreground routing
           supabase.auth.getUser().then(({ data: { user } }) => {
             if (user) {
               supabase.from('chat_messages').insert({
@@ -274,8 +285,16 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
           {
             id: 'incoming_call',
             actions: [
-              { id: 'answer', title: 'Answer', foreground: true },
-              { id: 'decline', title: 'Decline', foreground: false, destructive: true } // destructive true implies red/decline
+              { id: 'answer',  title: 'Answer',  foreground: true },
+              { id: 'decline', title: 'Decline', foreground: false, destructive: true },
+            ]
+          },
+          {
+            // Duel challenge — Accept/Decline buttons on Android lock screen
+            id: 'duel_challenge',
+            actions: [
+              { id: 'accept_duel',  title: '⚔️ Accept',  foreground: true },
+              { id: 'decline_duel', title: '❌ Decline', foreground: false, destructive: true },
             ]
           }
         ]

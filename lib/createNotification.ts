@@ -194,14 +194,20 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                                 title: params.title,
                                                 clickAction: 'OPEN_APP',
                                                 sound: isIncomingCall ? 'ringtone' : (channelId === 'duels' ? 'battle' : 'default'),
-                                                tag: params.type, // replaces previous notif of same type (dedupes)
-                                                // Notification group — Android bundles these together
+                                                tag: params.type,
                                                 notificationCount: 1,
-                                                // Visibility on lock screen: PUBLIC = show full content
                                                 visibility: 'public',
-                                                // Show ticker text in status bar
                                                 ticker: params.title,
+                                                // ⚔️ Action buttons — only for duel challenges
+                                                // These show as tappable buttons on the lock screen & shade
+                                                ...(isDuel ? {
+                                                    actions: [
+                                                        { action: 'accept_duel',  title: '⚔️ Accept'  },
+                                                        { action: 'decline_duel', title: '❌ Decline' },
+                                                    ]
+                                                } : {}),
                                             },
+
                                         },
 
                                         apns: {
