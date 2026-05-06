@@ -90,6 +90,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         streak_count: Number(meta.streakCount) || 0,
         streak_longest: Number(meta.streakLongest) || 0,
         last_streak_at: meta.lastStreakAt || null,
+        last_streak_count: Number(meta.lastStreakCount) || 0,
         daily_solve_count: Number(meta.dailySolveCount) || 0,
         daily_solve_date: meta.dailySolveDate || null,
         daily_solved: Number(meta.dailySolved) || 0,
@@ -99,6 +100,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         updated_at: new Date().toISOString(),
         cosmetics: meta.cosmetics || [],
     }, { onConflict: 'id' });
+
 
     if (error) {
         console.error('[upsertProfile] failed:', error.message);

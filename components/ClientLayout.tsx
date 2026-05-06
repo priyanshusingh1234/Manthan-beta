@@ -19,6 +19,7 @@ import { CallProvider } from '@/components/CallProvider';
 
 import CompleteProfileOverlay from '@/components/CompleteProfileOverlay';
 import StreakToast from '@/components/StreakToast';
+import StreakLostOverlay from '@/components/StreakLostOverlay';
 import { Toaster } from 'react-hot-toast';
 import AchievementUnlockOverlay from '@/components/AchievementUnlockOverlay';
 
@@ -588,6 +589,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       <GlobalCallListener />
       <GlobalPrefetcher isAuthenticated={isAuthenticated} />
       {isAuthenticated && <StreakToast />}
+      {isAuthenticated && <StreakLostOverlay />}
       {isAuthenticated && <AchievementUnlockOverlay />}
     </CallProvider>
   );

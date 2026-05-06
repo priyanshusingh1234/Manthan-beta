@@ -270,6 +270,7 @@ export async function POST(req: Request) {
         let newStreakCount     = dbStreakCount;
         let newStreakLongest   = dbStreakLongest;
         let newLastStreakAt    = dbLastStreakAt;
+        let lastStreakCount    = Number((profile as any)?.last_streak_count) || dbStreakCount;
 
         if (dbDailySolveDate === todayStr) {
             // Same day — just increment daily count
@@ -280,6 +281,8 @@ export async function POST(req: Request) {
 
             // If they missed yesterday (last solve wasn't yesterday) → break streak
             if (dbLastStreakAt && dbDailySolveDate !== yesterdayStr && dbDailySolveDate !== todayStr) {
+                // Save the streak they had before losing it
+                lastStreakCount = dbStreakCount;
                 newStreakCount = 0; // streak broken
             }
         }
@@ -296,6 +299,7 @@ export async function POST(req: Request) {
         }
         // ────────────────────────────────────────────────────────────────
 
+
         const updatedMeta = {
             ...userMeta,
             totalPoints: newTotal,
@@ -305,6 +309,7 @@ export async function POST(req: Request) {
             streakCount: newStreakCount,
             streakLongest: newStreakLongest,
             lastStreakAt: newLastStreakAt,
+            lastStreakCount,        // ← the streak count before it was lost
             dailySolveCount: newDailySolveCount,
             dailySolveDate: todayStr,
         };
