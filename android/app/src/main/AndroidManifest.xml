@@ -20,9 +20,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- FCM Notification Tap Launch Intent (maps to click_action: OPEN_APP) -->
+            <!-- FCM Notification Tap Launch Intents -->
             <intent-filter>
                 <action android:name="OPEN_APP" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="duel_challenge" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="incoming_call" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
