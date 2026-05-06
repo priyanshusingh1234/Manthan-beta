@@ -182,12 +182,22 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
             // ── Check achievement thresholds (lifetime totals) ──
             try {
-                const meta = (await supabase.auth.getUser()).data.user?.user_metadata || {};
-                const attempts = Number(meta.battlesAttempted) || 0;
-                const wins     = Number(meta.battlesWon)      || 0;
-                if (attempts === 1)  queueAchievementUnlock('first_victory');
-                if (wins     === 5)  queueAchievementUnlock('duel_hero');
-                if (attempts === 20) queueAchievementUnlock('final_boss');
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const meta = user.user_metadata || {};
+                    const attempts = Number(meta.battlesAttempted) || 0;
+
+                    if (attempts === 1)  queueAchievementUnlock('first_victory');
+                    if (attempts === 20) queueAchievementUnlock('final_boss');
+
+                    // Duel Hero: count real 1v1 duel wins
+                    const { count: duelWins } = await supabase
+                        .from('duel_challenges')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('winner_id', user.id)
+                        .eq('status', 'completed');
+                    if ((duelWins ?? 0) === 5) queueAchievementUnlock('duel_hero');
+                }
             } catch { /* non-fatal */ }
 
             if (question.subject) {

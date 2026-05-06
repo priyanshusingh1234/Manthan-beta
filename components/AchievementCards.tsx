@@ -3,6 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { Sword, Swords, Lock, CheckCircle2 } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 
 /* ── inject CSS once ─────────────────────────────────────────────────────── */
 let injected = false;
@@ -366,6 +367,27 @@ export function CardFinalBoss({ earned, progress, current }: { earned: boolean; 
 
 /* ── default export: 3-card grid ─────────────────────────────────────────── */
 export default function AchievementCards({ battlesWon, battlesAttempted }: { battlesWon: number; battlesAttempted: number }) {
+  // Fetch REAL 1v1 duel wins from duel_challenges table
+  // battlesWon just counts correct answers — not actual duel victories.
+  const [realDuelWins, setRealDuelWins] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function fetchDuelWins() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setRealDuelWins(0); return; }
+      const { count } = await supabase
+        .from('duel_challenges')
+        .select('*', { count: 'exact', head: true })
+        .eq('winner_id', user.id)
+        .eq('status', 'completed');
+      setRealDuelWins(count ?? 0);
+    }
+    fetchDuelWins();
+  }, []);
+
+  // Show a loading state until duel wins are fetched
+  const duelWins = realDuelWins ?? 0;
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 16 }}>
       <CardFirstVictory
@@ -373,9 +395,9 @@ export default function AchievementCards({ battlesWon, battlesAttempted }: { bat
         progress={Math.min(battlesAttempted / 1, 1)}
       />
       <CardDuelHero
-        earned={battlesWon >= 5}
-        progress={Math.min(battlesWon / 5, 1)}
-        current={battlesWon}
+        earned={duelWins >= 5}
+        progress={Math.min(duelWins / 5, 1)}
+        current={duelWins}
       />
       <CardFinalBoss
         earned={battlesAttempted >= 20}
