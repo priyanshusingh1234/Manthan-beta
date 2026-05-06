@@ -350,6 +350,7 @@ export async function POST(req: Request) {
                     title: '✅ AI confirmed your answer is correct!',
                     body: `Your written answer was verified by AI and marked correct. Points are secured!`,
                     href: `/submission/${submissionId}/ai-review`,
+                    actorAvatar: sub.submission_url || undefined,
                 });
 
                 if (sub.challenge_id) {
@@ -417,6 +418,7 @@ export async function POST(req: Request) {
                     title: '❌ AI reviewed your answer — it was wrong',
                     body: `Your written answer was flagged by peers and the AI confirmed it was incorrect. Points have been deducted.`,
                     href: `/submission/${submissionId}/ai-review`,
+                    actorAvatar: sub.submission_url || undefined,
                 });
 
                 if (sub.challenge_id) await processCoopLoss(sub);

@@ -82,8 +82,8 @@ export async function POST(request: Request) {
             type: 'coop_challenge',
             title: `⚔️ ${challengerName} challenged you to a duel!`,
             body: message?.trim()
-                ? `"${message.trim()}" — Accept or reject within 24 hours`
-                : `Can you beat ${challengerName}? Accept or reject the duel within 24 hours.`,
+                ? `"${message.trim()}" — Question: ${question.title}`
+                : `Question: ${question.title} — Can you beat ${challengerName}? Accept within 24h.`,
             href: `/duel/${duel.id}`,
             actorId: user.id,
             actorName: challengerName,

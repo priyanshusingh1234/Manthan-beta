@@ -291,6 +291,7 @@ export async function PATCH(req: Request) {
                     title: '✅ AI confirmed your answer is correct!',
                     body: `Your written answer was verified by AI and marked correct. Points are secured!`,
                     href: `/submission/${submissionId}/ai-review`,
+                    actorAvatar: sub.submission_url || undefined,
                 });
 
                 await processCoopWin(sub);
@@ -334,6 +335,7 @@ export async function PATCH(req: Request) {
                     title: '❌ AI reviewed your answer — it was wrong',
                     body: `During fast-track AI review, your answer was determined incorrect. Standard penalty applied.`,
                     href: `/submission/${submissionId}/ai-review`,
+                    actorAvatar: sub.submission_url || undefined,
                 });
 
                 await processCoopLoss(sub);
