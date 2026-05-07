@@ -1082,6 +1082,7 @@ const StudentProfile: React.FC = () => {
                 {/* ── Animated COD-skin achievement cards ── */}
                 <div className="mb-6">
                   <AchievementCards
+                    userId={currentUser?.id || ''}
                     battlesWon={userData.battlesWon}
                     battlesAttempted={userData.battlesAttempted}
                   />

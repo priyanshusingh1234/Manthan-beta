@@ -366,24 +366,23 @@ export function CardFinalBoss({ earned, progress, current }: { earned: boolean; 
 }
 
 /* ── default export: 3-card grid ─────────────────────────────────────────── */
-export default function AchievementCards({ battlesWon, battlesAttempted }: { battlesWon: number; battlesAttempted: number }) {
+export default function AchievementCards({ userId, battlesWon, battlesAttempted }: { userId: string; battlesWon: number; battlesAttempted: number }) {
   // Fetch REAL 1v1 duel wins from duel_challenges table
   // battlesWon just counts correct answers — not actual duel victories.
   const [realDuelWins, setRealDuelWins] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchDuelWins() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setRealDuelWins(0); return; }
+      if (!userId) { setRealDuelWins(0); return; }
       const { count } = await supabase
         .from('duel_challenges')
         .select('*', { count: 'exact', head: true })
-        .eq('winner_id', user.id)
+        .eq('winner_id', userId)
         .eq('status', 'completed');
       setRealDuelWins(count ?? 0);
     }
     fetchDuelWins();
-  }, []);
+  }, [userId]);
 
   // Show a loading state until duel wins are fetched
   const duelWins = realDuelWins ?? 0;

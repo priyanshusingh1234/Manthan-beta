@@ -293,7 +293,7 @@ export default function PublicProfileTabs({
                   </div>
                   <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Achievements</h2>
                 </div>
-                <AchievementCards battlesWon={battlesWon} battlesAttempted={battlesAttempted} />
+                <AchievementCards userId={userId} battlesWon={battlesWon} battlesAttempted={battlesAttempted} />
               </div>
             )}
         </div>
