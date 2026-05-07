@@ -20,6 +20,7 @@ dependencies {
     implementation project(':capacitor-status-bar')
     implementation project(':capgo-capacitor-incoming-call-kit')
     implementation project(':capgo-capacitor-share-target')
+    implementation project(':codetrix-studio-capacitor-google-auth')
 
 }
 

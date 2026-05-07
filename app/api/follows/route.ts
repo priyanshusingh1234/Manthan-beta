@@ -49,7 +49,7 @@ export async function GET(request: Request) {
 
         while (hasMore) {
             const { data: pageData, error: pageError } = await supabaseAdmin.auth.admin.listUsers({
-                pageSize: 1000,
+                perPage: 1000,
                 page: pageNum,
             });
 

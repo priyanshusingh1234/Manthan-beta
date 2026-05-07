@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Mail, Lock, Eye, EyeOff, Github, Chrome, BookOpen, Brain, Sparkles, Trophy, Users } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import Logo from './Logo';
 import BrandingSection from './BrandingSection';
 /**
@@ -230,7 +231,29 @@ const Login: React.FC = () => {
               <div className="grid grid-cols-1 gap-3">
                 <button
                   type="button"
-                  onClick={() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/profile` } })}
+                  onClick={async () => {
+                    if (Capacitor.isNativePlatform()) {
+                      try {
+                        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+                        GoogleAuth.initialize({
+                          clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+                          scopes: ['profile', 'email'],
+                          grantOfflineAccess: true,
+                        });
+                        const googleUser = await GoogleAuth.signIn();
+                        const idToken = googleUser.authentication.idToken;
+                        if (idToken) {
+                          const { error: authErr } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
+                          if (authErr) throw authErr;
+                          router.push('/profile');
+                        }
+                      } catch (err: any) {
+                        setError('Google Native Login Failed: ' + (err?.message || 'Unknown error'));
+                      }
+                    } else {
+                      supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/profile` } });
+                    }
+                  }}
                   className="flex items-center justify-center px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all duration-200 hover:shadow-md w-full"
                 >
                   <Chrome className="h-5 w-5 mr-2" />

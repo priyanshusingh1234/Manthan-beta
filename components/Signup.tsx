@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Mail, Lock, Eye, EyeOff, Chrome, User, GraduationCap, ArrowRight, Loader2 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 
 const Signup: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -128,7 +129,29 @@ const Signup: React.FC = () => {
         {/* Google SSO */}
         <button
           type="button"
-          onClick={() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/profile` } })}
+          onClick={async () => {
+            if (Capacitor.isNativePlatform()) {
+              try {
+                const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+                GoogleAuth.initialize({
+                  clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+                  scopes: ['profile', 'email'],
+                  grantOfflineAccess: true,
+                });
+                const googleUser = await GoogleAuth.signIn();
+                const idToken = googleUser.authentication.idToken;
+                if (idToken) {
+                  const { error: authErr } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
+                  if (authErr) throw authErr;
+                  router.push('/profile');
+                }
+              } catch (err: any) {
+                setError('Google Native Login Failed: ' + (err?.message || 'Unknown error'));
+              }
+            } else {
+              supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/profile` } });
+            }
+          }}
           className="w-full flex items-center justify-center gap-3 py-3.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 active:scale-95 transition-all mb-6"
         >
           <Chrome className="w-5 h-5 text-slate-600 dark:text-slate-300" />

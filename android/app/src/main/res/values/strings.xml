@@ -4,4 +4,5 @@
     <string name="title_activity_main">Dheeyudha</string>
     <string name="package_name">com.dheeyudha.app</string>
     <string name="custom_url_scheme">com.dheeyudha.app</string>
+    <string name="server_client_id">662029701715-ne3tpvd9ohecmti9joka28mc6dk2uijs.apps.googleusercontent.com</string>
 </resources>

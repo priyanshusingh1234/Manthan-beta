@@ -34,3 +34,6 @@ project(':capgo-capacitor-incoming-call-kit').projectDir = new File('../node_mod
 
 include ':capgo-capacitor-share-target'
 project(':capgo-capacitor-share-target').projectDir = new File('../node_modules/@capgo/capacitor-share-target/android')
+
+include ':codetrix-studio-capacitor-google-auth'
+project(':codetrix-studio-capacitor-google-auth').projectDir = new File('../node_modules/@codetrix-studio/capacitor-google-auth/android')
