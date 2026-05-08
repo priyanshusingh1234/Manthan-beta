@@ -28,7 +28,7 @@ export default function CreateQuestionForm() {
   const [chaptersLoading, setChaptersLoading] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [correctOption, setCorrectOption] = useState<number | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>();
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Image upload states
   const [imageFile, setImageFile] = useState<File | null>(null);
