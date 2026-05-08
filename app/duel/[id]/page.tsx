@@ -167,7 +167,7 @@ export default function DuelRoomPage() {
                                 {question.subject && (
                                     <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-500 mb-1">{question.subject}</span>
                                 )}
-                                {question.title}
+                                {question?.title}
                             </div>
                         )}
                         <div className="flex gap-3">
@@ -198,7 +198,7 @@ export default function DuelRoomPage() {
                         {question?.title && (
                             <div className="mt-2 bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 text-left border border-slate-100 dark:border-slate-700">
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your challenge</p>
-                                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{question.title}</p>
+                                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{question?.title}</p>
                             </div>
                         )}
                     </div>
