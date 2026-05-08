@@ -409,6 +409,12 @@ export async function POST(req: Request) {
 
         const streakEarnedToday = newDailySolveCount === 2;
 
+        // ── Level-up detection ────────────────────────────────────────────
+        const XP_PER_LEVEL = 50;
+        const oldLevel = Math.floor(currentXp / XP_PER_LEVEL) + 1;
+        const newLevel = Math.floor(newXp / XP_PER_LEVEL) + 1;
+        const leveledUp = newLevel > oldLevel;
+
         const response = NextResponse.json({
             success: true,
             isCorrect,
@@ -417,6 +423,8 @@ export async function POST(req: Request) {
             newTotal,
             xpGained: isCorrect && !existingAttempt ? XP_PER_CORRECT : 0,
             newXp,
+            leveledUp,
+            newLevel,
             streak: {
                 current: newStreakCount,
                 longest: newStreakLongest,
