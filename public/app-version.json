@@ -1,9 +1,9 @@
 {
-  "version": "0.0.3",
-  "min_version": "0.0.3",
-  "name": "v0.0.3 Native Update",
-  "description": "Native Android optimization with haptic feedback. Improved war battle experience with compact native UI.",
+  "version": "1.1.2",
+  "min_version": "1.0.0",
+  "name": "v1.1.2 Native Update",
+  "description": "Level up system and native audio optimization.",
   "url": "/app-debug.apk",
   "force_update": true,
-  "release_date": "2026-03-30"
+  "release_date": "2026-05-08"
 }
