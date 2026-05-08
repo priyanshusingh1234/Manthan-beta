@@ -127,6 +127,7 @@ export async function GET(req: Request) {
         title: r.title,
         body: r.body,
         subject: r.subject,
+        chapter: r.chapter || null,
         classGrade: r.class_grade,
         points: r.points,
         timeLimit: r.time_limit,
@@ -140,6 +141,7 @@ export async function GET(req: Request) {
         userSubmissionId: userWrittenSubmissions[String(r.id)] || null,
         imagePath: r.image_path || null,
         imageUrl: r.image_url || null,
+        is_vip: r.is_vip === true,
         createdAt: r.created_at,
       }));
 
@@ -167,7 +169,7 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
     const body = await req.json();
-    const { title, body: questionBody, subject, classGrade, points, timeLimit, difficulty, options, correctOption, imagePath, imageUrl, chapter } = body || {};
+    const { title, body: questionBody, subject, classGrade, points, timeLimit, difficulty, options, correctOption, imagePath, imageUrl, chapter, isVip } = body || {};
 
     // Basic validation server-side
     if (!title || !subject || (!classGrade && subject !== 'English') || !points || !timeLimit) {
@@ -218,6 +220,7 @@ export async function POST(req: Request) {
         image_path: imagePath || null,
         image_url: imageUrl || null,
         chapter: chapter || null,
+        is_vip: isVip === true,
       };
 
       // attempt insert; if DB schema is missing `correct_option`, retry without it

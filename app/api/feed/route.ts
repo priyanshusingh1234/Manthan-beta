@@ -47,6 +47,7 @@ function normalizeQuestion(
         hasFailed: userFailed.has(String(r.id)),
         imagePath: r.image_path || null,
         imageUrl: r.image_url || null,
+        is_vip: r.is_vip === true,
         createdAt: r.created_at,
         _feedLabel: feedLabel,
         _feedScore: 0,
@@ -444,6 +445,15 @@ export async function GET(req: NextRequest) {
             shuffle((stretchRes as any).data).slice(0, Math.ceil(limit * 0.10)).forEach((r: any) =>
                 pool.push({ ...r, _layer: 5, _label: '🚀 Stretch: Class ' + nextGrade, _score: 80 })
             );
+        }
+
+        // Layer 9 — VIP Daily Challenges (max 5 per user per day, not already attempted)
+        if (!subject) {
+            let vipQuery = supabaseAdmin.from('questions').select('*').eq('is_vip', true).order('created_at', { ascending: false }).limit(20);
+            if (userGrade) vipQuery = vipQuery.in('class_grade', [String(userGrade), 'All', 'Any']);
+            const { data: vipData } = await vipQuery;
+            const vipItems = shuffle(vipData || []).filter((r: any) => !userAttempted.has(String(r.id))).slice(0, 5);
+            vipItems.forEach((r: any) => pool.push({ ...r, _layer: 9, _label: '👑 VIP Daily Challenge', _score: 150, is_vip: true }));
         }
 
         // Layer 6 — Following solved (NO listUsers call — profiles table only)

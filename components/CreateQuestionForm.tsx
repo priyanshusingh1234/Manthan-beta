@@ -6,6 +6,10 @@ import { compressImage } from '@/utils/compressImage';
 
 type Difficulty = 'easy' | 'moderate' | 'hard' | '';
 
+const SUBJECT_OPTIONS = [
+  'Mathematics','Science','English','English Literature','SST','Hindi','G.K',
+];
+
 export default function CreateQuestionForm() {
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,9 +22,13 @@ export default function CreateQuestionForm() {
   const [points, setPoints] = useState<number>(5);
   const [timeLimit, setTimeLimit] = useState<number>(10); // minutes
   const [difficulty, setDifficulty] = useState<Difficulty>('');
+  const [chapter, setChapter] = useState('');
+  const [isVip, setIsVip] = useState(false);
+  const [chapters, setChapters] = useState<string[]>([]);
+  const [chaptersLoading, setChaptersLoading] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [correctOption, setCorrectOption] = useState<number | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>();
 
   // Image upload states
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -46,6 +54,24 @@ export default function CreateQuestionForm() {
       if (imagePreview) URL.revokeObjectURL(imagePreview);
     };
   }, []);
+
+  // Load distinct chapters for selected subject from DB
+  useEffect(() => {
+    if (!subject) { setChapters([]); setChapter(''); return; }
+    setChaptersLoading(true);
+    supabase
+      .from('questions')
+      .select('chapter')
+      .ilike('subject', `%${subject}%`)
+      .not('chapter', 'is', null)
+      .limit(200)
+      .then(({ data }) => {
+        const unique = [...new Set((data || []).map((r: any) => r.chapter).filter(Boolean))].sort();
+        setChapters(unique as string[]);
+        setChaptersLoading(false);
+      });
+    setChapter('');
+  }, [subject]);
 
   if (loading) return <div className="text-sm text-slate-500">Checking permissions…</div>;
   if (!user || !user.user_metadata?.isTeacher) return <div className="text-sm text-red-600">Not authorized — teachers only.</div>;
@@ -95,6 +121,8 @@ export default function CreateQuestionForm() {
     setPoints(5);
     setTimeLimit(10);
     setDifficulty('');
+    setChapter('');
+    setIsVip(false);
     setOptions([]);
     setCorrectOption(null);
     setErrors({});
@@ -261,9 +289,11 @@ export default function CreateQuestionForm() {
         points,
         timeLimit,
         difficulty: difficulty || null,
+        chapter: chapter.trim() || null,
+        isVip,
         options: options.filter((o) => o.trim() !== ''),
         correctOption: correctOption !== null ? correctOption : null,
-        imageUrl: null, // Do not save signed URL (imagePreview) as it expires. Rely on imagePath.
+        imageUrl: null,
         imagePath: imagePath || null,
       };
 
@@ -342,19 +372,15 @@ export default function CreateQuestionForm() {
 
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Subject <span className="text-red-500">*</span></label>
-          <select 
-            value={subject} 
-            onChange={(e) => setSubject(e.target.value)} 
+          <select
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
             className="block w-full sm:w-72 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
           >
             <option value="">Select subject</option>
-            <option value="Mathematics">Mathematics</option>
-            <option value="Science">Science</option>
-            <option value="English">English</option>
-            <option value="English Literature">English Literature</option>
-            <option value="SST">SST</option>
+            {SUBJECT_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          {errors.subject && <div className="text-xs text-red-600 mt-1.5 font-medium">{errors.subject}</div>}
+          {errors && errors.subject && <div className="text-xs text-red-600 mt-1.5 font-medium">{errors.subject}</div>}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -406,11 +432,33 @@ export default function CreateQuestionForm() {
           </div>
         </div>
 
+        {/* Chapter dropdown — loaded from DB based on selected subject */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Chapter (optional)</label>
+          <div className="flex gap-2">
+            <select
+              value={chapter}
+              onChange={(e) => setChapter(e.target.value)}
+              disabled={!subject || chaptersLoading}
+              className="block flex-1 sm:w-72 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all disabled:opacity-50"
+            >
+              <option value="">{chaptersLoading ? 'Loading…' : chapters.length ? 'Select chapter' : 'No chapters found'}</option>
+              {chapters.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input
+              value={chapter}
+              onChange={(e) => setChapter(e.target.value)}
+              placeholder="Or type new chapter…"
+              className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm"
+            />
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Difficulty (optional)</label>
-          <select 
-            value={difficulty} 
-            onChange={(e) => setDifficulty(e.target.value as Difficulty)} 
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value as Difficulty)}
             className="block w-40 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
           >
             <option value="">(none)</option>
@@ -418,6 +466,27 @@ export default function CreateQuestionForm() {
             <option value="moderate">Moderate</option>
             <option value="hard">Hard</option>
           </select>
+        </div>
+
+        {/* VIP Toggle */}
+        <div className="flex items-center gap-4 p-4 rounded-2xl border-2 border-amber-200 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-900/10">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">👑</span>
+              <span className="font-black text-amber-700 dark:text-amber-400">Mark as VIP Challenge</span>
+              <span className="text-[10px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">Special</span>
+            </div>
+            <p className="text-xs text-amber-600/80 dark:text-amber-400/60 leading-relaxed">VIP questions get a premium card design and appear as Daily Challenges (max 5 per day per user). Use for your best, hardest, or most important questions.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsVip(v => !v)}
+            className={`relative w-14 h-7 rounded-full transition-all duration-300 focus:outline-none ${
+              isVip ? 'bg-amber-500 shadow-lg shadow-amber-500/40' : 'bg-slate-200 dark:bg-slate-700'
+            }`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${isVip ? 'translate-x-7' : 'translate-x-0'}`} />
+          </button>
         </div>
 
         <div className="pt-2">

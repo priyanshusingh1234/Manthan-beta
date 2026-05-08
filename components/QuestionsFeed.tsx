@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import QuestionCard from './QuestionCard';
 import PostCard from './PostCard';
+import VipQuestionCard from './VipQuestionCard';
 import { supabase } from '@/lib/supabaseClient';
 import { RefreshCw, X, ChevronDown, ArrowUp, Loader2 } from 'lucide-react';
 
@@ -480,6 +481,8 @@ export default function QuestionsFeed() {
                     feedLabel={item._feedLabel}
                     suppliedCurrentUserData={currentUserData}
                   />
+                ) : item.is_vip ? (
+                  <VipQuestionCard q={item} />
                 ) : (
                   <QuestionCard q={item} />
                 )}
