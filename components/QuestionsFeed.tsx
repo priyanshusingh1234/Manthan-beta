@@ -15,6 +15,7 @@ const SUBJECTS = [
   { label: 'Science', value: 'Science', emoji: '🔬' },
   { label: 'English', value: 'English', emoji: '📖' },
   { label: 'SST', value: 'SST', emoji: '🌍' },
+  { label: 'Hindi', value: 'Hindi', emoji: '🇮🇳' },
   { label: 'G.K', value: 'G.K', emoji: '🧠' },
 ];
 
@@ -47,6 +48,7 @@ function matchSubject(qSubject: string | null | undefined, filterValue: string):
       );
     }
     case 'g.k': return q === 'g.k' || q === 'gk' || q.includes('g.k') || q.includes('general knowledge') || q.includes('general k');
+    case 'hindi': return q === 'hindi' || q.includes('hindi');
     default: return q.startsWith(f) || q === f || q.includes(f);
   }
 }

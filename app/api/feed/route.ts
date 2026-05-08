@@ -159,7 +159,7 @@ export async function GET(req: NextRequest) {
 
         const now = new Date();
         const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 60 * 60 * 1000).toISOString();
-        const CORE_SUBJECTS = ['Mathematics', 'Science', 'English', 'SST', 'English Literature', 'G.K'];
+        const CORE_SUBJECTS = ['Mathematics', 'Science', 'English', 'SST', 'English Literature', 'G.K', 'Hindi'];
 
         // ── Step 1: User context — ALL in parallel ────────────────────────
         let userGrade: string | null = targetClass || null;

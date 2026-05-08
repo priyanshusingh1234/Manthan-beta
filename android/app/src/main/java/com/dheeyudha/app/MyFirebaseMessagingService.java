@@ -91,7 +91,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 .setAutoCancel(true)
                 .setOngoing(true)
                 .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE))
-                .setVibration(new long[]{0, 500, 1000, 500, 1000})
+                .setVibrate(new long[]{0, 500, 1000, 500, 1000})
                 .setFullScreenIntent(fullScreenPendingIntent, true)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
 
