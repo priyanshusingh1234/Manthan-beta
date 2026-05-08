@@ -34,12 +34,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             duel.status = 'expired';
         }
 
-        // Fetch question
         const { data: question } = await supabaseAdmin
             .from('questions')
             .select('id, title, body, options, correct_option, points, subject, class_grade, difficulty')
             .eq('id', duel.question_id)
-            .single();
+            .maybeSingle();
 
         // Fetch profiles
         const { data: profiles } = await supabaseAdmin
@@ -51,10 +50,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         const cp = profileMap[duel.challenger_id] || {};
         const dp = profileMap[duel.challenged_id] || {};
 
-        // Only reveal correct_option once completed
-        const safeQuestion = duel.status === 'completed'
-            ? question
-            : { ...(question || {}), correct_option: undefined };
+        // Only reveal correct_option once completed; always spread safely in case question was deleted
+        const safeQuestion = question
+            ? (duel.status === 'completed'
+                ? question
+                : { ...question, correct_option: undefined })
+            : null;
 
         return NextResponse.json({
             duel: {

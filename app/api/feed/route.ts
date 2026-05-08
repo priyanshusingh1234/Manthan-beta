@@ -606,9 +606,24 @@ export async function GET(req: NextRequest) {
             return { ...normalizeQuestion(r, userInfoMap, attemptsMap, userAttempted, userFailed, r._label || ''), type: 'question' };
         });
 
+        // ── Interleave VIP items at fixed positions (every 5th slot, max 5) ──
+        const vipItems   = questions.filter(q => (q as any).is_vip);
+        const nonVipItems = questions.filter(q => !(q as any).is_vip);
+        const interleavedFeed: any[] = [];
+        let vipIdx = 0;
+        for (let i = 0; i < nonVipItems.length; i++) {
+            // Insert a VIP card at positions 1, 6, 11, 16, 21 (0-indexed)
+            if (vipIdx < vipItems.length && (i === 1 || (i > 1 && (i - 1) % 5 === 0))) {
+                interleavedFeed.push(vipItems[vipIdx++]);
+            }
+            interleavedFeed.push(nonVipItems[i]);
+        }
+        // Append any remaining VIP items at the end (shouldn't happen with max 5)
+        while (vipIdx < vipItems.length) interleavedFeed.push(vipItems[vipIdx++]);
+
         const response = NextResponse.json({
-            questions,
-            meta: { total: questions.length, userId, userGrade, userSchool: userSchoolName, followingCount: followingIds.length }
+            questions: interleavedFeed,
+            meta: { total: interleavedFeed.length, userId, userGrade, userSchool: userSchoolName, followingCount: followingIds.length }
         });
         // Cache on edge for 45 seconds per user (personalized)
         response.headers.set('Cache-Control', 'private, max-age=45, stale-while-revalidate=30');
