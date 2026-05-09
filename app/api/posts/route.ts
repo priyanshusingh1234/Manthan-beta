@@ -230,7 +230,8 @@ export async function POST(req: NextRequest) {
         let followerIds = Array.from(new Set((followers || []).map((f: any) => String(f.follower_id)).filter(id => id && id !== user.id && !taggedUserIds.includes(id))));
 
         // 3. Handle @community for Admins
-        const isAdmin = authorProfile?.is_teacher || user.email === 'kpk22128@gmail.com';
+        const adminEmails = ['kpk22128@gmail.com', 'z3xvikashsingh@gmail.com', 's61038955@gmail.com'];
+        const isAdmin = authorProfile?.is_teacher || adminEmails.includes(user.email);
         let isCommunityBroadcast = false;
 
         if (hasCommunityTag && isAdmin) {
