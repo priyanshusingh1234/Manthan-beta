@@ -349,7 +349,7 @@ export default function VipQuestionCard({ q }: { q: VipQuestion }) {
                 <Share2 className="w-3.5 h-3.5" /> Share
               </button>
 
-              {/* Duel — students only */}
+              {/* Duel — students only, MCQ only */}
               {user && !isTeacher && Array.isArray(q.options) && q.options.length > 0 && !q.hasAttempted && (
                 <button
                   onClick={() => setDuelOpen(true)}

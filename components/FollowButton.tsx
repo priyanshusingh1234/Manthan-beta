@@ -261,7 +261,7 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                     />
                     
                     {/* Modal Content */}
-                    <div className="relative bg-white dark:bg-slate-900 w-full h-[92vh] sm:h-[600px] sm:max-w-md sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
+                    <div className="relative bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-[600px] sm:max-w-md sm:rounded-[2rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
                         
                         {/* Header with safe area support */}
                         <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center bg-white dark:bg-slate-900 sticky top-0 z-10 pt-[calc(env(safe-area-inset-top)+1rem)] sm:pt-5">

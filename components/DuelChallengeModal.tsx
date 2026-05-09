@@ -76,11 +76,11 @@ export default function DuelChallengeModal({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-slate-950 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative flex flex-col max-h-[85vh] animate-in zoom-in-95">
+        <div className="fixed inset-0 z-[999] flex flex-col justify-end sm:justify-center items-center bg-slate-900/70 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white dark:bg-slate-950 w-full h-[100dvh] sm:h-auto sm:max-w-md sm:rounded-3xl shadow-2xl overflow-hidden relative flex flex-col sm:max-h-[85vh] animate-in slide-in-from-bottom-full sm:zoom-in-95">
 
                 {/* Gradient header */}
-                <div className="bg-gradient-to-br from-orange-500 via-rose-500 to-red-600 px-5 pt-5 pb-8 relative overflow-hidden">
+                <div className="bg-gradient-to-br from-orange-500 via-rose-500 to-red-600 px-5 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)] sm:pt-5 pb-8 relative overflow-hidden">
                     <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
                     <div className="flex items-center justify-between relative">
                         <div className="flex items-center gap-3">
