@@ -156,8 +156,8 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                     await firebaseAdmin.messaging().send({
                                         token: sub.endpoint,
 
-                                        // Incoming call uses data-only to wake JS (IncomingCallKit)
-                                        notification: isIncomingCall ? undefined : {
+                                        // Incoming call and Duels use data-only to wake JS or use custom Android Service
+                                        notification: (isIncomingCall || isDuel) ? undefined : {
                                             title: params.title,
                                             body: params.body,
                                         },
@@ -183,7 +183,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         android: {
                                             priority: 'high',
                                             collapseKey: channelId, // group same-channel notifications
-                                            notification: isIncomingCall ? undefined : {
+                                            notification: (isIncomingCall || isDuel) ? undefined : {
                                                 channelId,
                                                 color,
                                                 icon: 'ic_notification',

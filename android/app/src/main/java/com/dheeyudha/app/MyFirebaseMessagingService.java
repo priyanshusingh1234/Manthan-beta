@@ -19,6 +19,7 @@ import com.google.firebase.messaging.RemoteMessage;
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private static final String CHANNEL_ID = "incoming_calls_v2";
+    private static final String DUEL_CHANNEL_ID = "duels";
 
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
@@ -40,6 +41,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 wakeLock.acquire(15000); // Hold for 15 seconds
 
                 showIncomingCallNotification(callerName, roomId);
+            } else if ("coop_challenge".equals(type)) {
+                showCoopChallengeNotification(remoteMessage);
             }
         }
     }
@@ -96,5 +99,75 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
 
         notificationManager.notify(1001, notificationBuilder.build());
+    }
+
+    private void showCoopChallengeNotification(RemoteMessage remoteMessage) {
+        String title = remoteMessage.getData().get("title");
+        String body = remoteMessage.getData().get("body");
+        String url = remoteMessage.getData().get("url");
+
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                DUEL_CHANNEL_ID,
+                "⚔️ Duels & Battles",
+                NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.enableVibration(true);
+            channel.setLightColor(0xFFF97316); // orange
+            
+            // Try to set battle sound if it exists in raw/
+            int soundId = getResources().getIdentifier("battle", "raw", getPackageName());
+            if (soundId != 0) {
+                AudioAttributes attributes = new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build();
+                channel.setSound(android.net.Uri.parse("android.resource://" + getPackageName() + "/" + soundId), attributes);
+            }
+            
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        int pendingIntentFlags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S 
+            ? PendingIntent.FLAG_MUTABLE | PendingIntent.FLAG_UPDATE_CURRENT 
+            : PendingIntent.FLAG_UPDATE_CURRENT;
+
+        // Default intent (tapping the notification)
+        Intent defaultIntent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://manthan-beta-c975.vercel.app" + (url != null ? url : "/notifications")));
+        defaultIntent.setPackage(getPackageName());
+        PendingIntent defaultPending = PendingIntent.getActivity(this, 101, defaultIntent, pendingIntentFlags);
+
+        // Accept intent
+        String acceptUrl = url != null ? url : "/notifications";
+        if (!acceptUrl.contains("autoAccept=")) {
+            acceptUrl += (acceptUrl.contains("?") ? "&" : "?") + "autoAccept=1";
+        }
+        Intent acceptIntent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://manthan-beta-c975.vercel.app" + acceptUrl));
+        acceptIntent.setPackage(getPackageName());
+        PendingIntent acceptPending = PendingIntent.getActivity(this, 102, acceptIntent, pendingIntentFlags);
+
+        // Reject intent
+        String rejectUrl = url != null ? url : "/notifications";
+        if (!rejectUrl.contains("autoReject=")) {
+            rejectUrl += (rejectUrl.contains("?") ? "&" : "?") + "autoReject=1";
+        }
+        Intent rejectIntent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://manthan-beta-c975.vercel.app" + rejectUrl));
+        rejectIntent.setPackage(getPackageName());
+        PendingIntent rejectPending = PendingIntent.getActivity(this, 103, rejectIntent, pendingIntentFlags);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, DUEL_CHANNEL_ID)
+            .setSmallIcon(getResources().getIdentifier("ic_notification", "drawable", getPackageName()))
+            .setContentTitle(title)
+            .setContentText(body)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(defaultPending)
+            .addAction(0, "⚔️ Accept", acceptPending)
+            .addAction(0, "❌ Decline", rejectPending);
+
+        int notificationId = (int) System.currentTimeMillis();
+        notificationManager.notify(notificationId, builder.build());
     }
 }

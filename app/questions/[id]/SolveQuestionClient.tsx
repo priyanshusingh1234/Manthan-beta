@@ -22,6 +22,8 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const challengeId = searchParams.get("challenge");
+    const autoAccept = searchParams.get("autoAccept");
+    const autoReject = searchParams.get("autoReject");
 
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState<number>(question.time_limit * 60);
@@ -99,11 +101,41 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 if (wonCoop) setRecoveredViaCoop(true);
                 setCurrentUserId(user.id);
                 setAuthChecked(true);
+
+                // Auto-accept challenge if tapped from Android Notification
+                if (autoAccept === "1" && challengeId && challengeInfo?.status === "pending" && challengeInfo?.partner_id === user.id) {
+                    fetch(`/api/coop/${challengeId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${session?.access_token || ''}`
+                        },
+                        body: JSON.stringify({ action: 'accept' })
+                    }).then(() => {
+                        setChallengeStatus('active');
+                        toast.success("Challenge accepted! Good luck.");
+                    }).catch(() => {});
+                }
+
+                // Auto-reject challenge if tapped from Android Notification
+                if (autoReject === "1" && challengeId && challengeInfo?.status === "pending" && challengeInfo?.partner_id === user.id) {
+                    fetch(`/api/coop/${challengeId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${session?.access_token || ''}`
+                        },
+                        body: JSON.stringify({ action: 'reject' })
+                    }).then(() => {
+                        toast.error("Challenge declined.");
+                        if (mounted) router.push('/notifications');
+                    }).catch(() => {});
+                }
             }
         };
         checkAuthAndAttempt();
         return () => { mounted = false; };
-    }, [question.id, router]);
+    }, [question.id, router, challengeId, autoAccept, autoReject]);
 
     const publicUrl = question.image_url || (question.image_path ? supabase.storage.from("question-images").getPublicUrl(question.image_path).data.publicUrl : null);
 
