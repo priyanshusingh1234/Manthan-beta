@@ -39,7 +39,7 @@ function ClipThumbnailTile({ clip }: { clip: any }) {
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
   return (
-    <Link href={`/posts/${clip.id}`} className="group relative block aspect-[9/16] bg-slate-900 overflow-hidden rounded-lg sm:rounded-xl">
+    <Link href={`/clips?postId=${clip.id}`} className="group relative block aspect-[9/16] bg-slate-900 overflow-hidden rounded-lg sm:rounded-xl">
       {clip.video_thumbnail ? (
         <img src={clip.video_thumbnail} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
       ) : (
@@ -369,7 +369,7 @@ export default function PublicProfileTabs({
                 {userClips.map((clip) => (
                   <Link
                     key={clip.id}
-                    href={`/posts/${clip.id}`}
+                    href={`/clips?postId=${clip.id}`}
                     className="block rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-violet-200/40 dark:hover:shadow-violet-900/30 hover:border-violet-200 dark:hover:border-violet-800 transition-all duration-200"
                     onClick={(e) => {
                       // only navigate if NOT clicking an interactive element inside the card
