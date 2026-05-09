@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import GauntletProgressCard from '@/components/GauntletProgressCard';
 import RecentDuelsCard from '@/components/RecentDuelsCard';
+import DailyPlannerModal from '@/components/DailyPlannerModal';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -57,6 +58,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-gray-900 dark:text-gray-100">
       <HomeSignPrompt />
+      <DailyPlannerModal />
 
 
 

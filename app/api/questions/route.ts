@@ -46,6 +46,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const subject    = url.searchParams.get('subject');
     const classParam = url.searchParams.get('class');
+    const chapterParam = url.searchParams.get('chapter');
     // Allow up to 1000 so a full subject filter is never truncated
     const limit = Math.min(Number(url.searchParams.get('limit') || '50'), 1000);
 
@@ -67,6 +68,11 @@ export async function GET(req: Request) {
       // Class grade filter — also passes through 'All'/'Any' class_grade rows
       if (classParam) {
         builder = builder.or(`class_grade.eq.${classParam},class_grade.ilike.All,class_grade.ilike.Any,class_grade.is.null`);
+      }
+
+      // Chapter filter
+      if (chapterParam) {
+        builder = builder.ilike('chapter', `%${chapterParam}%`);
       }
 
       const { data, error } = await builder;

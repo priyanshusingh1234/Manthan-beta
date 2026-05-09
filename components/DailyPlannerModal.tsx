@@ -1,0 +1,198 @@
+"use client";
+
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { Loader2, BookOpen, ChevronRight, X, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+const SUBJECTS = [
+  { label: 'Maths', value: 'Maths', emoji: '📐', color: 'from-blue-500 to-indigo-600' },
+  { label: 'Science', value: 'Science', emoji: '🔬', color: 'from-green-500 to-emerald-600' },
+  { label: 'English', value: 'English', emoji: '📖', color: 'from-amber-500 to-orange-600' },
+  { label: 'SST', value: 'SST', emoji: '🌍', color: 'from-rose-500 to-pink-600' },
+  { label: 'Hindi', value: 'Hindi', emoji: '🇮🇳', color: 'from-cyan-500 to-blue-600' },
+  { label: 'G.K', value: 'G.K', emoji: '🧠', color: 'from-violet-500 to-purple-600' },
+];
+
+export default function DailyPlannerModal() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [userName, setUserName] = useState('');
+  const [userClass, setUserClass] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [chapters, setChapters] = useState<string[]>([]);
+  const [loadingChapters, setLoadingChapters] = useState(false);
+  
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if we need to show the modal (every 24 hours)
+    const checkDailyPlan = async () => {
+      const lastPlanDate = localStorage.getItem('dheeyudhha_daily_plan_date');
+      const now = new Date().getTime();
+      
+      // 24 hours in milliseconds
+      const ONE_DAY = 24 * 60 * 60 * 1000;
+      
+      if (!lastPlanDate || (now - parseInt(lastPlanDate, 10)) > ONE_DAY) {
+        // Fetch user info for personalization
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const meta = user.user_metadata || {};
+          setUserName(meta.fullName || meta.name || 'Student');
+          setUserClass(meta.class || '10'); // Default to 10 if not set
+          setIsOpen(true);
+        }
+      }
+    };
+    
+    checkDailyPlan();
+  }, []);
+
+  const fetchChapters = async (subject: string) => {
+    setLoadingChapters(true);
+    try {
+      const res = await fetch(`/api/questions?subject=${subject}&limit=200`);
+      if (res.ok) {
+        const raw = await res.json();
+        const items = Array.isArray(raw) ? raw : (raw?.questions || []);
+        
+        const uniqueChapters = new Set<string>();
+        items.forEach((q: any) => {
+          if (q.chapter && q.chapter.trim()) {
+            uniqueChapters.add(q.chapter.trim());
+          }
+        });
+        
+        let chapterList = Array.from(uniqueChapters);
+        
+        // If not enough chapters found, provide some fun mixed options
+        if (chapterList.length < 3) {
+           chapterList = [
+             "Chapter 1: The Beginning", 
+             "Chapter 2: Fundamentals", 
+             "Chapter 3: Deep Dive", 
+             "Chapter 4: Advanced Concepts",
+             "Mix Practice"
+           ];
+        }
+        
+        // Shuffle the options to make it mixed
+        chapterList = chapterList.sort(() => Math.random() - 0.5);
+        
+        setChapters(chapterList);
+      }
+    } catch (err) {
+      console.error(err);
+      setChapters(["Chapter 1", "Chapter 2", "Chapter 3", "Mixed Practice"]);
+    } finally {
+      setLoadingChapters(false);
+    }
+  };
+
+  const handleSubjectSelect = (subject: string) => {
+    setSelectedSubject(subject);
+    fetchChapters(subject);
+    setStep(2);
+  };
+
+  const handleChapterSelect = (chapter: string) => {
+    // Save to local storage
+    localStorage.setItem('dheeyudhha_daily_plan_date', new Date().getTime().toString());
+    sessionStorage.setItem('dheeyudhha_feed_subject', selectedSubject);
+    sessionStorage.setItem('dheeyudhha_feed_chapter', chapter);
+    
+    setIsOpen(false);
+    
+    // Refresh page to apply filters to QuestionsFeed
+    window.location.reload();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800">
+        
+        {/* Header / Banner */}
+        <div className="relative pt-12 pb-6 px-6 bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 text-center text-white">
+          <div className="absolute top-4 right-4">
+            <button 
+              onClick={() => setIsOpen(false)}
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors backdrop-blur-sm"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+          
+          <div className="w-20 h-20 mx-auto bg-white/20 backdrop-blur-md rounded-3xl mb-4 flex items-center justify-center shadow-inner rotate-3">
+            <Sparkles className="w-10 h-10 text-yellow-300" />
+          </div>
+          
+          <h2 className="text-2xl font-black mb-1">Hii {userName}! 👋</h2>
+          <p className="text-indigo-100 font-medium text-sm">
+            {step === 1 ? `Welcome back! What are you planning to study today from Class ${userClass}?` : `Great choice! Which chapter in ${selectedSubject}?`}
+          </p>
+        </div>
+
+        {/* Content Body */}
+        <div className="p-6">
+          {step === 1 && (
+            <div className="space-y-4 animate-in slide-in-from-right-4 duration-500">
+              <div className="grid grid-cols-2 gap-3">
+                {SUBJECTS.map((sub) => (
+                  <button
+                    key={sub.value}
+                    onClick={() => handleSubjectSelect(sub.value)}
+                    className="flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:scale-[1.02] transition-all active:scale-95 group shadow-sm hover:shadow-md"
+                  >
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl bg-gradient-to-br ${sub.color} shadow-inner text-white group-hover:rotate-12 transition-transform`}>
+                      {sub.emoji}
+                    </div>
+                    <span className="font-bold text-slate-700 dark:text-slate-200">{sub.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-3 animate-in slide-in-from-right-4 duration-500">
+              <button 
+                onClick={() => setStep(1)}
+                className="text-xs font-bold text-indigo-500 mb-2 flex items-center gap-1 hover:underline"
+              >
+                ← Back to Subjects
+              </button>
+              
+              {loadingChapters ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-500">
+                  <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                  <p className="text-sm font-semibold animate-pulse">Finding your chapters...</p>
+                </div>
+              ) : (
+                <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                  {chapters.map((chap, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleChapterSelect(chap)}
+                      className="w-full flex items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all active:scale-[0.98] group"
+                    >
+                      <div className="flex items-center gap-3 text-left">
+                        <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm text-indigo-600">
+                          <BookOpen className="w-4 h-4" />
+                        </div>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-2 pr-2">{chap}</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

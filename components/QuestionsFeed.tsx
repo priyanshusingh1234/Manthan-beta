@@ -94,25 +94,30 @@ export default function QuestionsFeed() {
   const [classGrade, setClass] = useState(() =>
     typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_class') || '' : ''
   );
+  const [chapter, setChapter] = useState(() =>
+    typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_chapter') || '' : ''
+  );
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('dheeyudhha_feed_subject', subject);
       sessionStorage.setItem('dheeyudhha_feed_class', classGrade);
+      sessionStorage.setItem('dheeyudhha_feed_chapter', chapter);
     }
-  }, [subject, classGrade]);
+  }, [subject, classGrade, chapter]);
 
   // ── Feed data ── Immediately hydrate from cache (Instagram-style) ─────────
-  const getCached = (sub: string, cls: string): FeedItem[] => {
+  const getCached = (sub: string, cls: string, chap: string): FeedItem[] => {
     try {
-      const raw = localStorage.getItem(`dheeyudhha_feed_cache_${sub}_${cls}`);
+      const raw = localStorage.getItem(`dheeyudhha_feed_cache_${sub}_${cls}_${chap}`);
       return raw ? JSON.parse(raw) : [];
     } catch { return []; }
   };
 
   const [allData, setAllData] = useState<FeedItem[]>(() => getCached(
     typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_subject') || '' : '',
-    typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_class') || '' : ''
+    typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_class') || '' : '',
+    typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_chapter') || '' : ''
   ));
 
   const [userId, setUserId] = useState<string | null>(null);
@@ -152,7 +157,7 @@ export default function QuestionsFeed() {
   const filterModeRef = useRef(false);
 
   // ── Fetch logic ──────────────────────────────────────────────────────────
-  const load = useCallback(async ({ refresh = false, subject: sub = '', classGrade: cls = '', silent = false } = {}) => {
+  const load = useCallback(async ({ refresh = false, subject: sub = '', classGrade: cls = '', chapter: chap = '', silent = false } = {}) => {
     if (refresh && !silent) { setRefreshing(true); offsetRef.current = 0; }
     else if (!silent && offsetRef.current === 0 && !hasCachedData) setLoading(true);
     else if (!silent && offsetRef.current > 0) setMore(true);
@@ -191,11 +196,12 @@ export default function QuestionsFeed() {
 
       let items: FeedItem[] = [];
 
-      if (sub || cls) {
+      if (sub || cls || chap) {
         filterModeRef.current = true;
         const qs = new URLSearchParams({ limit: '1000' });
         if (sub) qs.set('subject', sub);
         if (cls) qs.set('class', cls);
+        if (chap) qs.set('chapter', chap);
         const res = await fetch(`/api/questions?${qs.toString()}`, { headers, cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const raw = await res.json();
@@ -223,14 +229,14 @@ export default function QuestionsFeed() {
             setShowNewBanner(true);
           }
           // Always update the cache
-          localStorage.setItem(`dheeyudhha_feed_cache_${sub}_${cls}`, JSON.stringify(items.slice(0, 20)));
+          localStorage.setItem(`dheeyudhha_feed_cache_${sub}_${cls}_${chap}`, JSON.stringify(items.slice(0, 20)));
         } else {
           // Direct update (initial load or manual refresh)
           setAllData(items);
           setVisible(PAGE_SIZE);
           setExhausted(items.length < 10);
           if (typeof window !== 'undefined') {
-            localStorage.setItem(`dheeyudhha_feed_cache_${sub}_${cls}`, JSON.stringify(items.slice(0, 20)));
+            localStorage.setItem(`dheeyudhha_feed_cache_${sub}_${cls}_${chap}`, JSON.stringify(items.slice(0, 20)));
           }
         }
       } else {
@@ -255,41 +261,42 @@ export default function QuestionsFeed() {
   useEffect(() => {
     const sub = typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_subject') || '' : '';
     const cls = typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_class') || '' : '';
-    const hasCache = getCached(sub, cls).length > 0;
+    const chap = typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_chapter') || '' : '';
+    const hasCache = getCached(sub, cls, chap).length > 0;
 
     if (hasCache) {
       // Cache already hydrated via useState — start a silent background refresh
-      load({ subject: sub, classGrade: cls, silent: true });
+      load({ subject: sub, classGrade: cls, chapter: chap, silent: true });
     } else {
       // No cache → show skeleton, do a normal fetch
-      load({ subject: sub, classGrade: cls });
+      load({ subject: sub, classGrade: cls, chapter: chap });
     }
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch when filters change
-  const prevFiltersRef = useRef({ subject: '', classGrade: '' });
+  const prevFiltersRef = useRef({ subject: '', classGrade: '', chapter: '' });
   useEffect(() => {
     const prev = prevFiltersRef.current;
-    if (prev.subject === subject && prev.classGrade === classGrade) return;
-    prevFiltersRef.current = { subject, classGrade };
+    if (prev.subject === subject && prev.classGrade === classGrade && prev.chapter === chapter) return;
+    prevFiltersRef.current = { subject, classGrade, chapter };
     offsetRef.current = 0;
     setShowNewBanner(false);
     setFreshItems([]);
 
-    const cached = getCached(subject, classGrade);
+    const cached = getCached(subject, classGrade, chapter);
     if (cached.length > 0) {
       setAllData(cached);
       setLoading(false);
       // Silent background refresh
-      load({ subject, classGrade, silent: true });
+      load({ subject, classGrade, chapter, silent: true });
     } else {
       setAllData([]);
       setLoading(true);
-      load({ subject, classGrade });
+      load({ subject, classGrade, chapter });
     }
     setVisible(PAGE_SIZE);
     setExhausted(false);
-  }, [subject, classGrade]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [subject, classGrade, chapter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Avatar patch for own questions
   const myAvatar = useMemo(() => {
@@ -302,6 +309,7 @@ export default function QuestionsFeed() {
       .filter(item => {
         if (!matchSubject(item.subject, subject)) return false;
         if (!matchClass(item.classGrade, classGrade)) return false;
+        if (chapter && item.chapter !== chapter) return false;
         return true;
       })
       .map(item => {
@@ -321,17 +329,17 @@ export default function QuestionsFeed() {
       setVisible(v => {
         const next = v + PAGE_SIZE;
         if (next >= filtered.length && !exhausted && !filterModeRef.current) {
-          load({ subject, classGrade });
+          load({ subject, classGrade, chapter });
         }
         return next;
       });
     }, { rootMargin: '250px' });
     obs.observe(el);
     return () => obs.disconnect();
-  }, [filtered.length, exhausted, load, subject, classGrade]);
+  }, [filtered.length, exhausted, load, subject, classGrade, chapter]);
 
   const visible = filtered.slice(0, visibleCount);
-  const hasFilter = !!(subject || classGrade);
+  const hasFilter = !!(subject || classGrade || chapter);
 
   // ── Apply the banner content (tap to reveal new posts) ───────────────────
   const applyNewPosts = () => {
@@ -405,7 +413,7 @@ export default function QuestionsFeed() {
             <div className="flex items-center gap-2 ml-auto">
               {hasFilter && (
                 <button
-                  onClick={() => { setSubject(''); setClass(''); }}
+                  onClick={() => { setSubject(''); setClass(''); setChapter(''); }}
                   className="flex items-center gap-1 text-[11px] font-black text-red-500 active:scale-95 transition-transform"
                 >
                   <X className="w-3 h-3" /> Clear
@@ -416,7 +424,7 @@ export default function QuestionsFeed() {
                   setShowNewBanner(false);
                   setFreshItems([]);
                   offsetRef.current = 0;
-                  load({ refresh: true, subject, classGrade });
+                  load({ refresh: true, subject, classGrade, chapter });
                 }}
                 disabled={refreshing}
                 className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900/60 px-3 py-1.5 rounded-full transition-all active:scale-95 disabled:opacity-60"
@@ -431,7 +439,7 @@ export default function QuestionsFeed() {
           {!loading && (
             <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
               {hasFilter
-                ? `${filtered.length} questions • ${subject || 'All subjects'}${classGrade ? ` · Class ${classGrade}` : ''}`
+                ? `${filtered.length} questions • ${subject || 'All subjects'}${classGrade ? ` · Class ${classGrade}` : ''}${chapter ? ` · ${chapter}` : ''}`
                 : `${visible.length} of ${filtered.length} personalized picks`}
             </p>
           )}
