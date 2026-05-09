@@ -49,6 +49,9 @@ export default function PostCard({
     const [mentionSearch, setMentionSearch] = useState<string | null>(null);
     const [mentionIndex, setMentionIndex] = useState<number | null>(null);
 
+    // LINK PREVIEW LOGIC
+    const [linkPreview, setLinkPreview] = useState<any>(null);
+
     const suggestionsRef = useRef<HTMLDivElement>(null);
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true }).replace('about ', '').replace('less than ', '');
     const ownerId = post.author?.id || post.author_id || null;
@@ -64,6 +67,20 @@ export default function PostCard({
         setComments(post.recent_comments || []);
         setIsHidden(false);
     }, [post.id, post.is_liked_by_me, post.likes_count, post.comments_count, post.recent_comments]);
+
+    useEffect(() => {
+        if (!post.image_url && !post.video_url && post.content) {
+            const match = post.content.match(/https?:\/\/[^\s]+/);
+            if (match) {
+                fetch(`/api/metadata?url=${encodeURIComponent(match[0])}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && (data.title || data.image)) setLinkPreview(data);
+                    })
+                    .catch(() => {});
+            }
+        }
+    }, [post.content, post.image_url, post.video_url]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -499,6 +516,22 @@ export default function PostCard({
                                 </Link>
                             )}
                         </div>
+                    )}
+
+                    {/* Link Preview (SEO metadata) */}
+                    {linkPreview && (
+                        <a href={linkPreview.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="block mb-3 sm:mb-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors shadow-sm">
+                            {linkPreview.image && (
+                                <div className="w-full h-40 sm:h-56 bg-slate-200 dark:bg-slate-900 overflow-hidden border-b border-slate-200 dark:border-slate-800">
+                                    <img src={linkPreview.image} alt={linkPreview.title} className="w-full h-full object-cover" />
+                                </div>
+                            )}
+                            <div className="p-3 sm:p-4">
+                                <h4 className="font-bold text-slate-900 dark:text-white text-[14px] sm:text-[15px] line-clamp-2 leading-snug mb-1">{linkPreview.title}</h4>
+                                {linkPreview.description && <p className="text-slate-500 dark:text-slate-400 text-[12px] sm:text-[13px] line-clamp-2 leading-relaxed">{linkPreview.description}</p>}
+                                <p className="text-indigo-500 text-[10px] sm:text-[11px] mt-2.5 uppercase tracking-widest font-black">{linkPreview.domain}</p>
+                            </div>
+                        </a>
                     )}
 
                     {/* Post Actions */}
