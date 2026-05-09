@@ -87,22 +87,22 @@ function ShimmerCard() {
 }
 
 export default function QuestionsFeed() {
-  // Filter state (persisted in sessionStorage)
+  // Filter state (persisted in localStorage)
   const [subject, setSubject] = useState(() =>
-    typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_subject') || '' : ''
+    typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_feed_subject') || '' : ''
   );
   const [classGrade, setClass] = useState(() =>
-    typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_class') || '' : ''
+    typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_feed_class') || '' : ''
   );
   const [chapter, setChapter] = useState(() =>
-    typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_chapter') || '' : ''
+    typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_feed_chapter') || '' : ''
   );
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('dheeyudhha_feed_subject', subject);
-      sessionStorage.setItem('dheeyudhha_feed_class', classGrade);
-      sessionStorage.setItem('dheeyudhha_feed_chapter', chapter);
+      localStorage.setItem('dheeyudhha_feed_subject', subject);
+      localStorage.setItem('dheeyudhha_feed_class', classGrade);
+      localStorage.setItem('dheeyudhha_feed_chapter', chapter);
     }
   }, [subject, classGrade, chapter]);
 
@@ -115,9 +115,9 @@ export default function QuestionsFeed() {
   };
 
   const [allData, setAllData] = useState<FeedItem[]>(() => getCached(
-    typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_subject') || '' : '',
-    typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_class') || '' : '',
-    typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_chapter') || '' : ''
+    typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_feed_subject') || '' : '',
+    typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_feed_class') || '' : '',
+    typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_feed_chapter') || '' : ''
   ));
 
   const [userId, setUserId] = useState<string | null>(null);
@@ -259,9 +259,9 @@ export default function QuestionsFeed() {
 
   // Initial load: if cache exists → show it instantly, then silently refresh in bg
   useEffect(() => {
-    const sub = typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_subject') || '' : '';
-    const cls = typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_class') || '' : '';
-    const chap = typeof window !== 'undefined' ? sessionStorage.getItem('dheeyudhha_feed_chapter') || '' : '';
+    const sub = typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_feed_subject') || '' : '';
+    const cls = typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_feed_class') || '' : '';
+    const chap = typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_feed_chapter') || '' : '';
     const hasCache = getCached(sub, cls, chap).length > 0;
 
     if (hasCache) {
@@ -412,12 +412,20 @@ export default function QuestionsFeed() {
 
             <div className="flex items-center gap-2 ml-auto">
               {hasFilter && (
-                <button
-                  onClick={() => { setSubject(''); setClass(''); setChapter(''); }}
-                  className="flex items-center gap-1 text-[11px] font-black text-red-500 active:scale-95 transition-transform"
-                >
-                  <X className="w-3 h-3" /> Clear
-                </button>
+                <>
+                  <button
+                    onClick={() => { window.dispatchEvent(new Event('open_daily_planner')); }}
+                    className="flex items-center gap-1 text-[11px] font-black text-indigo-500 active:scale-95 transition-transform mr-1"
+                  >
+                    Change Plan
+                  </button>
+                  <button
+                    onClick={() => { setSubject(''); setClass(''); setChapter(''); }}
+                    className="flex items-center gap-1 text-[11px] font-black text-red-500 active:scale-95 transition-transform"
+                  >
+                    <X className="w-3 h-3" /> Clear
+                  </button>
+                </>
               )}
               <button
                 onClick={() => {

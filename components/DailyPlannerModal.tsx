@@ -47,6 +47,13 @@ export default function DailyPlannerModal() {
     };
     
     checkDailyPlan();
+
+    const handleOpen = () => {
+      setStep(1);
+      setIsOpen(true);
+    };
+    window.addEventListener('open_daily_planner', handleOpen);
+    return () => window.removeEventListener('open_daily_planner', handleOpen);
   }, []);
 
   const fetchChapters = async (subject: string) => {
@@ -99,8 +106,8 @@ export default function DailyPlannerModal() {
   const handleChapterSelect = (chapter: string) => {
     // Save to local storage
     localStorage.setItem('dheeyudhha_daily_plan_date', new Date().getTime().toString());
-    sessionStorage.setItem('dheeyudhha_feed_subject', selectedSubject);
-    sessionStorage.setItem('dheeyudhha_feed_chapter', chapter);
+    localStorage.setItem('dheeyudhha_feed_subject', selectedSubject);
+    localStorage.setItem('dheeyudhha_feed_chapter', chapter);
     
     setIsOpen(false);
     
