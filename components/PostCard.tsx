@@ -306,15 +306,15 @@ export default function PostCard({
                 const message = await res.text();
                 if (res.status === 404) {
                     setIsHidden(true);
-                    onUpdate?.(null);
                     setShowMenu(false);
+                    setTimeout(() => onUpdate?.(null), 1500);
                     return;
                 }
                 throw new Error(message || 'Failed to delete post');
             }
             setIsHidden(true);
-            onUpdate?.(null); // null = deleted — parent removes card immediately
             setShowMenu(false);
+            setTimeout(() => onUpdate?.(null), 1500); // Wait 1.5s so user sees the "Deleted" animation
         } catch (err: any) {
             alert(err?.message || 'Failed to delete post');
         } finally { setDeletingPost(false); }
@@ -370,7 +370,16 @@ export default function PostCard({
         } finally { setIsSubmitting(false); }
     };
 
-    if (isHidden) return null;
+    if (isHidden) {
+        return (
+            <div className="bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/50 rounded-2xl p-8 m-4 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-300">
+                <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center mb-3">
+                    <Trash2 className="w-6 h-6 text-slate-400" />
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-bold">This post was deleted.</p>
+            </div>
+        );
+    }
 
     // ── Video clip posts get their own specialised card ─────────────────────
     if (post.video_url) {

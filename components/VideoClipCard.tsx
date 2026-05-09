@@ -180,7 +180,11 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
             const res = await fetch(`/api/posts/${post.id}`, {
                 method: 'DELETE', headers: { Authorization: `Bearer ${session?.access_token}` }
             });
-            if (res.ok || res.status === 404) { setIsHidden(true); onUpdate?.(null); }
+            if (res.ok || res.status === 404) { 
+                setIsHidden(true); 
+                setShowMenu(false);
+                setTimeout(() => onUpdate?.(null), 1500); 
+            }
         } finally { setDeletingPost(false); setShowMenu(false); }
     };
 
@@ -196,7 +200,16 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
         );
     };
 
-    if (isHidden) return null;
+    if (isHidden) {
+        return (
+            <div className={`mx-auto flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-300 ${compact ? 'bg-slate-50 dark:bg-slate-900/50 rounded-[2.5rem] border border-slate-100 dark:border-slate-800/60 p-8 my-4 w-full max-w-[400px] h-64' : 'h-screen w-full bg-black'}`}>
+                <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                    <Trash2 className="w-8 h-8 text-slate-400" />
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 font-bold text-center">This clip has been deleted.</p>
+            </div>
+        );
+    }
 
     // Component logic ends, view starts
     const authorHeader = (
