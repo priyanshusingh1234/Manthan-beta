@@ -16,7 +16,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 
 const SOUND_ID = 'dheeyudhha_correct';
-const ASSET_PATH = 'public/right.mp3'; // relative to Android assets folder
+const ASSET_PATH = 'sounds/right.mp3'; // bundled directly into Android assets/sounds
 
 let nativeReady = false;
 let nativeAudioModule: any = null;
