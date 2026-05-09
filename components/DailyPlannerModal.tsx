@@ -118,12 +118,15 @@ export default function DailyPlannerModal() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800">
+    <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center items-center bg-slate-900/60 backdrop-blur-sm sm:p-4 animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-slate-950 w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden border-t sm:border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-8 duration-500 ease-out relative">
         
+        {/* Native Drag Handle (Mobile only) */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/40 rounded-full z-20 sm:hidden"></div>
+
         {/* Header / Banner */}
         <div className="relative pt-12 pb-6 px-6 bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 text-center text-white">
-          <div className="absolute top-4 right-4">
+          <div className="absolute top-4 right-4 z-20">
             <button 
               onClick={() => setIsOpen(false)}
               className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors backdrop-blur-sm"
@@ -143,7 +146,7 @@ export default function DailyPlannerModal() {
         </div>
 
         {/* Content Body */}
-        <div className="p-6">
+        <div className="p-6 pb-8 sm:pb-6">
           {step === 1 && (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-500">
               <div className="grid grid-cols-2 gap-3">
