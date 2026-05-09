@@ -118,15 +118,12 @@ export default function DailyPlannerModal() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center items-center bg-slate-900/60 backdrop-blur-sm sm:p-4 animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-slate-950 w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden border-t sm:border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-8 duration-500 ease-out relative">
-        
-        {/* Native Drag Handle (Mobile only) */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/40 rounded-full z-20 sm:hidden"></div>
+    <div className="fixed inset-0 z-[999] flex flex-col justify-end sm:justify-center items-center bg-slate-900/60 backdrop-blur-sm sm:p-4 animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-slate-950 w-full h-[100dvh] sm:h-auto sm:max-w-md sm:rounded-[2rem] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] overflow-hidden sm:border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-8 duration-500 ease-out relative flex flex-col">
 
         {/* Header / Banner */}
-        <div className="relative pt-12 pb-6 px-6 bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 text-center text-white">
-          <div className="absolute top-4 right-4 z-20">
+        <div className="relative pt-[calc(3rem+env(safe-area-inset-top,0px))] sm:pt-12 pb-6 px-6 bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 text-center text-white">
+          <div className="absolute top-[calc(1rem+env(safe-area-inset-top,0px))] right-4 z-20">
             <button 
               onClick={() => setIsOpen(false)}
               className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors backdrop-blur-sm"
