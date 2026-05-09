@@ -394,8 +394,8 @@ export default function PostCard({
     }
 
     return (
-        <div className={`group/card relative bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 transition-colors duration-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 ${isSinglePost ? 'border-none' : 'last:border-0'}`}>
-            <div className="flex gap-3 px-4 py-3 sm:px-6 sm:py-4">
+        <div className={`group/card relative bg-white dark:bg-slate-900 ${isSinglePost ? '' : 'sm:rounded-[2rem] sm:border border-b border-slate-100 dark:border-slate-800/60 sm:mb-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none transition-all duration-300'}`}>
+            <div className="flex gap-3 sm:gap-4 px-4 py-5 sm:p-6">
                 {/* Left: Avatar Column */}
                 <div className="flex flex-col items-center flex-shrink-0">
                     <Link href={getProfileUrl(effectiveAuthor) || '#'}>
