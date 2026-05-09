@@ -235,7 +235,7 @@ const Login: React.FC = () => {
                     if (Capacitor.isNativePlatform()) {
                       try {
                         const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
-                        // GoogleAuth is automatically initialized on native platforms via capacitor.config.ts
+                        GoogleAuth.initialize();
                         const googleUser = await GoogleAuth.signIn();
                         const idToken = googleUser.authentication.idToken;
                         if (idToken) {
