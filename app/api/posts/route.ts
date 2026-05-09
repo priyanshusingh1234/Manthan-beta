@@ -176,7 +176,12 @@ export async function POST(req: NextRequest) {
         // --- Tagging / Mentions Logic ---
         const mentionRegex = /@([\w.-]+)/g;
         const matches = [...content.matchAll(mentionRegex)];
-        const mentionedUsernames = Array.from(new Set(matches.map(m => m[1].toLowerCase())));
+        let mentionedUsernames = Array.from(new Set(matches.map(m => m[1].toLowerCase())));
+        
+        const hasCommunityTag = mentionedUsernames.includes('community');
+        if (hasCommunityTag) {
+            mentionedUsernames = mentionedUsernames.filter(u => u !== 'community');
+        }
 
         let taggedUserIds: string[] = [];
         if (mentionedUsernames.length > 0) {
@@ -222,13 +227,42 @@ export async function POST(req: NextRequest) {
             .select('follower_id')
             .eq('following_id', user.id);
 
-        const followerIds = Array.from(new Set((followers || []).map((f: any) => String(f.follower_id)).filter(id => id && id !== user.id && !taggedUserIds.includes(id))));
+        let followerIds = Array.from(new Set((followers || []).map((f: any) => String(f.follower_id)).filter(id => id && id !== user.id && !taggedUserIds.includes(id))));
+
+        // 3. Handle @community for Admins
+        const isAdmin = authorProfile?.is_teacher || user.email === 'kpk22128@gmail.com';
+        let isCommunityBroadcast = false;
+
+        if (hasCommunityTag && isAdmin) {
+            isCommunityBroadcast = true;
+            // Get all valid users who aren't the author
+            const { data: allUsers } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .neq('id', user.id);
+                
+            const allUserIds = (allUsers || []).map(p => String(p.id));
+            
+            // Merge all users into followerIds to reuse the notification broadcasting logic below
+            // This ensures everyone gets the notification, without sending duplicates.
+            const combined = new Set([...followerIds, ...allUserIds]);
+            // Remove those who already got tagged directly to avoid double notification
+            taggedUserIds.forEach(id => combined.delete(id));
+            
+            followerIds = Array.from(combined);
+        }
 
         if (followerIds.length > 0) {
             const isClip = !!videoUrl;
-            const followerTitle = isClip
+            
+            let followerTitle = isClip
                 ? `🎬 ${authorName} posted a new clip`
                 : `${authorName} shared a new post`;
+                
+            if (isCommunityBroadcast) {
+                followerTitle = `📢 Community Announcement from ${authorName}`;
+            }
+
             const followerBody = isClip
                 ? (excerpt
                     ? `${authorName}: "${excerpt}"`
@@ -240,7 +274,7 @@ export async function POST(req: NextRequest) {
             await Promise.allSettled(
                 followerIds.map((followerId) => createNotification({
                     userId: followerId,
-                    type: 'following_post',
+                    type: isCommunityBroadcast ? 'points_earned' : 'following_post', // Use points_earned type for alert color/priority
                     title: followerTitle,
                     body: followerBody,
                     href: `/posts/${post.id}`,
