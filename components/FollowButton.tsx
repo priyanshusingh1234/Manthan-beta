@@ -60,6 +60,20 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
         }
     }, [profileUserId]);
 
+    useEffect(() => {
+        if (modalOpen) {
+            window.dispatchEvent(new Event('hide-nav'));
+            document.body.style.overflow = 'hidden';
+        } else {
+            window.dispatchEvent(new Event('show-nav'));
+            document.body.style.overflow = '';
+        }
+        return () => {
+            window.dispatchEvent(new Event('show-nav'));
+            document.body.style.overflow = '';
+        };
+    }, [modalOpen]);
+
     const handleToggleFollow = async () => {
         if (!currentUser) {
             alert("Please login to follow users.");

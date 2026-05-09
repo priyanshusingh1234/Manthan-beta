@@ -18,6 +18,18 @@ const BottomNav: React.FC = () => {
   const pathname = usePathname();
   const [streakCount, setStreakCount] = useState(0);
   const [goalMet, setGoalMet] = useState(false);
+  const [navHidden, setNavHidden] = useState(false);
+
+  useEffect(() => {
+    const hide = () => setNavHidden(true);
+    const show = () => setNavHidden(false);
+    window.addEventListener('hide-nav', hide);
+    window.addEventListener('show-nav', show);
+    return () => {
+      window.removeEventListener('hide-nav', hide);
+      window.removeEventListener('show-nav', show);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +58,7 @@ const BottomNav: React.FC = () => {
   };
 
   if (pathname?.startsWith('/store') || pathname?.startsWith('/clips') || (pathname?.startsWith('/posts/') && pathname !== '/posts/create')) return null;
+  if (navHidden) return null;
 
   const navItems: NavItem[] = [
     { href: '/', icon: Home, label: 'Home' },

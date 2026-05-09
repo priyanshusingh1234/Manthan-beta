@@ -80,6 +80,18 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
   const { theme, setTheme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
   const [isFirstSearch, setIsFirstSearch] = useState(false);
+  const [navHidden, setNavHidden] = useState(false);
+
+  useEffect(() => {
+    const hide = () => setNavHidden(true);
+    const show = () => setNavHidden(false);
+    window.addEventListener('hide-nav', hide);
+    window.addEventListener('show-nav', show);
+    return () => {
+      window.removeEventListener('hide-nav', hide);
+      window.removeEventListener('show-nav', show);
+    };
+  }, []);
 
   useEffect(() => {
     setIsMounted(true);
@@ -204,6 +216,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
   if (pathname === '/login' || pathname === '/signup') {
     return null;
   }
+  if (navHidden) return null;
 
   const isActive = (path: string) => pathname === path;
 
