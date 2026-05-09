@@ -184,7 +184,7 @@ export default function ClipsClient() {
             </div>
 
             {/* Vertical scroll snap container */}
-            <div className="w-full h-[100dvh] overflow-y-scroll snap-y snap-mandatory scroll-smooth hide-scrollbar bg-black">
+            <div className="w-full h-[100dvh] overflow-y-scroll snap-y snap-mandatory overscroll-y-contain hide-scrollbar bg-black">
                 {posts.map((post) => (
                     <div key={post.id} className="w-full h-[100dvh] snap-center snap-always flex items-center justify-center relative">
                         <div className="w-full h-full max-w-[450px] aspect-[9/16] relative bg-black">
