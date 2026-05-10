@@ -190,14 +190,22 @@ export default function StorePage() {
         const fetchPoints = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.id) {
-                const { data } = await supabase.from('profiles').select('total_points, full_name, username, avatar_url, banner_url').eq('id', session.user.id).single();
-                setPoints(data?.total_points || 0);
-                setUserProfile(data);
-                
-                // Get owned cosmetics from auth meta
-                const { data: userData } = await supabase.auth.getUser();
-                if (userData?.user?.user_metadata?.cosmetics) {
-                    setCosmetics(userData.user.user_metadata.cosmetics);
+                const { data, error } = await supabase.from('profiles').select('total_points, full_name, username, avatar_url').eq('id', session.user.id).single();
+                if (data) {
+                    setPoints(data.total_points || 0);
+                    
+                    // Get owned cosmetics and banner from auth meta
+                    const { data: userData } = await supabase.auth.getUser();
+                    const meta = userData?.user?.user_metadata || {};
+                    
+                    setUserProfile({
+                        ...data,
+                        banner_url: meta.banner_url || null
+                    });
+                    
+                    if (meta.cosmetics) {
+                        setCosmetics(meta.cosmetics);
+                    }
                 }
             }
             setLoading(false);

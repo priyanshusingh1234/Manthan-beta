@@ -76,8 +76,7 @@ export async function POST(req: NextRequest) {
             .from('profiles')
             .update({ 
                 total_points: newPoints,
-                cosmetics: metaUpdate.cosmetics,
-                ...(itemId.startsWith('banner_') ? { banner_url: validItems[itemId] } : {})
+                cosmetics: metaUpdate.cosmetics
             })
             .eq('id', user.id);
 
