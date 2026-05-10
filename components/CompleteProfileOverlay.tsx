@@ -140,7 +140,8 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
       particleCount: 200,
       spread: 100,
       origin: { y: 0.6 },
-      colors: ['#4f46e5', '#d946ef', '#3b82f6', '#f59e0b']
+      colors: ['#4f46e5', '#d946ef', '#3b82f6', '#f59e0b'],
+      zIndex: 10000
     });
 
     await supabase.auth.updateUser({

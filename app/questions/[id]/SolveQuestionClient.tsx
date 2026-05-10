@@ -14,7 +14,6 @@ import CoopSpectatorScreen from "@/components/CoopSpectatorScreen";
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 import { queueAchievementUnlock } from '@/components/AchievementUnlockOverlay';
-import LevelUpModal from '@/components/LevelUpModal';
 import { useCorrectSound } from '@/hooks/useCorrectSound';
 
 
@@ -32,7 +31,6 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const [startedAt] = useState(() => new Date().toISOString());
     const [showXpBurst, setShowXpBurst] = useState(false);
     const [showWrongFlash, setShowWrongFlash] = useState(false);
-    const [levelUpData, setLevelUpData] = useState<{ show: boolean; level: number }>({ show: false, level: 1 });
     const playCorrect = useCorrectSound();
 
     const [authChecked, setAuthChecked] = useState(false);
@@ -183,7 +181,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             // 🆙 Level-up celebration — show after a short delay so confetti fires first
             if (data.leveledUp && data.newLevel) {
                 setTimeout(() => {
-                    setLevelUpData({ show: true, level: data.newLevel });
+                    window.dispatchEvent(new CustomEvent('level_up', { detail: { level: data.newLevel } }));
                 }, data.isCorrect ? 1200 : 400);
             }
 
@@ -788,13 +786,6 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                         </button>
                     </div>
                 </div>
-            )}
-            {/* Level-up celebration overlay */}
-            <LevelUpModal
-                isOpen={levelUpData.show}
-                newLevel={levelUpData.level}
-                onClose={() => setLevelUpData(d => ({ ...d, show: false }))}
-            />
         </div>
     );
 }
