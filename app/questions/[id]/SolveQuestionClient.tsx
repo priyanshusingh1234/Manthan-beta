@@ -50,7 +50,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const [relatedQuestion, setRelatedQuestion] = useState<{ id: string, title: string } | null>(null);
 
     useEffect(() => {
-        if (result && !relatedQuestion && question.subject) {
+        if ((result || alreadyAttempted) && !relatedQuestion && question.subject) {
             const fetchRelated = async () => {
                 let query = supabase.from('questions').select('id, title').eq('subject', question.subject).neq('id', question.id).limit(10);
                 if (question.class_grade) query = query.eq('class_grade', question.class_grade);
@@ -70,7 +70,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             };
             fetchRelated();
         }
-    }, [result, question.id, question.subject, question.class_grade, question.chapter, relatedQuestion]);
+    }, [result, alreadyAttempted, question.id, question.subject, question.class_grade, question.chapter, relatedQuestion]);
 
     useEffect(() => {
         let mounted = true;
@@ -463,9 +463,25 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                             Ask for Help
                         </button>
                     )}
+                    
+                    {/* Related Question CTA */}
+                    {relatedQuestion && (
+                        <button
+                            onClick={() => router.push(`/questions/${relatedQuestion.id}`)}
+                            className="w-full flex flex-col items-center justify-center bg-emerald-600 text-white font-bold px-8 py-4 rounded-xl hover:bg-emerald-500 transition shadow-lg shadow-emerald-600/20 dark:shadow-emerald-500/20 mb-3"
+                        >
+                            <div className="flex items-center gap-2 text-lg">
+                                Skip to Next <ArrowRight className="w-5 h-5" />
+                            </div>
+                            <div className="text-emerald-100 text-sm font-medium mt-1 opacity-90 text-center line-clamp-1 max-w-[280px]">
+                                Next: {relatedQuestion.title}
+                            </div>
+                        </button>
+                    )}
+                    
                     <button
                         onClick={() => router.push("/")}
-                        className={`w-full ${alreadyAttempted.is_correct ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 border'} font-bold px-8 py-3.5 rounded-xl transition`}
+                        className={`w-full ${!relatedQuestion && alreadyAttempted.is_correct ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 border'} font-bold px-8 py-3.5 rounded-xl transition`}
                     >
                         Back to Dashboard
                     </button>
