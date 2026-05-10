@@ -428,7 +428,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setIsAuthenticated(!!user);
-      if (user && !user.user_metadata?.username) setNeedsOnboarding(true);
+      if (user && !user.user_metadata?.has_completed_onboarding) setNeedsOnboarding(true);
 
       if (user && Capacitor.isNativePlatform()) {
         initNativePush(user.id, (path) => router.push(path));
@@ -455,7 +455,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session?.user);
-      if (session?.user && !session.user.user_metadata?.username) {
+      if (session?.user && !session.user.user_metadata?.has_completed_onboarding) {
         setNeedsOnboarding(true);
       } else {
         setNeedsOnboarding(false);
