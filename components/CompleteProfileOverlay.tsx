@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { User as UserIcon, GraduationCap, Loader2, Sparkles, Sword, Building2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NativeAudio } from '@capacitor-community/native-audio';
+import { StatusBar } from '@capacitor/status-bar';
 import confetti from 'canvas-confetti';
 import { Capacitor } from '@capacitor/core';
 import type { User } from '@supabase/supabase-js';
@@ -47,8 +48,17 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
         assetPath: 'level_up.mp3',
         isComplex: false,
       }).catch(() => {});
+      
+      // Hide status bar to make it truly fullscreen
+      StatusBar.hide().catch(() => {});
     }
-    return () => { mounted = false; };
+    
+    return () => { 
+      mounted = false; 
+      if (Capacitor.isNativePlatform()) {
+        StatusBar.show().catch(() => {});
+      }
+    };
   }, []);
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
