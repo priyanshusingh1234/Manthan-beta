@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send, Users, Trophy } from "lucide-react";
+import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send, Users, Trophy, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Haptics } from '@capacitor/haptics';
 import { ActivityTracker } from '@/lib/activityTracker';
@@ -46,6 +46,31 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const [challengeInitiator, setChallengeInitiator] = useState<string | null>(null);
     const [challengePartner, setChallengePartner] = useState<string | null>(null);
     const [challengeStatus, setChallengeStatus] = useState<string | null>(null);
+
+    const [relatedQuestion, setRelatedQuestion] = useState<{ id: string, title: string } | null>(null);
+
+    useEffect(() => {
+        if (result && !relatedQuestion && question.subject) {
+            const fetchRelated = async () => {
+                let query = supabase.from('questions').select('id, title').eq('subject', question.subject).neq('id', question.id).limit(10);
+                if (question.class_grade) query = query.eq('class_grade', question.class_grade);
+                if (question.chapter) query = query.eq('chapter', question.chapter);
+                
+                const { data } = await query;
+                if (data && data.length > 0) {
+                    const randomQ = data[Math.floor(Math.random() * data.length)];
+                    setRelatedQuestion(randomQ);
+                } else if (question.chapter) {
+                    // Fallback to subject level if no other chapter matches
+                    const { data: fbData } = await supabase.from('questions').select('id, title').eq('subject', question.subject).neq('id', question.id).limit(5);
+                    if (fbData && fbData.length > 0) {
+                        setRelatedQuestion(fbData[Math.floor(Math.random() * fbData.length)]);
+                    }
+                }
+            };
+            fetchRelated();
+        }
+    }, [result, question.id, question.subject, question.class_grade, question.chapter, relatedQuestion]);
 
     useEffect(() => {
         let mounted = true;
@@ -656,9 +681,25 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                                 Ask for Help
                             </button>
                         )}
+                        
+                        {/* Related Question CTA */}
+                        {relatedQuestion && (
+                            <button
+                                onClick={() => router.push(`/questions/${relatedQuestion.id}`)}
+                                className="w-full flex flex-col items-center justify-center bg-emerald-600 text-white font-bold px-8 py-4 rounded-xl hover:bg-emerald-500 transition shadow-lg shadow-emerald-600/20 dark:shadow-emerald-500/20"
+                            >
+                                <div className="flex items-center gap-2 text-lg">
+                                    Continue Learning <ArrowRight className="w-5 h-5" />
+                                </div>
+                                <div className="text-emerald-100 text-sm font-medium mt-1 opacity-90 text-center line-clamp-1 max-w-[280px]">
+                                    Next: {relatedQuestion.title}
+                                </div>
+                            </button>
+                        )}
+                        
                         <button
                             onClick={() => router.push("/")}
-                            className={`w-full ${result.isCorrect ? 'bg-slate-900 dark:bg-slate-100 border-transparent text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'} font-bold px-8 py-3.5 rounded-xl border transition`}
+                            className={`w-full ${!relatedQuestion && result.isCorrect ? 'bg-slate-900 dark:bg-slate-100 border-transparent text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'} font-bold px-8 py-3.5 rounded-xl border transition`}
                         >
                             Back to Dashboard
                         </button>
