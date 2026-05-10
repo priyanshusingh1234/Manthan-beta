@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { Star, Target, Users, Activity } from 'lucide-react';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import TeacherBadge from '@/ticks/teacher';
 import TeacherPublicTabs from '@/components/TeacherPublicTabs';
