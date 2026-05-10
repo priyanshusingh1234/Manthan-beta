@@ -710,8 +710,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             </div>
 
             {/* Main Card */}
-            {(
-                <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 sm:p-12 shadow-sm border border-gray-200 dark:border-slate-800 relative overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 sm:p-12 shadow-sm border border-gray-200 dark:border-slate-800 relative overflow-hidden">
                     {renderTeacherProfile()}
 
                     <div className="mb-8 flex flex-wrap gap-2">

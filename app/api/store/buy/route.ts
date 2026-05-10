@@ -22,7 +22,14 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { itemId, price } = body;
 
-        if (itemId !== 'avatar_glow') {
+        const validItems: Record<string, string> = {
+            'avatar_glow': '',
+            'banner_cyberpunk': '/banners/cyberpunk.png',
+            'banner_library': '/banners/library.png',
+            'banner_galactic': '/banners/galactic.png'
+        };
+
+        if (!(itemId in validItems)) {
             return NextResponse.json({ error: 'Item not found' }, { status: 404 });
         }
 
@@ -50,8 +57,18 @@ export async function POST(req: NextRequest) {
         const newCosmetics = [...cosmetics, itemId];
 
         // 1. Update Auth Metadata
+        const metaUpdate: any = { ...meta, cosmetics: newCosmetics, totalPoints: newPoints };
+        
+        // Auto-equip banner
+        if (itemId.startsWith('banner_')) {
+            metaUpdate.banner_url = validItems[itemId];
+            
+            // Unequip other banners from cosmetics list to keep it clean (optional, but good)
+            metaUpdate.cosmetics = newCosmetics.filter(id => !id.startsWith('banner_') || id === itemId);
+        }
+
         await supabaseAdmin.auth.admin.updateUserById(user.id, {
-            user_metadata: { ...meta, cosmetics: newCosmetics, totalPoints: newPoints }
+            user_metadata: metaUpdate
         });
 
         // 2. Update Profile Table
@@ -59,7 +76,8 @@ export async function POST(req: NextRequest) {
             .from('profiles')
             .update({ 
                 total_points: newPoints,
-                cosmetics: newCosmetics 
+                cosmetics: metaUpdate.cosmetics,
+                ...(itemId.startsWith('banner_') ? { banner_url: validItems[itemId] } : {})
             })
             .eq('id', user.id);
 

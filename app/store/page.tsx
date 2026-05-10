@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, ReactNode } from 'react';
-import { ShoppingBag, Star, ChevronLeft, Sparkles, X, CheckCircle2 } from 'lucide-react';
+import { ShoppingBag, Star, ChevronLeft, Sparkles, X, CheckCircle2, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -11,6 +11,7 @@ interface StoreItem {
     description: string;
     price: number;
     type: string;
+    imageUrl?: string;
 }
 
 const STORE_ITEMS: StoreItem[] = [
@@ -20,6 +21,30 @@ const STORE_ITEMS: StoreItem[] = [
         description: 'Adds a glowing, pulsing aura around your avatar on all profiles.',
         type: 'cosmetic',
         price: 100,
+    },
+    {
+        id: 'banner_cyberpunk',
+        name: 'Cyberpunk City Banner',
+        description: 'A neon-lit futuristic city background for your public profile.',
+        type: 'banner',
+        price: 99,
+        imageUrl: '/banners/cyberpunk.png'
+    },
+    {
+        id: 'banner_library',
+        name: 'Ancient Library Banner',
+        description: 'A mystical ancient library background for the true scholar.',
+        type: 'banner',
+        price: 99,
+        imageUrl: '/banners/library.png'
+    },
+    {
+        id: 'banner_galactic',
+        name: 'Galactic Arena Banner',
+        description: 'A deep space nebula background for your public profile.',
+        type: 'banner',
+        price: 99,
+        imageUrl: '/banners/galactic.png'
     }
 ];
 
@@ -80,11 +105,78 @@ function NativePopup({ isOpen, title, message, onConfirm, onCancel, confirmText 
     );
 }
 
+function ProfilePreviewModal({ isOpen, onClose, item, userProfile }: any) {
+    if (!isOpen || !item || !userProfile) return null;
+
+    const isGlow = item.id === 'avatar_glow';
+    const isBanner = item.type === 'banner';
+    const bannerUrl = isBanner ? item.imageUrl : userProfile.banner_url;
+    
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+            <div className="w-full max-w-2xl relative z-10 animate-in zoom-in-95 duration-200">
+                <button onClick={onClose} className="absolute -top-12 right-0 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors">
+                    <X className="w-6 h-6" />
+                </button>
+                
+                {/* Mini Profile Card */}
+                <div className="w-full relative bg-slate-100 dark:bg-slate-950 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                    {/* Banner */}
+                    <div className="h-40 w-full relative bg-slate-800 overflow-hidden">
+                        {bannerUrl ? (
+                            <img src={bannerUrl} alt="banner" className="w-full h-full object-cover opacity-90 scale-105" />
+                        ) : (
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-500 opacity-90" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
+                    </div>
+                    
+                    {/* Header Card */}
+                    <div className="bg-white dark:bg-slate-900 rounded-t-[2.5rem] shadow-xl p-6 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center text-center -mt-10 relative z-10 mx-2">
+                        <div className="relative shrink-0">
+                            {isGlow && (
+                                <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-xl opacity-70 animate-pulse transition-opacity -mt-12"></div>
+                            )}
+                            {userProfile.avatar_url ? (
+                                <img src={userProfile.avatar_url} className={`w-24 h-24 rounded-full object-cover shadow-xl relative -mt-12 bg-white dark:bg-slate-900 ${isGlow ? 'ring-4 ring-transparent shadow-indigo-500/50' : 'ring-4 ring-white dark:ring-slate-900'}`} alt="Avatar" />
+                            ) : (
+                                <div className={`w-24 h-24 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-3xl font-bold text-indigo-500 dark:text-indigo-400 shadow-xl relative -mt-12 ${isGlow ? 'ring-4 ring-transparent shadow-indigo-500/50' : 'ring-4 ring-white dark:ring-slate-900'}`}>
+                                    {String(userProfile.full_name?.[0] || 'S').toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="mt-3">
+                            <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center justify-center gap-2">
+                                {userProfile.full_name || 'Student'}
+                                <CheckCircle2 className="w-5 h-5 text-indigo-500" />
+                            </h2>
+                            <p className="text-indigo-500 font-medium">@{userProfile.username || 'student'}</p>
+                        </div>
+                        
+                        <div className="mt-6 w-full flex items-center justify-center gap-4">
+                            <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center gap-2 font-bold text-slate-600 dark:text-slate-300">
+                                <Star className="w-4 h-4 text-amber-500" /> {userProfile.total_points?.toLocaleString() || 0} pts
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="mt-4 text-center">
+                    <p className="text-white/70 font-medium text-sm">This is how your public profile will look to others.</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function StorePage() {
     const [points, setPoints] = useState<number>(0);
     const [cosmetics, setCosmetics] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [purchasing, setPurchasing] = useState<string | null>(null);
+    const [userProfile, setUserProfile] = useState<any>(null);
+    const [previewItem, setPreviewItem] = useState<StoreItem | null>(null);
     
     // Dialog state
     const [dialogState, setDialogState] = useState<{isOpen: boolean, item: StoreItem | null, isSuccess: boolean, message: string}>({
@@ -98,8 +190,9 @@ export default function StorePage() {
         const fetchPoints = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.id) {
-                const { data } = await supabase.from('profiles').select('total_points').eq('id', session.user.id).single();
+                const { data } = await supabase.from('profiles').select('total_points, full_name, username, avatar_url, banner_url').eq('id', session.user.id).single();
                 setPoints(data?.total_points || 0);
+                setUserProfile(data);
                 
                 // Get owned cosmetics from auth meta
                 const { data: userData } = await supabase.auth.getUser();
@@ -199,6 +292,13 @@ export default function StorePage() {
                 onCancel={() => setDialogState(prev => ({...prev, isOpen: false}))}
             />
 
+            <ProfilePreviewModal 
+                isOpen={!!previewItem} 
+                onClose={() => setPreviewItem(null)} 
+                item={previewItem} 
+                userProfile={userProfile} 
+            />
+
             {/* Native Top Bar */}
             <div className="flex items-center justify-between px-4 h-14 max-w-lg mx-auto w-full shrink-0">
                 <Link href="/" className="p-2 -ml-2 rounded-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition active:scale-95 shadow-sm">
@@ -241,39 +341,55 @@ export default function StorePage() {
                             <div key={item.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 sm:p-8 border-2 border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center gap-6 transition-all hover:border-indigo-100 dark:hover:border-indigo-900 hover:shadow-xl relative overflow-hidden group">
                                 {cosmetics.includes(item.id) && <div className="absolute inset-0 border-[3px] border-emerald-500 rounded-[2.5rem] pointer-events-none z-10"></div>}
                                 
-                                <div className="relative shrink-0 w-24 h-24 sm:w-28 sm:h-28 group-hover:scale-105 transition-transform duration-500">
-                                    {/* The Actual Glow Preview */}
-                                    <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-xl opacity-70 animate-pulse"></div>
-                                    <img src="https://ui-avatars.com/api/?name=St&background=e2e8f0&color=475569" className="w-full h-full rounded-full object-cover relative bg-white border-4 border-transparent shadow-[0_0_15px_rgba(99,102,241,0.5)]" alt="Preview" />
-                                </div>
+                                {item.type === 'banner' ? (
+                                    <div className="relative shrink-0 w-full sm:w-40 h-24 sm:h-28 rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-shadow">
+                                        <img src={item.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Preview" />
+                                    </div>
+                                ) : (
+                                    <div className="relative shrink-0 w-24 h-24 sm:w-28 sm:h-28 group-hover:scale-105 transition-transform duration-500">
+                                        {/* The Actual Glow Preview */}
+                                        <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-xl opacity-70 animate-pulse"></div>
+                                        <img src="https://ui-avatars.com/api/?name=St&background=e2e8f0&color=475569" className="w-full h-full rounded-full object-cover relative bg-white border-4 border-transparent shadow-[0_0_15px_rgba(99,102,241,0.5)]" alt="Preview" />
+                                    </div>
+                                )}
                                 
                                 <div className="flex-1 text-center sm:text-left flex flex-col items-center sm:items-start w-full">
                                     <h4 className="font-black text-slate-900 dark:text-white text-xl leading-tight mb-2 tracking-tight">{item.name}</h4>
                                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 font-medium leading-relaxed">{item.description}</p>
                                     
-                                    <button
-                                        onClick={() => triggerBuyDialog(item)}
-                                        disabled={purchasing === item.id || cosmetics.includes(item.id)}
-                                        className={`w-full sm:w-auto px-8 py-3.5 rounded-2xl font-black text-[15px] flex items-center justify-center gap-2 transition-all active:scale-95 border-2
-                                            ${cosmetics.includes(item.id)
-                                                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 cursor-default shadow-inner'
-                                                : points >= item.price 
-                                                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-lg hover:shadow-xl hover:-translate-y-0.5' 
-                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
-                                            }
-                                        `}
-                                    >
-                                        {cosmetics.includes(item.id) ? (
-                                            <>
-                                                <CheckCircle2 className="w-5 h-5" /> Equipped
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Star className="w-5 h-5 text-inherit" />
-                                                {item.price.toLocaleString()} Points
-                                            </>
-                                        )}
-                                    </button>
+                                    <div className="flex w-full sm:w-auto gap-3">
+                                        <button
+                                            onClick={() => setPreviewItem(item)}
+                                            className="px-4 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold transition-colors active:scale-95 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700"
+                                            title="Live Preview"
+                                        >
+                                            <Eye className="w-5 h-5" />
+                                        </button>
+                                        
+                                        <button
+                                            onClick={() => triggerBuyDialog(item)}
+                                            disabled={purchasing === item.id || cosmetics.includes(item.id)}
+                                            className={`flex-1 sm:w-48 px-6 py-3.5 rounded-2xl font-black text-[15px] flex items-center justify-center gap-2 transition-all active:scale-95 border-2
+                                                ${cosmetics.includes(item.id)
+                                                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 cursor-default shadow-inner'
+                                                    : points >= item.price 
+                                                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-lg hover:shadow-xl hover:-translate-y-0.5' 
+                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                                                }
+                                            `}
+                                        >
+                                            {cosmetics.includes(item.id) ? (
+                                                <>
+                                                    <CheckCircle2 className="w-5 h-5" /> Equipped
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Star className="w-5 h-5 text-inherit" />
+                                                    {item.price.toLocaleString()} Pts
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ))}
