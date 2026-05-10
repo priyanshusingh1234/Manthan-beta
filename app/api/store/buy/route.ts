@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
             })
             .eq('id', user.id);
 
-        return NextResponse.json({ success: true, newPoints, cosmetics: newCosmetics });
+        return NextResponse.json({ success: true, newPoints, cosmetics: metaUpdate.cosmetics });
 
     } catch (err: any) {
         console.error('[Store Buy Error]', err);
