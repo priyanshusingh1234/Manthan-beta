@@ -66,6 +66,10 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
     };
   }, []);
 
+  const isPreFilled = !!user?.user_metadata?.username;
+  const isTeacher = user?.user_metadata?.isTeacher === true || user?.user_metadata?.is_teacher === true;
+  const isClassLocked = !!user?.user_metadata?.classGrade;
+
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setUsername(val);
@@ -79,7 +83,9 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
     if (e) e.preventDefault();
     if (username.length < 3) return setError('Username must be at least 3 characters');
     if (/[A-Z]/.test(username) || /\s/.test(username)) return setError('Username must be lowercase with no spaces');
-    if (!fullName || !classGrade) return setError('Please fill in all required fields');
+    if (!fullName) return setError('Please fill in all required fields');
+
+    if (!isTeacher && !classGrade) return setError('Please fill in all required fields');
 
     setLoading(true);
     setError('');
@@ -104,7 +110,7 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
         data: {
           username,
           fullName,
-          classGrade,
+          classGrade: isTeacher ? (user?.user_metadata?.classGrade || '') : classGrade,
           school,
           ageConfirmed: true,
           username_updates: []
@@ -168,8 +174,6 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
       </div>
     );
   }
-
-  const isPreFilled = !!user?.user_metadata?.username;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-slate-50 dark:bg-slate-950 overflow-hidden flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -247,23 +251,25 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
                 </div>
               </div>
 
-              <div className="group">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <GraduationCap className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+              {!isTeacher && (
+                <div className="group">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <GraduationCap className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                    </div>
+                    <select
+                      required
+                      disabled={isClassLocked}
+                      value={classGrade}
+                      onChange={(e) => setClassGrade(e.target.value)}
+                      className={`w-full pl-12 pr-4 py-4 border-2 rounded-2xl text-[15px] font-bold transition-all appearance-none ${isClassLocked ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-indigo-500'}`}
+                    >
+                      <option value="" disabled>Select Your Class</option>
+                      {[6,7,8,9,10,11,12].map(n => <option key={n} value={n}>Class {n}</option>)}
+                    </select>
                   </div>
-                  <select
-                    required
-                    disabled={isPreFilled}
-                    value={classGrade}
-                    onChange={(e) => setClassGrade(e.target.value)}
-                    className={`w-full pl-12 pr-4 py-4 border-2 rounded-2xl text-[15px] font-bold transition-all appearance-none ${isPreFilled ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-indigo-500'}`}
-                  >
-                    <option value="" disabled>Select Your Class</option>
-                    {[6,7,8,9,10,11,12].map(n => <option key={n} value={n}>Class {n}</option>)}
-                  </select>
                 </div>
-              </div>
+              )}
 
               {error && (
                 <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-xs font-bold text-red-500 text-center p-3 bg-red-50 dark:bg-red-500/10 rounded-xl">
