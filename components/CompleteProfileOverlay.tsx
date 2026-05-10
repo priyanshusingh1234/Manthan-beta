@@ -66,6 +66,10 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
     };
   }, []);
 
+  const isPreFilled = !!user?.user_metadata?.username;
+  const isTeacher = user?.user_metadata?.isTeacher === true || user?.user_metadata?.is_teacher === true;
+  const isClassLocked = !!user?.user_metadata?.classGrade;
+
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setUsername(val);
@@ -81,7 +85,6 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
     if (/[A-Z]/.test(username) || /\s/.test(username)) return setError('Username must be lowercase with no spaces');
     if (!fullName) return setError('Please fill in all required fields');
 
-    const isTeacher = user?.user_metadata?.isTeacher === true || user?.user_metadata?.is_teacher === true;
     if (!isTeacher && !classGrade) return setError('Please fill in all required fields');
 
     setLoading(true);
@@ -171,10 +174,6 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
       </div>
     );
   }
-
-  const isPreFilled = !!user?.user_metadata?.username;
-  const isTeacher = user?.user_metadata?.isTeacher === true || user?.user_metadata?.is_teacher === true;
-  const isClassLocked = !!user?.user_metadata?.classGrade;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-slate-50 dark:bg-slate-950 overflow-hidden flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
