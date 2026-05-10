@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { User as UserIcon, GraduationCap, Loader2, Sparkles, Sword, Building2 } from 'lucide-react';
+import { User as UserIcon, GraduationCap, Loader2, Sparkles, Sword, Building2, Trophy, PlaySquare, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NativeAudio } from '@capacitor-community/native-audio';
 import { StatusBar } from '@capacitor/status-bar';
@@ -14,6 +14,7 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
   const [step, setStep] = useState<number | null>(null); // null means loading
   const [user, setUser] = useState<User | null>(null);
   
+  // For new users (Google)
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [classGrade, setClassGrade] = useState('');
@@ -22,6 +23,7 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [duelWon, setDuelWon] = useState(false);
+  const [wrongAnswer, setWrongAnswer] = useState(false);
 
   // 1. Initialize logic
   useEffect(() => {
@@ -32,12 +34,15 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
       if (user) {
         setUser(user);
         const meta = user.user_metadata || {};
-        // If they already have a username (Manual Signup), skip step 1!
-        if (meta.username) {
-          setStep(2); // Jump straight to the interactive tutorial
-        } else {
-          setStep(1); // Google Signup needs to fill info
-        }
+        
+        // Even if they filled the form, start them at Step 1 (Welcome Screen)
+        // We will pre-fill their existing data so they can see it!
+        setUsername(meta.username || '');
+        setFullName(meta.fullName || meta.name || '');
+        setClassGrade(meta.classGrade || '');
+        setSchool(meta.school || '');
+        
+        setStep(1); 
       }
     };
     init();
@@ -70,8 +75,8 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
     else if (/\s/.test(val)) setError('Username cannot contain spaces');
   };
 
-  const handleProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleProfileSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (username.length < 3) return setError('Username must be at least 3 characters');
     if (/[A-Z]/.test(username) || /\s/.test(username)) return setError('Username must be lowercase with no spaces');
     if (!fullName || !classGrade) return setError('Please fill in all required fields');
@@ -80,18 +85,20 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
     setError('');
 
     try {
-      // Check username uniqueness
-      try {
-        const uniqueCheckRes = await fetch(`/api/check-username?username=${encodeURIComponent(username)}`);
-        if (uniqueCheckRes.ok) {
-          const uniqueCheckData = await uniqueCheckRes.json();
-          if (!uniqueCheckData.isUnique) {
-            setError('Username is already taken. Please choose a different username.');
-            setLoading(false);
-            return;
+      // Check username uniqueness if it changed
+      if (username !== user?.user_metadata?.username) {
+        try {
+          const uniqueCheckRes = await fetch(`/api/check-username?username=${encodeURIComponent(username)}`);
+          if (uniqueCheckRes.ok) {
+            const uniqueCheckData = await uniqueCheckRes.json();
+            if (!uniqueCheckData.isUnique) {
+              setError('Username is already taken. Please choose a different username.');
+              setLoading(false);
+              return;
+            }
           }
-        }
-      } catch {}
+        } catch {}
+      }
 
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
@@ -100,14 +107,13 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
           classGrade,
           school,
           ageConfirmed: true,
-          username_updates: [],
-          has_completed_onboarding: true // We set it true here as well just in case they drop out
+          username_updates: []
         }
       });
 
       if (updateError) throw updateError;
 
-      // Sync to public DB profiles table immediately
+      // Sync to DB
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
         fetch('/api/profile/sync', {
@@ -116,7 +122,7 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
         }).catch(() => {});
       }
       
-      setStep(2); // Move to Tutorial
+      setStep(2); // Move to Feature Tour
     } catch (err: any) {
       setError(err.message || 'Failed to update profile. Please try again.');
     } finally {
@@ -124,38 +130,34 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
     }
   };
 
-  const handleTutorialAnswer = async () => {
+  const finishOnboarding = async () => {
     setDuelWon(true);
     if (Capacitor.isNativePlatform()) {
       NativeAudio.play({ assetId: 'level_up' }).catch(() => {});
     }
     
     confetti({
-      particleCount: 150,
-      spread: 80,
+      particleCount: 200,
+      spread: 100,
       origin: { y: 0.6 },
-      colors: ['#4f46e5', '#d946ef', '#3b82f6']
+      colors: ['#4f46e5', '#d946ef', '#3b82f6', '#f59e0b']
     });
 
-    // If they skipped Step 1 (Normal signup), we still need to mark them as completed!
-    if (user?.user_metadata?.username && !user.user_metadata?.has_completed_onboarding) {
-      await supabase.auth.updateUser({
-        data: { has_completed_onboarding: true }
-      });
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        fetch('/api/profile/sync', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${session.access_token}` }
-        }).catch(() => {});
-      }
+    await supabase.auth.updateUser({
+      data: { has_completed_onboarding: true }
+    });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      fetch('/api/profile/sync', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      }).catch(() => {});
     }
 
-    // Wait a couple of seconds for the confetti before closing
     setTimeout(() => {
       if (onComplete) onComplete();
       else window.location.reload();
-    }, 2500);
+    }, 3000);
   };
 
   if (step === null) {
@@ -165,6 +167,8 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
       </div>
     );
   }
+
+  const isPreFilled = !!user?.user_metadata?.username;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-slate-50 dark:bg-slate-950 overflow-hidden flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -186,10 +190,10 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
             </div>
             
             <h2 className="text-3xl font-black italic uppercase tracking-tighter text-center text-slate-900 dark:text-white mb-2">
-              Join the Ranks
+              {isPreFilled ? "Identity Verified" : "Join the Ranks"}
             </h2>
             <p className="text-center text-slate-500 dark:text-slate-400 text-sm font-medium mb-8">
-              Welcome to the Arena. Forging your identity...
+              {isPreFilled ? "Welcome! Here are the details you provided:" : "Welcome to the Arena. Forging your identity..."}
             </p>
 
             <form onSubmit={handleProfileSubmit} className="space-y-4 w-full">
@@ -201,10 +205,11 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
                   <input
                     type="text"
                     required
+                    disabled={isPreFilled}
                     value={username}
                     onChange={handleUsernameChange}
                     placeholder="Username (e.g. shadowwarrior)"
-                    className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-[15px] font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all font-mono"
+                    className={`w-full pl-12 pr-4 py-4 border-2 rounded-2xl text-[15px] font-bold transition-all font-mono ${isPreFilled ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-indigo-500'}`}
                   />
                 </div>
               </div>
@@ -217,10 +222,11 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
                   <input
                     type="text"
                     required
+                    disabled={isPreFilled}
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Full Name"
-                    className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-[15px] font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all"
+                    className={`w-full pl-12 pr-4 py-4 border-2 rounded-2xl text-[15px] font-bold transition-all ${isPreFilled ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-indigo-500'}`}
                   />
                 </div>
               </div>
@@ -247,9 +253,10 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
                   </div>
                   <select
                     required
+                    disabled={isPreFilled}
                     value={classGrade}
                     onChange={(e) => setClassGrade(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-[15px] font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
+                    className={`w-full pl-12 pr-4 py-4 border-2 rounded-2xl text-[15px] font-bold transition-all appearance-none ${isPreFilled ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:border-indigo-500'}`}
                   >
                     <option value="" disabled>Select Your Class</option>
                     {[6,7,8,9,10,11,12].map(n => <option key={n} value={n}>Class {n}</option>)}
@@ -268,7 +275,7 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
                 disabled={loading}
                 className="w-full py-4 mt-6 bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white font-black text-sm uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-indigo-500/30 active:scale-95 transition-transform flex justify-center items-center gap-2"
               >
-                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Continue'}
+                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Confirm & Continue'}
               </button>
             </form>
           </motion.div>
@@ -277,6 +284,92 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
         {step === 2 && (
           <motion.div 
             key="step2"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="flex-1 flex flex-col items-center justify-center p-6 relative z-10 w-full max-w-md mx-auto"
+          >
+            <Shield className="w-16 h-16 text-indigo-500 mb-6" />
+            <h2 className="text-3xl font-black italic uppercase tracking-tighter text-center text-slate-900 dark:text-white mb-6">
+              Welcome to the Arena
+            </h2>
+            <p className="text-center text-slate-500 dark:text-slate-400 text-base font-medium mb-8 leading-relaxed">
+              Dheeyudha is not just an app. It is a battlefield where knowledge is power. Are you ready to prove your intelligence?
+            </p>
+
+            <div className="space-y-4 w-full mb-8">
+              <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-700 shadow-sm">
+                <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center shrink-0">
+                  <Trophy className="w-6 h-6 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Leaderboards</h3>
+                  <p className="text-xs text-slate-500">Answer questions to climb the global ranks.</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-700 shadow-sm">
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center shrink-0">
+                  <PlaySquare className="w-6 h-6 text-purple-500" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Video Clips</h3>
+                  <p className="text-xs text-slate-500">Learn from bite-sized educational reels.</p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setStep(3)}
+              className="w-full py-4 bg-gradient-to-r from-indigo-600 to-fuchsia-600 text-white font-black text-sm uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-indigo-500/30 active:scale-95 transition-transform"
+            >
+              Next
+            </button>
+          </motion.div>
+        )}
+
+        {step === 3 && (
+          <motion.div 
+            key="step3"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="flex-1 flex flex-col items-center justify-center p-6 relative z-10 w-full max-w-md mx-auto"
+          >
+            <div className="w-20 h-20 bg-gradient-to-br from-rose-500 to-orange-500 rounded-full mx-auto flex items-center justify-center mb-8 shadow-2xl shadow-rose-500/40 shrink-0">
+                <Sword className="w-10 h-10 text-white" />
+            </div>
+            
+            <h2 className="text-3xl font-black italic uppercase tracking-tighter text-center text-slate-900 dark:text-white mb-6">
+              The Duel
+            </h2>
+            <p className="text-center text-slate-500 dark:text-slate-400 text-base font-medium mb-8 leading-relaxed">
+              The ultimate test of knowledge is the <strong>1v1 Duel</strong>. Challenge your classmates, answer faster, and steal their points.
+            </p>
+
+            <div className="w-full bg-rose-50 dark:bg-rose-900/10 border-2 border-rose-200 dark:border-rose-900/50 rounded-2xl p-6 mb-8 text-center">
+              <p className="text-rose-800 dark:text-rose-300 font-bold mb-2">Rules of the Duel:</p>
+              <ul className="text-sm text-rose-600 dark:text-rose-400 space-y-2 font-medium">
+                <li>⚔️ Challenge anyone from your school</li>
+                <li>⏱️ You have limited time to answer</li>
+                <li>☠️ Wrong answers damage your health</li>
+              </ul>
+            </div>
+
+            <button
+              onClick={() => setStep(4)}
+              className="w-full py-4 bg-gradient-to-r from-rose-500 to-orange-500 text-white font-black text-sm uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-rose-500/30 active:scale-95 transition-transform"
+            >
+              Start Practice Duel
+            </button>
+          </motion.div>
+        )}
+
+        {step === 4 && (
+          <motion.div 
+            key="step4"
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.9 }}
@@ -332,10 +425,10 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
             </div>
 
             <h2 className="text-3xl font-black italic uppercase tracking-tighter text-center text-slate-900 dark:text-white mb-2">
-              {duelWon ? 'Victory!' : 'Your First Duel'}
+              {duelWon ? 'Victory!' : 'Practice Duel'}
             </h2>
             <p className="text-center text-slate-500 dark:text-slate-400 text-sm font-medium mb-6">
-              {duelWon ? 'You have proven your worth. Entering the Arena...' : 'Strike first to win.'}
+              {duelWon ? 'You have proven your worth. Entering the Arena...' : 'Answer correctly to defeat the bot!'}
             </p>
             
             <AnimatePresence mode="wait">
@@ -343,24 +436,30 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
                 <motion.div 
                   key="question"
                   exit={{ opacity: 0, y: 20 }}
-                  className="w-full bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-xl border-2 border-slate-100 dark:border-slate-700 mb-8"
+                  className={`w-full bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-xl border-2 ${wrongAnswer ? 'border-red-500 animate-shake' : 'border-slate-100 dark:border-slate-700'} mb-8 transition-colors`}
                 >
                   <p className="text-lg font-bold text-slate-800 dark:text-slate-200 text-center mb-6">
-                    Are you ready to conquer the arena and dominate the leaderboards?
+                    Which organelle is known as the powerhouse of the cell?
                   </p>
                   
                   <div className="space-y-3">
                     <button 
-                      onClick={handleTutorialAnswer}
-                      className="w-full py-4 px-6 bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-left font-bold text-slate-700 dark:text-slate-300 active:bg-indigo-50 dark:active:bg-indigo-900/30 active:border-indigo-500 transition-colors"
+                      onClick={() => setWrongAnswer(true)}
+                      className="w-full py-4 px-6 bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-left font-bold text-slate-700 dark:text-slate-300 active:bg-rose-50 dark:active:bg-rose-900/30 active:border-rose-500 transition-colors"
                     >
-                      <span className="inline-block w-8 text-indigo-500">A</span> Yes, strike now!
+                      <span className="inline-block w-8 text-indigo-500">A</span> Nucleus
                     </button>
                     <button 
-                      onClick={handleTutorialAnswer}
-                      className="w-full py-4 px-6 bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-left font-bold text-slate-700 dark:text-slate-300 active:bg-indigo-50 dark:active:bg-indigo-900/30 active:border-indigo-500 transition-colors"
+                      onClick={finishOnboarding}
+                      className="w-full py-4 px-6 bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-left font-bold text-slate-700 dark:text-slate-300 active:bg-green-50 dark:active:bg-green-900/30 active:border-green-500 transition-colors"
                     >
-                      <span className="inline-block w-8 text-indigo-500">B</span> I was born ready!
+                      <span className="inline-block w-8 text-indigo-500">B</span> Mitochondria
+                    </button>
+                    <button 
+                      onClick={() => setWrongAnswer(true)}
+                      className="w-full py-4 px-6 bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-left font-bold text-slate-700 dark:text-slate-300 active:bg-rose-50 dark:active:bg-rose-900/30 active:border-rose-500 transition-colors"
+                    >
+                      <span className="inline-block w-8 text-indigo-500">C</span> Ribosome
                     </button>
                   </div>
                 </motion.div>
