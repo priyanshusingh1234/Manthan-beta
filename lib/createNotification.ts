@@ -75,11 +75,25 @@ export async function createNotification(params: CreateNotificationParams): Prom
                 .eq('user_id', params.userId);
 
             if (subs && subs.length > 0) {
+                const isDuel = params.type === 'coop_challenge';
+                const isIncomingCall = params.type === 'incoming_call';
+                
                 // Prepare payloads
                 const webPayload = JSON.stringify({
                     title: params.title,
                     body: params.body,
                     url: params.href || '/',
+                    ...(isDuel ? {
+                        actions: [
+                            { action: 'accept_duel', title: '⚔️ Accept' },
+                            { action: 'decline_duel', title: '❌ Decline' }
+                        ]
+                    } : isIncomingCall ? {
+                        actions: [
+                            { action: 'answer', title: 'Answer' },
+                            { action: 'decline', title: 'Decline' }
+                        ]
+                    } : {})
                 });
 
                 // Fire pushes to all endpoints in parallel
@@ -156,8 +170,8 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                     await firebaseAdmin.messaging().send({
                                         token: sub.endpoint,
 
-                                        // Incoming call and Duels use data-only to wake JS or use custom Android Service
-                                        notification: (isIncomingCall || isDuel) ? undefined : {
+                                        // Always send notification so FCM creates the native notification with action buttons
+                                        notification: {
                                             title: params.title,
                                             body: params.body,
                                         },
@@ -183,7 +197,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         android: {
                                             priority: 'high',
                                             collapseKey: channelId, // group same-channel notifications
-                                            notification: (isIncomingCall || isDuel) ? undefined : {
+                                            notification: {
                                                 channelId,
                                                 color,
                                                 icon: 'ic_notification',

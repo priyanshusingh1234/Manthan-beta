@@ -7,6 +7,7 @@ self.addEventListener('push', function (event) {
             icon: '/icon-192x192.png',
             badge: '/icon-192x192.png',
             vibrate: [100, 50, 100],
+            actions: data.actions || [],
             data: {
                 dateOfArrival: Date.now(),
                 url: data.url || '/'
@@ -23,7 +24,21 @@ self.addEventListener('push', function (event) {
 self.addEventListener('notificationclick', function (event) {
     event.notification.close();
 
-    const urlToOpen = new URL(event.notification.data.url, self.location.origin).href;
+    let urlToOpen = new URL(event.notification.data.url, self.location.origin).href;
+
+    // Handle action buttons
+    if (event.action) {
+        if (event.action === 'decline' || event.action === 'decline_duel') {
+            // If they clicked decline, we just let the notification close.
+            return;
+        } else if (event.action === 'answer') {
+            // If it's a chat/call URL, auto-accept it
+            if (urlToOpen.includes('/chat/')) {
+                const separator = urlToOpen.includes('?') ? '&' : '?';
+                urlToOpen += `${separator}incoming=1&autoAccept=1`;
+            }
+        }
+    }
 
     // This looks to see if the current window is already open and focuses if it is
     event.waitUntil(
