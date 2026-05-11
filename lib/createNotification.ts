@@ -199,7 +199,13 @@ export async function createNotification(params: CreateNotificationParams): Prom
 
                                         android: {
                                             priority: 'high',
-                                            collapseKey: channelId, // group same-channel notifications
+                                            // Calls use roomId as collapse key (so each call is unique);
+                                            // others collapse by channel to avoid notification spam.
+                                            collapseKey: isIncomingCall
+                                                ? (params.href?.split('/chat/')?.[1]?.split('?')?.[0] || 'call')
+                                                : channelId,
+                                            // Time-to-live: calls expire after 45s, others after 4 hours
+                                            ttl: isIncomingCall ? 45000 : 14400000,
                                             notification: isIncomingCall ? undefined : {
                                                 channelId,
                                                 color,

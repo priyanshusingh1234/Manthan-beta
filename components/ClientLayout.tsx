@@ -163,10 +163,12 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
               ongoing: true,
               autoCancel: true,
               actionTypeId: 'incoming_call',
+              sound: 'default',
               extra: {
                 type: 'incoming_call',
                 url: data.url || data.href || '/',
                 roomId: data.roomId || '',
+                callerName: data.callerName || data.title || notification.title || 'Scholar',
               },
             }]
           });
@@ -325,7 +327,7 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
         importance: 5,
         visibility: 1,
         vibration: true,
-        sound: 'ringtone',
+        sound: 'default',
         lights: true,
         lightColor: '#6366f1',
       });
