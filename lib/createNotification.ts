@@ -170,10 +170,11 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                     await firebaseAdmin.messaging().send({
                                         token: sub.endpoint,
 
-                                        // Calls & duels: data-only so pushNotificationReceived fires
-                                        // and we can show IncomingCallKit / LocalNotifications with real buttons.
-                                        // Other types: use notification block for standard FCM display.
-                                        notification: (isIncomingCall || isDuel) ? undefined : {
+                                        // Calls: data-only so IncomingCallKit native service can
+                                        // intercept and show the full-screen call UI in background.
+                                        // Duels & others: include notification block so Android
+                                        // auto-shows a notification when app is in background.
+                                        notification: isIncomingCall ? undefined : {
                                             title: params.title,
                                             body: params.body,
                                         },
@@ -199,14 +200,14 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         android: {
                                             priority: 'high',
                                             collapseKey: channelId, // group same-channel notifications
-                                            notification: (isIncomingCall || isDuel) ? undefined : {
+                                            notification: isIncomingCall ? undefined : {
                                                 channelId,
                                                 color,
                                                 icon: 'ic_notification',
                                                 ...(params.actorAvatar ? { imageUrl: params.actorAvatar } : {}),
                                                 body: params.body,
                                                 title: params.title,
-                                                clickAction: isDuel ? 'duel_challenge' : (isIncomingCall ? 'incoming_call' : 'OPEN_APP'),
+                                                clickAction: isDuel ? 'duel_challenge' : 'OPEN_APP',
                                                 sound: channelId === 'duels' ? 'default' : 'default',
                                                 tag: params.type,
                                                 notificationCount: 1,
