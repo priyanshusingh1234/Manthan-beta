@@ -131,6 +131,7 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       console.log('[NativePush] Foreground/Background push received:', notification);
       const data = notification.data || {};
 
+      // ── Incoming Call: show IncomingCallKit full-screen + local notif with buttons ──
       if (data.type === 'incoming_call') {
         try {
           const { IncomingCallKit } = await import('@capgo/capacitor-incoming-call-kit');
@@ -148,6 +149,52 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
           });
         } catch (e) {
           console.error('[CallKit] Failed to show incoming call from push', e);
+        }
+
+        // Also show a local notification with native Answer / Decline buttons
+        try {
+          const { LocalNotifications } = await import('@capacitor/local-notifications');
+          await LocalNotifications.schedule({
+            notifications: [{
+              id: Math.floor(Math.random() * 100000),
+              title: data.title || notification.title || '📞 Incoming Call',
+              body: data.body || notification.body || 'Someone is calling you',
+              channelId: 'calls',
+              ongoing: true,
+              autoCancel: true,
+              actionTypeId: 'incoming_call',
+              extra: {
+                type: 'incoming_call',
+                url: data.url || data.href || '/',
+                roomId: data.roomId || '',
+              },
+            }]
+          });
+        } catch (e) {
+          console.error('[LocalNotif] Failed to show call notification with buttons', e);
+        }
+      }
+
+      // ── Duel Challenge: show local notification with Accept / Decline buttons ──
+      if (data.type === 'coop_challenge') {
+        try {
+          const { LocalNotifications } = await import('@capacitor/local-notifications');
+          await LocalNotifications.schedule({
+            notifications: [{
+              id: Math.floor(Math.random() * 100000),
+              title: data.title || notification.title || '⚔️ Duel Challenge!',
+              body: data.body || notification.body || 'You have been challenged to a duel!',
+              channelId: 'duels',
+              autoCancel: true,
+              actionTypeId: 'duel_challenge',
+              extra: {
+                type: 'coop_challenge',
+                url: data.url || data.href || '/duels',
+              },
+            }]
+          });
+        } catch (e) {
+          console.error('[LocalNotif] Failed to show duel notification with buttons', e);
         }
       }
     });
@@ -302,6 +349,87 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
         ]
       });
       await PushNotifications.register();
+
+      // ── Register LocalNotifications action types (native Android buttons) ──
+      try {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
+
+        // Register the action button types that map to our actionTypeId values
+        await LocalNotifications.registerActionTypes({
+          types: [
+            {
+              id: 'incoming_call',
+              actions: [
+                { id: 'answer',  title: '📞 Answer',  foreground: true },
+                { id: 'decline', title: '❌ Decline', foreground: false, destructive: true },
+              ]
+            },
+            {
+              id: 'duel_challenge',
+              actions: [
+                { id: 'accept_duel',  title: '⚔️ Accept',  foreground: true },
+                { id: 'decline_duel', title: '❌ Decline', foreground: false, destructive: true },
+              ]
+            }
+          ]
+        });
+
+        // Listen for action button taps on local notifications
+        await LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+          console.log('[LocalNotif] Action performed:', action);
+          const extra = action.notification?.extra || {};
+          const actionId = action.actionId;
+
+          // ── Call buttons ──
+          if (actionId === 'answer') {
+            const url = extra.url || '/';
+            if (url.includes('/chat/')) {
+              const path = normalizeInAppPath(url);
+              if (path) safeNavigate(`${path}?incoming=1&autoAccept=1`, navigate);
+            } else {
+              const path = normalizeInAppPath(url);
+              if (path) safeNavigate(path, navigate);
+            }
+            return;
+          }
+          if (actionId === 'decline') {
+            // Decline call: send call-ended message without opening the app
+            const roomId = extra.roomId;
+            if (roomId) {
+              supabase.auth.getUser().then(({ data: { user } }) => {
+                if (user) {
+                  supabase.from('chat_messages').insert({
+                    room_id: roomId,
+                    sender_id: user.id,
+                    content: '__CALL_ENDED__: Call declined from notification',
+                    message_type: 'text'
+                  }).then(() => {
+                    supabaseRealtime.channel(`room-${roomId}`).send({
+                      type: 'broadcast',
+                      event: 'call-ended',
+                      payload: { roomId }
+                    }).catch(() => { });
+                  });
+                }
+              });
+            }
+            return;
+          }
+
+          // ── Duel buttons ──
+          if (actionId === 'accept_duel') {
+            const path = normalizeInAppPath(extra.url || '/duels');
+            if (path) safeNavigate(path, navigate);
+            return;
+          }
+          if (actionId === 'decline_duel') {
+            // Just dismiss — no navigation
+            return;
+          }
+        });
+      } catch (e) {
+        console.log('[LocalNotif] Setup skipped or failed:', e);
+      }
     }
 
     // Call Kit Permissions

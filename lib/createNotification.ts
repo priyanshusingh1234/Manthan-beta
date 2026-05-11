@@ -170,8 +170,10 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                     await firebaseAdmin.messaging().send({
                                         token: sub.endpoint,
 
-                                        // Always send notification so FCM creates the native notification with action buttons
-                                        notification: {
+                                        // Calls & duels: data-only so pushNotificationReceived fires
+                                        // and we can show IncomingCallKit / LocalNotifications with real buttons.
+                                        // Other types: use notification block for standard FCM display.
+                                        notification: (isIncomingCall || isDuel) ? undefined : {
                                             title: params.title,
                                             body: params.body,
                                         },
@@ -197,7 +199,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         android: {
                                             priority: 'high',
                                             collapseKey: channelId, // group same-channel notifications
-                                            notification: {
+                                            notification: (isIncomingCall || isDuel) ? undefined : {
                                                 channelId,
                                                 color,
                                                 icon: 'ic_notification',
