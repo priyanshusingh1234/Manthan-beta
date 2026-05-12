@@ -242,8 +242,14 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             },
                                         },
                                     });
-                                } catch (fcmErr) {
+                                } catch (fcmErr: any) {
                                     console.error('[createNotification] FCM Push failed:', fcmErr);
+                                    // Clean up dead tokens (uninstalled apps)
+                                    const errCode = fcmErr?.code || fcmErr?.errorInfo?.code || '';
+                                    if (errCode.includes('not-registered') || errCode.includes('invalid-registration-token') || errCode.includes('UNREGISTERED')) {
+                                        await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+                                        console.log('[createNotification] Deleted dead FCM token:', sub.endpoint.substring(0, 20) + '...');
+                                    }
                                 }
                             }
                             return;

@@ -14,6 +14,20 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
         }
 
+        const isNative = subscription.keys?.p256dh === 'native';
+
+        // For native (FCM) tokens: delete all OLD native tokens for this user
+        // before inserting the new one. APK reinstalls generate a new FCM token
+        // and the old ones become dead — keeping them causes delivery failures.
+        if (isNative) {
+            await supabaseAdmin
+                .from('push_subscriptions')
+                .delete()
+                .eq('user_id', userId)
+                .eq('p256dh_key', 'native')
+                .neq('endpoint', subscription.endpoint);
+        }
+
         // Upsert the subscription using the endpoint as the unique identifier
         // so a browser doesn't duplicate its entry if it re-subscribes
         const { error } = await supabaseAdmin

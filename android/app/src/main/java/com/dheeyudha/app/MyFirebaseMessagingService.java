@@ -45,8 +45,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 String roomId = remoteMessage.getData().get("roomId");
                 String callerName = remoteMessage.getData().get("callerName");
                 String url = remoteMessage.getData().get("url");
-                String callType = remoteMessage.getData().get("callType");
-                String callerId = remoteMessage.getData().get("callerId");
 
                 // Wake the device so the user can see/hear the call
                 PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
@@ -59,14 +57,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     wakeLock.acquire(30000); // 30 seconds
                 }
 
-                showIncomingCallNotification(callerName, roomId, url, callType, callerId);
+                showIncomingCallNotification(callerName, roomId, url);
             } else if ("coop_challenge".equals(type)) {
                 showCoopChallengeNotification(remoteMessage);
             }
         }
     }
 
-    private void showIncomingCallNotification(String callerName, String roomId, String url, String callType, String callerId) {
+    private void showIncomingCallNotification(String callerName, String roomId, String url) {
         NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
@@ -113,12 +111,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         // ── Accept action → deep-link into the chat with autoAccept ─────────
         String chatPath = "/chat/" + (roomId != null ? roomId : "");
-        String effectiveCallType = (callType != null && !callType.isEmpty()) ? callType : "voice";
-        String effectiveCallerId = (callerId != null && !callerId.isEmpty()) ? callerId : "";
         String acceptUrl = "https://manthan-beta-c975.vercel.app" + chatPath
-                + "?autoAccept=1&callType=" + effectiveCallType
-                + "&callerName=" + Uri.encode(callerName != null ? callerName : "Scholar")
-                + (effectiveCallerId.isEmpty() ? "" : "&callerId=" + effectiveCallerId);
+                + "?autoAccept=1&callType=voice&callerName=" + Uri.encode(callerName != null ? callerName : "Scholar");
 
         Intent acceptIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(acceptUrl));
         acceptIntent.setPackage(getPackageName());
