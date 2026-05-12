@@ -41,6 +41,8 @@ interface CreateNotificationParams {
     actorId?: string;        // who triggered it
     actorName?: string;
     actorAvatar?: string;
+    callType?: 'voice' | 'video';   // for incoming_call: voice or video
+    callerId?: string;              // for incoming_call: the caller's user ID
 }
 
 /**
@@ -189,6 +191,8 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             type: params.type,
                                             roomId: params.href?.split('/chat/')?.[1]?.split('?')?.[0] || '',
                                             callerName: params.actorName || params.title || 'Scholar',
+                                            callType: params.callType || 'voice',
+                                            callerId: params.callerId || params.actorId || '',
                                             // Actor info — used by the app to show avatar in notification
                                             actor_name:   params.actorName   || '',
                                             actor_avatar: params.actorAvatar || '',

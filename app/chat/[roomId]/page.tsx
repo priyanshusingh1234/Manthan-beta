@@ -401,27 +401,37 @@ function ChatRoomContent() {
         const unread = filtered.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id);
         if (unread.length) supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
 
-        // Resume incoming call state if the last message is a recent CALL_STARTED
-        // autoAccept=1 means we arrived here from GlobalCallListener.acceptCall()
-        const lastMsg = filtered[filtered.length - 1];
+        // Resume incoming call state when autoAccept=1 is set
+        // (we arrived here from GlobalCallListener.acceptCall() OR the native
+        // notification Accept button via Intent deep-link)
         if (
-          lastMsg &&
-          lastMsg.content.startsWith('__CALL_STARTED__') &&
-          lastMsg.sender_id !== u.id &&
           searchParams.get('autoAccept') === '1' &&
           !callCtx.callActive.current  // use ref — never stale, safe to check here
         ) {
-          const createdAt = new Date(lastMsg.created_at).getTime();
-          if (Date.now() - createdAt < 45000) {
-            processedCallIdRef.current = lastMsg.id;
-            const type = (searchParams.get('callType') as 'voice' | 'video') || lastMsg.content.split(':')[1] as 'voice' | 'video';
-            const callerId = searchParams.get('callerId') || pRes.data?.[0]?.user_id;
-            const callerName = searchParams.get('callerName')
-              ? decodeURIComponent(searchParams.get('callerName')!)
-              : (profData?.full_name || 'Scholar');
-            // startCall has its own internal guard too — this is belt-and-suspenders
-            callCtx.startCall(roomId, type, callerId, callerName, true);
+          // Search through ALL recent messages for a __CALL_STARTED__ from the
+          // other party — don't just check the last message, because regular
+          // messages may have arrived after the call invite.
+          const callMsg = [...filtered].reverse().find(
+            m => m.content.startsWith('__CALL_STARTED__') &&
+                 m.sender_id !== u.id &&
+                 (Date.now() - new Date(m.created_at).getTime() < 60000)
+          );
+
+          const type = (searchParams.get('callType') as 'voice' | 'video')
+            || (callMsg?.content.split(':')[1] as 'voice' | 'video')
+            || 'voice';
+          const callerId = searchParams.get('callerId') || pRes.data?.[0]?.user_id;
+          const callerName = searchParams.get('callerName')
+            ? decodeURIComponent(searchParams.get('callerName')!)
+            : (profData?.full_name || 'Scholar');
+
+          if (callMsg) {
+            processedCallIdRef.current = callMsg.id;
           }
+
+          // isAnswering=true → joins the existing Agora channel, does NOT send
+          // a new __CALL_STARTED__ message (which would start a second call)
+          callCtx.startCall(roomId, type, callerId, callerName, true);
         }
       }
       

@@ -23,11 +23,16 @@ export async function POST(req: Request) {
     let notifType = 'chat_message';
     let title = `New message from ${realSenderName}`;
     let body = content?.substring(0, 50) || 'New message';
+    // Extract call type from content like "📞 Incoming video call"
+    let callType: 'voice' | 'video' = 'voice';
 
     if (isCall) {
       notifType = 'incoming_call';
       title = `${realSenderName} is calling you...`;
       body = 'Tap to answer';
+      if (content?.toLowerCase().includes('video')) {
+        callType = 'video';
+      }
     } else if (isCallEnded) {
       notifType = 'missed_call';
       title = `Missed call from ${realSenderName}`;
@@ -41,6 +46,9 @@ export async function POST(req: Request) {
       body,
       href: `/chat/${roomId}`,
       actorName: actorName || realSenderName,  // used as callerName in FCM data
+      actorId: senderId,                       // used as callerId in FCM data
+      callType: isCall ? callType : undefined,
+      callerId: isCall ? senderId : undefined,
     });
 
     return NextResponse.json({ success: true });
