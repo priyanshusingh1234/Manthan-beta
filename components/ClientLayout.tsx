@@ -109,22 +109,30 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
 
     // ── Register listeners BEFORE calling register() so no events are missed ──
     await PushNotifications.addListener('registration', async (token) => {
-      console.log('[NativePush] Token:', token.value);
-      await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          subscription: {
-            endpoint: token.value,
-            keys: { auth: 'native', p256dh: 'native' }
-          }
-        })
-      });
+      console.log('[NativePush] Token received:', token.value?.substring(0, 20) + '...');
+      try {
+        const res = await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            subscription: {
+              endpoint: token.value,
+              keys: { auth: 'native', p256dh: 'native' }
+            }
+          })
+        });
+        console.log('[NativePush] Subscribe response:', res.status);
+        if (!res.ok) {
+          console.error('[NativePush] Subscribe failed:', await res.text());
+        }
+      } catch (err) {
+        console.error('[NativePush] Subscribe fetch error:', err);
+      }
     });
 
     await PushNotifications.addListener('registrationError', (err) => {
-      console.error('[NativePush] Registration error:', err.error);
+      console.error('[NativePush] Registration error:', JSON.stringify(err));
     });
 
     await PushNotifications.addListener('pushNotificationReceived', async (notification) => {
