@@ -63,7 +63,21 @@ function safeNavigate(path: string, navigate: (path: string) => void) {
 
 // Dynamic import for PushNotifications to avoid SSR issues
 const initNativePush = async (userId: string, navigate: (path: string) => void) => {
-  if (!Capacitor.isNativePlatform()) return;
+  // Check if we're running in a native Capacitor WebView.
+  // Capacitor.isNativePlatform() can return false when loading from a remote
+  // server URL, so also check for the native bridge directly.
+  const isNative = Capacitor.isNativePlatform() ||
+    (typeof (window as any)?.Capacitor?.isNativePlatform === 'function' && (window as any).Capacitor.isNativePlatform()) ||
+    (typeof (window as any)?.Capacitor?.getPlatform === 'function' && (window as any).Capacitor.getPlatform() !== 'web');
+
+  console.log('[NativePush] Platform check:', {
+    isNativePlatform: Capacitor.isNativePlatform(),
+    getPlatform: Capacitor.getPlatform?.(),
+    isNative,
+    userAgent: navigator.userAgent?.substring(0, 50),
+  });
+
+  if (!isNative) return;
   if (nativePushInitialized) return;
 
   try {
@@ -569,7 +583,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setIsAuthenticated(!!user);
       if (user && !user.user_metadata?.has_completed_onboarding) setNeedsOnboarding(true);
 
-      if (user && Capacitor.isNativePlatform()) {
+      // initNativePush handles its own platform detection internally
+      if (user) {
         initNativePush(user.id, (path) => router.push(path));
       }
       if (user) {
@@ -600,7 +615,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         setNeedsOnboarding(false);
       }
 
-      if (session?.user && Capacitor.isNativePlatform()) {
+      if (session?.user) {
         initNativePush(session.user.id, (path) => router.push(path));
       }
       if (session?.user) {
