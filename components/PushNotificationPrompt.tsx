@@ -99,8 +99,8 @@ export default function PushNotificationPrompt() {
     if (!isVisible) return null;
 
     return (
-        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 animate-slideUp">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl p-4 md:p-5 w-[calc(100vw-2rem)] md:w-80 flex flex-col gap-3 relative overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 dark:bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl p-5 w-full max-w-sm flex flex-col gap-3 relative overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
                 {/* Background glow */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 dark:bg-indigo-500/5 rounded-full blur-3xl -z-10 pointer-events-none" />
                 
