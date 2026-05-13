@@ -15,6 +15,7 @@ import CongratsBadgeModal from '@/components/CongratsBadgeModal';
 import GlobalCallListener from '@/components/GlobalCallListener';
 import GlobalPrefetcher from '@/components/GlobalPrefetcher';
 import { CallProvider } from '@/components/CallProvider';
+import { subscribeToPushNotifications } from '@/lib/pushUtils';
 
 
 import CompleteProfileOverlay from '@/components/CompleteProfileOverlay';
@@ -355,45 +356,15 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       ]
     });
 
-    // ── Reliably capture the FCM token using a Promise ──
-    // The event-listener-only approach is unreliable: if GMS has a cached
-    // token the 'registration' event may not re-fire. Wrapping in a Promise
-    // with a timeout ensures we always attempt to save.
+    // ── Auto-register FCM token ──
+    // Use the SAME subscribeToPushNotifications() function that works from
+    // the settings toggle. This is the proven code path — handles permission,
+    // token capture, and server save reliably.
     try {
-      const token = await new Promise<string>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Token timeout')), 10000);
-        PushNotifications.addListener('registration', (t) => {
-          clearTimeout(timeout);
-          resolve(t.value);
-        });
-        PushNotifications.addListener('registrationError', (err) => {
-          clearTimeout(timeout);
-          reject(err);
-        });
-        PushNotifications.register();
-      });
-
-      console.log('[NativePush] Token captured:', token.substring(0, 20) + '...');
-
-      // Save the token to the server — use /api/push/subscribe which
-      // cleans up old native tokens for this user (handles reinstalls)
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          subscription: {
-            endpoint: token,
-            keys: { auth: 'native', p256dh: 'native' }
-          }
-        })
-      });
-      console.log('[NativePush] Auto-subscribe response:', res.status);
-      if (!res.ok) {
-        console.error('[NativePush] Auto-subscribe failed:', await res.text());
-      }
-    } catch (tokenErr) {
-      console.warn('[NativePush] Token capture failed (will retry on next app open):', tokenErr);
+      await subscribeToPushNotifications();
+      console.log('[NativePush] Auto-subscribe succeeded');
+    } catch (subErr) {
+      console.warn('[NativePush] Auto-subscribe failed (will retry next app open):', subErr);
     }
 
       // ── Register LocalNotifications action types (native Android buttons) ──
