@@ -450,6 +450,7 @@ export default function CreateQuestionForm() {
                 className="block w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
               >
                 <option value="">Select class</option>
+                <option value="All">All</option>
                 <option value="6">6</option>
                 <option value="7">7</option>
                 <option value="8">8</option>

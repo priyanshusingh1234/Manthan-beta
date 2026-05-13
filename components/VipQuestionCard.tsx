@@ -7,6 +7,8 @@ import {
   Play, CheckCircle, Lock, Sparkles, TrendingDown,
   Users, AlertTriangle, Trophy,
 } from "lucide-react";
+import { Share } from "@capacitor/share";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/lib/supabaseClient";
 import DuelChallengeModal from "@/components/DuelChallengeModal";
 
@@ -138,8 +140,16 @@ export default function VipQuestionCard({ q }: { q: VipQuestion }) {
 
   const handleShare = async () => {
     const url = `${window.location.origin}/questions/${q.id}`;
+    const title = q.title || "Dheeyudha VIP Challenge";
     try {
-      if (navigator.share) { await navigator.share({ title: q.title || "", url }); return; }
+      if (Capacitor.isNativePlatform()) {
+        await Share.share({ title, url, dialogTitle: "Share this VIP Challenge" });
+        return;
+      }
+      if (typeof navigator !== 'undefined' && navigator.share) { 
+        await navigator.share({ title, url }); 
+        return; 
+      }
       await navigator.clipboard.writeText(url);
     } catch { /* ignore */ }
   };

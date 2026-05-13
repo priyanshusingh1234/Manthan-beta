@@ -15,7 +15,7 @@ export async function generateMetadata({
     const { id } = params;
     const { data: q } = await supabaseAdmin
         .from("questions")
-        .select("id, title, body, subject, class_grade, points, difficulty, image_url")
+        .select("id, title, body, subject, class_grade, points, difficulty, image_url, question_type")
         .eq("id", id)
         .maybeSingle();
 
@@ -26,10 +26,14 @@ export async function generateMetadata({
         };
     }
 
-    const title = `${q.title} | Dheeyudha Question`;
-    const description = (q.body || `Class ${q.class_grade || '?'} ${q.subject || 'Question'} · ${q.points || 0} points`)
-        .toString()
-        .slice(0, 160);
+    const typePrefix = q.question_type === 'match' ? '🧩 Match The Following: ' : '';
+    const title = `${typePrefix}${q.title} | Dheeyudha Question`;
+    
+    const defaultDesc = q.question_type === 'match' 
+        ? `Interactive matching puzzle for Class ${q.class_grade || '?'} ${q.subject || ''}. Solve to earn ${q.points || 0} points!` 
+        : `Class ${q.class_grade || '?'} ${q.subject || 'Question'} · ${q.points || 0} points`;
+        
+    const description = (q.body || defaultDesc).toString().slice(0, 160);
     const image = q.image_url
         ? (q.image_url.startsWith('http') ? q.image_url : `${APP_URL}${q.image_url}`)
         : `${APP_URL}/og-social.png`;
