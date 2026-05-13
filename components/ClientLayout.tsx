@@ -356,16 +356,10 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       ]
     });
 
-    // ── Auto-register FCM token ──
-    // Use the SAME subscribeToPushNotifications() function that works from
-    // the settings toggle. This is the proven code path — handles permission,
-    // token capture, and server save reliably.
-    try {
-      await subscribeToPushNotifications();
-      console.log('[NativePush] Auto-subscribe succeeded');
-    } catch (subErr) {
-      console.warn('[NativePush] Auto-subscribe failed (will retry next app open):', subErr);
-    }
+    // Token registration is handled independently in the auth useEffect
+    // with a 3s delay to ensure Capacitor bridge is fully ready.
+    // initNativePush focuses only on listener setup and channel creation.
+    await PushNotifications.register();
 
       // ── Register LocalNotifications action types (native Android buttons) ──
       try {
@@ -581,6 +575,30 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       }
       if (user) {
         ActivityTracker.restoreFromCloud();
+      }
+
+      // ── Auto-register push token independently ──
+      // Delayed call ensures the Capacitor bridge is fully initialized.
+      // This is separate from initNativePush to guarantee token registration
+      // even if something in initNativePush fails before reaching subscribe.
+      if (user) {
+        setTimeout(async () => {
+          try {
+            const isNative = Capacitor.isNativePlatform() ||
+              (typeof (window as any)?.Capacitor?.isNativePlatform === 'function' && (window as any).Capacitor.isNativePlatform()) ||
+              (typeof (window as any)?.Capacitor?.getPlatform === 'function' && (window as any).Capacitor.getPlatform() !== 'web');
+            if (!isNative) return;
+
+            // Check if token is already saved this session
+            if (sessionStorage.getItem('push_token_saved')) return;
+
+            await subscribeToPushNotifications();
+            sessionStorage.setItem('push_token_saved', '1');
+            console.log('[AutoPush] Token registered successfully on app open');
+          } catch (e) {
+            console.warn('[AutoPush] Auto-register failed:', e);
+          }
+        }, 3000);
       }
     });
 
