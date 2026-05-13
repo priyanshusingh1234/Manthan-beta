@@ -121,33 +121,9 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       }
     } catch { }
 
-    // ── Register listeners BEFORE calling register() so no events are missed ──
-    await PushNotifications.addListener('registration', async (token) => {
-      console.log('[NativePush] Token received:', token.value?.substring(0, 20) + '...');
-      try {
-        const res = await fetch('/api/push/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            subscription: {
-              endpoint: token.value,
-              keys: { auth: 'native', p256dh: 'native' }
-            }
-          })
-        });
-        console.log('[NativePush] Subscribe response:', res.status);
-        if (!res.ok) {
-          console.error('[NativePush] Subscribe failed:', await res.text());
-        }
-      } catch (err) {
-        console.error('[NativePush] Subscribe fetch error:', err);
-      }
-    });
-
-    await PushNotifications.addListener('registrationError', (err) => {
-      console.error('[NativePush] Registration error:', JSON.stringify(err));
-    });
+    // Note: 'registration' and 'registrationError' listeners are set up inside
+    // the Promise-based token capture block below (after channel creation).
+    // A 'pushNotificationReceived' listener handles foreground notifications:
 
     await PushNotifications.addListener('pushNotificationReceived', async (notification) => {
       console.log('[NativePush] Foreground/Background push received:', notification);
@@ -294,9 +270,8 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       permStatus = await PushNotifications.requestPermissions();
     }
 
-    // Always attempt to create channels and register — even if permission
-    // check returns something unexpected, register() may still succeed on
-    // some OEMs and older Android versions.
+    // Always create channels regardless of permission status — they persist
+    // and are needed when the user eventually grants permission.
     await PushNotifications.createChannel({
       id: 'default',
       name: 'General',
@@ -379,7 +354,47 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
         }
       ]
     });
-    await PushNotifications.register();
+
+    // ── Reliably capture the FCM token using a Promise ──
+    // The event-listener-only approach is unreliable: if GMS has a cached
+    // token the 'registration' event may not re-fire. Wrapping in a Promise
+    // with a timeout ensures we always attempt to save.
+    try {
+      const token = await new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Token timeout')), 10000);
+        PushNotifications.addListener('registration', (t) => {
+          clearTimeout(timeout);
+          resolve(t.value);
+        });
+        PushNotifications.addListener('registrationError', (err) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
+        PushNotifications.register();
+      });
+
+      console.log('[NativePush] Token captured:', token.substring(0, 20) + '...');
+
+      // Save the token to the server — use /api/push/subscribe which
+      // cleans up old native tokens for this user (handles reinstalls)
+      const res = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          subscription: {
+            endpoint: token,
+            keys: { auth: 'native', p256dh: 'native' }
+          }
+        })
+      });
+      console.log('[NativePush] Auto-subscribe response:', res.status);
+      if (!res.ok) {
+        console.error('[NativePush] Auto-subscribe failed:', await res.text());
+      }
+    } catch (tokenErr) {
+      console.warn('[NativePush] Token capture failed (will retry on next app open):', tokenErr);
+    }
 
       // ── Register LocalNotifications action types (native Android buttons) ──
       try {
