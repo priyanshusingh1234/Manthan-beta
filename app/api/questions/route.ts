@@ -140,6 +140,8 @@ export async function GET(req: Request) {
         difficulty: r.difficulty || null,
         options: typeof r.options === 'string' ? JSON.parse(r.options) : r.options || null,
         correctOption: typeof r.correct_option === 'number' ? r.correct_option : null,
+        questionType: r.question_type || 'mcq',
+        matchPairs: typeof r.match_pairs === 'string' ? JSON.parse(r.match_pairs) : r.match_pairs || null,
         totalAttempts: attemptsMap[String(r.id)]?.total || 0,
         solvedCount: attemptsMap[String(r.id)]?.solved || 0,
         hasAttempted: userAttempts.has(String(r.id)),
@@ -175,7 +177,7 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
     const body = await req.json();
-    const { title, body: questionBody, subject, classGrade, points, timeLimit, difficulty, options, correctOption, imagePath, imageUrl, chapter, isVip } = body || {};
+    const { title, body: questionBody, subject, classGrade, points, timeLimit, difficulty, options, correctOption, imagePath, imageUrl, chapter, isVip, questionType, matchPairs } = body || {};
 
     // Basic validation server-side
     if (!title || !subject || (!classGrade && subject !== 'English') || !points || !timeLimit) {
@@ -227,6 +229,8 @@ export async function POST(req: Request) {
         image_url: imageUrl || null,
         chapter: chapter || null,
         is_vip: isVip === true,
+        question_type: questionType || 'mcq',
+        match_pairs: Array.isArray(matchPairs) && matchPairs.length ? matchPairs : null,
       };
 
       // attempt insert; if DB schema is missing `correct_option`, retry without it
@@ -266,6 +270,8 @@ export async function POST(req: Request) {
         difficulty: data.difficulty || null,
         options: data.options || null,
         correctOption: typeof data.correct_option === 'number' ? data.correct_option : null,
+        questionType: data.question_type || 'mcq',
+        matchPairs: data.match_pairs || null,
         imagePath: data.image_path || null,
         imageUrl: data.image_url || null,
         createdAt: data.created_at,

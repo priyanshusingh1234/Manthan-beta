@@ -28,6 +28,15 @@ export default function CreateQuestionForm() {
   const [chaptersLoading, setChaptersLoading] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [correctOption, setCorrectOption] = useState<number | null>(null);
+  
+  // Match the Following states
+  const [questionType, setQuestionType] = useState<'mcq' | 'match'>('mcq');
+  const [matchPairs, setMatchPairs] = useState<{ left: string; right: string }[]>([
+    { left: '', right: '' },
+    { left: '', right: '' },
+    { left: '', right: '' },
+  ]);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Image upload states
@@ -85,12 +94,23 @@ export default function CreateQuestionForm() {
     if (points > 15 && !modelAnswerFile && !modelAnswerSaved) e.modelAnswer = 'A model answer is required for questions worth more than 15 points.';
     if (!Number.isFinite(timeLimit) || timeLimit <= 0) e.timeLimit = 'Given time must be greater than 0.';
     const filledOptions = options.filter((o) => o.trim() !== '');
-    if (filledOptions.length > 0 && filledOptions.length < 2) e.options = 'Provide at least two options or remove them.';
-    if (filledOptions.length > 0) {
-      if (correctOption === null || !Number.isInteger(correctOption) || correctOption < 0 || correctOption >= filledOptions.length) {
-        e.correctOption = 'Select the correct option.';
+    if (questionType === 'mcq') {
+      if (filledOptions.length > 0 && filledOptions.length < 2) e.options = 'Provide at least two options or remove them.';
+      if (filledOptions.length > 0) {
+        if (correctOption === null || !Number.isInteger(correctOption) || correctOption < 0 || correctOption >= filledOptions.length) {
+          e.correctOption = 'Select the correct option.';
+        }
+      }
+    } else if (questionType === 'match') {
+      const filledPairs = matchPairs.filter(p => p.left.trim() && p.right.trim());
+      if (filledPairs.length < 3) {
+        e.matchPairs = 'Provide at least 3 complete matching pairs.';
+      }
+      if (matchPairs.some(p => (p.left.trim() && !p.right.trim()) || (!p.left.trim() && p.right.trim()))) {
+        e.matchPairs = 'All active pairs must have both left and right sides filled.';
       }
     }
+    
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -113,6 +133,18 @@ export default function CreateQuestionForm() {
     setOptions((s) => s.map((v, i) => (i === idx ? value : v)));
   };
 
+  const handleAddMatchPair = () => {
+    if (matchPairs.length >= 6) return;
+    setMatchPairs(s => [...s, { left: '', right: '' }]);
+  };
+  const handleRemoveMatchPair = (idx: number) => {
+    if (matchPairs.length <= 3) return; // keep min 3
+    setMatchPairs(s => s.filter((_, i) => i !== idx));
+  };
+  const handleMatchPairChange = (idx: number, field: 'left' | 'right', value: string) => {
+    setMatchPairs(s => s.map((p, i) => i === idx ? { ...p, [field]: value } : p));
+  };
+
   const resetForm = async (keepImage = false) => {
     setTitle('');
     setBody('');
@@ -125,6 +157,12 @@ export default function CreateQuestionForm() {
     setIsVip(false);
     setOptions([]);
     setCorrectOption(null);
+    setQuestionType('mcq');
+    setMatchPairs([
+      { left: '', right: '' },
+      { left: '', right: '' },
+      { left: '', right: '' },
+    ]);
     setErrors({});
 
     // remove preview and uploaded image (best-effort)
@@ -291,8 +329,10 @@ export default function CreateQuestionForm() {
         difficulty: difficulty || null,
         chapter: chapter.trim() || null,
         isVip,
-        options: options.filter((o) => o.trim() !== ''),
-        correctOption: correctOption !== null ? correctOption : null,
+        questionType,
+        matchPairs: questionType === 'match' ? matchPairs.filter(p => p.left.trim() && p.right.trim()) : null,
+        options: questionType === 'mcq' ? options.filter((o) => o.trim() !== '') : null,
+        correctOption: questionType === 'mcq' && correctOption !== null ? correctOption : null,
         imageUrl: null,
         imagePath: imagePath || null,
       };
@@ -357,6 +397,23 @@ export default function CreateQuestionForm() {
     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm p-6 border border-slate-100 dark:border-slate-800">
       <h2 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Create question</h2>
       {message && <div className="mb-4 text-sm text-slate-600 dark:text-slate-400 font-medium">{message}</div>}
+
+      <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mb-6 w-full sm:w-fit">
+        <button
+          type="button"
+          onClick={() => setQuestionType('mcq')}
+          className={`flex-1 sm:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-all ${questionType === 'mcq' ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+        >
+          MCQ / Written
+        </button>
+        <button
+          type="button"
+          onClick={() => setQuestionType('match')}
+          className={`flex-1 sm:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-all ${questionType === 'match' ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+        >
+          Match the Following
+        </button>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
@@ -490,48 +547,96 @@ export default function CreateQuestionForm() {
         </div>
 
         <div className="pt-2">
-          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Options (optional)</label>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mb-3 font-medium">If you add options, provide at least two. Leave empty for open-ended questions.</p>
-          <div className="space-y-3">
-            {options.map((opt, i) => (
-              <div key={i} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-200">
-                <label className="inline-flex items-center group cursor-pointer">
-                  <input 
-                    type="radio" 
-                    name="correct" 
-                    checked={correctOption === i} 
-                    onChange={() => setCorrectOption(i)} 
-                    className="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-600 text-amber-500 focus:ring-amber-500 bg-white dark:bg-slate-800" 
-                  />
-                </label>
-                <input 
-                  value={opt} 
-                  onChange={(e) => handleOptionChange(i, e.target.value)} 
-                  className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" 
-                  placeholder={`Option ${i + 1}`} 
-                />
+          {questionType === 'mcq' ? (
+            <>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Options (optional)</label>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-3 font-medium">If you add options, provide at least two. Leave empty for open-ended questions.</p>
+              <div className="space-y-3">
+                {options.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-200">
+                    <label className="inline-flex items-center group cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="correct" 
+                        checked={correctOption === i} 
+                        onChange={() => setCorrectOption(i)} 
+                        className="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-600 text-amber-500 focus:ring-amber-500 bg-white dark:bg-slate-800" 
+                      />
+                    </label>
+                    <input 
+                      value={opt} 
+                      onChange={(e) => handleOptionChange(i, e.target.value)} 
+                      className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all" 
+                      placeholder={`Option ${i + 1}`} 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveOption(i)} 
+                      className="p-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex items-center gap-3">
                 <button 
                   type="button" 
-                  onClick={() => handleRemoveOption(i)} 
-                  className="p-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+                  onClick={handleAddOption} 
+                  disabled={options.length >= 6} 
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                  Add option
                 </button>
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Up to 6 options</div>
               </div>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center gap-3">
-            <button 
-              type="button" 
-              onClick={handleAddOption} 
-              disabled={options.length >= 6} 
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
-            >
-              Add option
-            </button>
-            <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Up to 6 options</div>
-          </div>
-          {errors.options && <div className="text-xs text-red-600 mt-2 font-medium">{errors.options}</div>}
+              {errors.options && <div className="text-xs text-red-600 mt-2 font-medium">{errors.options}</div>}
+            </>
+          ) : (
+            <>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Matching Pairs <span className="text-red-500">*</span></label>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-3 font-medium">Add the correct pairs here. They will be shuffled for the students.</p>
+              <div className="space-y-3">
+                {matchPairs.map((pair, i) => (
+                  <div key={i} className="flex items-center gap-2 sm:gap-3 animate-in fade-in slide-in-from-left-2 duration-200">
+                    <input 
+                      value={pair.left} 
+                      onChange={(e) => handleMatchPairChange(i, 'left', e.target.value)} 
+                      className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 sm:px-4 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm" 
+                      placeholder={`Left Item ${i + 1}`} 
+                    />
+                    <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    <input 
+                      value={pair.right} 
+                      onChange={(e) => handleMatchPairChange(i, 'right', e.target.value)} 
+                      className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 sm:px-4 py-2 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm" 
+                      placeholder={`Matching Right Item ${i + 1}`} 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveMatchPair(i)} 
+                      disabled={matchPairs.length <= 3}
+                      className="p-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                    >
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex items-center gap-3">
+                <button 
+                  type="button" 
+                  onClick={handleAddMatchPair} 
+                  disabled={matchPairs.length >= 6} 
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                >
+                  Add Pair
+                </button>
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">3 to 6 pairs</div>
+              </div>
+              {errors.matchPairs && <div className="text-xs text-red-600 mt-2 font-medium">{errors.matchPairs}</div>}
+            </>
+          )}
         </div>
 
         {/* Model Answer Upload — required for > 15 point questions */}

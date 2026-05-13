@@ -25,7 +25,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Authentication required" }, { status: 401 });
         }
 
-        const { questionId, selectedOption, startedAt, timeTaken, challengeId, warId } = await req.json();
+        const { questionId, selectedOption, startedAt, timeTaken, challengeId, warId, isCorrect: clientIsCorrect } = await req.json();
 
         if (!questionId) {
             return NextResponse.json({ error: "Missing questionId" }, { status: 400 });
@@ -131,8 +131,14 @@ export async function POST(req: Request) {
         }
 
         // 3. Evaluate answer
-        const correctOpt = typeof q.correct_option === 'number' ? q.correct_option : null;
-        const isCorrect = correctOpt !== null && selectedOption === correctOpt;
+        let isCorrect = false;
+        let correctOpt: number | null = null;
+        if (q.question_type === 'match') {
+            isCorrect = clientIsCorrect === true;
+        } else {
+            correctOpt = typeof q.correct_option === 'number' ? q.correct_option : null;
+            isCorrect = correctOpt !== null && selectedOption === correctOpt;
+        }
         const questionPoints = q.points || 0;
 
         // 4. Update User Points

@@ -35,6 +35,8 @@ type Question = {
   difficulty?: string | null;
   options?: string[] | null;
   correctOption?: number | null;
+  questionType?: string;
+  matchPairs?: { left: string, right: string }[] | null;
   imageUrl?: string | null;
   imagePath?: string | null;
   createdAt?: string | null;

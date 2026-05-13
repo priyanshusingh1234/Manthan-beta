@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import SolveQuestionClient from "./SolveQuestionClient";
 import WrittenSolveClient from "@/components/WrittenSolveClient";
+import MatchTheFollowingClient from "@/components/MatchTheFollowingClient";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -113,11 +114,14 @@ export default async function SolveQuestionPage({
 
     // ── Route to written answer flow for high-point questions ──
     const isWrittenQuestion = (q.points || 0) > 15;
+    const isMatchQuestion = q.question_type === 'match';
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/20 py-10 px-4 flex flex-col items-center">
             <div className="w-full max-w-3xl">
-                {isWrittenQuestion ? (
+                {isMatchQuestion ? (
+                    <MatchTheFollowingClient question={clientQuestion} />
+                ) : isWrittenQuestion ? (
                     <WrittenSolveClient question={clientQuestion} />
                 ) : (
                     <SolveQuestionClient question={clientQuestion} />
