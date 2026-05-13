@@ -41,6 +41,8 @@ function normalizeQuestion(
         difficulty: r.difficulty || null,
         options: typeof r.options === 'string' ? JSON.parse(r.options) : r.options || null,
         correctOption: typeof r.correct_option === 'number' ? r.correct_option : null,
+        questionType: r.question_type || 'mcq',
+        matchPairs: typeof r.match_pairs === 'string' ? JSON.parse(r.match_pairs) : r.match_pairs || null,
         totalAttempts: attemptsMap[String(r.id)]?.total || 0,
         solvedCount: attemptsMap[String(r.id)]?.solved || 0,
         hasAttempted: userAttempted.has(String(r.id)),

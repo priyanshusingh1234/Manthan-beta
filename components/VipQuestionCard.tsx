@@ -20,6 +20,8 @@ type VipQuestion = {
   timeLimit?: number | null;
   difficulty?: string | null;
   options?: string[] | null;
+  questionType?: string;
+  matchPairs?: { left: string, right: string }[] | null;
   createdByName?: string | null;
   createdByAvatar?: string | null;
   createdByUsername?: string | null;
@@ -226,6 +228,12 @@ export default function VipQuestionCard({ q }: { q: VipQuestion }) {
                     Class {q.classGrade}
                   </span>
                 )}
+                {q.questionType === 'match' && (
+                  <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-400 text-[9px] font-black uppercase tracking-wider">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v18"/><path d="M3 8h6"/><path d="M3 16h6"/><path d="M15 8h6"/><path d="M15 16h6"/></svg>
+                    Match
+                  </span>
+                )}
               </div>
 
               {/* Question title */}
@@ -312,8 +320,24 @@ export default function VipQuestionCard({ q }: { q: VipQuestion }) {
                 </div>
               )}
 
-              {/* Options preview — blurred to tease (only for unattempted) */}
-              {Array.isArray(q.options) && q.options.length > 0 && !q.hasAttempted && (
+              {/* Options or Match Pairs preview — blurred to tease (only for unattempted) */}
+              {q.questionType === 'match' && q.matchPairs && q.matchPairs.length > 0 && !q.hasAttempted && (
+                <div className="grid grid-cols-2 gap-2 select-none relative">
+                  <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
+                     <svg width="40" height="10" className="text-white">
+                        <path d="M 0 5 L 40 5" stroke="currentColor" strokeWidth="2" strokeDasharray="3 3"/>
+                     </svg>
+                  </div>
+                  <div className="relative px-3 py-2 rounded-xl bg-white/5 border border-white/8 overflow-hidden text-center">
+                    <span className="text-xs font-semibold text-white/30 blur-[3px] select-none">{q.matchPairs[0].left}</span>
+                  </div>
+                  <div className="relative px-3 py-2 rounded-xl bg-white/5 border border-white/8 overflow-hidden text-center">
+                    <span className="text-xs font-semibold text-white/30 blur-[3px] select-none">{q.matchPairs[0].right}</span>
+                    <Lock className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/15" />
+                  </div>
+                </div>
+              )}
+              {q.questionType !== 'match' && Array.isArray(q.options) && q.options.length > 0 && !q.hasAttempted && (
                 <div className="grid grid-cols-2 gap-2 select-none">
                   {q.options.slice(0, 4).map((opt, i) => (
                     <div

@@ -418,8 +418,15 @@ export default function QuestionCard({ q }: { q: Question }) {
         {/* Title & Tags */}
         <div className="space-y-1.5 sm:space-y-2">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {/* Match The Following Badge */}
+            {q.questionType === 'match' && (
+              <span className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-100/80 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5 sm:w-3 sm:h-3"><path d="M12 3v18"/><path d="M3 8h6"/><path d="M3 16h6"/><path d="M15 8h6"/><path d="M15 16h6"/></svg>
+                Match
+              </span>
+            )}
             {/* Written Answer badge for high-point questions */}
-            {(q.points ?? 0) > 15 && (
+            {(q.points ?? 0) > 15 && q.questionType !== 'match' && (
               <span className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-violet-100/80 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
                 <FileImage className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 Written
@@ -476,7 +483,46 @@ export default function QuestionCard({ q }: { q: Question }) {
           </div>
         )}
 
-        {/* options are hidden in preview card now */}
+        {/* Match the Following Preview */}
+        {q.questionType === 'match' && q.matchPairs && q.matchPairs.length > 0 && (
+          <div className="mt-3 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800/80 p-3 sm:p-4">
+            <div className="flex items-stretch justify-between gap-4 relative">
+              {/* Left Column Preview */}
+              <div className="flex-1 space-y-2 relative z-10">
+                {q.matchPairs.slice(0, 3).map((pair, idx) => (
+                  <div key={`left-${idx}`} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-center shadow-sm relative">
+                    <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 line-clamp-1">{pair.left}</span>
+                    <div className="absolute top-1/2 -right-2 w-1.5 h-1.5 rounded-full bg-indigo-400 -translate-y-1/2" />
+                  </div>
+                ))}
+              </div>
+
+              {/* Center Decorative Dashed Lines */}
+              <div className="w-12 sm:w-16 flex flex-col justify-around items-center opacity-30 dark:opacity-20">
+                 <svg width="100%" height="100%" className="absolute inset-0" preserveAspectRatio="none">
+                    <path d="M 0 15 C 30 15, 30 50, 60 50" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" className="text-indigo-500" />
+                    <path d="M 0 50 C 30 50, 30 15, 60 15" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" className="text-indigo-500" />
+                 </svg>
+              </div>
+
+              {/* Right Column Preview */}
+              <div className="flex-1 space-y-2 relative z-10">
+                {/* We just slice the first 3 items but reversed to show they are shuffled */}
+                {q.matchPairs.slice(0, 3).reverse().map((pair, idx) => (
+                  <div key={`right-${idx}`} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-center shadow-sm relative">
+                    <div className="absolute top-1/2 -left-2 w-1.5 h-1.5 rounded-full bg-indigo-400 -translate-y-1/2" />
+                    <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 line-clamp-1">{pair.right}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {q.matchPairs.length > 3 && (
+              <div className="mt-2 text-center text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium">
+                +{q.matchPairs.length - 3} more pairs to match
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* CARD FOOTER: Action Bar */}
