@@ -258,14 +258,11 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       if (path) safeNavigate(path, navigate);
     });
 
-    // ── Check permissions and register ──
-    // Auto-request permission if not already granted.
+    // ── Check permissions ──
+    // Do NOT auto-request permission here. We rely on PushNotificationPrompt UI instead.
     let permStatus = await PushNotifications.checkPermissions();
     if (permStatus.receive !== 'granted') {
-      permStatus = await PushNotifications.requestPermissions();
-      // FIX: Wait for Android activity to fully resume after the permission dialog closes.
-      // If we register() too quickly after the dialog, the intent is dropped.
-      await new Promise(r => setTimeout(r, 1500));
+      console.log('[NativePush] Permissions not granted yet. Skipping auto token registration.');
     }
 
     // Always create channels regardless of permission status — they persist
@@ -356,7 +353,8 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
     // ── Register and reliably capture the token using a Promise ──
     // This perfectly mirrors the manual toggle behavior from pushUtils.ts
     // to ensure the token is reliably caught and saved on app launch.
-    try {
+    if (permStatus.receive === 'granted') {
+      try {
       const token = await new Promise<string>((resolve, reject) => {
         let resolved = false;
         // Failsafe timeout in case device is already registered and event doesn't fire
@@ -407,6 +405,7 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       // Even if this fails (e.g. timeout because token is already known to OS),
       // the channels are created and native pushes from previous logins will still work.
     }
+  }
 
       // ── Register LocalNotifications action types (native Android buttons) ──
       try {
