@@ -124,6 +124,12 @@ export default function GlobalCallListener() {
         clearInterval((window as any)._activeCallHapticInterval);
         delete (window as any)._activeCallHapticInterval;
       }
+      // Stop web ringtone on timeout
+      if ((window as any)._activeCallRingtone) {
+        (window as any)._activeCallRingtone.pause();
+        (window as any)._activeCallRingtone.currentTime = 0;
+        delete (window as any)._activeCallRingtone;
+      }
     }, 45000);
 
     if (Capacitor.isNativePlatform()) {
@@ -332,6 +338,12 @@ export default function GlobalCallListener() {
       channelsRef.current = [];
       if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
       if ((window as any)._activeCallHapticInterval) clearInterval((window as any)._activeCallHapticInterval);
+      // Stop web ringtone on unmount
+      if ((window as any)._activeCallRingtone) {
+        (window as any)._activeCallRingtone.pause();
+        (window as any)._activeCallRingtone.currentTime = 0;
+        delete (window as any)._activeCallRingtone;
+      }
     };
   }, []);
 

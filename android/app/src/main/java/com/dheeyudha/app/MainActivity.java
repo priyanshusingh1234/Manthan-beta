@@ -1,6 +1,7 @@
 package com.dheeyudha.app;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -26,7 +27,7 @@ public class MainActivity extends BridgeActivity {
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
             );
         }
-        
+
         getWindow().addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON |
             WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
@@ -34,7 +35,7 @@ public class MainActivity extends BridgeActivity {
 
         handleCallIntent(getIntent());
     }
-    
+
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -43,10 +44,10 @@ public class MainActivity extends BridgeActivity {
     }
 
     /**
-     * If the user tapped "Decline" on the call notification, we just need to:
-     * 1. Stop the ringtone
-     * 2. Cancel the ongoing call notification
-     * No need to open the app UI for decline.
+     * Handle call-related intents:
+     *  - accept_call  → stop ringtone, cancel notification, navigate to chat room
+     *  - decline_call → stop ringtone, cancel notification, stay on current screen
+     *  - incoming_call → stop ringtone, cancel notification (full-screen tap)
      */
     private void handleCallIntent(Intent intent) {
         if (intent == null || intent.getExtras() == null) return;
@@ -54,22 +55,30 @@ public class MainActivity extends BridgeActivity {
         String type = intent.getStringExtra("type");
         Log.d(TAG, "handleCallIntent type=" + type);
 
-        if ("decline_call".equals(type)) {
-            // Stop ringtone
-            MyFirebaseMessagingService.stopRingtone();
+        if (type == null) return;
 
-            // Cancel the call notification
-            android.app.NotificationManager nm =
-                    (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            if (nm != null) {
-                nm.cancel(1001); // matches CALL_NOTIFICATION_ID
-            }
+        // ── Common cleanup: always stop ringtone + cancel notification ────────
+        MyFirebaseMessagingService.stopRingtone();
+        MyFirebaseMessagingService.cancelCallNotification(this);
 
-            // Clear the intent so it doesn't re-trigger
-            intent.removeExtra("type");
-        } else if ("incoming_call".equals(type)) {
-            // Stop ringtone when app opens for the call (user will hear in-app audio)
-            MyFirebaseMessagingService.stopRingtone();
+        // Clear the intent extras so it doesn't re-trigger on config changes
+        intent.removeExtra("type");
+
+        if ("accept_call".equals(type)) {
+            // Navigate to the chat page with autoAccept so Agora call starts
+            String roomId = intent.getStringExtra("roomId");
+            String callerName = intent.getStringExtra("callerName");
+            if (roomId == null) roomId = "";
+            if (callerName == null) callerName = "Scholar";
+
+            String chatUrl = "https://manthan-beta-c975.vercel.app/chat/" + roomId
+                    + "?autoAccept=1&callType=voice&callerName=" + Uri.encode(callerName);
+
+            Intent webIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(chatUrl));
+            webIntent.setPackage(getPackageName());
+            webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(webIntent);
         }
+        // For decline_call and incoming_call, cleanup above is sufficient
     }
 }

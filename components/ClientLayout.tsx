@@ -284,95 +284,102 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
     });
 
     // ── Check permissions and register ──
+    // Auto-request permission if not already granted (covers 'prompt',
+    // 'prompt-with-rationale', and any other non-granted state).
+    // On Android <13 permission is auto-granted; on 13+ the system dialog
+    // is shown once. This ensures the token is always generated on app
+    // open without requiring the user to find a manual settings toggle.
     let permStatus = await PushNotifications.checkPermissions();
-    if (permStatus.receive === 'prompt') {
+    if (permStatus.receive !== 'granted') {
       permStatus = await PushNotifications.requestPermissions();
     }
 
-    if (permStatus.receive === 'granted') {
-      await PushNotifications.createChannel({
-        id: 'default',
-        name: 'General',
-        description: 'General notifications',
-        importance: 4,
-        visibility: 1,
-        vibration: true,
-      });
-      await PushNotifications.createChannel({
-        id: 'duels',
-        name: '⚔️ Duels & Battles',
-        description: 'Duel challenges, war declarations, and battle results',
-        importance: 5,       // IMPORTANCE_HIGH — heads-up notification
-        visibility: 1,       // VISIBILITY_PUBLIC — show on lock screen
-        vibration: true,
-        sound: 'battle',     // res/raw/battle.mp3 in the Android project
-        lights: true,
-        lightColor: '#f97316', // orange
-      });
-      await PushNotifications.createChannel({
-        id: 'social',
-        name: '👥 Social',
-        description: 'Follows, comments, mentions, streaks, and chats',
-        importance: 4,
-        visibility: 1,
-        vibration: true,
-        sound: 'default',
-        lights: true,
-        lightColor: '#3b82f6', // blue
-      });
-      await PushNotifications.createChannel({
-        id: 'academic',
-        name: '📚 Academic',
-        description: 'Answer reviews, new questions, and AI feedback',
-        importance: 4,
-        visibility: 1,
-        vibration: true,
-        sound: 'default',
-        lights: true,
-        lightColor: '#6366f1', // indigo
-      });
-      await PushNotifications.createChannel({
-        id: 'alerts',
-        name: '🏆 Rewards & Alerts',
-        description: 'Points earned, weekly reports, and achievements',
-        importance: 4,
-        visibility: 1,
-        vibration: true,
-        sound: 'default',
-        lights: true,
-        lightColor: '#f59e0b', // amber
-      });
-      await PushNotifications.createChannel({
-        id: 'calls',
-        name: '📞 Calls',
-        description: 'Incoming and missed voice calls',
-        importance: 5,
-        visibility: 1,
-        vibration: true,
-        sound: 'default',
-        lights: true,
-        lightColor: '#6366f1',
-      });
-      await PushNotifications.registerActionTypes({
-        types: [
-          {
-            id: 'incoming_call',
-            actions: [
-              { id: 'answer',  title: 'Answer',  foreground: true },
-              { id: 'decline', title: 'Decline', foreground: false, destructive: true },
-            ]
-          },
-          {
-            // Duel challenge — Accept/Decline buttons on Android lock screen
-            id: 'duel_challenge',
-            actions: [
-              { id: 'accept_duel',  title: '⚔️ Accept',  foreground: true },
-              { id: 'decline_duel', title: '❌ Decline', foreground: false, destructive: true },
-            ]
-          }
-        ]
-      });
-      await PushNotifications.register();
+    // Always attempt to create channels and register — even if permission
+    // check returns something unexpected, register() may still succeed on
+    // some OEMs and older Android versions.
+    await PushNotifications.createChannel({
+      id: 'default',
+      name: 'General',
+      description: 'General notifications',
+      importance: 4,
+      visibility: 1,
+      vibration: true,
+    });
+    await PushNotifications.createChannel({
+      id: 'duels',
+      name: '⚔️ Duels & Battles',
+      description: 'Duel challenges, war declarations, and battle results',
+      importance: 5,       // IMPORTANCE_HIGH — heads-up notification
+      visibility: 1,       // VISIBILITY_PUBLIC — show on lock screen
+      vibration: true,
+      sound: 'battle',     // res/raw/battle.mp3 in the Android project
+      lights: true,
+      lightColor: '#f97316', // orange
+    });
+    await PushNotifications.createChannel({
+      id: 'social',
+      name: '👥 Social',
+      description: 'Follows, comments, mentions, streaks, and chats',
+      importance: 4,
+      visibility: 1,
+      vibration: true,
+      sound: 'default',
+      lights: true,
+      lightColor: '#3b82f6', // blue
+    });
+    await PushNotifications.createChannel({
+      id: 'academic',
+      name: '📚 Academic',
+      description: 'Answer reviews, new questions, and AI feedback',
+      importance: 4,
+      visibility: 1,
+      vibration: true,
+      sound: 'default',
+      lights: true,
+      lightColor: '#6366f1', // indigo
+    });
+    await PushNotifications.createChannel({
+      id: 'alerts',
+      name: '🏆 Rewards & Alerts',
+      description: 'Points earned, weekly reports, and achievements',
+      importance: 4,
+      visibility: 1,
+      vibration: true,
+      sound: 'default',
+      lights: true,
+      lightColor: '#f59e0b', // amber
+    });
+    await PushNotifications.createChannel({
+      id: 'calls',
+      name: '📞 Calls',
+      description: 'Incoming and missed voice calls',
+      importance: 5,
+      visibility: 1,
+      vibration: true,
+      sound: 'default',
+      lights: true,
+      lightColor: '#6366f1',
+    });
+    await PushNotifications.registerActionTypes({
+      types: [
+        {
+          id: 'incoming_call',
+          actions: [
+            { id: 'answer',  title: 'Answer',  foreground: true },
+            { id: 'decline', title: 'Decline', foreground: false, destructive: true },
+          ]
+        },
+        {
+          // Duel challenge — Accept/Decline buttons on Android lock screen
+          id: 'duel_challenge',
+          actions: [
+            { id: 'accept_duel',  title: '⚔️ Accept',  foreground: true },
+            { id: 'decline_duel', title: '❌ Decline', foreground: false, destructive: true },
+          ]
+        }
+      ]
+    });
+    await PushNotifications.register();
 
       // ── Register LocalNotifications action types (native Android buttons) ──
       try {
@@ -454,7 +461,6 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       } catch (e) {
         console.log('[LocalNotif] Setup skipped or failed:', e);
       }
-    }
 
     // Call Kit Permissions
     try {

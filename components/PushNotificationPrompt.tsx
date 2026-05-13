@@ -16,14 +16,12 @@ export default function PushNotificationPrompt() {
         const checkPermission = async () => {
             const isNative = Capacitor.isNativePlatform();
             
-            if (isNative) {
-                const { PushNotifications } = await import('@capacitor/push-notifications');
-                const status = await PushNotifications.checkPermissions();
-                if (status.receive !== 'prompt' && status.receive !== 'prompt-with-rationale') return;
-            } else {
-                if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-                if (Notification.permission !== 'default') return;
-            }
+            // On native, permissions are auto-requested in initNativePush (ClientLayout),
+            // so we don't need this in-app prompt — skip entirely.
+            if (isNative) return;
+
+            if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+            if (Notification.permission !== 'default') return;
 
             // Check if we already asked them recently (5 hour cooldown)
             const lastShown = localStorage.getItem('push_prompt_last_shown');

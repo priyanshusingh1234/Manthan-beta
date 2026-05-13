@@ -109,14 +109,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         fullScreenIntent.putExtra("fromKilledState", true);
         PendingIntent fullScreenPI = PendingIntent.getActivity(this, 0, fullScreenIntent, piFlags);
 
-        // ── Accept action → deep-link into the chat with autoAccept ─────────
-        String chatPath = "/chat/" + (roomId != null ? roomId : "");
-        String acceptUrl = "https://manthan-beta-c975.vercel.app" + chatPath
-                + "?autoAccept=1&callType=voice&callerName=" + Uri.encode(callerName != null ? callerName : "Scholar");
-
-        Intent acceptIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(acceptUrl));
-        acceptIntent.setPackage(getPackageName());
-        acceptIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        // ── Accept action → route through MainActivity so ringtone is stopped ──
+        Intent acceptIntent = new Intent(this, MainActivity.class);
+        acceptIntent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK |
+                Intent.FLAG_ACTIVITY_CLEAR_TOP |
+                Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        acceptIntent.putExtra("type", "accept_call");
+        acceptIntent.putExtra("roomId", roomId != null ? roomId : "");
+        acceptIntent.putExtra("callerName", callerName != null ? callerName : "Scholar");
         PendingIntent acceptPI = PendingIntent.getActivity(this, 200, acceptIntent, piFlags);
 
         // ── Decline action → just dismiss notification (no navigation) ──────
@@ -178,6 +179,15 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 }
             } catch (Exception ignored) {}
             activeRingtone = null;
+        }
+    }
+
+    /** Cancel the call notification. */
+    public static void cancelCallNotification(Context context) {
+        NotificationManager nm =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) {
+            nm.cancel(CALL_NOTIFICATION_ID);
         }
     }
 
