@@ -122,25 +122,6 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       }
     } catch { }
 
-    // ── Token registration listener — saves FCM token to server ──
-    await PushNotifications.addListener('registration', async (token) => {
-      console.log('[NativePush] Token received:', token.value?.substring(0, 20) + '...');
-      try {
-        const res = await fetch('/api/debug-push', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, token: token.value })
-        });
-        console.log('[NativePush] Token save response:', res.status);
-      } catch (err) {
-        console.error('[NativePush] Token save error:', err);
-      }
-    });
-
-    await PushNotifications.addListener('registrationError', (err) => {
-      console.error('[NativePush] Registration error:', JSON.stringify(err));
-    });
-
     // Foreground notification handler:
 
     await PushNotifications.addListener('pushNotificationReceived', async (notification) => {
@@ -373,9 +354,60 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       ]
     });
 
-    // register() triggers the 'registration' event above which saves the token
-    await PushNotifications.register();
-    console.log('[NativePush] register() called, waiting for token event...');
+    // ── Register and reliably capture the token using a Promise ──
+    // This perfectly mirrors the manual toggle behavior from pushUtils.ts
+    // to ensure the token is reliably caught and saved on app launch.
+    try {
+      const token = await new Promise<string>((resolve, reject) => {
+        let resolved = false;
+        // Failsafe timeout in case device is already registered and event doesn't fire
+        const timeout = setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            reject(new Error('Token capture timeout'));
+          }
+        }, 10000);
+
+        PushNotifications.addListener('registration', (t) => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timeout);
+          resolve(t.value);
+        });
+
+        PushNotifications.addListener('registrationError', (err) => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timeout);
+          reject(err);
+        });
+
+        console.log('[NativePush] Calling register()...');
+        PushNotifications.register();
+      });
+
+      console.log('[NativePush] Token successfully captured:', token.substring(0, 20) + '...');
+
+      // Save token exactly how the settings page does
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        const res = await fetch('/api/push/native-subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ token })
+        });
+        console.log('[NativePush] Server save response:', res.status);
+      } else {
+        console.error('[NativePush] No access token available to save push token');
+      }
+    } catch (err) {
+      console.error('[NativePush] Auto-registration token capture failed:', err);
+      // Even if this fails (e.g. timeout because token is already known to OS),
+      // the channels are created and native pushes from previous logins will still work.
+    }
 
       // ── Register LocalNotifications action types (native Android buttons) ──
       try {
