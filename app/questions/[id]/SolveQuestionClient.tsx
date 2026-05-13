@@ -11,6 +11,7 @@ import TeacherBadge from "@/ticks/teacher";
 import ChallengeFriendModal from "@/components/ChallengeFriendModal";
 import CoopChallengeHeader from "@/components/CoopChallengeHeader";
 import CoopSpectatorScreen from "@/components/CoopSpectatorScreen";
+import MatchArena from "@/components/MatchArena";
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 import { queueAchievementUnlock } from '@/components/AchievementUnlockOverlay';
@@ -162,7 +163,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
     const publicUrl = question.image_url || (question.image_path ? supabase.storage.from("question-images").getPublicUrl(question.image_path).data.publicUrl : null);
 
-    const handleSubmit = useCallback(async (forcedOption?: number | null) => {
+    const handleSubmit = useCallback(async (forcedOption?: number | null, forcedIsCorrect?: boolean) => {
         if (isSubmitting || result) return;
         setIsSubmitting(true);
 
@@ -181,6 +182,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 body: JSON.stringify({
                     questionId: question.id,
                     selectedOption: optionToSend ?? null,
+                    isCorrect: forcedIsCorrect,
                     startedAt,
                     timeTaken: Math.max(0, question.time_limit * 60 - timeLeft),
                     challengeId
@@ -806,8 +808,16 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                         </div>
                     )}
 
-                    {/* Options */}
-                    {question.options && question.options.length > 0 && (
+                    {/* Options or Match Arena */}
+                    {question.question_type === 'match' ? (
+                        <div className="mt-8">
+                            <MatchArena 
+                                question={question} 
+                                disabled={isSubmitting || !!result}
+                                onAttempt={(isCorrect) => handleSubmit(-1, isCorrect)} 
+                            />
+                        </div>
+                    ) : question.options && question.options.length > 0 ? (
                         <div className="grid gap-3 mt-8">
                             {question.options.map((opt: string, idx: number) => {
                                 const isSelected = selectedOption === idx;
@@ -829,18 +839,20 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                                 );
                             })}
                         </div>
-                    )}
+                    ) : null}
 
-                    {/* Footer sticky submit integrated inside card */}
-                    <div className="mt-12 pt-8 border-t border-gray-100 dark:border-slate-800 flex justify-end">
-                        <button
-                            onClick={() => handleSubmit()}
-                            disabled={selectedOption === null || isSubmitting}
-                            className="flex items-center gap-2 bg-gray-900 dark:bg-indigo-600 hover:bg-gray-800 dark:hover:bg-indigo-500 disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:text-gray-400 dark:disabled:text-slate-500 text-white font-medium text-lg px-10 py-4 rounded-full transition-all w-full sm:w-auto justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                        >
-                            {isSubmitting ? "Submitting..." : "Submit Answer"}
-                        </button>
-                    </div>
+                    {/* Submit Button for normal questions */}
+                    {question.question_type !== 'match' && (
+                        <div className="mt-12 pt-8 border-t border-gray-100 dark:border-slate-800 flex justify-end">
+                            <button
+                                onClick={() => handleSubmit()}
+                                disabled={selectedOption === null || isSubmitting}
+                                className="flex items-center gap-2 bg-gray-900 dark:bg-indigo-600 hover:bg-gray-800 dark:hover:bg-indigo-500 disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:text-gray-400 dark:disabled:text-slate-500 text-white font-medium text-lg px-10 py-4 rounded-full transition-all w-full sm:w-auto justify-center shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                            >
+                                {isSubmitting ? "Submitting..." : "Submit Answer"}
+                            </button>
+                        </div>
+                    )}
                 </div>
         </div>
     );
