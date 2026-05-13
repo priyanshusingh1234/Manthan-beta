@@ -171,7 +171,7 @@ export default function MatchTheFollowingClient({ question }: { question: any })
       }
 
       // Record the successful attempt
-      const res = await fetch('/api/questions/solve', {
+      const res = await fetch('/api/solve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

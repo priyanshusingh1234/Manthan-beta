@@ -110,6 +110,7 @@ export default async function SolveQuestionPage({
         teacherName: teacherMetadata.fullName || teacherMetadata.full_name || teacherMetadata.name || "Teacher",
         teacherUsername: teacherMetadata.username || null,
         teacherAvatar: teacherMetadata.avatar_url || teacherMetadata.avatar || null,
+        matchPairs: q.match_pairs || [],
     };
 
     // ── Route to written answer flow for high-point questions ──
