@@ -122,9 +122,26 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       }
     } catch { }
 
-    // Note: 'registration' and 'registrationError' listeners are set up inside
-    // the Promise-based token capture block below (after channel creation).
-    // A 'pushNotificationReceived' listener handles foreground notifications:
+    // ── Token registration listener — saves FCM token to server ──
+    await PushNotifications.addListener('registration', async (token) => {
+      console.log('[NativePush] Token received:', token.value?.substring(0, 20) + '...');
+      try {
+        const res = await fetch('/api/debug-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, token: token.value })
+        });
+        console.log('[NativePush] Token save response:', res.status);
+      } catch (err) {
+        console.error('[NativePush] Token save error:', err);
+      }
+    });
+
+    await PushNotifications.addListener('registrationError', (err) => {
+      console.error('[NativePush] Registration error:', JSON.stringify(err));
+    });
+
+    // Foreground notification handler:
 
     await PushNotifications.addListener('pushNotificationReceived', async (notification) => {
       console.log('[NativePush] Foreground/Background push received:', notification);
@@ -356,10 +373,9 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
       ]
     });
 
-    // Token registration is handled independently in the auth useEffect
-    // with a 3s delay to ensure Capacitor bridge is fully ready.
-    // initNativePush focuses only on listener setup and channel creation.
+    // register() triggers the 'registration' event above which saves the token
     await PushNotifications.register();
+    console.log('[NativePush] register() called, waiting for token event...');
 
       // ── Register LocalNotifications action types (native Android buttons) ──
       try {
@@ -577,79 +593,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         ActivityTracker.restoreFromCloud();
       }
 
-      // ── Auto-register push token independently ──
-      // Completely self-contained: doesn't depend on initNativePush or
-      // subscribeToPushNotifications. Uses PushNotifications directly.
-      if (user) {
-        setTimeout(async () => {
-          try {
-            const isNative = Capacitor.isNativePlatform() ||
-              (typeof (window as any)?.Capacitor?.isNativePlatform === 'function' && (window as any).Capacitor.isNativePlatform()) ||
-              (typeof (window as any)?.Capacitor?.getPlatform === 'function' && (window as any).Capacitor.getPlatform() !== 'web');
 
-            console.log('[AutoPush] isNative:', isNative, 'platform:', Capacitor.getPlatform?.());
-
-            if (!isNative) {
-              console.log('[AutoPush] Not native, skipping');
-              return;
-            }
-
-            // Skip if already saved this session
-            if (sessionStorage.getItem('push_token_saved')) {
-              console.log('[AutoPush] Already saved this session');
-              return;
-            }
-
-            const { PushNotifications } = await import('@capacitor/push-notifications');
-
-            // Request permission
-            let perm = await PushNotifications.checkPermissions();
-            console.log('[AutoPush] Permission status:', perm.receive);
-            if (perm.receive !== 'granted') {
-              perm = await PushNotifications.requestPermissions();
-              console.log('[AutoPush] After request:', perm.receive);
-            }
-
-            if (perm.receive !== 'granted') {
-              console.log('[AutoPush] Permission denied, cannot register');
-              return;
-            }
-
-            // Capture token
-            const token = await new Promise<string>((resolve, reject) => {
-              const timeout = setTimeout(() => reject(new Error('Token timeout after 15s')), 15000);
-              PushNotifications.addListener('registration', (t) => {
-                clearTimeout(timeout);
-                resolve(t.value);
-              });
-              PushNotifications.addListener('registrationError', (err) => {
-                clearTimeout(timeout);
-                reject(new Error('Registration error: ' + JSON.stringify(err)));
-              });
-              PushNotifications.register();
-            });
-
-            console.log('[AutoPush] Token:', token.substring(0, 30) + '...');
-
-            // Save token to server via debug-push endpoint (most reliable, no auth needed)
-            const res = await fetch('/api/debug-push', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: user.id, token })
-            });
-
-            if (res.ok) {
-              sessionStorage.setItem('push_token_saved', '1');
-              console.log('[AutoPush] ✅ Token saved successfully');
-            } else {
-              const errText = await res.text();
-              console.error('[AutoPush] ❌ Save failed:', errText);
-            }
-          } catch (e: any) {
-            console.error('[AutoPush] ❌ Error:', e?.message || e);
-          }
-        }, 3000);
-      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
