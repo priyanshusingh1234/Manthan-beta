@@ -578,25 +578,75 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       }
 
       // ── Auto-register push token independently ──
-      // Delayed call ensures the Capacitor bridge is fully initialized.
-      // This is separate from initNativePush to guarantee token registration
-      // even if something in initNativePush fails before reaching subscribe.
+      // Completely self-contained: doesn't depend on initNativePush or
+      // subscribeToPushNotifications. Uses PushNotifications directly.
       if (user) {
         setTimeout(async () => {
           try {
             const isNative = Capacitor.isNativePlatform() ||
               (typeof (window as any)?.Capacitor?.isNativePlatform === 'function' && (window as any).Capacitor.isNativePlatform()) ||
               (typeof (window as any)?.Capacitor?.getPlatform === 'function' && (window as any).Capacitor.getPlatform() !== 'web');
-            if (!isNative) return;
 
-            // Check if token is already saved this session
-            if (sessionStorage.getItem('push_token_saved')) return;
+            console.log('[AutoPush] isNative:', isNative, 'platform:', Capacitor.getPlatform?.());
 
-            await subscribeToPushNotifications();
-            sessionStorage.setItem('push_token_saved', '1');
-            console.log('[AutoPush] Token registered successfully on app open');
-          } catch (e) {
-            console.warn('[AutoPush] Auto-register failed:', e);
+            if (!isNative) {
+              console.log('[AutoPush] Not native, skipping');
+              return;
+            }
+
+            // Skip if already saved this session
+            if (sessionStorage.getItem('push_token_saved')) {
+              console.log('[AutoPush] Already saved this session');
+              return;
+            }
+
+            const { PushNotifications } = await import('@capacitor/push-notifications');
+
+            // Request permission
+            let perm = await PushNotifications.checkPermissions();
+            console.log('[AutoPush] Permission status:', perm.receive);
+            if (perm.receive !== 'granted') {
+              perm = await PushNotifications.requestPermissions();
+              console.log('[AutoPush] After request:', perm.receive);
+            }
+
+            if (perm.receive !== 'granted') {
+              console.log('[AutoPush] Permission denied, cannot register');
+              return;
+            }
+
+            // Capture token
+            const token = await new Promise<string>((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Token timeout after 15s')), 15000);
+              PushNotifications.addListener('registration', (t) => {
+                clearTimeout(timeout);
+                resolve(t.value);
+              });
+              PushNotifications.addListener('registrationError', (err) => {
+                clearTimeout(timeout);
+                reject(new Error('Registration error: ' + JSON.stringify(err)));
+              });
+              PushNotifications.register();
+            });
+
+            console.log('[AutoPush] Token:', token.substring(0, 30) + '...');
+
+            // Save token to server via debug-push endpoint (most reliable, no auth needed)
+            const res = await fetch('/api/debug-push', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.id, token })
+            });
+
+            if (res.ok) {
+              sessionStorage.setItem('push_token_saved', '1');
+              console.log('[AutoPush] ✅ Token saved successfully');
+            } else {
+              const errText = await res.text();
+              console.error('[AutoPush] ❌ Save failed:', errText);
+            }
+          } catch (e: any) {
+            console.error('[AutoPush] ❌ Error:', e?.message || e);
           }
         }, 3000);
       }
