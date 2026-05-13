@@ -259,14 +259,13 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
     });
 
     // ── Check permissions and register ──
-    // Auto-request permission if not already granted (covers 'prompt',
-    // 'prompt-with-rationale', and any other non-granted state).
-    // On Android <13 permission is auto-granted; on 13+ the system dialog
-    // is shown once. This ensures the token is always generated on app
-    // open without requiring the user to find a manual settings toggle.
+    // Auto-request permission if not already granted.
     let permStatus = await PushNotifications.checkPermissions();
     if (permStatus.receive !== 'granted') {
       permStatus = await PushNotifications.requestPermissions();
+      // FIX: Wait for Android activity to fully resume after the permission dialog closes.
+      // If we register() too quickly after the dialog, the intent is dropped.
+      await new Promise(r => setTimeout(r, 1500));
     }
 
     // Always create channels regardless of permission status — they persist
