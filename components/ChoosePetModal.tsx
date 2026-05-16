@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Sphere, Box, Cone, MeshDistortMaterial, MeshWobbleMaterial } from '@react-three/drei';
 import { X, CheckCircle, Sparkles } from 'lucide-react';
-import { createBrowserClient } from '@supabase/ssr';
+import { supabase } from '@/lib/supabaseClient';
 import toast from 'react-hot-toast';
 
 interface ChoosePetModalProps {
@@ -54,11 +54,6 @@ export default function ChoosePetModal({ isOpen, onClose, onSelect }: ChoosePetM
     const [selectedPet, setSelectedPet] = useState<string | null>(null);
     const [petName, setPetName] = useState<string>('');
     const [saving, setSaving] = useState(false);
-    
-    const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
 
     const handleSave = async () => {
         if (!selectedPet || !petName.trim()) return;
