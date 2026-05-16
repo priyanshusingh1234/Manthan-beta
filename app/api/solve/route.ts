@@ -488,6 +488,24 @@ export async function POST(req: Request) {
         }
         // ─────────────────────────────────────────────────────────────────
 
+        // ── PET FEEDING LOGIC ──────────────────────────────────────────────
+        if (isCorrect) {
+            try {
+                const { data: petData } = await supabaseAdmin.from('profiles').select('pet_health').eq('id', userId).single();
+                if (petData) {
+                    const currentHealth = petData.pet_health || 0;
+                    const newHealth = Math.min(100, currentHealth + 15); // +15 health per correct answer
+                    await supabaseAdmin.from('profiles').update({
+                        pet_health: newHealth,
+                        pet_last_fed_at: new Date().toISOString()
+                    }).eq('id', userId);
+                }
+            } catch (e) {
+                console.error('[solve] pet feed error:', e);
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────
+
         return response;
     } catch (err: any) {
         console.error(err);

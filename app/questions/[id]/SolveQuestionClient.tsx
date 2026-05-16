@@ -16,6 +16,7 @@ import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 import { queueAchievementUnlock } from '@/components/AchievementUnlockOverlay';
 import { useCorrectSound } from '@/hooks/useCorrectSound';
+import { schedulePetFeedingReminder } from '@/lib/petNotifications';
 
 
 export default function SolveQuestionClient({ question }: { question: any }) {
@@ -215,6 +216,13 @@ export default function SolveQuestionClient({ question }: { question: any }) {
             // EXTREME VISUAL GRATIFICATION: Confetti & Rank up Toast
             if (data.isCorrect) {
                 try {
+                    // Schedule Pet Notification for Android
+                    supabase.auth.getUser().then(({ data: { user } }) => {
+                        if (user) {
+                            schedulePetFeedingReminder(user.user_metadata?.pet_name || 'your pet');
+                        }
+                    });
+
                     // 🔊 Play correct-answer sound (native on Android, web fallback)
                     playCorrect();
 
