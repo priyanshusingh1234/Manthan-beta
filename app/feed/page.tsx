@@ -6,8 +6,10 @@ import PostCard from '@/components/PostCard';
 import { Filter, SlidersHorizontal, BookOpen, Layers, Target, ChevronDown, Info, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
-import PetWidget from '@/components/PetWidget';
-import ChoosePetModal from '@/components/ChoosePetModal';
+import dynamic from 'next/dynamic';
+
+const PetWidget = dynamic(() => import('@/components/PetWidget'), { ssr: false });
+const ChoosePetModal = dynamic(() => import('@/components/ChoosePetModal'), { ssr: false });
 
 function normalizeSubject(subject?: string | null) {
     if (!subject) return '';

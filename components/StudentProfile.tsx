@@ -22,8 +22,10 @@ import EditProfileModal from '@/components/profile/EditProfileModal';
 import MyPostsSection from '@/components/MyPostsSection';
 import XPBar from '@/components/XPBar';
 import AchievementCards from '@/components/AchievementCards';
-import PetWidget from '@/components/PetWidget';
-import ChoosePetModal from '@/components/ChoosePetModal';
+import dynamic from 'next/dynamic';
+
+const PetWidget = dynamic(() => import('@/components/PetWidget'), { ssr: false });
+const ChoosePetModal = dynamic(() => import('@/components/ChoosePetModal'), { ssr: false });
 
 type BadgeKey = 'gold' | 'silver' | 'bronze' | 'topper';
 
