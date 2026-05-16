@@ -14,6 +14,20 @@ interface ChoosePetModalProps {
     onSelect: (petId: string) => void;
 }
 
+const PetFace = () => (
+    <group position={[0, 0, 0.95]}>
+        <Sphere args={[0.12, 16, 16]} position={[-0.25, 0.15, 0]}>
+            <meshBasicMaterial color="#111827" />
+        </Sphere>
+        <Sphere args={[0.12, 16, 16]} position={[0.25, 0.15, 0]}>
+            <meshBasicMaterial color="#111827" />
+        </Sphere>
+        <Box args={[0.1, 0.04, 0.1]} position={[0, -0.1, 0.05]}>
+            <meshBasicMaterial color="#111827" />
+        </Box>
+    </group>
+);
+
 const PETS = [
     {
         id: 'slime',
@@ -21,9 +35,12 @@ const PETS = [
         description: 'A bouncy, friendly slime that loves learning.',
         color: '#10b981', // Emerald
         component: (color: string) => (
-            <Sphere args={[1, 32, 32]}>
-                <MeshDistortMaterial color={color} attach="material" distort={0.4} speed={2} />
-            </Sphere>
+            <group>
+                <Sphere args={[1, 32, 32]}>
+                    <MeshDistortMaterial color={color} attach="material" distort={0.4} speed={2} />
+                </Sphere>
+                <PetFace />
+            </group>
         )
     },
     {
@@ -32,9 +49,12 @@ const PETS = [
         description: 'A sturdy companion who never breaks a streak.',
         color: '#f59e0b', // Amber
         component: (color: string) => (
-            <Box args={[1.5, 1.5, 1.5]}>
-                <MeshWobbleMaterial color={color} attach="material" factor={0.2} speed={1} />
-            </Box>
+            <group>
+                <Box args={[1.5, 1.5, 1.5]}>
+                    <MeshWobbleMaterial color={color} attach="material" factor={0.2} speed={1} />
+                </Box>
+                <group position={[0, 0, -0.2]}><PetFace /></group>
+            </group>
         )
     },
     {
@@ -43,9 +63,12 @@ const PETS = [
         description: 'Sharp, focused, and always ready for a duel.',
         color: '#8b5cf6', // Violet
         component: (color: string) => (
-            <Cone args={[1, 2, 32]}>
-                <MeshDistortMaterial color={color} attach="material" distort={0.2} speed={3} />
-            </Cone>
+            <group>
+                <Cone args={[1, 2, 32]}>
+                    <MeshDistortMaterial color={color} attach="material" distort={0.2} speed={3} />
+                </Cone>
+                <group position={[0, -0.2, 0]}><PetFace /></group>
+            </group>
         )
     }
 ];

@@ -10,21 +10,47 @@ interface PetWidgetProps {
     onClick?: () => void;
 }
 
+const PetFace = () => (
+    <group position={[0, 0, 1.1]}>
+        {/* Left Eye */}
+        <Sphere args={[0.15, 16, 16]} position={[-0.3, 0.2, 0]}>
+            <meshBasicMaterial color="#111827" />
+        </Sphere>
+        {/* Right Eye */}
+        <Sphere args={[0.15, 16, 16]} position={[0.3, 0.2, 0]}>
+            <meshBasicMaterial color="#111827" />
+        </Sphere>
+        {/* Cute Mouth */}
+        <Box args={[0.15, 0.05, 0.1]} position={[0, -0.1, 0.05]}>
+            <meshBasicMaterial color="#111827" />
+        </Box>
+    </group>
+);
+
 const PET_COMPONENTS = {
     slime: (
-        <Sphere args={[1.2, 32, 32]}>
-            <MeshDistortMaterial color="#10b981" attach="material" distort={0.4} speed={2} />
-        </Sphere>
+        <group>
+            <Sphere args={[1.2, 32, 32]}>
+                <MeshDistortMaterial color="#10b981" attach="material" distort={0.4} speed={2} />
+            </Sphere>
+            <PetFace />
+        </group>
     ),
     blocky: (
-        <Box args={[1.6, 1.6, 1.6]}>
-            <MeshWobbleMaterial color="#f59e0b" attach="material" factor={0.2} speed={1} />
-        </Box>
+        <group>
+            <Box args={[1.6, 1.6, 1.6]}>
+                <MeshWobbleMaterial color="#f59e0b" attach="material" factor={0.2} speed={1} />
+            </Box>
+            <group position={[0, 0, -0.3]}><PetFace /></group>
+        </group>
     ),
     spike: (
-        <Cone args={[1.2, 2.5, 32]}>
-            <MeshDistortMaterial color="#8b5cf6" attach="material" distort={0.2} speed={3} />
-        </Cone>
+        <group>
+            <Cone args={[1.2, 2.5, 32]}>
+                <MeshDistortMaterial color="#8b5cf6" attach="material" distort={0.2} speed={3} />
+            </Cone>
+            <group position={[0, -0.2, 0]}><PetFace /></group>
+        </group>
     )
 };
 
