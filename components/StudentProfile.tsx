@@ -22,6 +22,8 @@ import EditProfileModal from '@/components/profile/EditProfileModal';
 import MyPostsSection from '@/components/MyPostsSection';
 import XPBar from '@/components/XPBar';
 import AchievementCards from '@/components/AchievementCards';
+import PetWidget from '@/components/PetWidget';
+import ChoosePetModal from '@/components/ChoosePetModal';
 
 type BadgeKey = 'gold' | 'silver' | 'bronze' | 'topper';
 
@@ -84,6 +86,7 @@ const StudentProfile: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'achievements' | 'posts' | 'badges'>('achievements');
   const [equippedBadges, setEquippedBadges] = useState<BadgeKey[]>([]);
   const [equipSaving, setEquipSaving] = useState(false);
+  const [isPetModalOpen, setIsPetModalOpen] = useState(false);
 
   const availableBadges: Array<{ key: BadgeKey; title: string; description: string; earned: boolean }> = [
     {
@@ -926,6 +929,10 @@ const StudentProfile: React.FC = () => {
           </div>
         </div>
 
+        {/* Pet Companion Widget */}
+        <div className="mb-8 relative z-10 w-full sm:max-w-none">
+            <PetWidget onClick={() => setIsPetModalOpen(true)} />
+        </div>
 
         {/* Stats Grid - Native mobile look */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12 relative z-10 px-1 sm:px-0">
@@ -1247,6 +1254,12 @@ const StudentProfile: React.FC = () => {
         )}
 
         {activeTab === 'posts' && <MyPostsSection userId={currentUser?.id} />}
+        {/* Modals */}
+        <ChoosePetModal 
+            isOpen={isPetModalOpen} 
+            onClose={() => setIsPetModalOpen(false)} 
+            onSelect={(petId) => console.log("Adopted pet:", petId)} 
+        />
       </main>
     </div>
   );

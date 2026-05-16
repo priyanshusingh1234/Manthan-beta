@@ -125,7 +125,10 @@ export default function DailyPlannerModal() {
         <div className="relative pt-[calc(3rem+env(safe-area-inset-top,0px))] sm:pt-12 pb-6 px-6 bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 text-center text-white">
           <div className="absolute top-[calc(1rem+env(safe-area-inset-top,0px))] right-4 z-20">
             <button 
-              onClick={() => setIsOpen(false)}
+              onClick={() => {
+                localStorage.setItem('dheeyudhha_daily_plan_date', new Date().getTime().toString());
+                setIsOpen(false);
+              }}
               className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors backdrop-blur-sm"
             >
               <X className="w-5 h-5 text-white" />

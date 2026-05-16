@@ -6,6 +6,8 @@ import PostCard from '@/components/PostCard';
 import { Filter, SlidersHorizontal, BookOpen, Layers, Target, ChevronDown, Info, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
+import PetWidget from '@/components/PetWidget';
+import ChoosePetModal from '@/components/ChoosePetModal';
 
 function normalizeSubject(subject?: string | null) {
     if (!subject) return '';
@@ -20,6 +22,7 @@ export default function FeedPage() {
     const [loading, setLoading] = useState(true);
     const [feedMeta, setFeedMeta] = useState<any>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [isPetModalOpen, setIsPetModalOpen] = useState(false);
 
     // Filters
     const [selectedSubject, setSelectedSubject] = useState('');
@@ -129,6 +132,11 @@ export default function FeedPage() {
                                 <Sparkles className="w-4 h-4" /> 6-Layer Algorithm Active
                             </div>
                         )}
+                    </div>
+
+                    {/* Pet Companion Widget */}
+                    <div className="mb-8 w-full max-w-sm mx-auto sm:max-w-none">
+                        <PetWidget onClick={() => setIsPetModalOpen(true)} />
                     </div>
 
                     {/* Modern Filter Selectors */}
@@ -283,6 +291,15 @@ export default function FeedPage() {
                 </div>
 
             </main>
+
+            {/* Modals */}
+            <ChoosePetModal 
+                isOpen={isPetModalOpen} 
+                onClose={() => setIsPetModalOpen(false)} 
+                onSelect={(petId) => {
+                    console.log("Adopted pet:", petId);
+                }} 
+            />
         </div>
     );
 }
