@@ -67,7 +67,8 @@ export async function POST(req: NextRequest) {
 
         const currentUsername = typeof finalMeta.username === 'string' ? finalMeta.username : '';
         const sanitizedUsername = sanitizeUsernameInput(currentUsername);
-        const normalizedDbUsername = sanitizeUsernameInput(String((dbProfile as any)?.username || ''));
+        const dbUsername = typeof dbProfile?.username === 'string' ? dbProfile.username : '';
+        const normalizedDbUsername = sanitizeUsernameInput(dbUsername);
         if (currentUsername !== sanitizedUsername || normalizedDbUsername !== sanitizedUsername) {
             finalMeta.username = sanitizedUsername || null;
             metaNeedsUpdate = true;
