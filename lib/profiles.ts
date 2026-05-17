@@ -8,6 +8,7 @@
 
 import supabaseAdmin from './supabaseAdmin';
 import { leaderboardCache } from './leaderboardCache';
+import { sanitizeUsernameInput } from './username';
 
 export interface Profile {
     id: string;
@@ -83,6 +84,8 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
             }
         } catch { /* non-fatal — fall through to null */ }
     }
+    const sanitizedUsername = sanitizeUsernameInput(String(meta.username || ''));
+
     const { error } = await supabaseAdmin.from('profiles').upsert({
         id: userId,
         full_name: meta.fullName || meta.name || null,
@@ -99,7 +102,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         daily_solved: Number(meta.dailySolved) || 0,
         total_points: preserveDBPoints && dbPoints !== undefined ? dbPoints : (Number(meta.totalPoints) || 0),
         xp: Number(meta.xp) || 0,
-        username: meta.username || null,
+        username: sanitizedUsername || null,
         updated_at: new Date().toISOString(),
         cosmetics: meta.cosmetics || [],
         login_bonus_day: Number(meta.loginBonusDay) || 0,

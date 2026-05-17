@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { isValidUsername, sanitizeUsernameInput } from '@/lib/username';
 import { Mail, Lock, Eye, EyeOff, Chrome, User, GraduationCap, ArrowRight, Loader2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 
@@ -22,11 +23,9 @@ const Signup: React.FC = () => {
   const router = useRouter();
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setUsername(val);
+    const sanitized = sanitizeUsernameInput(e.target.value);
+    setUsername(sanitized);
     if (error) setError('');
-    if (/[A-Z]/.test(val)) setError('Username cannot contain uppercase letters');
-    else if (/\s/.test(val)) setError('Username cannot contain spaces');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,7 +34,7 @@ const Signup: React.FC = () => {
     if (!ageConfirmed) return setError('You must confirm you are 14 years or older');
     if (password !== confirmPassword) return setError('Passwords do not match');
     if (username.length < 3) return setError('Username must be at least 3 characters');
-    if (/[A-Z]/.test(username) || /\s/.test(username)) return setError('Username must be lowercase with no spaces');
+    if (!isValidUsername(username)) return setError('Username can only contain lowercase letters, numbers, and underscores');
 
     setLoading(true);
     setError('');

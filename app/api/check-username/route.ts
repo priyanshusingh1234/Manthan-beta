@@ -1,12 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { isValidUsername, sanitizeUsernameInput } from '@/lib/username';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
-    const username = searchParams.get('username');
+    const rawUsername = searchParams.get('username');
 
-    if (!username) {
+    if (!rawUsername) {
         return NextResponse.json({ error: 'Username is required' }, { status: 400 });
+    }
+
+    const username = sanitizeUsernameInput(rawUsername);
+    if (!username || !isValidUsername(username)) {
+        return NextResponse.json({ error: 'Invalid username format' }, { status: 400 });
     }
 
     try {
@@ -27,9 +33,10 @@ export async function GET(request: Request) {
 
         if (error) throw error;
 
-        const isTaken = usersData.users.some(user =>
-            user.user_metadata?.username === username
-        );
+        const isTaken = usersData.users.some(user => {
+            const existingUsername = sanitizeUsernameInput(String(user.user_metadata?.username || ''));
+            return existingUsername === username;
+        });
 
         return NextResponse.json({ isUnique: !isTaken });
     } catch (err: any) {
