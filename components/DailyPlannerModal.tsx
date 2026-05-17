@@ -26,35 +26,31 @@ export default function DailyPlannerModal() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if we need to show the modal (every 24 hours)
-    const checkDailyPlan = async () => {
-      const lastPlanDate = localStorage.getItem('dheeyudhha_daily_plan_date');
-      const now = new Date().getTime();
-      
-      // 24 hours in milliseconds
-      const ONE_DAY = 24 * 60 * 60 * 1000;
-      
-      if (!lastPlanDate || (now - parseInt(lastPlanDate, 10)) > ONE_DAY) {
-        // Fetch user info for personalization
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const meta = user.user_metadata || {};
-          let grade = meta.classGrade || meta.class;
-          
-          // Try to fetch from DB profile for accuracy
-          const { data: profile } = await supabase.from('profiles').select('class_grade').eq('id', user.id).single();
-          if (profile?.class_grade) {
-            grade = profile.class_grade;
-          }
-          
-          setUserName(meta.fullName || meta.name || 'Student');
-          setUserClass(grade || '10'); // Default to 10 only if completely unknown
+    const initUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const meta = user.user_metadata || {};
+        let grade = meta.classGrade || meta.class;
+        
+        const { data: profile } = await supabase.from('profiles').select('class_grade').eq('id', user.id).single();
+        if (profile?.class_grade) {
+          grade = profile.class_grade;
+        }
+        
+        setUserName(meta.fullName || meta.name || 'Student');
+        setUserClass(grade || '10');
+        
+        // After getting user, check if we should auto-open
+        const lastPlanDate = localStorage.getItem('dheeyudhha_daily_plan_date');
+        const now = new Date().getTime();
+        const ONE_DAY = 24 * 60 * 60 * 1000;
+        if (!lastPlanDate || (now - parseInt(lastPlanDate, 10)) > ONE_DAY) {
           setIsOpen(true);
         }
       }
     };
     
-    checkDailyPlan();
+    initUser();
 
     const handleOpen = () => {
       setStep(1);
