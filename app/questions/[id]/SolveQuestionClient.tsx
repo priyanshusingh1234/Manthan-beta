@@ -650,12 +650,52 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     )}
                 </div>
 
-                {!result.isCorrect && question.options && result.correctOption !== undefined && result.correctOption !== null && (
-                    <div className="mt-6 text-sm">
-                        <span className="text-slate-500 dark:text-slate-400 font-medium">The correct answer was: </span>
-                        <strong className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded">
-                            {question.options[result.correctOption]}
-                        </strong>
+                {/* MCQ Feedback */}
+                {!result.isCorrect && question.question_type !== 'match' && question.options && result.correctOption !== undefined && result.correctOption !== null && (
+                    <div className="mt-6 w-full max-w-md mx-auto text-left space-y-2">
+                        <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3 text-center">Let's review the options:</div>
+                        <div className="flex flex-col gap-2">
+                            {question.options.map((opt: string, idx: number) => {
+                                const isCorrectOpt = idx === result.correctOption;
+                                const isSelectedOpt = idx === selectedOption;
+                                
+                                let style = "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"; // neutral
+                                if (isCorrectOpt) {
+                                    style = "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/20 font-medium";
+                                } else if (isSelectedOpt) {
+                                    style = "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 font-medium";
+                                }
+                                
+                                return (
+                                    <div key={idx} className={`p-3 rounded-xl border flex items-center gap-3 ${style}`}>
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isCorrectOpt ? 'bg-emerald-200 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200' : isSelectedOpt ? 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                            {String.fromCharCode(65 + idx)}
+                                        </div>
+                                        <span className="text-sm">{opt}</span>
+                                        {isCorrectOpt && <CheckCircle2 className="w-4 h-4 text-emerald-500 ml-auto shrink-0" />}
+                                        {isSelectedOpt && !isCorrectOpt && <XCircle className="w-4 h-4 text-red-500 ml-auto shrink-0" />}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Match the Following Feedback */}
+                {!result.isCorrect && question.question_type === 'match' && question.matchPairs && (
+                    <div className="mt-6 w-full max-w-md mx-auto text-left space-y-2">
+                        <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3 text-center">The correct matches were:</div>
+                        <div className="flex flex-col gap-2 bg-slate-50 dark:bg-slate-800/30 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                            {question.matchPairs.map((pair: any, idx: number) => (
+                                <div key={idx} className="flex items-center justify-between gap-3 bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm">
+                                    <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300 text-right">{pair.left}</span>
+                                    <div className="shrink-0 text-emerald-500">
+                                        <ArrowRight className="w-4 h-4" />
+                                    </div>
+                                    <span className="flex-1 text-sm font-medium text-emerald-600 dark:text-emerald-400 text-left">{pair.right}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
 
