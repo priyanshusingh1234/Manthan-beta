@@ -67,7 +67,9 @@ export async function GET(req: Request) {
 
       // Class grade filter — also passes through 'All'/'Any' class_grade rows
       if (classParam) {
-        builder = builder.or(`class_grade.eq.${classParam},class_grade.ilike.All,class_grade.ilike.Any,class_grade.is.null`);
+        const numericMatch = String(classParam).match(/\d+/);
+        const normalizedClass = numericMatch ? numericMatch[0] : classParam;
+        builder = builder.or(`class_grade.eq.${normalizedClass},class_grade.ilike.All,class_grade.ilike.Any`);
       }
 
       // Chapter filter
@@ -219,7 +221,7 @@ export async function POST(req: Request) {
         title: title || null,
         body: questionBody || null,
         subject: subject || null,
-        class_grade: (subject === 'English' ? 'All' : String(classGrade)) || null,
+        class_grade: classGrade ? String(classGrade) : null,
         points: Number(points) || 0,
         time_limit: Number(timeLimit) || 0,
         difficulty: difficulty || null,
