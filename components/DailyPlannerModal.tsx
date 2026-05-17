@@ -59,7 +59,7 @@ export default function DailyPlannerModal() {
   const fetchChapters = async (subject: string) => {
     setLoadingChapters(true);
     try {
-      const res = await fetch(`/api/questions?subject=${subject}&limit=200`);
+      const res = await fetch(`/api/questions?subject=${subject}&class=${userClass}&limit=1000`);
       if (res.ok) {
         const raw = await res.json();
         const items = Array.isArray(raw) ? raw : (raw?.questions || []);
@@ -84,8 +84,8 @@ export default function DailyPlannerModal() {
            ];
         }
         
-        // Shuffle the options to make it mixed
-        chapterList = chapterList.sort(() => Math.random() - 0.5);
+        // Sort alphabetically instead of shuffling randomly
+        chapterList = chapterList.sort((a, b) => a.localeCompare(b));
         
         setChapters(chapterList);
       }
