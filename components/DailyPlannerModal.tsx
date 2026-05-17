@@ -77,17 +77,6 @@ export default function DailyPlannerModal() {
         
         let chapterList = Array.from(uniqueChapters);
         
-        // If not enough chapters found, provide some fun mixed options
-        if (chapterList.length < 3) {
-           chapterList = [
-             "Chapter 1: The Beginning", 
-             "Chapter 2: Fundamentals", 
-             "Chapter 3: Deep Dive", 
-             "Chapter 4: Advanced Concepts",
-             "Mix Practice"
-           ];
-        }
-        
         // Sort alphabetically instead of shuffling randomly
         chapterList = chapterList.sort((a, b) => a.localeCompare(b));
         
@@ -183,6 +172,14 @@ export default function DailyPlannerModal() {
                 <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-500">
                   <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
                   <p className="text-sm font-semibold animate-pulse">Finding your chapters...</p>
+                </div>
+              ) : chapters.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-500 text-center px-4">
+                  <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-2">
+                    <BookOpen className="w-6 h-6 text-slate-400" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-600 dark:text-slate-300">No chapters found</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-500">Looks like teachers haven't uploaded any questions for this subject in your class yet!</p>
                 </div>
               ) : (
                 <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
