@@ -9,6 +9,7 @@ import { StatusBar } from '@capacitor/status-bar';
 import confetti from 'canvas-confetti';
 import { Capacitor } from '@capacitor/core';
 import type { User } from '@supabase/supabase-js';
+import { isValidUsername, sanitizeUsernameInput } from '@/lib/username';
 
 export default function CompleteProfileOverlay({ onComplete }: { onComplete?: () => void }) {
   const [step, setStep] = useState<number | null>(null); // null means loading
@@ -71,18 +72,15 @@ export default function CompleteProfileOverlay({ onComplete }: { onComplete?: ()
   const isClassLocked = !!user?.user_metadata?.classGrade;
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setUsername(val);
+    const sanitized = sanitizeUsernameInput(e.target.value);
+    setUsername(sanitized);
     if (error) setError('');
-
-    if (/[A-Z]/.test(val)) setError('Username cannot contain uppercase letters');
-    else if (/\s/.test(val)) setError('Username cannot contain spaces');
   };
 
   const handleProfileSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (username.length < 3) return setError('Username must be at least 3 characters');
-    if (/[A-Z]/.test(username) || /\s/.test(username)) return setError('Username must be lowercase with no spaces');
+    if (!isValidUsername(username)) return setError('Username can only contain lowercase letters, numbers, and underscores');
     if (!fullName) return setError('Please fill in all required fields');
 
     if (!isTeacher && !classGrade) return setError('Please fill in all required fields');

@@ -23,6 +23,7 @@ import MyPostsSection from '@/components/MyPostsSection';
 import XPBar from '@/components/XPBar';
 import AchievementCards from '@/components/AchievementCards';
 import dynamic from 'next/dynamic';
+import { isValidUsername, sanitizeUsernameInput } from '@/lib/username';
 
 const PetWidget = dynamic(() => import('@/components/PetWidget'), { ssr: false });
 const ChoosePetModal = dynamic(() => import('@/components/ChoosePetModal'), { ssr: false });
@@ -601,20 +602,17 @@ const StudentProfile: React.FC = () => {
 
   const saveProfile = async () => {
     if (!currentUser) return;
+    const normalizedUsername = sanitizeUsernameInput(editForm.username);
 
     let newUsernameUpdates = userData.usernameUpdates;
 
-    if (editForm.username !== userData.username) {
-      if (editForm.username.length < 3) {
+    if (normalizedUsername !== userData.username) {
+      if (normalizedUsername.length < 3) {
         setMessage('Username must be at least 3 characters');
         return;
       }
-      if (/[A-Z]/.test(editForm.username)) {
-        setMessage('Username cannot contain uppercase letters');
-        return;
-      }
-      if (/\s/.test(editForm.username)) {
-        setMessage('Username cannot contain spaces');
+      if (!isValidUsername(normalizedUsername)) {
+        setMessage('Username can only contain lowercase letters, numbers, and underscores');
         return;
       }
 
@@ -629,7 +627,7 @@ const StudentProfile: React.FC = () => {
       }
 
       setMessage('Checking username availability...');
-      const uniqueCheckRes = await fetch(`/api/check-username?username=${encodeURIComponent(editForm.username)}`);
+      const uniqueCheckRes = await fetch(`/api/check-username?username=${encodeURIComponent(normalizedUsername)}`);
       if (uniqueCheckRes.ok) {
         const uniqueCheckData = await uniqueCheckRes.json();
         if (!uniqueCheckData.isUnique) {
@@ -645,7 +643,7 @@ const StudentProfile: React.FC = () => {
       const { error } = await supabase.auth.updateUser({
         data: {
           fullName: editForm.name,
-          username: editForm.username,
+          username: normalizedUsername,
           username_updates: newUsernameUpdates,
           school: editForm.school,
           classGrade: editForm.grade,
@@ -667,7 +665,7 @@ const StudentProfile: React.FC = () => {
       setUserData((s) => ({
         ...s,
         name: editForm.name,
-        username: editForm.username,
+        username: normalizedUsername,
         usernameUpdates: newUsernameUpdates,
         school: editForm.school,
         grade: editForm.grade,

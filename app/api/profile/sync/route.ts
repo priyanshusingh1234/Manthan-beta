@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { upsertProfile } from '@/lib/profiles';
 import { leaderboardCache } from '@/lib/leaderboardCache';
+import { sanitizeUsernameInput } from '@/lib/username';
 
 const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
 
@@ -60,9 +61,18 @@ export async function POST(req: NextRequest) {
 
         const { data: dbProfile } = await supabaseAdmin
             .from('profiles')
-            .select('total_points, avatar_url')
+            .select('total_points, avatar_url, username')
             .eq('id', user.id)
             .maybeSingle();
+
+        const currentUsername = typeof finalMeta.username === 'string' ? finalMeta.username : '';
+        const sanitizedUsername = sanitizeUsernameInput(currentUsername);
+        const dbUsername = typeof dbProfile?.username === 'string' ? dbProfile.username : '';
+        const normalizedDbUsername = sanitizeUsernameInput(dbUsername);
+        if (currentUsername !== sanitizedUsername || normalizedDbUsername !== sanitizedUsername) {
+            finalMeta.username = sanitizedUsername || null;
+            metaNeedsUpdate = true;
+        }
 
         const dbPoints = Number(dbProfile?.total_points) || 0;
         const metaPoints = Number(finalMeta.totalPoints) || 0;

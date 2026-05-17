@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { sanitizeUsernameInput } from "@/lib/username";
 
 interface EditProfileForm {
     name: string;
@@ -71,7 +72,7 @@ export default function EditProfileModal({
                             <input
                                 value={form.username}
                                 onChange={(e) =>
-                                    onFormChange({ ...form, username: e.target.value.toLowerCase().replace(/\s/g, "") })
+                                    onFormChange({ ...form, username: sanitizeUsernameInput(e.target.value) })
                                 }
                                 className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl pl-8 pr-4 py-3 outline-none focus:border-indigo-500 transition-colors font-mono font-medium text-slate-800 dark:text-slate-200"
                                 placeholder="username"
