@@ -39,8 +39,16 @@ export default function DailyPlannerModal() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const meta = user.user_metadata || {};
+          let grade = meta.classGrade || meta.class;
+          
+          // Try to fetch from DB profile for accuracy
+          const { data: profile } = await supabase.from('profiles').select('class_grade').eq('id', user.id).single();
+          if (profile?.class_grade) {
+            grade = profile.class_grade;
+          }
+          
           setUserName(meta.fullName || meta.name || 'Student');
-          setUserClass(meta.class || '10'); // Default to 10 if not set
+          setUserClass(grade || '10'); // Default to 10 only if completely unknown
           setIsOpen(true);
         }
       }
