@@ -33,13 +33,19 @@ const PreGameSpinner = ({ question, onComplete }: { question: any, onComplete: (
     const actualPoints = question.points?.toString() || "0";
     const actualSubject = question.subject || "General";
 
+    const diffColor = !isSpinning
+        ? actualDifficulty === 'Legendary' ? '#facc15'
+        : actualDifficulty === 'Hard' ? '#f87171'
+        : actualDifficulty === 'Medium' ? '#fb923c'
+        : '#4ade80'
+        : '#ffffff';
+
     useEffect(() => {
         let ticks = 0;
-        const maxTicks = 20; // 2 seconds
+        const maxTicks = 20;
         
         const interval = setInterval(() => {
             ticks++;
-            
             try { Haptics.vibrate({ duration: 10 }).catch(() => {}); } catch(e){}
             
             if (ticks < maxTicks - 10) setDisplaySubject(subjects[Math.floor(Math.random() * subjects.length)]);
@@ -64,57 +70,89 @@ const PreGameSpinner = ({ question, onComplete }: { question: any, onComplete: (
         <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
-            className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-white"
+            exit={{ opacity: 0, scale: 1.05, filter: "blur(12px)" }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center text-white"
+            style={{ background: 'radial-gradient(ellipse at center, #0f0f1a 0%, #000000 100%)' }}
         >
-            <h2 className="text-2xl font-black text-slate-400 mb-12 tracking-widest uppercase">Target Locked</h2>
-            
-            <div className="w-full max-w-sm space-y-4">
-                <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl overflow-hidden text-center">
-                    <div className="text-sm text-slate-400 font-bold mb-2">SUBJECT</div>
-                    <motion.div 
-                        key={displaySubject} 
-                        initial={{ y: -20, opacity: 0 }} 
-                        animate={{ y: 0, opacity: 1 }} 
-                        className={`text-3xl font-black ${!isSpinning ? 'text-indigo-400' : 'text-white'}`}
-                    >
-                        {displaySubject}
-                    </motion.div>
-                </div>
-                
-                <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl overflow-hidden text-center">
-                    <div className="text-sm text-slate-400 font-bold mb-2">DIFFICULTY</div>
-                    <motion.div 
-                        key={displayDifficulty} 
-                        initial={{ y: -20, opacity: 0 }} 
-                        animate={{ y: 0, opacity: 1 }} 
-                        className={`text-3xl font-black ${!isSpinning ? (actualDifficulty === 'Legendary' ? 'text-yellow-400' : actualDifficulty === 'Hard' ? 'text-red-400' : 'text-orange-400') : 'text-white'}`}
-                    >
-                        {displayDifficulty}
-                    </motion.div>
-                </div>
-                
-                <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl overflow-hidden text-center">
-                    <div className="text-sm text-slate-400 font-bold mb-2">REWARD</div>
-                    <motion.div 
-                        key={displayPoints} 
-                        initial={{ y: -20, opacity: 0 }} 
-                        animate={{ y: 0, opacity: 1 }} 
-                        className={`text-3xl font-black ${!isSpinning ? 'text-green-400' : 'text-white'}`}
-                    >
-                        {displayPoints} PTS
-                    </motion.div>
-                </div>
+            {/* Subtle animated grain overlay */}
+            <motion.div
+                animate={{ opacity: [0.03, 0.06, 0.03] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute inset-0 pointer-events-none"
+                style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }}
+            />
+
+            {/* Top label */}
+            <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-xs font-bold tracking-[0.4em] text-white/30 uppercase mb-16"
+            >
+                Incoming Challenge
+            </motion.p>
+
+            {/* Subject row */}
+            <div className="text-center mb-10">
+                <p className="text-[11px] font-bold tracking-[0.3em] text-white/30 uppercase mb-2">Subject</p>
+                <motion.p
+                    key={displaySubject}
+                    initial={{ y: -16, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.08 }}
+                    className="text-4xl font-black tracking-tight"
+                    style={{ color: !isSpinning ? '#818cf8' : '#ffffff' }}
+                >
+                    {displaySubject}
+                </motion.p>
             </div>
 
+            {/* Thin divider */}
+            <div className="w-16 h-px bg-white/10 mb-10" />
+
+            {/* Difficulty row */}
+            <div className="text-center mb-10">
+                <p className="text-[11px] font-bold tracking-[0.3em] text-white/30 uppercase mb-2">Difficulty</p>
+                <motion.p
+                    key={displayDifficulty}
+                    initial={{ y: -16, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.08 }}
+                    className="text-4xl font-black tracking-tight"
+                    style={{ color: diffColor }}
+                >
+                    {displayDifficulty}
+                </motion.p>
+            </div>
+
+            {/* Thin divider */}
+            <div className="w-16 h-px bg-white/10 mb-10" />
+
+            {/* Reward row */}
+            <div className="text-center">
+                <p className="text-[11px] font-bold tracking-[0.3em] text-white/30 uppercase mb-2">Reward</p>
+                <motion.p
+                    key={displayPoints}
+                    initial={{ y: -16, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.08 }}
+                    className="text-4xl font-black tracking-tight"
+                    style={{ color: !isSpinning ? '#4ade80' : '#ffffff' }}
+                >
+                    {displayPoints} <span className="text-2xl font-bold opacity-60">PTS</span>
+                </motion.p>
+            </div>
+
+            {/* CTA */}
             <AnimatePresence>
                 {!isSpinning && (
                     <motion.button
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ type: "spring", bounce: 0.5 }}
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.1 }}
                         onClick={onComplete}
-                        className="mt-12 bg-white text-slate-900 font-black text-xl py-4 px-12 rounded-full shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-all"
+                        className="mt-20 text-black font-black text-base py-4 px-14 rounded-full active:scale-95 transition-transform"
+                        style={{ background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)', letterSpacing: '0.1em' }}
                     >
                         START BATTLE
                     </motion.button>
