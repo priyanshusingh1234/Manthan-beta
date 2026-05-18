@@ -3,8 +3,9 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import QuestionCard from './QuestionCard';
 import PostCard from './PostCard';
 import VipQuestionCard from './VipQuestionCard';
+import SwipeableFeed from './SwipeableFeed';
 import { supabase } from '@/lib/supabaseClient';
-import { RefreshCw, X, ChevronDown, ArrowUp, Loader2 } from 'lucide-react';
+import { RefreshCw, X, ChevronDown, ArrowUp, Loader2, Layers } from 'lucide-react';
 
 type FeedItem = any;
 const PAGE_SIZE = 10;
@@ -97,6 +98,7 @@ export default function QuestionsFeed() {
   const [chapter, setChapter] = useState(() =>
     typeof window !== 'undefined' ? localStorage.getItem('dheeyudhha_feed_chapter') || '' : ''
   );
+  const [swipeMode, setSwipeMode] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -411,6 +413,18 @@ export default function QuestionsFeed() {
             </div>
 
             <div className="flex items-center gap-2 ml-auto">
+              {/* Swipe mode toggle */}
+              <button
+                onClick={() => setSwipeMode(m => !m)}
+                className={`flex items-center gap-1 text-xs font-black px-3 py-1.5 rounded-full transition-all active:scale-95 ${
+                  swipeMode
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <Layers className="w-3 h-3" />
+                {swipeMode ? 'Swipe' : 'Swipe'}
+              </button>
               {hasFilter && (
                 <>
                   <button
@@ -480,6 +494,14 @@ export default function QuestionsFeed() {
               </button>
             )}
           </div>
+        ) : swipeMode ? (
+          <SwipeableFeed
+            items={visible}
+            userId={userId}
+            currentUserData={currentUserData}
+            onLoadMore={() => load({ subject, classGrade, chapter })}
+            onReload={() => load({ refresh: true, subject, classGrade, chapter })}
+          />
         ) : (
           <>
             {visible.map((item: FeedItem) => (
