@@ -8,8 +8,6 @@ import { supabase } from '@/lib/supabaseClient';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
 import dynamic from 'next/dynamic';
 
-const PetWidget = dynamic(() => import('@/components/PetWidget'), { ssr: false });
-const ChoosePetModal = dynamic(() => import('@/components/ChoosePetModal'), { ssr: false });
 
 function normalizeSubject(subject?: string | null) {
     if (!subject) return '';
@@ -24,7 +22,6 @@ export default function FeedPage() {
     const [loading, setLoading] = useState(true);
     const [feedMeta, setFeedMeta] = useState<any>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-    const [isPetModalOpen, setIsPetModalOpen] = useState(false);
 
     // Filters
     const [selectedSubject, setSelectedSubject] = useState('');
@@ -136,10 +133,6 @@ export default function FeedPage() {
                         )}
                     </div>
 
-                    {/* Pet Companion Widget */}
-                    <div className="mb-8 w-full max-w-sm mx-auto sm:max-w-none">
-                        <PetWidget onClick={() => setIsPetModalOpen(true)} />
-                    </div>
 
                     {/* Modern Filter Selectors */}
                     <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200/60 dark:border-slate-800/60 p-5 rounded-[2rem] shadow-sm mb-8">
@@ -294,14 +287,6 @@ export default function FeedPage() {
 
             </main>
 
-            {/* Modals */}
-            <ChoosePetModal 
-                isOpen={isPetModalOpen} 
-                onClose={() => setIsPetModalOpen(false)} 
-                onSelect={(petId) => {
-                    console.log("Adopted pet:", petId);
-                }} 
-            />
         </div>
     );
 }

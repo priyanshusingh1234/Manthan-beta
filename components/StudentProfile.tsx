@@ -25,8 +25,6 @@ import AchievementCards from '@/components/AchievementCards';
 import dynamic from 'next/dynamic';
 import { isValidUsername, sanitizeUsernameInput } from '@/lib/username';
 
-const PetWidget = dynamic(() => import('@/components/PetWidget'), { ssr: false });
-const ChoosePetModal = dynamic(() => import('@/components/ChoosePetModal'), { ssr: false });
 
 type BadgeKey = 'gold' | 'silver' | 'bronze' | 'topper';
 
@@ -89,7 +87,6 @@ const StudentProfile: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'achievements' | 'posts' | 'badges'>('achievements');
   const [equippedBadges, setEquippedBadges] = useState<BadgeKey[]>([]);
   const [equipSaving, setEquipSaving] = useState(false);
-  const [isPetModalOpen, setIsPetModalOpen] = useState(false);
 
   const availableBadges: Array<{ key: BadgeKey; title: string; description: string; earned: boolean }> = [
     {
@@ -929,10 +926,6 @@ const StudentProfile: React.FC = () => {
           </div>
         </div>
 
-        {/* Pet Companion Widget */}
-        <div className="mb-8 relative z-10 w-full sm:max-w-none">
-            <PetWidget onClick={() => setIsPetModalOpen(true)} />
-        </div>
 
         {/* Stats Grid - Native mobile look */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12 relative z-10 px-1 sm:px-0">
