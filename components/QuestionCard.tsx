@@ -14,7 +14,6 @@ import {
   Users,
   FileImage,
   CheckCircle,
-  CheckCircle,
   Eye,
   Swords,
   Bookmark
