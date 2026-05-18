@@ -228,21 +228,28 @@ export default function QuestionCard({ q }: { q: Question }) {
 
   const toggleSave = async () => {
     if (!user || isSaving) return;
+    
+    // Optimistic UI update
+    const previousState = isSaved;
+    setIsSaved(!previousState);
     setIsSaving(true);
+    
     try {
-      if (isSaved) {
-        await supabase.from('saved_questions')
+      if (previousState) {
+        const { error } = await supabase.from('saved_questions')
           .delete()
           .eq('question_id', q.id)
           .eq('user_id', user.id);
-        setIsSaved(false);
+        if (error) throw error;
       } else {
-        await supabase.from('saved_questions')
+        const { error } = await supabase.from('saved_questions')
           .insert({ question_id: q.id, user_id: user.id });
-        setIsSaved(true);
+        if (error) throw error;
       }
     } catch (e) {
       console.error('Failed to toggle save', e);
+      // Revert on failure
+      setIsSaved(previousState);
     } finally {
       setIsSaving(false);
     }
@@ -589,7 +596,7 @@ export default function QuestionCard({ q }: { q: Question }) {
           <button
             type="button"
             onClick={toggleSave}
-            disabled={isSaving || !user}
+            disabled={!user}
             className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border transition-colors text-[10px] sm:text-xs font-bold uppercase tracking-wider ${
               isSaved 
                 ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40' 
