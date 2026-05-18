@@ -150,19 +150,23 @@ const MessageItem = memo(function MessageItem({
     );
   }
 
-  // Parse reply
   let replyAuthor = '', replyPreview = '', mainContent = msg.content;
   if (mainContent.startsWith('> Replying to **')) {
-    const firstLine = mainContent.split('\n\n')[0];
-    const rest = mainContent.split('\n\n').slice(1).join('\n\n');
-    const match = firstLine.match(/\*\*(.+?)\*\*:\s*"?(.*)\"?$/);
-    replyAuthor = match?.[1] || '';
-    replyPreview = match?.[2]?.replace(/"$/, '') || '';
-    mainContent = rest;
+    const splitIndex = mainContent.indexOf('\n\n');
+    if (splitIndex !== -1) {
+      const firstLine = mainContent.substring(0, splitIndex);
+      const rest = mainContent.substring(splitIndex + 2);
+      const match = firstLine.match(/> Replying to \*\*(.+?)\*\*:\s*"?(.*?)"?$/);
+      if (match) {
+        replyAuthor = match[1];
+        replyPreview = match[2];
+        mainContent = rest;
+      }
+    }
   }
 
   return (
-    <div className="w-full flex flex-col">
+    <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
       {showDate && (
         <div className="flex justify-center my-3">
           <span className="px-3 py-1 bg-slate-200/80 dark:bg-slate-800 rounded-lg text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -172,7 +176,7 @@ const MessageItem = memo(function MessageItem({
       )}
       <div
         className={`flex items-center gap-2 mb-0.5 px-3 ${isMe ? 'justify-end' : 'justify-start'}`}
-        style={{ transform: `translateX(${swipeX}px)`, transition: swiping.current ? 'none' : 'transform 0.2s ease' }}
+        style={{ transform: `translateX(${swipeX}px)`, transition: swiping.current ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)' }}
         onTouchStart={(e) => { handleTouchStart(e); handlePressStart(e); }}
         onTouchMove={handleTouchMove}
         onTouchEnd={() => { handleTouchEnd(); handlePressEnd(); }}
@@ -566,7 +570,7 @@ function ChatRoomContent() {
     let content = newMessage.trim();
     if (replyingTo) {
       const isImage = replyingTo.message_type === 'image';
-      const preview = isImage ? 'Photo 📷' : replyingTo.content.slice(0, 40);
+      const preview = isImage ? 'Photo 📷' : replyingTo.content.replace(/\n/g, ' ').slice(0, 40);
       const who = replyingTo.sender_id === user.id ? 'You' : (participant?.full_name || 'Scholar');
       content = `> Replying to **${who}**: "${preview}"\n\n${content}`;
       setReplyingTo(null);

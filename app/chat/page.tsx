@@ -234,12 +234,12 @@ export default function ChatListPage() {
                 <p className="text-sm text-slate-500 dark:text-slate-400">Search for a scholar above to start chatting.</p>
               </div>
             ) : (
-              <>
+              <div className="animate-in fade-in duration-300">
                 <div className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Recent Chats</div>
-                {filteredRooms.map(room => (
-                  <ChatCard key={room.id} room={room} onClick={() => router.push(`/chat/${room.id}`)} user={user} />
+                {filteredRooms.map((room, idx) => (
+                  <ChatCard key={room.id} room={room} onClick={() => router.push(`/chat/${room.id}`)} user={user} index={idx} />
                 ))}
-              </>
+              </div>
             )}
           </div>
         ) : null}
@@ -259,7 +259,7 @@ function formatPreview(content: string, type?: string) {
   return content;
 }
 
-const ChatCard = memo(function ChatCard({ room, onClick, user }: { room: ChatRoom; onClick: () => void; user: any }) {
+const ChatCard = memo(function ChatCard({ room, onClick, user, index = 0 }: { room: ChatRoom; onClick: () => void; user: any; index?: number }) {
   const isUnread = room.last_message && !room.last_message.is_read && room.last_message.sender_id !== user?.id;
   const timeLabel = room.last_message
     ? formatDistanceToNow(new Date(room.last_message.created_at), { addSuffix: false })
@@ -267,7 +267,11 @@ const ChatCard = memo(function ChatCard({ room, onClick, user }: { room: ChatRoo
     : '';
 
   return (
-    <button onClick={onClick} className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-slate-100 dark:active:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800/50 text-left">
+    <button 
+      onClick={onClick} 
+      className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-slate-100 dark:active:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800/50 text-left animate-in fade-in slide-in-from-bottom-2 duration-300"
+      style={{ animationFillMode: 'both', animationDelay: `${index * 40}ms` }}
+    >
       <div className="relative shrink-0">
         <div className="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
           {room.participant.avatar_url
