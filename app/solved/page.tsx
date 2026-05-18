@@ -7,7 +7,8 @@ import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function SolvedQuestionsPage() {
-    const [questions, setQuestions] = useState<any[] | null>(null);
+    const [solvedQuestions, setSolvedQuestions] = useState<any[] | null>(null);
+    const [savedQuestions, setSavedQuestions] = useState<any[] | null>(null);
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'solved' | 'saved'>('solved');
@@ -25,14 +26,28 @@ export default function SolvedQuestionsPage() {
                     return;
                 }
 
-                const headers: HeadersInit = { 'Authorization': `Bearer ${session.access_token}` };
-                const endpoint = activeTab === 'solved' ? '/api/questions/solved' : '/api/questions/saved';
-                const res = await fetch(endpoint, { headers });
-                if (!res.ok) throw new Error(await res.text());
-                const data = await res.json();
+                const headers: HeadersInit = { 
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                };
+                
+                const [solvedRes, savedRes] = await Promise.all([
+                    fetch('/api/questions/solved', { headers, cache: 'no-store' }),
+                    fetch('/api/questions/saved', { headers, cache: 'no-store' })
+                ]);
+                
+                if (!solvedRes.ok) throw new Error(`Solved: ${await solvedRes.text()}`);
+                if (!savedRes.ok) throw new Error(`Saved: ${await savedRes.text()}`);
+                
+                const [solvedData, savedData] = await Promise.all([
+                    solvedRes.json(),
+                    savedRes.json()
+                ]);
 
                 if (!mounted) return;
-                setQuestions(Array.isArray(data) ? data : []);
+                setSolvedQuestions(Array.isArray(solvedData) ? solvedData : []);
+                setSavedQuestions(Array.isArray(savedData) ? savedData : []);
             } catch (error: any) {
                 console.error(error);
                 if (!mounted) return;
@@ -45,7 +60,9 @@ export default function SolvedQuestionsPage() {
         loadData();
 
         return () => { mounted = false; };
-    }, [router, activeTab]);
+    }, [router]);
+
+    const displayQuestions = activeTab === 'solved' ? solvedQuestions : savedQuestions;
 
     return (
         <div className="min-h-screen bg-background pb-24">
@@ -90,9 +107,9 @@ export default function SolvedQuestionsPage() {
                         ))}
                     </div>
                 ) : err ? (
-                    <div className="py-10 text-center text-sm text-red-600">Error loading solved questions — {err}</div>
-                ) : !questions || questions.length === 0 ? (
-                    <div className="text-center py-20 bg-background rounded-3xl border border-border shadow-sm">
+                    <div className="py-10 text-center text-sm text-red-600">Error loading questions — {err}</div>
+                ) : !displayQuestions || displayQuestions.length === 0 ? (
+                    <div className="text-center py-20 bg-background rounded-3xl border border-border shadow-sm animate-in fade-in zoom-in-95 duration-300">
                         <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-900/20 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-emerald-100/50 dark:border-emerald-800/50">
                             <CheckCircle2 className="w-10 h-10 text-emerald-400" />
                         </div>
@@ -110,9 +127,9 @@ export default function SolvedQuestionsPage() {
                         </button>
                     </div>
                 ) : (
-                    <div className="space-y-4">
-                        {questions.map((q) => (
-                            <QuestionCard key={q.id} q={q} />
+                    <div className="space-y-4 animate-in fade-in duration-300">
+                        {displayQuestions.map((q) => (
+                            <QuestionCard key={`${activeTab}-${q.id}`} q={q} />
                         ))}
                     </div>
                 )}
