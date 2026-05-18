@@ -16,3 +16,6 @@ CREATE POLICY "Users can manage their own saved questions" ON public.saved_quest
 
 -- Optional: Create an index for faster lookups when checking if a user saved a question
 CREATE INDEX IF NOT EXISTS saved_questions_user_id_idx ON public.saved_questions(user_id);
+
+-- Performance index for the Solved page
+CREATE INDEX IF NOT EXISTS question_attempts_user_id_created_at_idx ON public.question_attempts(user_id, created_at DESC);
