@@ -14,8 +14,10 @@ import {
   Users,
   FileImage,
   CheckCircle,
+  CheckCircle,
   Eye,
-  Swords
+  Swords,
+  Bookmark
 } from "lucide-react";
 import { Share } from "@capacitor/share";
 import { Capacitor } from "@capacitor/core";
@@ -181,6 +183,8 @@ export default function QuestionCard({ q }: { q: Question }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
   const [duelOpen, setDuelOpen] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -207,6 +211,43 @@ export default function QuestionCard({ q }: { q: Question }) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    if (user && q.id) {
+      supabase.from('saved_questions')
+        .select('id')
+        .eq('question_id', q.id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (mounted && data && !error) setIsSaved(true);
+        });
+    }
+    return () => { mounted = false; };
+  }, [user, q.id]);
+
+  const toggleSave = async () => {
+    if (!user || isSaving) return;
+    setIsSaving(true);
+    try {
+      if (isSaved) {
+        await supabase.from('saved_questions')
+          .delete()
+          .eq('question_id', q.id)
+          .eq('user_id', user.id);
+        setIsSaved(false);
+      } else {
+        await supabase.from('saved_questions')
+          .insert({ question_id: q.id, user_id: user.id });
+        setIsSaved(true);
+      }
+    } catch (e) {
+      console.error('Failed to toggle save', e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const isOwner = user && (user.id === q.createdBy);
   const isTeacher = !!user?.user_metadata?.isTeacher;
@@ -544,6 +585,21 @@ export default function QuestionCard({ q }: { q: Question }) {
           >
             <Share2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Share</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleSave}
+            disabled={isSaving || !user}
+            className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border transition-colors text-[10px] sm:text-xs font-bold uppercase tracking-wider ${
+              isSaved 
+                ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40' 
+                : 'border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-300 hover:border-indigo-300 dark:hover:border-indigo-700'
+            }`}
+            aria-label={isSaved ? "Unsave question" : "Save question"}
+          >
+            <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-current' : ''}`} />
+            <span className="hidden sm:inline">{isSaved ? "Saved" : "Save"}</span>
           </button>
 
           {/* ⚔️ Duel button — students only, MCQ only */}
