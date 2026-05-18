@@ -121,6 +121,7 @@ export async function GET(req: Request) {
             hasAttempted: !!userAttempts[String(r.id)] || !!userWrittenSubmissions[String(r.id)],
             hasWrittenSubmission: !!userWrittenSubmissions[String(r.id)],
             userSubmissionId: userWrittenSubmissions[String(r.id)] || null,
+            isSaved: true,
             imagePath: r.image_path || null,
             imageUrl: r.image_url || null,
             createdAt: r.created_at,

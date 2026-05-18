@@ -90,13 +90,16 @@ export async function GET(req: Request) {
       const currentUserId = parseJwtField(authHeader, 'sub') || parseJwtField(authHeader, 'user_id');
 
       // Single batch query instead of N individual admin.getUserById calls
-      const [profilesMap, attemptsResult, wSubsResult] = await Promise.all([
+      const [profilesMap, attemptsResult, wSubsResult, savedResult] = await Promise.all([
         getProfilesMap(userIds),
         questionIds.length > 0
           ? supabaseAdmin.from('question_attempts').select('question_id, is_correct, user_id').in('question_id', questionIds)
           : Promise.resolve({ data: [] }),
         currentUserId && questionIds.length > 0
           ? supabaseAdmin.from('written_submissions').select('id, question_id').eq('student_id', currentUserId).in('question_id', questionIds)
+          : Promise.resolve({ data: [] }),
+        currentUserId && questionIds.length > 0
+          ? supabaseAdmin.from('saved_questions').select('question_id').eq('user_id', currentUserId).in('question_id', questionIds)
           : Promise.resolve({ data: [] }),
       ]);
 
@@ -114,6 +117,11 @@ export async function GET(req: Request) {
       const userWrittenSubmissions: Record<string, string> = {};
       ((wSubsResult as any).data || []).forEach((s: any) => {
         userWrittenSubmissions[String(s.question_id)] = String(s.id);
+      });
+
+      const userSaved = new Set<string>();
+      ((savedResult as any).data || []).forEach((s: any) => {
+        userSaved.add(String(s.question_id));
       });
 
       const resolvedAvatarMap: Record<string, { avatar: string | null; name: string; username: string | null }> = {};
@@ -149,6 +157,7 @@ export async function GET(req: Request) {
         hasAttempted: userAttempts.has(String(r.id)),
         hasWrittenSubmission: !!userWrittenSubmissions[String(r.id)],
         userSubmissionId: userWrittenSubmissions[String(r.id)] || null,
+        isSaved: userSaved.has(String(r.id)),
         imagePath: r.image_path || null,
         imageUrl: r.image_url || null,
         is_vip: r.is_vip === true,

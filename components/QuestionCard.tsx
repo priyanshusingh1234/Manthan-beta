@@ -50,6 +50,7 @@ type Question = {
   hasAttempted?: boolean;
   hasWrittenSubmission?: boolean;
   userSubmissionId?: string | null;
+  isSaved?: boolean;
 };
 
 // Module-level avatar cache so re-renders and multiple cards for the same
@@ -182,7 +183,7 @@ export default function QuestionCard({ q }: { q: Question }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
   const [duelOpen, setDuelOpen] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved] = useState(q.isSaved || false);
   const [isSaving, setIsSaving] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -210,21 +211,6 @@ export default function QuestionCard({ q }: { q: Question }) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    if (user && q.id) {
-      supabase.from('saved_questions')
-        .select('id')
-        .eq('question_id', q.id)
-        .eq('user_id', user.id)
-        .maybeSingle()
-        .then(({ data, error }) => {
-          if (mounted && data && !error) setIsSaved(true);
-        });
-    }
-    return () => { mounted = false; };
-  }, [user, q.id]);
 
   const toggleSave = async () => {
     if (!user || isSaving) return;
