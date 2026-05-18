@@ -22,7 +22,7 @@ export default function DailyPlannerModal() {
   const [selectedSubject, setSelectedSubject] = useState('');
   const [chapters, setChapters] = useState<string[]>([]);
   const [loadingChapters, setLoadingChapters] = useState(false);
-  
+
   const router = useRouter();
 
   useEffect(() => {
@@ -31,15 +31,15 @@ export default function DailyPlannerModal() {
       if (user) {
         const meta = user.user_metadata || {};
         let grade = meta.classGrade || meta.class;
-        
+
         const { data: profile } = await supabase.from('profiles').select('class_grade').eq('id', user.id).single();
         if (profile?.class_grade) {
           grade = profile.class_grade;
         }
-        
+
         setUserName(meta.fullName || meta.name || 'Student');
         setUserClass(grade || '10');
-        
+
         // After getting user, check if we should auto-open
         const lastPlanDate = localStorage.getItem('dheeyudhha_daily_plan_date');
         const now = new Date().getTime();
@@ -49,7 +49,7 @@ export default function DailyPlannerModal() {
         }
       }
     };
-    
+
     initUser();
 
     const handleOpen = () => {
@@ -67,19 +67,19 @@ export default function DailyPlannerModal() {
       if (res.ok) {
         const raw = await res.json();
         const items = Array.isArray(raw) ? raw : (raw?.questions || []);
-        
+
         const uniqueChapters = new Set<string>();
         items.forEach((q: any) => {
           if (q.chapter && q.chapter.trim()) {
             uniqueChapters.add(q.chapter.trim());
           }
         });
-        
+
         let chapterList = Array.from(uniqueChapters);
-        
+
         // Sort alphabetically instead of shuffling randomly
         chapterList = chapterList.sort((a, b) => a.localeCompare(b));
-        
+
         setChapters(chapterList);
       }
     } catch (err) {
@@ -101,9 +101,9 @@ export default function DailyPlannerModal() {
     localStorage.setItem('dheeyudhha_daily_plan_date', new Date().getTime().toString());
     localStorage.setItem('dheeyudhha_feed_subject', selectedSubject);
     localStorage.setItem('dheeyudhha_feed_chapter', chapter);
-    
+
     setIsOpen(false);
-    
+
     // Refresh page to apply filters to QuestionsFeed
     window.location.reload();
   };
@@ -117,7 +117,7 @@ export default function DailyPlannerModal() {
         {/* Header / Banner */}
         <div className="relative pt-[calc(3rem+env(safe-area-inset-top,0px))] sm:pt-12 pb-6 px-6 bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700 text-center text-white">
           <div className="absolute top-[calc(1rem+env(safe-area-inset-top,0px))] right-4 z-20">
-            <button 
+            <button
               onClick={() => {
                 localStorage.setItem('dheeyudhha_daily_plan_date', new Date().getTime().toString());
                 setIsOpen(false);
@@ -127,11 +127,11 @@ export default function DailyPlannerModal() {
               <X className="w-5 h-5 text-white" />
             </button>
           </div>
-          
+
           <div className="w-20 h-20 mx-auto bg-white/20 backdrop-blur-md rounded-3xl mb-4 flex items-center justify-center shadow-inner rotate-3">
             <Sparkles className="w-10 h-10 text-yellow-300" />
           </div>
-          
+
           <h2 className="text-2xl font-black mb-1">Hii {userName}! 👋</h2>
           <p className="text-indigo-100 font-medium text-sm">
             {step === 1 ? `Welcome back! What are you planning to study today from Class ${userClass}?` : `Great choice! Which chapter in ${selectedSubject}?`}
@@ -161,13 +161,13 @@ export default function DailyPlannerModal() {
 
           {step === 2 && (
             <div className="space-y-3 animate-in slide-in-from-right-4 duration-500">
-              <button 
+              <button
                 onClick={() => setStep(1)}
                 className="text-xs font-bold text-indigo-500 mb-2 flex items-center gap-1 hover:underline"
               >
                 ← Back to Subjects
               </button>
-              
+
               {loadingChapters ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-500">
                   <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />

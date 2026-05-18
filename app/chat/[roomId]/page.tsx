@@ -65,7 +65,7 @@ function playNotifSound() {
 // ─── Message item (memoized) ─────────────────────────────────────────────────
 const MessageItem = memo(function MessageItem({
   msg, user, participant, isSelectionMode, isSelected,
-  onToggleSelection, onLongPress, onReply, prevMsg,
+  onToggleSelection, onLongPress, onReply, prevMsg, onImageClick
 }: {
   msg: Message; user: any; participant: Participant | null;
   isSelectionMode: boolean; isSelected: boolean;
@@ -73,6 +73,7 @@ const MessageItem = memo(function MessageItem({
   onLongPress: (msg: Message) => void;
   onReply: (msg: Message) => void;
   prevMsg?: Message;
+  onImageClick: (url: string) => void;
 }) {
   const isMe = msg.sender_id === user?.id;
   const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
@@ -229,7 +230,13 @@ const MessageItem = memo(function MessageItem({
             }`}
           >
             {msg.message_type === 'image' || msg.content.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
-              <div className="relative w-[200px] h-[200px]">
+              <div 
+                className="relative w-[200px] h-[200px] cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onImageClick(msg.content);
+                }}
+              >
                 <Image src={msg.content} alt="Image" fill className="object-cover" unoptimized />
               </div>
             ) : (
@@ -276,6 +283,7 @@ function ChatRoomContent() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [showMultiDeleteSheet, setShowMultiDeleteSheet] = useState(false);
   const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   // Incoming call banner — shown when the OTHER party starts a call while we are
   // already on this chat page (GlobalCallListener skips this room in that case)
   const [incomingCallBanner, setIncomingCallBanner] = useState<{type:'voice'|'video', callerId: string} | null>(null);
@@ -944,6 +952,7 @@ function ChatRoomContent() {
               onLongPress={handleLongPress}
               onReply={(m) => { setReplyingTo(m); setTimeout(() => inputRef.current?.focus(), 100); }}
               prevMsg={messages[idx - 1]}
+              onImageClick={(url) => setFullscreenImage(url)}
             />
           ))
         )}
@@ -1153,6 +1162,28 @@ function ChatRoomContent() {
               Cancel
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── Fullscreen Image ────────────────────────────────────────────── */}
+      {fullscreenImage && (
+        <div 
+          className="fixed inset-0 z-[10000] bg-black flex items-center justify-center animate-in fade-in zoom-in-95 duration-200"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <button 
+            className="absolute top-12 left-4 p-2 rounded-full bg-black/50 text-white z-[10001]"
+            onClick={(e) => { e.stopPropagation(); setFullscreenImage(null); }}
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <Image 
+            src={fullscreenImage} 
+            alt="Fullscreen" 
+            fill 
+            className="object-contain"
+            unoptimized
+          />
         </div>
       )}
     </div>

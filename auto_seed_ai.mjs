@@ -11,19 +11,19 @@ dotenv.config({ path: '.env.local' });
 // ─────────────────────────────────────────────────────────────
 const SYLLABUS = [
   {
-    class_grade: '7',
-    subject: 'SST',
+    class_grade: '9',
+    subject: 'English',
     chapters: [
-      'Tracing Changes Through a Thousand Years',
-      'New Kings and Kingdoms',
-      'The Delhi Sultans',
-      'The Mughal Empire',
-      'Rulers and Buildings',
-      'Towns, Traders and Craftspersons',
-      'Tribes, Nomads and Settled Communities',
-      'Devotional Paths to the Divine',
-      'The Making of Regional Cultures',
-      'Eighteenth-Century Political Formations',
+      'The Fun They Had',
+      'The Road Not Taken',
+      'The Sound of Music',
+      'Wind',
+      'The Little Girl',
+      'A Truly Beautiful Mind',
+      'The Legend of the Northland',
+      'My Childhood',
+      'No Men Are Foreign',
+      'The Beggar',
     ],
   },
 ];
@@ -40,7 +40,7 @@ const PASSWORD = '123456789';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
 const model = genAI.getGenerativeModel({
-  model: 'gemini-2.5-flash',
+  model: 'gemini-2.0-flash',
   generationConfig: {
     responseMimeType: 'application/json',
     responseSchema: {
@@ -111,42 +111,59 @@ async function run() {
 
       const prompt = `Generate 50 high-quality, academic multiple-choice questions for Class ${block.class_grade} ${block.subject}, specifically focusing on the chapter "${chapterName}". Each question must have exactly 4 options and indicate the correct option index (0 to 3). Make the questions varied in difficulty (easy, moderate, hard) and ensure they are accurate and relevant to the NCERT curriculum.`;
 
-      try {
-        const result = await model.generateContent(prompt);
-        const questions = JSON.parse(result.response.text());
-        console.log(`   ✅ Generated ${questions.length} questions. Uploading...`);
+      let success = false;
+      let retries = 0;
+      while (!success && retries < 3) {
+        try {
+          const result = await model.generateContent(prompt);
+          const questions = JSON.parse(result.response.text());
+          console.log(`   ✅ Generated ${questions.length} questions. Uploading...`);
 
-        let ok = 0, fail = 0;
-        for (const q of questions) {
-          const { error } = await adminClient.from('questions').insert({
-            created_by:    teacherId,
-            title:         q.title,
-            body:          '',
-            subject:       block.subject,
-            class_grade:   block.class_grade,
-            chapter:       chapterName,
-            points:        2,
-            time_limit:    2,
-            difficulty:    'moderate',
-            options:       q.options,
-            correct_option: q.correctOption,
-            image_path:    null,
-            image_url:     null,
-          });
-          if (error) { console.error(`   ❌ Failed: ${q.title?.slice(0, 60)} — ${error.message}`); fail++; }
-          else ok++;
+          let ok = 0, fail = 0;
+          for (const q of questions) {
+            const { error } = await adminClient.from('questions').insert({
+              created_by:    teacherId,
+              title:         q.title,
+              body:          '',
+              subject:       block.subject,
+              class_grade:   block.class_grade,
+              chapter:       chapterName,
+              points:        2,
+              time_limit:    2,
+              difficulty:    'moderate',
+              options:       q.options,
+              correct_option: q.correctOption,
+              image_path:    null,
+              image_url:     null,
+            });
+            if (error) { console.error(`   ❌ Failed: ${q.title?.slice(0, 60)} — ${error.message}`); fail++; }
+            else {
+              ok++;
+              console.log(`     ✔️ Inserted question ${ok}/50`);
+            }
+            // Add 1 second gap after each question
+            await delay(1000);
+          }
+
+          console.log(`   🎉 "${chapterName}": ${ok} added, ${fail} failed.`);
+          totalOk   += ok;
+          totalFail += fail;
+
+          // Mark as done so if re-run it won't duplicate
+          seededKeys.add(key);
+          success = true;
+
+        } catch (err) {
+          console.error(`   ❌ Error generating "${chapterName}":`, err.message);
+          if (err.message.includes('429')) {
+             console.log('   ⏳ Hit rate limit. Waiting 60s before retry...');
+             await delay(60000);
+             retries++;
+          } else {
+             totalFail++;
+             break;
+          }
         }
-
-        console.log(`   🎉 "${chapterName}": ${ok} added, ${fail} failed.`);
-        totalOk   += ok;
-        totalFail += fail;
-
-        // Mark as done so if re-run it won't duplicate
-        seededKeys.add(key);
-
-      } catch (err) {
-        console.error(`   ❌ Error generating "${chapterName}":`, err.message);
-        totalFail++;
       }
 
       // ── Rate-limit guard (free plan: 15 req/min) ──

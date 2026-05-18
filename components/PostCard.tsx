@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X, ArrowLeft } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
@@ -51,6 +51,7 @@ export default function PostCard({
 
     // LINK PREVIEW LOGIC
     const [linkPreview, setLinkPreview] = useState<any>(null);
+    const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
     const suggestionsRef = useRef<HTMLDivElement>(null);
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true }).replace('about ', '').replace('less than ', '');
@@ -516,9 +517,9 @@ export default function PostCard({
 
                     {/* Post Media */}
                     {post.image_url && (
-                        <div className={`mb-3 sm:mb-4 overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 ${isSinglePost ? '' : 'cursor-pointer hover:border-slate-200 dark:hover:border-slate-700 transition-colors'}`}>
+                        <div className={`mb-3 sm:mb-4 overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 ${isSinglePost ? 'cursor-pointer transition-opacity' : 'cursor-pointer hover:border-slate-200 dark:hover:border-slate-700 transition-colors'}`}>
                             {isSinglePost ? (
-                                <img src={post.image_url} alt="Post content" className="w-full h-auto max-h-[800px] object-contain" />
+                                <img src={post.image_url} alt="Post content" className="w-full h-auto max-h-[800px] object-contain hover:opacity-95 transition-opacity" onClick={(e) => { e.stopPropagation(); setFullscreenImage(post.image_url); }} />
                             ) : (
                                 <Link href={`/posts/${post.id}`} className="block">
                                     <img src={post.image_url} alt="Post content" className="w-full h-auto max-h-[512px] object-contain hover:opacity-95 transition-opacity" />
@@ -732,6 +733,28 @@ export default function PostCard({
                             )}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* ── Fullscreen Image ────────────────────────────────────────────── */}
+            {fullscreenImage && (
+                <div 
+                    className="fixed inset-0 z-[10000] bg-black flex items-center justify-center animate-in fade-in zoom-in-95 duration-200"
+                    onClick={(e) => { e.stopPropagation(); setFullscreenImage(null); }}
+                >
+                    <button 
+                        className="absolute top-12 left-4 p-2 rounded-full bg-black/50 text-white z-[10001]"
+                        onClick={(e) => { e.stopPropagation(); setFullscreenImage(null); }}
+                    >
+                        <ArrowLeft className="w-6 h-6" />
+                    </button>
+                    <Image 
+                        src={fullscreenImage} 
+                        alt="Fullscreen" 
+                        fill 
+                        className="object-contain"
+                        unoptimized
+                    />
                 </div>
             )}
         </div>
