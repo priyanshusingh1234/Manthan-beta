@@ -62,6 +62,34 @@ export default function SolvedQuestionsPage() {
         return () => { mounted = false; };
     }, [router]);
 
+    // Silently refresh the active tab's data in the background when switching tabs
+    // This ensures questions you JUST saved on the Solved tab appear when you click the Saved tab
+    useEffect(() => {
+        let mounted = true;
+        const refreshActiveTab = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            const headers: HeadersInit = { 
+                'Authorization': `Bearer ${session.access_token}`,
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+            };
+            const endpoint = activeTab === 'solved' ? '/api/questions/solved' : '/api/questions/saved';
+            try {
+                const res = await fetch(endpoint, { headers, cache: 'no-store' });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!mounted) return;
+                if (activeTab === 'solved') setSolvedQuestions(Array.isArray(data) ? data : []);
+                else setSavedQuestions(Array.isArray(data) ? data : []);
+            } catch (err) {
+                // Ignore background refresh errors
+            }
+        };
+        refreshActiveTab();
+        return () => { mounted = false; };
+    }, [activeTab]);
+
     const displayQuestions = activeTab === 'solved' ? solvedQuestions : savedQuestions;
 
     return (
