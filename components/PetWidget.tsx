@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import React, { useEffect, useState, useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Sphere, Box, Cone, MeshDistortMaterial, MeshWobbleMaterial } from '@react-three/drei';
+import * as THREE from 'three';
 import { supabase } from '@/lib/supabaseClient';
 import { Heart, Zap, Sparkles } from 'lucide-react';
 
@@ -10,48 +11,197 @@ interface PetWidgetProps {
     onClick?: () => void;
 }
 
-const PetFace = () => (
-    <group position={[0, 0, 1.1]}>
-        {/* Left Eye */}
-        <Sphere args={[0.15, 16, 16]} position={[-0.3, 0.2, 0]}>
-            <meshBasicMaterial color="#111827" />
-        </Sphere>
-        {/* Right Eye */}
-        <Sphere args={[0.15, 16, 16]} position={[0.3, 0.2, 0]}>
-            <meshBasicMaterial color="#111827" />
-        </Sphere>
-        {/* Cute Mouth */}
-        <Box args={[0.15, 0.05, 0.1]} position={[0, -0.1, 0.05]}>
-            <meshBasicMaterial color="#111827" />
-        </Box>
-    </group>
+const PetFace = ({ isTired, scale = 1, zOffset = 1.1 }: { isTired?: boolean, scale?: number, zOffset?: number }) => {
+    const leftEyeRef = useRef<THREE.Mesh>(null);
+    const rightEyeRef = useRef<THREE.Mesh>(null);
+    
+    useFrame(({ clock }) => {
+        const t = clock.getElapsedTime();
+        const blinkCycle = t % 4;
+        let blinkScale = 1;
+        if (blinkCycle > 3.8) {
+            blinkScale = 0.1;
+        }
+        const targetScale = isTired ? Math.min(0.4, blinkScale) : blinkScale;
+        
+        if (leftEyeRef.current) leftEyeRef.current.scale.y = THREE.MathUtils.lerp(leftEyeRef.current.scale.y, targetScale, 0.4);
+        if (rightEyeRef.current) rightEyeRef.current.scale.y = THREE.MathUtils.lerp(rightEyeRef.current.scale.y, targetScale, 0.4);
+    });
+
+    return (
+        <group position={[0, 0, zOffset]} scale={scale}>
+            <Sphere ref={leftEyeRef} args={[0.15, 16, 16]} position={[-0.3, 0.2, 0]}>
+                <meshBasicMaterial color="#111827" />
+                <Sphere args={[0.05, 8, 8]} position={[0.06, 0.06, 0.12]}>
+                    <meshBasicMaterial color="#ffffff" />
+                </Sphere>
+            </Sphere>
+            <Sphere ref={rightEyeRef} args={[0.15, 16, 16]} position={[0.3, 0.2, 0]}>
+                <meshBasicMaterial color="#111827" />
+                <Sphere args={[0.05, 8, 8]} position={[0.06, 0.06, 0.12]}>
+                    <meshBasicMaterial color="#ffffff" />
+                </Sphere>
+            </Sphere>
+            <Box args={[0.15, isTired ? 0.02 : 0.05, 0.1]} position={[0, isTired ? -0.15 : -0.1, 0.05]}>
+                <meshBasicMaterial color="#111827" />
+            </Box>
+        </group>
+    );
+};
+
+const BreathingWrapper = ({ children, isTired }: { children: React.ReactNode, isTired?: boolean }) => {
+    const groupRef = useRef<THREE.Group>(null);
+    useFrame(({ clock }) => {
+        const t = clock.getElapsedTime();
+        const speed = isTired ? 1 : 3;
+        const amplitude = isTired ? 0.05 : 0.1;
+        if (groupRef.current) {
+            groupRef.current.position.y = Math.sin(t * speed) * amplitude;
+        }
+    });
+    return <group ref={groupRef}>{children}</group>;
+};
+
+const VoxelDog = ({ isTired }: { isTired?: boolean }) => (
+    <BreathingWrapper isTired={isTired}>
+        <group position={[0, 0.2, 0]}>
+            {/* Body */}
+            <Box args={[0.8, 0.6, 1.2]} position={[0, -0.1, -0.2]}>
+                <meshStandardMaterial color="#c28e5c" />
+            </Box>
+            {/* Head */}
+            <group position={[0, 0.4, 0.4]}>
+                <Box args={[0.6, 0.6, 0.6]}>
+                    <meshStandardMaterial color="#c28e5c" />
+                </Box>
+                {/* Snout */}
+                <Box args={[0.3, 0.2, 0.3]} position={[0, -0.1, 0.4]}>
+                    <meshStandardMaterial color="#e5b787" />
+                </Box>
+                {/* Nose */}
+                <Box args={[0.1, 0.05, 0.05]} position={[0, 0, 0.56]}>
+                    <meshStandardMaterial color="#111827" />
+                </Box>
+                {/* Ears */}
+                <Box args={[0.15, 0.3, 0.2]} position={[-0.35, 0.3, 0]}>
+                    <meshStandardMaterial color="#8b5e34" />
+                </Box>
+                <Box args={[0.15, 0.3, 0.2]} position={[0.35, 0.3, 0]}>
+                    <meshStandardMaterial color="#8b5e34" />
+                </Box>
+                {/* Face */}
+                <PetFace isTired={isTired} scale={0.5} zOffset={0.31} />
+            </group>
+            {/* Legs */}
+            <Box args={[0.2, 0.4, 0.2]} position={[-0.25, -0.5, 0.2]}>
+                <meshStandardMaterial color="#c28e5c" />
+            </Box>
+            <Box args={[0.2, 0.4, 0.2]} position={[0.25, -0.5, 0.2]}>
+                <meshStandardMaterial color="#c28e5c" />
+            </Box>
+            <Box args={[0.2, 0.4, 0.2]} position={[-0.25, -0.5, -0.6]}>
+                <meshStandardMaterial color="#c28e5c" />
+            </Box>
+            <Box args={[0.2, 0.4, 0.2]} position={[0.25, -0.5, -0.6]}>
+                <meshStandardMaterial color="#c28e5c" />
+            </Box>
+            {/* Tail */}
+            <Box args={[0.1, 0.5, 0.1]} position={[0, 0.3, -0.8]} rotation={[Math.PI / 4, 0, 0]}>
+                <meshStandardMaterial color="#c28e5c" />
+            </Box>
+        </group>
+    </BreathingWrapper>
 );
 
-const PET_COMPONENTS = {
-    slime: (
-        <group>
-            <Sphere args={[1.2, 32, 32]}>
-                <MeshDistortMaterial color="#10b981" attach="material" distort={0.4} speed={2} />
-            </Sphere>
-            <PetFace />
-        </group>
-    ),
-    blocky: (
-        <group>
-            <Box args={[1.6, 1.6, 1.6]}>
-                <MeshWobbleMaterial color="#f59e0b" attach="material" factor={0.2} speed={1} />
+const VoxelCat = ({ isTired }: { isTired?: boolean }) => (
+    <BreathingWrapper isTired={isTired}>
+        <group position={[0, 0.1, 0]}>
+            {/* Body */}
+            <Box args={[0.6, 0.5, 1.0]} position={[0, -0.1, -0.1]}>
+                <meshStandardMaterial color="#f97316" />
             </Box>
-            <group position={[0, 0, -0.3]}><PetFace /></group>
+            {/* Head */}
+            <group position={[0, 0.3, 0.4]}>
+                <Box args={[0.5, 0.5, 0.5]}>
+                    <meshStandardMaterial color="#f97316" />
+                </Box>
+                {/* Ears */}
+                <Cone args={[0.15, 0.3, 4]} position={[-0.2, 0.4, 0]} rotation={[0, Math.PI/4, 0]}>
+                    <meshStandardMaterial color="#ea580c" />
+                </Cone>
+                <Cone args={[0.15, 0.3, 4]} position={[0.2, 0.4, 0]} rotation={[0, Math.PI/4, 0]}>
+                    <meshStandardMaterial color="#ea580c" />
+                </Cone>
+                {/* Face */}
+                <PetFace isTired={isTired} scale={0.4} zOffset={0.26} />
+            </group>
+            {/* Legs */}
+            <Box args={[0.12, 0.3, 0.12]} position={[-0.2, -0.4, 0.3]}>
+                <meshStandardMaterial color="#f97316" />
+            </Box>
+            <Box args={[0.12, 0.3, 0.12]} position={[0.2, -0.4, 0.3]}>
+                <meshStandardMaterial color="#f97316" />
+            </Box>
+            <Box args={[0.12, 0.3, 0.12]} position={[-0.2, -0.4, -0.5]}>
+                <meshStandardMaterial color="#f97316" />
+            </Box>
+            <Box args={[0.12, 0.3, 0.12]} position={[0.2, -0.4, -0.5]}>
+                <meshStandardMaterial color="#f97316" />
+            </Box>
+            {/* Tail */}
+            <Box args={[0.08, 0.6, 0.08]} position={[0, 0.3, -0.6]} rotation={[-Math.PI / 6, 0, 0]}>
+                <meshStandardMaterial color="#ea580c" />
+            </Box>
         </group>
-    ),
-    spike: (
-        <group>
-            <Cone args={[1.2, 2.5, 32]}>
-                <MeshDistortMaterial color="#8b5cf6" attach="material" distort={0.2} speed={3} />
+    </BreathingWrapper>
+);
+
+const VoxelBird = ({ isTired }: { isTired?: boolean }) => (
+    <BreathingWrapper isTired={isTired}>
+        <group position={[0, 0.3, 0]}>
+            {/* Body/Head */}
+            <Sphere args={[0.6, 16, 16]}>
+                <meshStandardMaterial color="#3b82f6" />
+            </Sphere>
+            {/* Beak */}
+            <Cone args={[0.15, 0.3, 16]} position={[0, 0, 0.6]} rotation={[Math.PI / 2, 0, 0]}>
+                <meshStandardMaterial color="#eab308" />
             </Cone>
-            <group position={[0, -0.2, 0]}><PetFace /></group>
+            {/* Wings */}
+            <Box args={[0.1, 0.4, 0.6]} position={[-0.6, 0, 0]} rotation={[0, 0, Math.PI / 8]}>
+                <meshStandardMaterial color="#60a5fa" />
+            </Box>
+            <Box args={[0.1, 0.4, 0.6]} position={[0.6, 0, 0]} rotation={[0, 0, -Math.PI / 8]}>
+                <meshStandardMaterial color="#60a5fa" />
+            </Box>
+            {/* Legs */}
+            <Box args={[0.05, 0.3, 0.05]} position={[-0.2, -0.7, 0]}>
+                <meshStandardMaterial color="#eab308" />
+            </Box>
+            <Box args={[0.05, 0.3, 0.05]} position={[0.2, -0.7, 0]}>
+                <meshStandardMaterial color="#eab308" />
+            </Box>
+            {/* Feet */}
+            <Box args={[0.15, 0.05, 0.2]} position={[-0.2, -0.85, 0.05]}>
+                <meshStandardMaterial color="#eab308" />
+            </Box>
+            <Box args={[0.15, 0.05, 0.2]} position={[0.2, -0.85, 0.05]}>
+                <meshStandardMaterial color="#eab308" />
+            </Box>
+            {/* Face */}
+            <PetFace isTired={isTired} scale={0.4} zOffset={0.55} />
         </group>
-    )
+    </BreathingWrapper>
+);
+
+export const PetModels = {
+    dog: VoxelDog,
+    cat: VoxelCat,
+    bird: VoxelBird,
+    // Legacy support for previously selected pets
+    blocky: VoxelDog,
+    slime: VoxelCat,
+    spike: VoxelBird
 };
 
 export default function PetWidget({ onClick }: PetWidgetProps) {
@@ -113,7 +263,7 @@ export default function PetWidget({ onClick }: PetWidgetProps) {
         );
     }
 
-    if (!activePet || !PET_COMPONENTS[activePet as keyof typeof PET_COMPONENTS]) {
+    if (!activePet || !PetModels[activePet as keyof typeof PetModels]) {
         return (
             <div 
                 onClick={onClick}
@@ -160,7 +310,10 @@ export default function PetWidget({ onClick }: PetWidgetProps) {
                     <ambientLight intensity={0.6} />
                     <directionalLight position={[10, 10, 5]} intensity={1.5} />
                     <pointLight position={[-10, -10, -10]} color="#3b82f6" intensity={1} />
-                    {PET_COMPONENTS[activePet as keyof typeof PET_COMPONENTS]}
+                    {(() => {
+                        const Model = PetModels[activePet as keyof typeof PetModels];
+                        return Model ? <Model isTired={petStats.health < 30} /> : null;
+                    })()}
                     <OrbitControls 
                         enableZoom={false} 
                         enablePan={false}

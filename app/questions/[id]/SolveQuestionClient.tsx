@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send, Users, Trophy, ArrowRight } from "lucide-react";
+import { Clock, Zap, CheckCircle2, XCircle, Loader2, Star, User, Send, Users, Trophy, ArrowRight, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Haptics } from '@capacitor/haptics';
 import { ActivityTracker } from '@/lib/activityTracker';
@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import { queueAchievementUnlock } from '@/components/AchievementUnlockOverlay';
 import { useCorrectSound } from '@/hooks/useCorrectSound';
 import { schedulePetFeedingReminder } from '@/lib/petNotifications';
+import { getRandomMessage } from '@/lib/feedbackMessages';
 
 
 export default function SolveQuestionClient({ question }: { question: any }) {
@@ -29,7 +30,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState<number>(question.time_limit * 60);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [result, setResult] = useState<{ isCorrect: boolean, newTotal: number, correctOption: number, pointsChange: number, xpGained?: number, newXp?: number } | null>(null);
+    const [result, setResult] = useState<{ isCorrect: boolean, newTotal: number, correctOption: number, pointsChange: number, xpGained?: number, newXp?: number, funnyMessage?: string } | null>(null);
     const [startedAt] = useState(() => new Date().toISOString());
     const [showXpBurst, setShowXpBurst] = useState(false);
     const [showWrongFlash, setShowWrongFlash] = useState(false);
@@ -197,6 +198,8 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 return;
             }
 
+            data.funnyMessage = getRandomMessage(data.isCorrect);
+
             setResult(data);
 
             // 🔥 Fire global streak toast when daily goal is completed
@@ -326,6 +329,20 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
         return () => clearInterval(timer);
     }, [timeLeft, authChecked, alreadyAttempted, result, isSubmitting, handleSubmit, selectedOption]);
+
+    // Urgent time pressure effects (Heartbeat Haptics)
+    useEffect(() => {
+        if (!authChecked || alreadyAttempted || result || isSubmitting) return;
+        
+        if (timeLeft <= 10 && timeLeft > 0) {
+            try { 
+                Haptics.vibrate({ duration: 40 }).catch(() => {});
+                setTimeout(() => {
+                    Haptics.vibrate({ duration: 40 }).catch(() => {});
+                }, 200);
+            } catch (e) {}
+        }
+    }, [timeLeft, authChecked, alreadyAttempted, result, isSubmitting]);
 
     const formatTime = (secs: number) => {
         const mins = Math.floor(secs / 60);
@@ -624,12 +641,33 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     {result.isCorrect ? "Correct!" : "Incorrect!"}
                 </h2>
 
-                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                <p className="text-lg text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-4">
                     {result.isCorrect
                         ? `Brilliant job! You earned ${result.pointsChange} points.`
                         : `Keep learning! You lost ${Math.abs(result.pointsChange)} points.`
                     }
                 </p>
+
+                {result.funnyMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ 
+                            type: 'spring', 
+                            stiffness: 400, 
+                            damping: 15,
+                            delay: 0.4
+                        }}
+                        className={`mx-auto max-w-sm p-4 rounded-2xl border-2 shadow-lg relative ${result.isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-300' : 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-900/30 dark:border-rose-700 dark:text-rose-300'}`}
+                    >
+                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-2xl drop-shadow-md">
+                            {result.isCorrect ? '🔥' : '💀'}
+                        </div>
+                        <span className="block font-bold text-base mt-1">
+                            "{result.funnyMessage}"
+                        </span>
+                    </motion.div>
+                )}
 
                 <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl inline-block w-full max-w-sm border border-slate-200 dark:border-slate-700">
                     <div className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Total Points</div>
@@ -788,6 +826,20 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-5">
+            {/* Urgent Time Pressure Overlay */}
+            <AnimatePresence>
+                {timeLeft <= 10 && !result && !isSubmitting && (
+                    <motion.div
+                        key="time-pressure"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 0.6, 0] }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                        className="fixed inset-0 z-[-1] pointer-events-none bg-gradient-to-b from-transparent via-red-500/10 to-red-600/30 dark:via-red-900/20 dark:to-red-900/50"
+                    />
+                )}
+            </AnimatePresence>
+
             {challengeId && (
                 <CoopChallengeHeader
                     challengeId={challengeId}
@@ -798,9 +850,14 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
             {/* Top Bar: Timer & Points */}
             <div className="flex items-center justify-between bg-white/95 dark:bg-slate-900/90 backdrop-blur-md px-5 py-3 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm sticky top-4 z-40">
-                <div className={`flex items-center gap-2 font-mono text-lg font-medium px-4 py-1.5 rounded-full ${timeLeft <= 30 ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/50' : 'bg-gray-100/80 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300'}`}>
-                    <Clock className="w-4 h-4" />
-                    {formatTime(timeLeft)}
+                <div className="flex items-center gap-3">
+                    <button onClick={() => router.back()} className="lg:hidden p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                        <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-slate-300" />
+                    </button>
+                    <div className={`flex items-center gap-2 font-mono text-lg font-medium px-4 py-1.5 rounded-full ${timeLeft <= 30 ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/50' : 'bg-gray-100/80 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300'}`}>
+                        <Clock className="w-4 h-4" />
+                        {formatTime(timeLeft)}
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-2">

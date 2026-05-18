@@ -775,10 +775,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isIndividualTest = pathname?.startsWith('/tests/') || pathname?.startsWith('/test/') || pathname?.startsWith('/arena/') || false;
   const isChatPage = pathname?.startsWith('/chat');
   const isStorePage = pathname?.startsWith('/store');
+  const isSolvePageMobile = pathname?.startsWith('/questions/') && isMobile;
 
   const isSinglePostPage = pathname?.startsWith('/posts/') && pathname !== '/posts';
-  const hideMainSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isSearchPage || isIndividualTest || isChatPage || isSinglePostPage;
-  const hideBottomNav = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isIndividualTest || isChatPage || isStorePage || isSinglePostPage;
+  const hideMainSidebar = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isSearchPage || isIndividualTest || isChatPage || isSinglePostPage || isSolvePageMobile;
+  const hideBottomNav = isAuthPage || isAuthenticated === false || (isLandingPage && isAuthenticated === null) || isTrailerPage || isIndividualTest || isChatPage || isStorePage || isSinglePostPage || isSolvePageMobile;
 
   if (needsOnboarding) {
     return <CompleteProfileOverlay onComplete={() => setNeedsOnboarding(false)} />;
