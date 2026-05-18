@@ -19,6 +19,7 @@ import BadgedName from '@/components/BadgedName';
 import FollowButton from '@/components/FollowButton';
 import CropModal from '@/components/profile/CropModal';
 import EditProfileModal from '@/components/profile/EditProfileModal';
+import ChoosePetModal from '@/components/ChoosePetModal';
 import MyPostsSection from '@/components/MyPostsSection';
 import XPBar from '@/components/XPBar';
 import AchievementCards from '@/components/AchievementCards';
@@ -82,6 +83,7 @@ const StudentProfile: React.FC = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [isPetModalOpen, setIsPetModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', username: '', school: '', grade: '', bio: '', showWeeklyReport: true });
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'achievements' | 'posts' | 'badges'>('achievements');
