@@ -24,6 +24,7 @@ import StreakLostOverlay from '@/components/StreakLostOverlay';
 import { Toaster } from 'react-hot-toast';
 import AchievementUnlockOverlay from '@/components/AchievementUnlockOverlay';
 import GlobalLevelUpListener from '@/components/GlobalLevelUpListener';
+import DailyEggDrop from '@/components/DailyEggDrop';
 
 let nativePushInitialized = false;
 
@@ -805,6 +806,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {isAuthenticated && <StreakLostOverlay />}
       {isAuthenticated && <AchievementUnlockOverlay />}
       {isAuthenticated && <GlobalLevelUpListener />}
+      {isAuthenticated && <DailyEggDrop />}
     </CallProvider>
   );
 }

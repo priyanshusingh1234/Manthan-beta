@@ -19,6 +19,111 @@ import { useCorrectSound } from '@/hooks/useCorrectSound';
 import { schedulePetFeedingReminder } from '@/lib/petNotifications';
 import { getRandomMessage } from '@/lib/feedbackMessages';
 
+const PreGameSpinner = ({ question, onComplete }: { question: any, onComplete: () => void }) => {
+    const [isSpinning, setIsSpinning] = useState(true);
+    const [displaySubject, setDisplaySubject] = useState("???");
+    const [displayDifficulty, setDisplayDifficulty] = useState("???");
+    const [displayPoints, setDisplayPoints] = useState("???");
+
+    const subjects = ["Math", "Science", "History", "English", "Physics", "Geography", "Biology", "Coding"];
+    const difficulties = ["Easy", "Medium", "Hard", "Legendary", "Nightmare"];
+    const pointsList = ["10", "20", "30", "50", "100", "500"];
+
+    const actualDifficulty = question.points >= 50 ? "Legendary" : question.points >= 30 ? "Hard" : question.points >= 20 ? "Medium" : "Easy";
+    const actualPoints = question.points?.toString() || "0";
+    const actualSubject = question.subject || "General";
+
+    useEffect(() => {
+        let ticks = 0;
+        const maxTicks = 20; // 2 seconds
+        
+        const interval = setInterval(() => {
+            ticks++;
+            
+            try { Haptics.vibrate({ duration: 10 }).catch(() => {}); } catch(e){}
+            
+            if (ticks < maxTicks - 10) setDisplaySubject(subjects[Math.floor(Math.random() * subjects.length)]);
+            else setDisplaySubject(actualSubject);
+            
+            if (ticks < maxTicks - 5) setDisplayDifficulty(difficulties[Math.floor(Math.random() * difficulties.length)]);
+            else setDisplayDifficulty(actualDifficulty);
+            
+            if (ticks < maxTicks) setDisplayPoints(pointsList[Math.floor(Math.random() * pointsList.length)]);
+            else {
+                setDisplayPoints(actualPoints);
+                setIsSpinning(false);
+                clearInterval(interval);
+                try { Haptics.vibrate({ duration: 100 }).catch(() => {}); } catch(e){}
+            }
+        }, 100);
+        
+        return () => clearInterval(interval);
+    }, [actualDifficulty, actualPoints, actualSubject]);
+
+    return (
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
+            className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-white"
+        >
+            <h2 className="text-2xl font-black text-slate-400 mb-12 tracking-widest uppercase">Target Locked</h2>
+            
+            <div className="w-full max-w-sm space-y-4">
+                <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl overflow-hidden text-center">
+                    <div className="text-sm text-slate-400 font-bold mb-2">SUBJECT</div>
+                    <motion.div 
+                        key={displaySubject} 
+                        initial={{ y: -20, opacity: 0 }} 
+                        animate={{ y: 0, opacity: 1 }} 
+                        className={`text-3xl font-black ${!isSpinning ? 'text-indigo-400' : 'text-white'}`}
+                    >
+                        {displaySubject}
+                    </motion.div>
+                </div>
+                
+                <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl overflow-hidden text-center">
+                    <div className="text-sm text-slate-400 font-bold mb-2">DIFFICULTY</div>
+                    <motion.div 
+                        key={displayDifficulty} 
+                        initial={{ y: -20, opacity: 0 }} 
+                        animate={{ y: 0, opacity: 1 }} 
+                        className={`text-3xl font-black ${!isSpinning ? (actualDifficulty === 'Legendary' ? 'text-yellow-400' : actualDifficulty === 'Hard' ? 'text-red-400' : 'text-orange-400') : 'text-white'}`}
+                    >
+                        {displayDifficulty}
+                    </motion.div>
+                </div>
+                
+                <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl overflow-hidden text-center">
+                    <div className="text-sm text-slate-400 font-bold mb-2">REWARD</div>
+                    <motion.div 
+                        key={displayPoints} 
+                        initial={{ y: -20, opacity: 0 }} 
+                        animate={{ y: 0, opacity: 1 }} 
+                        className={`text-3xl font-black ${!isSpinning ? 'text-green-400' : 'text-white'}`}
+                    >
+                        {displayPoints} PTS
+                    </motion.div>
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {!isSpinning && (
+                    <motion.button
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: "spring", bounce: 0.5 }}
+                        onClick={onComplete}
+                        className="mt-12 bg-white text-slate-900 font-black text-xl py-4 px-12 rounded-full shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-all"
+                    >
+                        START BATTLE
+                    </motion.button>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
+};
+
 
 export default function SolveQuestionClient({ question }: { question: any }) {
     const router = useRouter();
@@ -30,6 +135,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [timeLeft, setTimeLeft] = useState<number>(question.time_limit * 60);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showPreGame, setShowPreGame] = useState(true);
     const [result, setResult] = useState<{ isCorrect: boolean, newTotal: number, correctOption: number, pointsChange: number, xpGained?: number, newXp?: number, funnyMessage?: string } | null>(null);
     const [startedAt] = useState(() => new Date().toISOString());
     const [showXpBurst, setShowXpBurst] = useState(false);
@@ -123,7 +229,10 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 .maybeSingle();
 
             if (mounted) {
-                if (data) setAlreadyAttempted(data);
+                if (data || challengeId) {
+                    if (data) setAlreadyAttempted(data);
+                    setShowPreGame(false);
+                }
                 if (wonCoop) setRecoveredViaCoop(true);
                 setCurrentUserId(user.id);
                 setAuthChecked(true);
@@ -316,7 +425,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
     // Timer effect
     useEffect(() => {
-        if (!authChecked || alreadyAttempted || result || isSubmitting) return;
+        if (!authChecked || alreadyAttempted || result || isSubmitting || showPreGame) return;
 
         if (timeLeft <= 0) {
             handleSubmit(selectedOption);
@@ -332,7 +441,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
     // Urgent time pressure effects (Heartbeat Haptics)
     useEffect(() => {
-        if (!authChecked || alreadyAttempted || result || isSubmitting) return;
+        if (!authChecked || alreadyAttempted || result || isSubmitting || showPreGame) return;
         
         if (timeLeft <= 10 && timeLeft > 0) {
             try { 
@@ -826,6 +935,15 @@ export default function SolveQuestionClient({ question }: { question: any }) {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-5">
+            <AnimatePresence>
+                {showPreGame && authChecked && !alreadyAttempted && !challengeId && (
+                    <PreGameSpinner 
+                        question={question} 
+                        onComplete={() => setShowPreGame(false)} 
+                    />
+                )}
+            </AnimatePresence>
+
             {/* Urgent Time Pressure Overlay */}
             <AnimatePresence>
                 {timeLeft <= 10 && !result && !isSubmitting && (
