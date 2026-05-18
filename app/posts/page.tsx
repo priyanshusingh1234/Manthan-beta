@@ -153,7 +153,7 @@ function SocialFeedContent() {
                     loadMore();
                 }
             },
-            { threshold: 0.1, rootMargin: '400px' }
+            { threshold: 0.1, rootMargin: '100px' }  // reduced — was 400px which caused instant scroll-to-end
         );
 
         if (observerTarget.current) {
@@ -174,6 +174,13 @@ function SocialFeedContent() {
         });
         return () => { mounted = false; };
     }, [fetchFeed]);
+
+    // Scroll to top whenever the feed first loads with fresh posts
+    useEffect(() => {
+        if (posts.length > 0) {
+            window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+        }
+    }, [posts.length > 0 ? 'loaded' : 'empty']); // only fires the first time posts arrive
 
     // Handle incoming shared text
     useEffect(() => {

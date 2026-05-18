@@ -25,6 +25,7 @@ export default function ClipsClient() {
     const [replyingTo, setReplyingTo] = useState<{ username: string; userId: string } | null>(null);
 
     const observerTarget = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     const fetchFeed = useCallback(async (isInitial = true, targetPostId?: string) => {
         try {
@@ -92,7 +93,14 @@ export default function ClipsClient() {
 
     useEffect(() => {
         fetchFeed(true, targetPostId || undefined);
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Always reset scroll to top on mount so we never land at the bottom
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = 0;
+        }
+    }, [posts.length === 0 ? 0 : 1]); // fires once posts first arrive
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -101,7 +109,7 @@ export default function ClipsClient() {
                     fetchFeed(false);
                 }
             },
-            { threshold: 0.1, rootMargin: '400px' }
+            { threshold: 0.1, rootMargin: '50px' }  // small margin — don't fire on page load
         );
 
         if (observerTarget.current) observer.observe(observerTarget.current);
@@ -184,7 +192,10 @@ export default function ClipsClient() {
             </div>
 
             {/* Vertical scroll snap container */}
-            <div className="w-full h-[100dvh] overflow-y-scroll snap-y snap-mandatory overscroll-y-contain hide-scrollbar bg-black">
+            <div
+                ref={scrollContainerRef}
+                className="w-full h-[100dvh] overflow-y-scroll snap-y snap-mandatory overscroll-y-contain hide-scrollbar bg-black"
+            >
                 {posts.map((post) => (
                     <div key={post.id} className="w-full h-[100dvh] snap-center snap-always flex items-center justify-center relative">
                         <div className="w-full h-full max-w-[450px] aspect-[9/16] relative bg-black">
@@ -197,13 +208,18 @@ export default function ClipsClient() {
                         </div>
                     </div>
                 ))}
+            </div>
 
-                
-                {/* Sentinel for infinite scroll */}
-                <div ref={observerTarget} className="w-full h-20 snap-center flex items-center justify-center bg-black">
-                    {loadingMore && <Loader2 className="w-6 h-6 text-white/50 animate-spin" />}
-                    {!hasMore && posts.length > 0 && <p className="text-white/20 text-xs font-black uppercase">You are all caught up</p>}
-                </div>
+            {/* Sentinel outside snap container so it doesn't cause snapping to bottom */}
+            <div ref={observerTarget} className="absolute bottom-0 left-0 right-0 h-1 pointer-events-none">
+                {loadingMore && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
+                        <Loader2 className="w-6 h-6 text-white/50 animate-spin" />
+                    </div>
+                )}
+                {!hasMore && posts.length > 0 && (
+                    <p className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/20 text-xs font-black uppercase">You are all caught up</p>
+                )}
             </div>
 
             {/* Mobile Bottom Comments Sheet (Native-style slide up) */}
