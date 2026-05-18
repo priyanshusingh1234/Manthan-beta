@@ -90,18 +90,8 @@ export async function GET(req: Request) {
             }
         }
 
-        // Fetch attempt counts for these questions
-        const questionIds = rows.map((r: any) => r.id);
+        // Omit overall attempt counts for the library page to drastically improve load times
         let attemptsMap: Record<string, { total: number; solved: number }> = {};
-        if (questionIds.length > 0) {
-            const { data: attempts } = await supabaseAdmin.from('question_attempts').select('question_id, is_correct').in('question_id', questionIds);
-            attempts?.forEach((att: any) => {
-                const qid = String(att.question_id);
-                if (!attemptsMap[qid]) attemptsMap[qid] = { total: 0, solved: 0 };
-                attemptsMap[qid].total += 1;
-                if (att.is_correct) attemptsMap[qid].solved += 1;
-            });
-        }
 
         const apps = rows.map((r: any) => ({
             id: String(r.id),
