@@ -13,7 +13,6 @@ import { StatusBar } from '@capacitor/status-bar';
 import { ActivityTracker } from '@/lib/activityTracker';
 import CongratsBadgeModal from '@/components/CongratsBadgeModal';
 import GlobalCallListener from '@/components/GlobalCallListener';
-import GlobalPrefetcher from '@/components/GlobalPrefetcher';
 import { CallProvider } from '@/components/CallProvider';
 import { subscribeToPushNotifications } from '@/lib/pushUtils';
 
@@ -817,7 +816,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {isAuthenticated && <CongratsBadgeModal />}
       {isAuthenticated && <GlobalChatListener />}
       <GlobalCallListener />
-      <GlobalPrefetcher isAuthenticated={isAuthenticated} />
       {isAuthenticated && <StreakToast />}
       {isAuthenticated && <StreakLostOverlay />}
       {isAuthenticated && <AchievementUnlockOverlay />}
