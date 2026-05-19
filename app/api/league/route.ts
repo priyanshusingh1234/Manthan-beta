@@ -15,11 +15,10 @@ async function getUser(bearer?: string | null) {
   } catch { return null; }
 }
 
-// Auto-reset monthly_points if month has changed
 async function ensureMonthReset(userId: string, currentMonth: string, currentPts: number, storedMonth: string | null) {
   if (storedMonth === currentMonth) return currentPts;
-  // Month changed — reset
-  const resetPts = getResetPoints(currentPts);
+  // NULL storedMonth = column just added, no penalty — just initialize to 0
+  const resetPts = storedMonth === null ? 0 : getResetPoints(currentPts);
   await supabaseAdmin.from('profiles').update({
     monthly_points: resetPts,
     monthly_points_month: currentMonth
@@ -34,7 +33,6 @@ export async function GET(req: NextRequest) {
 
     const currentMonth = getMonthKey();
 
-    // Fetch current user profile
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id, full_name, username, avatar_url, monthly_points, monthly_points_month, total_points')
@@ -43,58 +41,82 @@ export async function GET(req: NextRequest) {
 
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
 
-    // Handle monthly reset
     const monthlyPts = await ensureMonthReset(user.id, currentMonth, profile.monthly_points || 0, profile.monthly_points_month);
     const userLeague = getLeague(monthlyPts);
 
-    // Rank in current league: count how many users have more monthly_points in same league
-    const { count: higherCount } = await supabaseAdmin
+    // Global rank by total_points (always meaningful)
+    const { count: globalHigher } = await supabaseAdmin
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_teacher', false)
+      .gt('total_points', profile.total_points || 0);
+    const globalRank = (globalHigher ?? 0) + 1;
+
+    // League rank (by monthly_points in same league)
+    const { count: leagueHigher } = await supabaseAdmin
       .from('profiles')
       .select('id', { count: 'exact', head: true })
       .eq('monthly_points_month', currentMonth)
       .gte('monthly_points', userLeague.min)
       .lte('monthly_points', userLeague.max === Infinity ? 99999 : userLeague.max)
       .gt('monthly_points', monthlyPts);
+    const leagueRank = (leagueHigher ?? 0) + 1;
 
-    const rank = (higherCount ?? 0) + 1;
+    // ── League leaderboard: users in same league, monthly_points + total_points tiebreaker ──
+    const leagueMin = userLeague.min;
+    const leagueMax = userLeague.max === Infinity ? 99999 : userLeague.max;
 
-    // Leaderboard: top 20 in user's league
-    const { data: leaderboard } = await supabaseAdmin
+    // Get users whose monthly_points_month matches (active this month) OR who have 0/null (unstarted = Scholar)
+    let leaderboardQuery = supabaseAdmin
       .from('profiles')
-      .select('id, full_name, username, avatar_url, monthly_points')
-      .eq('monthly_points_month', currentMonth)
-      .gte('monthly_points', userLeague.min)
-      .lte('monthly_points', userLeague.max === Infinity ? 99999 : userLeague.max)
-      .order('monthly_points', { ascending: false })
-      .limit(20);
+      .select('id, full_name, username, avatar_url, monthly_points, total_points')
+      .eq('is_teacher', false)
+      .not('full_name', 'is', null);
 
-    // Friends leagues (people I follow)
+    if (userLeague.min === 0) {
+      // Scholar: include users with 0 monthly points regardless of month
+      leaderboardQuery = leaderboardQuery.lte('monthly_points', leagueMax);
+    } else {
+      leaderboardQuery = leaderboardQuery
+        .eq('monthly_points_month', currentMonth)
+        .gte('monthly_points', leagueMin)
+        .lte('monthly_points', leagueMax);
+    }
+
+    const { data: leaderboard } = await leaderboardQuery
+      .order('monthly_points', { ascending: false })
+      .order('total_points', { ascending: false })
+      .limit(25);
+
+    // Friends
     const { data: following } = await supabaseAdmin
       .from('follows')
       .select('following_id')
       .eq('follower_id', user.id);
-    const friendIds = (following || []).map(f => f.following_id).slice(0, 20);
+    const friendIds = (following || []).map((f: any) => f.following_id).slice(0, 30);
 
     let friends: any[] = [];
     if (friendIds.length) {
       const { data } = await supabaseAdmin
         .from('profiles')
-        .select('id, full_name, username, avatar_url, monthly_points, monthly_points_month')
+        .select('id, full_name, username, avatar_url, monthly_points, monthly_points_month, total_points')
         .in('id', friendIds)
-        .order('monthly_points', { ascending: false });
-      friends = (data || []).map(f => ({
+        .order('total_points', { ascending: false });
+      friends = (data || []).map((f: any) => ({
         ...f,
-        monthly_points: f.monthly_points_month === currentMonth ? (f.monthly_points || 0) : getResetPoints(f.monthly_points || 0),
+        monthly_points: f.monthly_points_month === currentMonth ? (f.monthly_points || 0) : 0,
       }));
     }
 
     return NextResponse.json({
       monthlyPts,
-      rank,
+      leagueRank,
+      globalRank,
       currentMonth,
       leaderboard: leaderboard || [],
       friends,
       userId: user.id,
+      totalPoints: profile.total_points || 0,
     });
   } catch (err: any) {
     console.error('[League API]', err);
