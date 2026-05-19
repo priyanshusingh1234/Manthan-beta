@@ -20,7 +20,7 @@ interface Message {
   content: string;
   created_at: string;
   is_read: boolean;
-  message_type: 'text' | 'image' | 'file';
+  message_type: 'text' | 'image' | 'file' | 'image_once';
 }
 interface Participant {
   user_id: string;
@@ -73,7 +73,7 @@ const MessageItem = memo(function MessageItem({
   onLongPress: (msg: Message) => void;
   onReply: (msg: Message) => void;
   prevMsg?: Message;
-  onImageClick: (url: string) => void;
+  onImageClick: (url: string, msgType: string, msgId: string, isSender: boolean) => void;
 }) {
   const isMe = msg.sender_id === user?.id;
   const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
@@ -233,12 +233,28 @@ const MessageItem = memo(function MessageItem({
                 : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-sm border border-slate-100 dark:border-slate-700/50'
             }`}
           >
-            {msg.message_type === 'image' || msg.content.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
+            {msg.message_type === 'image_once' ? (
+              <div 
+                className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none active:bg-black/5 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onImageClick(msg.content, msg.message_type, msg.id, isMe);
+                }}
+              >
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${isMe ? 'bg-white/20' : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'}`}>
+                  <ImageIcon className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span className={`font-bold text-sm leading-none ${isMe ? 'text-white' : 'text-slate-900 dark:text-white'}`}>Photo</span>
+                  <span className={`text-[10px] font-semibold mt-0.5 opacity-80 ${isMe ? 'text-white/80' : 'text-slate-500'}`}>View once</span>
+                </div>
+              </div>
+            ) : msg.message_type === 'image' || msg.content.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
               <div 
                 className="relative w-[200px] h-[200px] cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onImageClick(msg.content);
+                  onImageClick(msg.content, msg.message_type, msg.id, isMe);
                 }}
               >
                 <Image src={msg.content} alt="Image" fill className="object-cover" unoptimized />
@@ -277,6 +293,7 @@ function ChatRoomContent() {
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [sending, setSending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isViewOnce, setIsViewOnce] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [contextMsg, setContextMsg] = useState<Message | null>(null);
@@ -285,6 +302,7 @@ function ChatRoomContent() {
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [roomStatus, setRoomStatus] = useState<{status: string, created_by: string} | null>(null);
   const [showMultiDeleteSheet, setShowMultiDeleteSheet] = useState(false);
   const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
@@ -383,11 +401,16 @@ function ChatRoomContent() {
         if (cp) setParticipant(JSON.parse(cp));
       } catch {}
 
-      const [pRes, mRes] = await Promise.all([
+      const [pRes, mRes, rRes] = await Promise.all([
         supabase.from('chat_participants').select('user_id').eq('room_id', roomId).neq('user_id', u.id),
         // Fetch newest 80 (descending), then reverse for display — works for chats with 80+ messages
         supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: false }).limit(80),
+        supabase.from('chat_rooms').select('status, created_by').eq('id', roomId).single(),
       ]);
+      
+      if (rRes.data) {
+          setRoomStatus(rRes.data);
+      }
 
       let profData: any = null;
       if (pRes.data?.[0]?.user_id) {
@@ -679,7 +702,7 @@ function ChatRoomContent() {
         room_id: roomId, 
         sender_id: user.id, 
         content: uploadData.publicUrl, 
-        message_type: 'image' 
+        message_type: isViewOnce ? 'image_once' : 'image' 
       }).select('*').single();
       
       if (error) throw error;
@@ -697,7 +720,33 @@ function ChatRoomContent() {
         }).catch(() => {});
       }
     } catch (err: any) { alert(err.message); }
-    finally { setUploadingImage(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
+    finally { 
+        setUploadingImage(false); 
+        setIsViewOnce(false); // reset after upload
+        if (fileInputRef.current) fileInputRef.current.value = ''; 
+    }
+  };
+
+  const handleImageClick = async (url: string, msgType: string, msgId: string, isSender: boolean) => {
+      setFullscreenImage(url);
+      
+      // If it's a view once image and NOT the sender viewing it, delete it from the server immediately
+      if (msgType === 'image_once' && !isSender) {
+          try {
+              const { data: { session } } = await supabase.auth.getSession();
+              await fetch('/api/chat/delete-once', {
+                  method: 'POST',
+                  headers: { 
+                      'Content-Type': 'application/json',
+                      Authorization: `Bearer ${session?.access_token}` 
+                  },
+                  body: JSON.stringify({ messageId: msgId })
+              });
+              // Note: the message will be removed from state via realtime DELETE event broadcasted by the server.
+          } catch (e) {
+              console.error("Failed to delete view-once image", e);
+          }
+      }
   };
 
   // ─── Long press handler ───────────────────────────────────────────────────
@@ -1091,13 +1140,22 @@ function ChatRoomContent() {
         )}
         <div className="flex items-end gap-2 px-3 py-2">
           {/* Image button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingImage}
-            className="w-9 h-9 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-100 dark:active:bg-slate-800 shrink-0 mb-0.5"
-          >
-            {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> : <ImageIcon className="w-5 h-5" />}
-          </button>
+          <div className="flex flex-col gap-1 items-center mb-0.5">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImage}
+                className="w-9 h-9 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-100 dark:active:bg-slate-800 shrink-0"
+              >
+                {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> : <ImageIcon className="w-5 h-5" />}
+              </button>
+              <button
+                onClick={() => setIsViewOnce(v => !v)}
+                className={`w-6 h-6 flex items-center justify-center rounded-full text-[9px] font-bold transition-colors ${isViewOnce ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}
+                title="View Once"
+              >
+                1
+              </button>
+          </div>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
 
           {/* Auto-growing textarea */}
@@ -1124,13 +1182,58 @@ function ChatRoomContent() {
           {/* Send */}
           <button
             onClick={handleSend}
-            disabled={!newMessage.trim() || sending || isBlocked}
+            disabled={!newMessage.trim() || sending || isBlocked || (roomStatus?.status === 'pending')}
             className="w-10 h-10 bg-indigo-600 disabled:bg-slate-200 dark:disabled:bg-slate-700 text-white disabled:text-slate-400 rounded-full flex items-center justify-center shadow-md shadow-indigo-600/20 disabled:shadow-none active:scale-90 transition-all shrink-0 mb-0.5"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}
           </button>
         </div>
       </div>
+      
+      {/* ── Message Request Banner ─────────────────────────────────────────── */}
+      {roomStatus?.status === 'pending' && (
+          <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 pb-8 z-50 animate-in slide-in-from-bottom">
+              {roomStatus.created_by === user?.id ? (
+                  <div className="text-center">
+                      <p className="font-bold text-slate-900 dark:text-white mb-1">Message Request Sent</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                          {participant?.full_name} will need to accept your request before you can chat.
+                      </p>
+                  </div>
+              ) : (
+                  <div>
+                      <p className="font-bold text-slate-900 dark:text-white mb-1 text-center">Message Request</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-4">
+                          If you accept, they will be able to message you and see when you've read messages.
+                      </p>
+                      <div className="flex items-center gap-3">
+                          <button
+                              onClick={async () => {
+                                  // Update status to approved
+                                  const { error } = await supabase.from('chat_rooms').update({ status: 'approved' }).eq('id', roomId);
+                                  if (!error) {
+                                      setRoomStatus({ ...roomStatus, status: 'approved' });
+                                  }
+                              }}
+                              className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold active:scale-95 transition-transform"
+                          >
+                              Accept
+                          </button>
+                          <button
+                              onClick={async () => {
+                                  // Delete room
+                                  await supabase.from('chat_rooms').delete().eq('id', roomId);
+                                  router.push('/chat');
+                              }}
+                              className="flex-1 py-3 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-bold active:scale-95 transition-transform"
+                          >
+                              Decline
+                          </button>
+                      </div>
+                  </div>
+              )}
+          </div>
+      )}
       <audio id="chat-notif-audio" src="/universfield-new-notification-040-493469.mp3" preload="auto" />
 
       {/* ── Clear Chat confirmation sheet ─────────────────────────────────── */}

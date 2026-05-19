@@ -42,11 +42,32 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // 2. Room doesn't exist, create it (bypassing RLS)
+        // 2. Room doesn't exist, check privacy
+        const { data: targetProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('is_private')
+            .eq('id', targetUserId)
+            .single();
+
+        let initialStatus = 'approved';
+        if (targetProfile?.is_private) {
+            // Check if current user follows target
+            const { data: followData } = await supabaseAdmin
+                .from('follows')
+                .select('follower_id')
+                .eq('follower_id', currentUserId)
+                .eq('following_id', targetUserId)
+                .single();
+                
+            if (!followData) {
+                initialStatus = 'pending';
+            }
+        }
+
         const roomId = crypto.randomUUID();
         const { data: newRoom, error: roomError } = await supabaseAdmin
             .from('chat_rooms')
-            .insert({ id: roomId, is_group: false, created_by: currentUserId })
+            .insert({ id: roomId, is_group: false, created_by: currentUserId, status: initialStatus })
             .select('id')
             .single();
 

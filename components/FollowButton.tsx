@@ -118,7 +118,8 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
         // -------------------------
 
         try {
-            if (previousIsFollowing) {
+            if (previousIsFollowing || previousIsRequested) {
+                // Unfollow or Cancel Request - use DELETE endpoint
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session?.access_token) {
                     throw new Error('No access token available');
