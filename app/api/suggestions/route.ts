@@ -23,75 +23,117 @@ export async function GET(req: NextRequest) {
         const authHeader = req.headers.get('authorization');
         const currentUser = await getVerifiedUser(authHeader);
 
-        // We can only provide smart suggestions if the user is authenticated
-        if (!currentUser) {
-            return NextResponse.json({ suggestions: [] });
-        }
+        if (!currentUser) return NextResponse.json({ suggestions: [] });
 
         const userId = currentUser.id;
-        const userGrade = currentUser.user_metadata?.classGrade?.toString();
-        const userSchool = currentUser.user_metadata?.school;
 
-        // 1. Get who the user is ALREADY following so we don't suggest them
-        const { data: followsData } = await supabaseAdmin
+        // 1. Who do I already follow?
+        const { data: myFollowing } = await supabaseAdmin
             .from('follows')
             .select('following_id')
             .eq('follower_id', userId);
+        const myFollowingIds = new Set((myFollowing || []).map((f: any) => f.following_id));
+        myFollowingIds.add(userId); // exclude self
 
-        const alreadyFollowingIds = new Set((followsData || []).map((f: any) => f.following_id));
-        alreadyFollowingIds.add(userId); // Don't suggest themselves
+        // 2. Who follows ME?
+        const { data: myFollowers } = await supabaseAdmin
+            .from('follows')
+            .select('follower_id')
+            .eq('following_id', userId);
+        const myFollowerIds = (myFollowers || []).map((f: any) => f.follower_id);
 
-        // 2. Get a wide pool of users to evaluate (up to 100 for performance)
-        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 100 });
-        const users = usersData?.users || [];
+        // Score map: candidateId -> { score, reason }
+        const scores: Record<string, { score: number; reason: string }> = {};
 
-        // 3. Score each user based on our algorithm
-        const scoredUsers = users
-            .filter(u => !alreadyFollowingIds.has(u.id))
-            .map(u => {
-                const meta = u.user_metadata || {};
-                let score = 0;
-                let reason = '';
+        const bump = (id: string, amount: number, reason: string) => {
+            if (myFollowingIds.has(id)) return; // skip already-following
+            if (!scores[id]) scores[id] = { score: 0, reason: 'Suggested for you' };
+            scores[id].score += amount;
+            if (amount >= scores[id].score) scores[id].reason = reason;
+        };
 
-                // Scoring Logic
-                if (meta.isTeacher) {
-                    score += 50;
-                    reason = 'Teacher';
-                }
+        // 3a. People MY FOLLOWERS also follow
+        if (myFollowerIds.length > 0) {
+            const { data: followerNetwork } = await supabaseAdmin
+                .from('follows')
+                .select('following_id')
+                .in('follower_id', myFollowerIds.slice(0, 50));
 
-                if (userSchool && meta.school === userSchool) {
-                    score += 30;
-                    if (!reason || reason === 'Teacher') reason = reason ? 'Teacher at your school' : 'From your school';
-                }
-
-                if (userGrade && meta.classGrade?.toString() === userGrade) {
-                    score += 20;
-                    if (!reason) reason = `Class ${userGrade} Student`;
-                }
-
-                // Minor fallback reason
-                if (!reason) {
-                    reason = 'Suggested for you';
-                    score += Math.random() * 5; // Light randomness to fallback suggestions
-                }
-
-                return {
-                    id: u.id,
-                    name: meta.fullName || meta.full_name || meta.name || 'User',
-                    username: meta.username || null,
-                    avatar: meta.avatar_url || meta.avatar || null,
-                    isTeacher: meta.isTeacher || false,
-                    reason,
-                    score,
-                    totalPoints: Number(meta.totalPoints) || 0,
-                };
+            (followerNetwork || []).forEach((f: any) => {
+                bump(f.following_id, 3, 'Followed by your followers');
             });
+        }
 
-        // 4. Sort by highest score first, slice top 5
-        scoredUsers.sort((a, b) => b.score - a.score);
-        const topSuggestions = scoredUsers.slice(0, 5);
+        // 3b. Co-followers: people who follow the same accounts as me
+        if (myFollowingIds.size > 1) {
+            const myFollowingArr = [...myFollowingIds].filter(id => id !== userId).slice(0, 50);
+            const { data: coFollowers } = await supabaseAdmin
+                .from('follows')
+                .select('follower_id')
+                .in('following_id', myFollowingArr);
 
-        return NextResponse.json({ suggestions: topSuggestions });
+            (coFollowers || []).forEach((f: any) => {
+                bump(f.follower_id, 2, 'Follows people you follow');
+            });
+        }
+
+        // 3c. People who follow ME but I don't follow back (highest priority)
+        myFollowerIds.forEach((id: string) => {
+            bump(id, 5, 'Follows you');
+        });
+
+        // 4. Sort by score descending
+        let candidates = Object.entries(scores)
+            .sort((a, b) => b[1].score - a[1].score)
+            .slice(0, 10)
+            .map(([id, { reason }]) => ({ id, reason }));
+
+        // 5. Fallback to top scorers if social graph is sparse
+        if (candidates.length < 5) {
+            const { data: topUsers } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .neq('id', userId)
+                .order('total_points', { ascending: false })
+                .limit(20);
+
+            for (const u of (topUsers || [])) {
+                if (!myFollowingIds.has(u.id) && !candidates.find(c => c.id === u.id)) {
+                    candidates.push({ id: u.id, reason: 'Popular on Dheeyudha' });
+                }
+                if (candidates.length >= 8) break;
+            }
+        }
+
+        // 6. Fetch full profiles in a single query
+        const ids = candidates.slice(0, 8).map(c => c.id);
+        if (!ids.length) return NextResponse.json({ suggestions: [] });
+
+        const { data: profiles } = await supabaseAdmin
+            .from('profiles')
+            .select('id, full_name, username, avatar_url, total_points, is_teacher')
+            .in('id', ids);
+
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+        const suggestions = candidates
+            .slice(0, 8)
+            .map(c => {
+                const p = profileMap.get(c.id);
+                if (!p) return null;
+                return {
+                    id: p.id,
+                    name: p.full_name || 'Scholar',
+                    username: p.username || null,
+                    avatar: p.avatar_url || null,
+                    isTeacher: p.is_teacher || false,
+                    reason: c.reason,
+                    totalPoints: Number(p.total_points) || 0,
+                };
+            })
+            .filter(Boolean);
+
+        return NextResponse.json({ suggestions });
 
     } catch (err: any) {
         console.error('[Suggestions API]', err);
