@@ -837,6 +837,10 @@ const StudentProfile: React.FC = () => {
                     {userData.school || 'Independent Learner'} {userData.grade ? `• Class ${userData.grade}` : ''}
                   </p>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-lg">
+                    {userData.bio || 'Sharing my learning journey on Dheeyudhha 🧠'}
+                  </p>
+                </div>
+
                 {/* Actions Row */}
                 <div className="mt-5 flex flex-wrap items-center gap-3">
                   {userData.username ? (
