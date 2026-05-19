@@ -29,7 +29,9 @@ interface PublicProfileTabsProps {
   stats: any[];
   recentSolvedQs: any[];
   isTeacher: boolean;
+  isTeacher: boolean;
   weeklyReport?: any;
+  isPrivate?: boolean;
 }
 
 // ─── Clip thumbnail tile for the 3-col grid ────────────────────────────────
@@ -82,7 +84,8 @@ export default function PublicProfileTabs({
   stats, 
   recentSolvedQs,
   isTeacher,
-  weeklyReport
+  weeklyReport,
+  isPrivate
 }: PublicProfileTabsProps) {
   const { getRank } = useTopRanks();
   const [activeTab, setActiveTab] = useState<'stats' | 'badges' | 'solved' | 'posts' | 'clips'>('stats');
@@ -94,12 +97,18 @@ export default function PublicProfileTabs({
   const [hasFetchedClips, setHasFetchedClips] = useState(false);
   const [postsFetchError, setPostsFetchError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
         setCurrentUserId(session?.user?.id || null);
+        if (session?.user?.id && isPrivate && session.user.id !== userId) {
+            supabase.from('follows').select('*').eq('follower_id', session.user.id).eq('following_id', userId).maybeSingle().then(({data}) => {
+                if (data) setIsFollowing(true);
+            });
+        }
     });
-  }, []);
+  }, [userId, isPrivate]);
 
   const fetchUserPosts = async (force = false) => {
     if (loadingPosts) return;
@@ -301,7 +310,15 @@ export default function PublicProfileTabs({
 
       {activeTab === 'posts' && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {loadingPosts ? (
+            {isPrivate && currentUserId !== userId && !isFollowing ? (
+                <div className="py-20 text-center flex flex-col items-center gap-4 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+                   <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400">
+                      <Shield className="w-10 h-10" />
+                   </div>
+                   <h3 className="text-xl font-black text-slate-900 dark:text-white">This Account is Private</h3>
+                   <p className="text-slate-500 font-medium">Follow them to see their posts and clips.</p>
+                </div>
+            ) : loadingPosts ? (
                 <div className="py-20 text-center flex flex-col items-center gap-4">
                     <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
                     <p className="text-slate-500 font-bold italic">Gathering records...</p>
@@ -344,7 +361,15 @@ export default function PublicProfileTabs({
       {/* ── Clips tab ──────────────────────────────────────────────────────── */}
       {activeTab === 'clips' && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {loadingClips ? (
+          {isPrivate && currentUserId !== userId && !isFollowing ? (
+              <div className="py-20 text-center flex flex-col items-center gap-4 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+                 <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400">
+                    <Shield className="w-10 h-10" />
+                 </div>
+                 <h3 className="text-xl font-black text-slate-900 dark:text-white">This Account is Private</h3>
+                 <p className="text-slate-500 font-medium">Follow them to see their clips.</p>
+              </div>
+          ) : loadingClips ? (
             <div className="py-20 text-center flex flex-col items-center gap-4">
               <Loader2 className="w-10 h-10 animate-spin text-violet-500" />
               <p className="text-slate-500 font-bold italic">Loading clips…</p>

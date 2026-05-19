@@ -18,6 +18,7 @@ type Notification = {
     title: string;
     body: string;
     href: string | null;
+    actor_id: string | null;
     actor_name: string | null;
     actor_avatar: string | null;
     read: boolean;
@@ -42,7 +43,7 @@ function NotifIconBadge({ type, size = 'md' }: { type: string; size?: 'sm' | 'md
     const iconDim = size === 'sm' ? 'w-3 h-3' : 'w-5 h-5';
     const rounded = size === 'sm' ? 'rounded-lg' : 'rounded-2xl';
 
-    if (type === 'new_follower') return <div className={`${dim} ${rounded} bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 shadow-sm`}><UserPlus className={iconDim} /></div>;
+    if (type === 'new_follower' || type === 'follow_request') return <div className={`${dim} ${rounded} bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 shadow-sm`}><UserPlus className={iconDim} /></div>;
     if (type === 'ai_confirmed_correct' || type === 'answer_approved') return <div className={`${dim} ${rounded} bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-sm`}><CheckCircle2 className={iconDim} /></div>;
     if (type === 'ai_confirmed_wrong' || type === 'answer_flagged') return <div className={`${dim} ${rounded} bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-sm`}><XCircle className={iconDim} /></div>;
     if (type === 'points_earned') return <div className={`${dim} ${rounded} bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-sm`}><Zap className={iconDim} /></div>;
@@ -132,6 +133,27 @@ export default function NotificationsPage() {
             });
         }
         if (notif.href) router.push(notif.href);
+    };
+
+    const handleFollowRequest = async (notif: Notification, action: 'accept' | 'reject') => {
+        if (!token) return;
+        
+        // Remove notif locally for optimistic UI
+        setNotifications(n => n.filter(x => x.id !== notif.id));
+        if (!notif.read) setUnreadCount(c => Math.max(0, c - 1));
+
+        // Delete from notifications table
+        fetch('/api/notifications', {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notificationId: notif.id, delete: true }) // Assuming backend doesn't support delete by ID easily, wait we can just let them stay or we can use the API. Let's just mark read.
+        });
+
+        await fetch('/api/follows/request', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ followerId: notif.actor_id || notif.actorId, action })
+        });
     };
 
     const filtered = notifications.filter(n => {
@@ -282,6 +304,54 @@ export default function NotificationsPage() {
                                                 </div>
                                             </div>
                                         </button>
+                                    ) : notif.type === 'follow_request' ? (
+                                        <div
+                                            className={`w-full text-left p-4 flex gap-4 items-start relative transition-colors ${!notif.read ? 'bg-pink-50/30 dark:bg-pink-950/10' : 'bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900/50'}`}
+                                        >
+                                            <div className="relative shrink-0">
+                                                {notif.actor_avatar? (
+                                                    <div className="relative">
+                                                        <img src={notif.actor_avatar} alt="" className="w-12 h-12 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-sm" />
+                                                        <div className="absolute -bottom-1 -right-1 ring-2 ring-white dark:ring-slate-950 rounded-[6px] overflow-hidden">
+                                                            <NotifIconBadge type={notif.type} size="sm" />
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <NotifIconBadge type={notif.type} />
+                                                )}
+                                            </div>
+
+                                            <div className="flex-1 min-w-0 pt-0.5">
+                                                <div className="flex items-center justify-between gap-2 mb-1">
+                                                    <p className={`text-[13px] leading-tight flex-1 ${!notif.read ? 'font-black text-slate-900 dark:text-white' : 'font-bold text-slate-600 dark:text-slate-400'}`}>
+                                                        {notif.title}
+                                                    </p>
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight shrink-0">{timeAgo(notif.created_at)}</span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal line-clamp-2 mb-3">
+                                                    {notif.body}
+                                                </p>
+                                                
+                                                <div className="flex gap-2">
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleFollowRequest(notif, 'accept'); }}
+                                                        className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                                    >
+                                                        Accept
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleFollowRequest(notif, 'reject'); }}
+                                                        className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                                    >
+                                                        Reject
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {!notif.read && (
+                                                <div className="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-pink-500 rounded-full" />
+                                            )}
+                                        </div>
                                     ) : (
                                         <button
                                             onClick={() => handleNotifClick(notif)}

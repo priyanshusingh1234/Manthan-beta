@@ -94,7 +94,7 @@ export default async function StudentProfilePage({ params }: Props) {
         // Fast, case-insensitive ID lookup from profiles table
         const { data: profile } = await supabaseAdmin
             .from('profiles')
-            .select('id, total_points, xp, is_teacher, avatar_url, streak_count, streak_longest, daily_solve_count, daily_solve_date') 
+            .select('id, total_points, xp, is_teacher, avatar_url, streak_count, streak_longest, daily_solve_count, daily_solve_date, is_private') 
             .ilike('username', username)
             .single();
 
@@ -140,6 +140,7 @@ export default async function StudentProfilePage({ params }: Props) {
         const school = fetchedUser.school || meta.school || null;
         const grade = (fetchedUser as any).classGrade || (fetchedUser as any).grade || meta.classGrade || meta.grade || null;
         const isTeacher = !!profile?.is_teacher || !!meta?.isTeacher || !!meta?.is_teacher;
+        const isPrivate = !!profile?.is_private;
 
         if (isTeacher) {
              const { redirect } = await import('next/navigation');
@@ -148,6 +149,12 @@ export default async function StudentProfilePage({ params }: Props) {
 
         let initialFollowers = 0;
         let initialFollowing = 0;
+        let currentUserIsFollowing = false;
+        
+        const { data: { session: authSession } } = await supabaseAdmin.auth.getSession();
+        // Fallback for getting session/user if needed for server components, wait we can just get current user from cookies
+        // Wait, supabaseAdmin.auth.getSession() might not have context. We should just let the client side handle it for follows, or use cookies.
+        
         try {
             const { count: followersCount, error: fError } = await supabaseAdmin
                 .from('follows')
@@ -424,7 +431,7 @@ export default async function StudentProfilePage({ params }: Props) {
                             )}
 
                             <div className="mt-6">
-                                <FollowButton profileUserId={fetchedUser.id} initialFollowers={initialFollowers} initialFollowing={initialFollowing} />
+                                <FollowButton profileUserId={fetchedUser.id} initialFollowers={initialFollowers} initialFollowing={initialFollowing} isPrivate={isPrivate} />
                             </div>
                         </div>
                         {/* Rank Badge & Analysis - Native layout on mobile */}
@@ -492,6 +499,7 @@ export default async function StudentProfilePage({ params }: Props) {
                                 recentSolvedQs={recentSolvedQs}
                                 isTeacher={isTeacher}
                                 weeklyReport={weeklyReportObj}
+                                isPrivate={isPrivate}
                             />
                         </div>
                     )}

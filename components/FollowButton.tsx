@@ -7,9 +7,10 @@ import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
 import TeacherBadge from '@/ticks/teacher';
 
-export default function FollowButton({ profileUserId, initialFollowers = 0, initialFollowing = 0, compact = false }: { profileUserId: string, initialFollowers?: number, initialFollowing?: number, compact?: boolean }) {
+export default function FollowButton({ profileUserId, initialFollowers = 0, initialFollowing = 0, compact = false, isPrivate = false }: { profileUserId: string, initialFollowers?: number, initialFollowing?: number, compact?: boolean, isPrivate?: boolean }) {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isFollowing, setIsFollowing] = useState(false);
+    const [isRequested, setIsRequested] = useState(false);
     const [followersCount, setFollowersCount] = useState(initialFollowers);
     const [followingCount, setFollowingCount] = useState(initialFollowing);
     const [loading, setLoading] = useState(true);
@@ -45,6 +46,18 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
 
                         if (data) {
                             setIsFollowing(true);
+                        } else {
+                            // Check if requested
+                            const { data: reqData } = await supabase
+                                .from('follow_requests')
+                                .select('*')
+                                .eq('follower_id', user.id)
+                                .eq('following_id', profileUserId)
+                                .maybeSingle();
+                            
+                            if (reqData) {
+                                setIsRequested(true);
+                            }
                         }
                     }
                 }
@@ -86,10 +99,22 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
 
         // --- OPTIMISTIC UPDATE ---
         const previousIsFollowing = isFollowing;
+        const previousIsRequested = isRequested;
         const previousFollowersCount = followersCount;
 
-        setIsFollowing(!previousIsFollowing);
-        setFollowersCount(prev => previousIsFollowing ? Math.max(0, prev - 1) : prev + 1);
+        if (isFollowing) {
+            setIsFollowing(false);
+            setFollowersCount(Math.max(0, followersCount - 1));
+        } else if (isRequested) {
+            setIsRequested(false);
+        } else {
+            if (isPrivate) {
+                setIsRequested(true);
+            } else {
+                setIsFollowing(true);
+                setFollowersCount(followersCount + 1);
+            }
+        }
         // -------------------------
 
         try {
@@ -153,12 +178,17 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
             console.error("Follow toggle failed, reverting:", err);
             // REVERT ON FAILURE
             setIsFollowing(previousIsFollowing);
+            setIsRequested(previousIsRequested);
             setFollowersCount(previousFollowersCount);
             alert("Failed to update follow status. Please try again.");
         }
     };
 
     const openUsersModal = async (type: 'followers' | 'following') => {
+        if (isPrivate && !isFollowing && currentUser?.id !== profileUserId) {
+            alert("This account is private. Follow them to see their connections.");
+            return;
+        }
         setModalType(type);
         setModalOpen(true);
         setModalLoading(true);
@@ -207,6 +237,8 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                         <Check size={16} strokeWidth={3} className="group-hover:hidden" />
                         <X size={16} strokeWidth={3} className="hidden group-hover:block" />
                     </>
+                ) : isRequested ? (
+                    <span className="text-xs font-bold uppercase tracking-wider">Requested</span>
                 ) : (
                     <UserPlus size={16} />
                 )}
@@ -254,6 +286,10 @@ export default function FollowButton({ profileUserId, initialFollowers = 0, init
                                 <X className="w-5 h-5 hidden group-hover:block" />
                                 <span className="group-hover:hidden">Following</span>
                                 <span className="hidden group-hover:block">Unfollow</span>
+                            </>
+                        ) : isRequested ? (
+                            <>
+                                <span>Requested</span>
                             </>
                         ) : (
                             <>

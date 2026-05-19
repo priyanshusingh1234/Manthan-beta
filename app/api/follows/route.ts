@@ -107,7 +107,57 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Invalid followingId' }, { status: 400 });
     }
 
-    // Insert follow relationship
+    // Check if the user is private
+    let isPrivate = false;
+    const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('is_private')
+        .eq('id', followingId)
+        .single();
+    
+    if (profile?.is_private) {
+        isPrivate = true;
+    }
+
+    if (isPrivate) {
+        // Insert into follow_requests
+        const { error: insertErr } = await supabaseAdmin
+            .from('follow_requests')
+            .insert({ follower_id: user.id, following_id: followingId });
+
+        if (insertErr && insertErr.code !== '23505') {
+            console.error('[POST /api/follows] DB error (request):', insertErr);
+            return NextResponse.json({ error: 'Failed to request follow' }, { status: 500 });
+        }
+
+        if (!insertErr) {
+            const followerName = user.user_metadata?.fullName || user.user_metadata?.username || 'Someone';
+            const followerUsername = user.user_metadata?.username || null;
+            const followerAvatar = (() => {
+                const m = user.user_metadata || {};
+                const u = m.avatar_url || null;
+                return (u && !u.includes('googleusercontent.com') ? u : undefined);
+            })();
+
+            try {
+                await createNotification({
+                    userId: followingId,
+                    type: 'follow_request',
+                    title: `${followerName} requested to follow you`,
+                    body: `@${followerUsername || 'someone'} wants to follow you.`,
+                    href: followerUsername ? `/user/${followerUsername}` : undefined,
+                    actorId: user.id,
+                    actorName: followerName,
+                    actorAvatar: followerAvatar,
+                });
+            } catch (notifyErr) {
+                console.error('[POST /api/follows] Notification error:', notifyErr);
+            }
+        }
+        return NextResponse.json({ success: true, status: 'requested' });
+    }
+
+    // Insert follow relationship (public)
     const { error: insertErr } = await supabaseAdmin
         .from('follows')
         .insert({ follower_id: user.id, following_id: followingId });
@@ -175,8 +225,16 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ error: 'Invalid followingId' }, { status: 400 });
     }
 
+    // Delete follow relationship
     const { error: deleteErr } = await supabaseAdmin
         .from('follows')
+        .delete()
+        .eq('follower_id', user.id)
+        .eq('following_id', followingId);
+
+    // Also delete any pending follow request
+    await supabaseAdmin
+        .from('follow_requests')
         .delete()
         .eq('follower_id', user.id)
         .eq('following_id', followingId);

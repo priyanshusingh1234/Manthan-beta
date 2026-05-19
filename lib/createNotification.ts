@@ -13,6 +13,7 @@ if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 
 export type NotificationType =
     | 'new_follower'
+    | 'follow_request'
     | 'following_post'
     | 'answer_approved'
     | 'answer_flagged'
@@ -113,6 +114,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                     const CHANNEL_MAP: Record<string, ChannelId> = {
                                         coop_challenge:       'duels',
                                         new_follower:         'social',
+                                        follow_request:       'social',
                                         following_post:       'social',
                                         social_comment:       'social',
                                         post_mention:         'social',
@@ -134,6 +136,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                     const COLOR_MAP: Record<string, string> = {
                                         coop_challenge:       '#f97316', // orange — battle
                                         new_follower:         '#ec4899', // pink — social
+                                        follow_request:       '#ec4899',
                                         social_comment:       '#3b82f6', // blue
                                         post_mention:         '#3b82f6',
                                         following_post:       '#6366f1',

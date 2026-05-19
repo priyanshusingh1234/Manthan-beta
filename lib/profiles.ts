@@ -32,6 +32,7 @@ export interface Profile {
     login_bonus_day: number;
     last_login_claim_date: string | null;
     login_bonus_completed: boolean;
+    is_private: boolean;
 }
 
 /**
@@ -108,6 +109,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         login_bonus_day: Number(meta.loginBonusDay) || 0,
         last_login_claim_date: meta.lastLoginClaimDate || null,
         login_bonus_completed: meta.loginBonusCompleted === true,
+        is_private: meta.isPrivate === true,
     }, { onConflict: 'id' });
 
 
