@@ -5,6 +5,7 @@ import PostCard from './PostCard';
 import VipQuestionCard from './VipQuestionCard';
 import { supabase } from '@/lib/supabaseClient';
 import { RefreshCw, X, ChevronDown, ArrowUp, Loader2 } from 'lucide-react';
+import PeopleYouMayKnow from '@/components/PeopleYouMayKnow';
 
 type FeedItem = any;
 const PAGE_SIZE = 10;
@@ -482,27 +483,31 @@ export default function QuestionsFeed() {
           </div>
         ) : (
           <>
-            {visible.map((item: FeedItem) => (
-              <div key={item.id} className="space-y-1">
-                {item._feedLabel && item.type !== 'post' && (
-                  <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 px-1 tracking-wide">
-                    {item._feedLabel}
-                  </p>
-                )}
-                {item.type === 'post' ? (
-                  <PostCard
-                    post={item}
-                    currentUserId={userId}
-                    onUpdate={() => load({ refresh: true, subject, classGrade })}
-                    feedLabel={item._feedLabel}
-                    suppliedCurrentUserData={currentUserData}
-                  />
-                ) : item.is_vip ? (
-                  <VipQuestionCard q={item} />
-                ) : (
-                  <QuestionCard q={item} />
-                )}
-              </div>
+            {visible.map((item: FeedItem, idx: number) => (
+              <React.Fragment key={item.id}>
+                <div className="space-y-1">
+                  {item._feedLabel && item.type !== 'post' && (
+                    <p className="text-xs font-semibold text-indigo-500 dark:text-indigo-400 px-1 tracking-wide">
+                      {item._feedLabel}
+                    </p>
+                  )}
+                  {item.type === 'post' ? (
+                    <PostCard
+                      post={item}
+                      currentUserId={userId}
+                      onUpdate={() => load({ refresh: true, subject, classGrade })}
+                      feedLabel={item._feedLabel}
+                      suppliedCurrentUserData={currentUserData}
+                    />
+                  ) : item.is_vip ? (
+                    <VipQuestionCard q={item} />
+                  ) : (
+                    <QuestionCard q={item} />
+                  )}
+                </div>
+                {/* Inject People You May Know after every 5th item */}
+                {(idx + 1) % 5 === 0 && <PeopleYouMayKnow />}
+              </React.Fragment>
             ))}
 
             {/* Infinite scroll sentinel */}
