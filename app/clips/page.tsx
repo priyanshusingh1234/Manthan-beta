@@ -1,4 +1,5 @@
 // app/clips/page.tsx
+import { Suspense } from 'react';
 import { Metadata } from 'next';
 import ClipsClient from './ClipsClient';
 
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function ClipsPage() {
-    return <ClipsClient />;
+    return (
+        <Suspense fallback={<div className="bg-black min-h-screen" />}>
+            <ClipsClient />
+        </Suspense>
+    );
 }
