@@ -3,84 +3,103 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
+const SUBJECTS = ['Maths', 'English', 'Science', 'SST', 'Hindi', 'G.K'];
+
+const SUBJECT_ALIASES: Record<string, string[]> = {
+  'Maths':   ['Maths', 'Mathematics', 'Math', 'maths', 'mathematics'],
+  'English': ['English', 'english', 'Eng'],
+  'Science': ['Science', 'science', 'Physics', 'Chemistry', 'Biology'],
+  'SST':     ['SST', 'sst', 'Social Science', 'Social Studies', 'History', 'Geography', 'Civics', 'S.St'],
+  'Hindi':   ['Hindi', 'hindi'],
+  'G.K':     ['G.K', 'GK', 'General Knowledge', 'g.k'],
+};
+
+function matchesSubject(dbSubject: string | null | undefined, goalSubject: string): boolean {
+  if (!dbSubject) return false;
+  const aliases = SUBJECT_ALIASES[goalSubject] || [goalSubject];
+  return aliases.some(a => dbSubject.toLowerCase() === a.toLowerCase());
+}
+
 function getDailyGoal(userId: string, dateStr: string) {
   const hashStr = userId + dateStr;
   let hash = 0;
   for (let i = 0; i < hashStr.length; i++) hash = (hash << 5) - hash + hashStr.charCodeAt(i);
-  
-  const subjects = ['Mathematics', 'English', 'Science', 'Social Science', 'Hindi'];
-  const sub1Idx = Math.abs(hash) % subjects.length;
-  const sub2Idx = Math.abs(hash >> 3) % (subjects.length - 1);
-  
-  const sub1 = subjects[sub1Idx];
-  const remaining = subjects.filter(s => s !== sub1);
-  const sub2 = remaining[sub2Idx];
 
-  const count1 = 3 + (Math.abs(hash >> 6) % 3); // 3, 4, 5
-  const count2 = 2 + (Math.abs(hash >> 9) % 3); // 2, 3, 4
-  
-  const finalCount1 = count1 + count2 > 10 ? 10 - count2 : count1;
+  const sub1Idx = Math.abs(hash) % SUBJECTS.length;
+  let sub2Idx = Math.abs(hash >> 4) % (SUBJECTS.length - 1);
+  if (sub2Idx >= sub1Idx) sub2Idx++;
 
-  return { subject1: sub1, count1: finalCount1, subject2: sub2, count2: count2 };
+  const count1 = 3 + (Math.abs(hash >> 8) % 3);
+  const count2 = 2 + (Math.abs(hash >> 12) % 3);
+  const safe1 = count1 + count2 > 10 ? 10 - count2 : count1;
+
+  return { subject1: SUBJECTS[sub1Idx], count1: safe1, subject2: SUBJECTS[sub2Idx], count2 };
 }
 
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    
+
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const today = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const meta = user.user_metadata || {};
-    
+
     if (meta.daily_goal_claimed_date === today) {
       return NextResponse.json({ error: 'Already claimed today' }, { status: 400 });
     }
 
     const goal = getDailyGoal(user.id, today);
 
-    // Verify progress
-    const todayStart = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
-    todayStart.setHours(0,0,0,0);
-    const isoStart = todayStart.toISOString();
-
+    // Fetch attempts from last 24h then filter to IST-today
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: attempts } = await supabaseAdmin
       .from('question_attempts')
-      .select('questions(subject)')
+      .select('question_id, created_at')
       .eq('user_id', user.id)
-      .gte('created_at', isoStart);
+      .gte('created_at', since);
 
-    let progress1 = 0;
-    let progress2 = 0;
+    const todayAttempts = (attempts || []).filter(a => {
+      const istDate = new Date(new Date(a.created_at).getTime() + 5.5 * 60 * 60 * 1000)
+        .toISOString().slice(0, 10);
+      return istDate === today;
+    });
 
-    if (attempts) {
-      for (const a of attempts) {
-        const sub = (a.questions as any)?.subject;
-        if (sub === goal.subject1) progress1++;
-        if (sub === goal.subject2) progress2++;
-      }
+    let progress1 = 0, progress2 = 0;
+
+    if (todayAttempts.length) {
+      const qIds = [...new Set(todayAttempts.map(a => a.question_id))];
+      const { data: questions } = await supabaseAdmin
+        .from('questions')
+        .select('id, subject')
+        .in('id', qIds);
+
+      const subjectMap = new Map((questions || []).map(q => [q.id, q.subject]));
+
+      todayAttempts.forEach(a => {
+        const sub = subjectMap.get(a.question_id);
+        if (matchesSubject(sub, goal.subject1)) progress1++;
+        if (matchesSubject(sub, goal.subject2)) progress2++;
+      });
     }
 
     if (progress1 < goal.count1 || progress2 < goal.count2) {
-      return NextResponse.json({ error: 'Goal not met yet' }, { status: 400 });
+      return NextResponse.json({ error: 'Goal not met yet', progress: { progress1, progress2, goal } }, { status: 400 });
     }
 
-    // Give rewards: 10 XP, 5 Points
+    // Give rewards
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('xp, total_points')
       .eq('id', user.id)
       .single();
 
-    const currentXp = Number(profile?.xp || 0);
-    const currentPoints = Number(profile?.total_points || 0);
-
     await supabaseAdmin.from('profiles').update({
-      xp: currentXp + 10,
-      total_points: currentPoints + 5
+      xp: Number(profile?.xp || 0) + 10,
+      total_points: Number(profile?.total_points || 0) + 5
     }).eq('id', user.id);
 
     await supabaseAdmin.auth.admin.updateUserById(user.id, {
