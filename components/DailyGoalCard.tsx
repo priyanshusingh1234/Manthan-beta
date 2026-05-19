@@ -2,13 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Target, Gift, CheckCircle2, Loader2, Zap } from 'lucide-react';
+import { Target, Gift, CheckCircle2, Loader2, Zap, PartyPopper } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-// ── Subjects that actually exist in the DB ─────────────────────────────────
+const CACHE_KEY = 'daily_goal_cache';
 const SUBJECTS = ['Maths', 'English', 'Science', 'SST', 'Hindi', 'G.K'];
 
-// Aliases: subject label → all DB values that should count toward it
 const SUBJECT_ALIASES: Record<string, string[]> = {
   'Maths':   ['Maths', 'Mathematics', 'Math', 'maths', 'mathematics'],
   'English': ['English', 'english', 'Eng'],
@@ -28,28 +27,40 @@ function getDailyGoal(userId: string, dateStr: string) {
   const hashStr = userId + dateStr;
   let hash = 0;
   for (let i = 0; i < hashStr.length; i++) hash = (hash << 5) - hash + hashStr.charCodeAt(i);
-
   const sub1Idx = Math.abs(hash) % SUBJECTS.length;
   let sub2Idx = Math.abs(hash >> 4) % (SUBJECTS.length - 1);
-  if (sub2Idx >= sub1Idx) sub2Idx++; // ensure different subject
-
-  const count1 = 3 + (Math.abs(hash >> 8) % 3);   // 3, 4, or 5
-  const count2 = 2 + (Math.abs(hash >> 12) % 3);  // 2, 3, or 4
+  if (sub2Idx >= sub1Idx) sub2Idx++;
+  const count1 = 3 + (Math.abs(hash >> 8) % 3);
+  const count2 = 2 + (Math.abs(hash >> 12) % 3);
   const safe1 = count1 + count2 > 10 ? 10 - count2 : count1;
+  return { subject1: SUBJECTS[sub1Idx], count1: safe1, subject2: SUBJECTS[sub2Idx], count2 };
+}
 
-  return {
-    subject1: SUBJECTS[sub1Idx],
-    count1: safe1,
-    subject2: SUBJECTS[sub2Idx],
-    count2,
-  };
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    // Only valid for today
+    const today = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    if (cached.date !== today) return null;
+    return cached;
+  } catch { return null; }
+}
+
+function saveCache(data: any) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {}
 }
 
 export default function DailyGoalCard() {
-  const [goal, setGoal] = useState<any>(null);
-  const [progress, setProgress] = useState({ count1: 0, count2: 0 });
-  const [claimed, setClaimed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const today = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  // Initialise instantly from cache — no flicker
+  const cached = typeof window !== 'undefined' ? loadCache() : null;
+  const [goal, setGoal] = useState<any>(cached?.goal ?? null);
+  const [progress, setProgress] = useState(cached?.progress ?? { count1: 0, count2: 0 });
+  const [claimed, setClaimed] = useState(cached?.claimed ?? false);
+  const [fetching, setFetching] = useState(false);
   const [claiming, setClaiming] = useState(false);
 
   useEffect(() => {
@@ -58,71 +69,60 @@ export default function DailyGoalCard() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
 
-        const today = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
         const g = getDailyGoal(session.user.id, today);
         setGoal(g);
 
-        // Check claimed
         const meta = session.user.user_metadata || {};
-        if (meta.daily_goal_claimed_date === today) { setClaimed(true); return; }
+        const isClaimed = meta.daily_goal_claimed_date === today;
+        setClaimed(isClaimed);
 
-        // Build today's start timestamp in UTC for the query
-        // IST midnight = UTC 18:30 of previous day — use a simpler approach:
-        // just get all attempts from past 24h then filter by IST date
+        if (isClaimed) {
+          saveCache({ date: today, goal: g, progress: { count1: g.count1, count2: g.count2 }, claimed: true });
+          return;
+        }
+
+        // Fetch progress in background
+        setFetching(true);
         const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-        // Step 1: get today's attempt question_ids
-        const { data: attempts, error: aErr } = await supabase
+        const { data: attempts } = await supabase
           .from('question_attempts')
           .select('question_id, created_at')
           .eq('user_id', session.user.id)
           .gte('created_at', since);
 
-        if (aErr) { console.error('attempts error', aErr); return; }
-
-        // Filter to only IST-today attempts
         const todayAttempts = (attempts || []).filter(a => {
           const istDate = new Date(new Date(a.created_at).getTime() + 5.5 * 60 * 60 * 1000)
             .toISOString().slice(0, 10);
           return istDate === today;
         });
 
-        if (!todayAttempts.length) { setProgress({ count1: 0, count2: 0 }); return; }
-
-        // Step 2: fetch subjects for those question_ids
-        const qIds = [...new Set(todayAttempts.map(a => a.question_id))];
-        const { data: questions, error: qErr } = await supabase
-          .from('questions')
-          .select('id, subject')
-          .in('id', qIds);
-
-        if (qErr) { console.error('questions error', qErr); return; }
-
-        // Build a map: questionId -> subject
-        const subjectMap = new Map((questions || []).map(q => [q.id, q.subject]));
-
-        // Step 3: count per-attempt (same question answered twice = counts twice)
         let p1 = 0, p2 = 0;
-        todayAttempts.forEach(a => {
-          const sub = subjectMap.get(a.question_id);
-          if (matchesSubject(sub, g.subject1)) p1++;
-          if (matchesSubject(sub, g.subject2)) p2++;
-        });
+        if (todayAttempts.length) {
+          const qIds = [...new Set(todayAttempts.map(a => a.question_id))];
+          const { data: questions } = await supabase
+            .from('questions').select('id, subject').in('id', qIds);
+          const subMap = new Map((questions || []).map(q => [q.id, q.subject]));
+          todayAttempts.forEach(a => {
+            const sub = subMap.get(a.question_id);
+            if (matchesSubject(sub, g.subject1)) p1++;
+            if (matchesSubject(sub, g.subject2)) p2++;
+          });
+        }
 
-        setProgress({ count1: p1, count2: p2 });
-
+        const newProgress = { count1: p1, count2: p2 };
+        setProgress(newProgress);
+        saveCache({ date: today, goal: g, progress: newProgress, claimed: false });
       } catch (err) {
         console.error('Daily goal error:', err);
       } finally {
-        setLoading(false);
+        setFetching(false);
       }
     };
-    load();
 
-    // Re-check progress when user answers a question
+    load();
     window.addEventListener('question_answered', load);
     return () => window.removeEventListener('question_answered', load);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClaim = async () => {
     if (claiming || claimed) return;
@@ -135,7 +135,8 @@ export default function DailyGoalCard() {
       });
       if (res.ok) {
         setClaimed(true);
-        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        saveCache({ date: today, goal, progress: { count1: goal.count1, count2: goal.count2 }, claimed: true });
+        confetti({ particleCount: 130, spread: 80, origin: { y: 0.6 } });
         window.dispatchEvent(new Event('xp_earned'));
       }
     } catch (err) {
@@ -145,8 +146,33 @@ export default function DailyGoalCard() {
     }
   };
 
-  if (loading || !goal) return null;
-  if (claimed) return null;
+  // ── Skeleton while no data at all (first ever load) ───────────────────────
+  if (!goal) {
+    return (
+      <div className="rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 mb-6 animate-pulse">
+        <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded-full mb-4" />
+        <div className="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full mb-2" />
+        <div className="h-3 w-4/5 bg-slate-100 dark:bg-slate-800 rounded-full" />
+      </div>
+    );
+  }
+
+  // ── Completed state ───────────────────────────────────────────────────────
+  if (claimed) {
+    return (
+      <div className="bg-gradient-to-br from-green-400 to-emerald-500 rounded-3xl p-[2px] shadow-lg mb-6">
+        <div className="bg-white dark:bg-slate-900 rounded-[22px] px-5 py-4 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+            <PartyPopper className="w-6 h-6 text-green-500" />
+          </div>
+          <div className="flex-1">
+            <p className="font-black text-[15px] text-slate-900 dark:text-white">Today's Goal Done! 🎉</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">You earned <span className="font-bold text-amber-500">+10 XP</span> and <span className="font-bold text-indigo-500">+5 Points</span>. Come back tomorrow!</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const pct1 = Math.min(100, Math.round((progress.count1 / goal.count1) * 100));
   const pct2 = Math.min(100, Math.round((progress.count2 / goal.count2) * 100));
@@ -162,6 +188,7 @@ export default function DailyGoalCard() {
             <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
               <Target className="w-5 h-5 text-indigo-500" />
               Daily Goal
+              {fetching && <Loader2 className="w-3.5 h-3.5 text-slate-400 animate-spin ml-1" />}
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Solve questions to earn rewards</p>
           </div>
@@ -179,27 +206,27 @@ export default function DailyGoalCard() {
           {[
             { label: goal.subject1, target: goal.count1, done: progress.count1, pct: pct1, color: 'from-indigo-500 to-purple-500', textColor: 'text-indigo-500' },
             { label: goal.subject2, target: goal.count2, done: progress.count2, pct: pct2, color: 'from-purple-500 to-fuchsia-500', textColor: 'text-fuchsia-500' },
-          ].map((g, i) => (
+          ].map((item, i) => (
             <div key={i}>
               <div className="flex justify-between text-sm font-bold mb-1.5">
                 <span className="text-slate-700 dark:text-slate-300">
-                  Solve {g.target} <span className="text-indigo-600 dark:text-indigo-400">{g.label}</span>
+                  Solve {item.target} <span className="text-indigo-600 dark:text-indigo-400">{item.label}</span>
                 </span>
-                <span className={g.pct === 100 ? 'text-green-500' : g.textColor}>
-                  {Math.min(g.done, g.target)}/{g.target}
+                <span className={item.pct === 100 ? 'text-green-500' : item.textColor}>
+                  {Math.min(item.done, item.target)}/{item.target}
                 </span>
               </div>
               <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-700 ${g.pct === 100 ? 'bg-green-500' : `bg-gradient-to-r ${g.color}`}`}
-                  style={{ width: `${g.pct}%` }}
+                  className={`h-full rounded-full transition-all duration-700 ${item.pct === 100 ? 'bg-green-500' : `bg-gradient-to-r ${item.color}`}`}
+                  style={{ width: `${item.pct}%` }}
                 />
               </div>
             </div>
           ))}
         </div>
 
-        {completed && !claimed && (
+        {completed && (
           <button
             onClick={handleClaim}
             disabled={claiming}
