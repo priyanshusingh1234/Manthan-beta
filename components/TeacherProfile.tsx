@@ -13,6 +13,7 @@ import {
   Star, Medal, Brain, Sword, Shield, Pencil, Check, X
 } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import TeacherBadge from '@/ticks/teacher';
 import FollowButton from '@/components/FollowButton';
 import TeacherReviewPanel from '@/components/TeacherReviewPanel';
@@ -644,6 +645,12 @@ const TeacherProfile: React.FC = () => {
                   >
                     Edit Profile
                   </button>
+                  <Link
+                    href="/league"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-bold rounded-xl transition-all active:scale-95 text-sm border border-indigo-200 dark:border-indigo-700"
+                  >
+                    <Trophy className="w-4 h-4" /> League
+                  </Link>
                   {/* Desktop Stats (Hidden on mobile) */}
                   <div className="hidden sm:block">
                     {currentUser && <FollowButton profileUserId={currentUser.id} />}
