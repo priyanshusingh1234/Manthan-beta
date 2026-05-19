@@ -266,8 +266,8 @@ const MessageItem = memo(function MessageItem({
           <div className={`flex items-center gap-1 mt-0.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
             <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{timeStr}</span>
             {isMe && (msg.is_read
-              ? <CheckCheck className="w-3.5 h-3.5 text-indigo-500" strokeWidth={2.5} />
-              : <Check className="w-3.5 h-3.5 text-slate-400" strokeWidth={2.5} />
+              ? <div className="flex items-center gap-0.5" title="Read"><CheckCheck className="w-3.5 h-3.5 text-indigo-500" strokeWidth={2.5} /><span className="text-[9px] text-indigo-500 font-bold uppercase tracking-widest">Seen</span></div>
+              : <div className="flex items-center gap-0.5" title="Sent"><Check className="w-3 h-3 text-slate-400" strokeWidth={2.5} /><span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Sent</span></div>
             )}
           </div>
         </div>

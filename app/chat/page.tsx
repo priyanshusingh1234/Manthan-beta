@@ -306,8 +306,9 @@ const ChatCard = memo(function ChatCard({ room, onClick, user, index = 0 }: { ro
           </p>
           <div className="flex items-center gap-1.5 shrink-0">
             {room.last_message && room.last_message.sender_id === user?.id && (
-              <span className={room.last_message.is_read ? 'text-indigo-500' : 'text-slate-400'}>
-                {room.last_message.is_read ? <CheckCheck className="w-4 h-4" strokeWidth={2.5} /> : <Check className="w-4 h-4" strokeWidth={2.5} />}
+              <span className={`flex items-center gap-0.5 ${room.last_message.is_read ? 'text-indigo-500' : 'text-slate-400'}`}>
+                {room.last_message.is_read ? <CheckCheck className="w-3.5 h-3.5" strokeWidth={2.5} /> : <Check className="w-3.5 h-3.5" strokeWidth={2.5} />}
+                <span className="text-[9px] font-bold uppercase tracking-widest">{room.last_message.is_read ? 'Seen' : 'Sent'}</span>
               </span>
             )}
             {isUnread && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full shadow shadow-indigo-500/40" />}
