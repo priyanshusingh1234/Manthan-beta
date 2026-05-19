@@ -15,6 +15,7 @@ import CongratsBadgeModal from '@/components/CongratsBadgeModal';
 import GlobalCallListener from '@/components/GlobalCallListener';
 import { CallProvider } from '@/components/CallProvider';
 import { subscribeToPushNotifications } from '@/lib/pushUtils';
+import BottomNav from '@/components/BottomNav';
 
 
 import CompleteProfileOverlay from '@/components/CompleteProfileOverlay';
@@ -503,10 +504,14 @@ const initNativePush = async (userId: string, navigate: (path: string) => void) 
   }
 };
 
-const BottomNav = dynamic(() => import('@/components/BottomNav'), { ssr: false });
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const isMobileUA = /android|mobile|iphone|ipad|ipod/i.test(window.navigator.userAgent);
+    const isMobileScreen = window.innerWidth < 768;
+    return isMobileUA || isMobileScreen;
+  });
   const router = useRouter();
 
   useEffect(() => {

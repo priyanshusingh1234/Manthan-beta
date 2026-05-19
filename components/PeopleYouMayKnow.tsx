@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Users, X, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
@@ -34,12 +33,22 @@ export default function PeopleYouMayKnow() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) { setLoading(false); return; }
 
+        // Pre-load who I already follow so buttons show correct state
+        const { data: myFollows } = await supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', session.user.id);
+        const alreadyFollowing = new Set((myFollows || []).map((f: any) => f.following_id));
+        setFollowing(alreadyFollowing);
+
         const res = await fetch('/api/suggestions', {
           headers: { Authorization: `Bearer ${session.access_token}` }
         });
         if (!res.ok) { setLoading(false); return; }
         const data = await res.json();
-        setSuggestions(data.suggestions || []);
+        // Filter out anyone we already follow from what the API returned
+        const filtered = (data.suggestions || []).filter((s: Suggestion) => !alreadyFollowing.has(s.id));
+        setSuggestions(filtered);
       } catch (err) {
         console.error('[PeopleYouMayKnow]', err);
       } finally {
@@ -127,7 +136,8 @@ export default function PeopleYouMayKnow() {
             <Link href={`/${suggestion.isTeacher ? 'teacher' : 'user'}/${suggestion.username || suggestion.id}`}>
               <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/20 border-2 border-white dark:border-slate-700 shadow-md">
                 {suggestion.avatar ? (
-                  <Image src={suggestion.avatar} alt={suggestion.name} width={64} height={64} className="w-full h-full object-cover" />
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={suggestion.avatar} alt={suggestion.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xl font-black text-indigo-500 dark:text-indigo-400">
                     {suggestion.name[0]?.toUpperCase()}
