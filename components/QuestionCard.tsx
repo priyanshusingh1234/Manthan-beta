@@ -178,7 +178,19 @@ function AvatarImage({
 
 export default function QuestionCard({ q }: { q: Question }) {
   const router = useRouter();
-  const [user, setUser] = useState<any | null | undefined>(undefined);
+  // Initialise user synchronously from cached session to avoid button flicker
+  const [user, setUser] = useState<any | null | undefined>(() => {
+    if (typeof window === 'undefined') return undefined;
+    try {
+      // Supabase stores the session in localStorage — read it synchronously
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+      if (keys.length) {
+        const session = JSON.parse(localStorage.getItem(keys[0]) || 'null');
+        return session?.user ?? null;
+      }
+    } catch {}
+    return null; // assume logged out, will correct async below
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
@@ -189,6 +201,7 @@ export default function QuestionCard({ q }: { q: Question }) {
 
   useEffect(() => {
     let mounted = true;
+    // Always do async verification to ensure user data is fresh
     supabase.auth.getUser().then(({ data: { user }, error }) => {
       if (!mounted) return;
       if (error) console.error("QuestionCard Auth Error:", error.message);
