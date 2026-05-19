@@ -60,6 +60,7 @@ export const metadata: Metadata = {
 }
 
 import { ThemeProvider } from '@/components/ThemeProvider'
+import NextTopLoader from 'nextjs-toploader';
 
 export default function RootLayout({
   children,
@@ -69,6 +70,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
+        <NextTopLoader color="#6366f1" showSpinner={false} height={3} shadow="0 0 10px #6366f1,0 0 5px #6366f1" />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ClientLayout>
             {children}

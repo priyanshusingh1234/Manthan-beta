@@ -401,78 +401,71 @@ function ChatRoomContent() {
         if (cp) setParticipant(JSON.parse(cp));
       } catch {}
 
-      const [pRes, mRes, rRes] = await Promise.all([
-        supabase.from('chat_participants').select('user_id').eq('room_id', roomId).neq('user_id', u.id),
-        // Fetch newest 80 (descending), then reverse for display — works for chats with 80+ messages
-        supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: false }).limit(80),
-        supabase.from('chat_rooms').select('status, created_by').eq('id', roomId).single(),
-      ]);
-      
-      if (rRes.data) {
-          setRoomStatus(rRes.data);
-      }
-
-      let profData: any = null;
-      if (pRes.data?.[0]?.user_id) {
-        const { data: prof } = await supabase.from('profiles').select('full_name, avatar_url, username, is_teacher').eq('id', pRes.data[0].user_id).single();
-        if (prof) {
-          profData = prof;
-          const p = { user_id: pRes.data[0].user_id, ...prof } as Participant;
-          setParticipant(p);
-          localStorage.setItem(PARTICIPANT_CACHE_KEY(roomId), JSON.stringify(p));
-        }
-      }
-
-      if (mRes.data) {
-        const roomDeletedKey = `deleted_for_me_${roomId}`;
-        const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
-
-        // Reverse from descending fetch → oldest-first for display
-        const filtered = mRes.data.slice().reverse().filter(m => !deletedIds.includes(m.id));
-
-        setMessages(filtered);
-        setLoading(false);
-        localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filtered.slice(-80)));
-        const unread = filtered.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id);
-        if (unread.length) supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
-
-        // Resume incoming call state when autoAccept=1 is set
-        // (we arrived here from GlobalCallListener.acceptCall() OR the native
-        // notification Accept button via Intent deep-link)
-        if (
-          searchParams.get('autoAccept') === '1' &&
-          !callCtx.callActive.current  // use ref — never stale, safe to check here
-        ) {
-          // Search through ALL recent messages for a __CALL_STARTED__ from the
-          // other party — don't just check the last message, because regular
-          // messages may have arrived after the call invite.
-          const callMsg = [...filtered].reverse().find(
-            m => m.content.startsWith('__CALL_STARTED__') &&
-                 m.sender_id !== u.id &&
-                 (Date.now() - new Date(m.created_at).getTime() < 60000)
-          );
-
-          const type = (searchParams.get('callType') as 'voice' | 'video')
-            || (callMsg?.content.split(':')[1] as 'voice' | 'video')
-            || 'voice';
-          const callerId = searchParams.get('callerId') || pRes.data?.[0]?.user_id;
-          const callerName = searchParams.get('callerName')
-            ? decodeURIComponent(searchParams.get('callerName')!)
-            : (profData?.full_name || 'Scholar');
-
-          if (callMsg) {
-            processedCallIdRef.current = callMsg.id;
+      try {
+          const [pRes, mRes, rRes] = await Promise.all([
+            supabase.from('chat_participants').select('user_id').eq('room_id', roomId).neq('user_id', u.id),
+            supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: false }).limit(80),
+            supabase.from('chat_rooms').select('status, created_by').eq('id', roomId).single(),
+          ]);
+          
+          if (rRes.data) {
+              setRoomStatus(rRes.data);
           }
 
-          // isAnswering=true → joins the existing Agora channel, does NOT send
-          // a new __CALL_STARTED__ message (which would start a second call)
-          callCtx.startCall(roomId, type, callerId, callerName, true);
-        }
-      }
-      
-      await syncBlockStatus();
+          let profData: any = null;
+          if (pRes.data?.[0]?.user_id) {
+            const { data: prof } = await supabase.from('profiles').select('full_name, avatar_url, username, is_teacher').eq('id', pRes.data[0].user_id).single();
+            if (prof) {
+              profData = prof;
+              const p = { user_id: pRes.data[0].user_id, ...prof } as Participant;
+              setParticipant(p);
+              localStorage.setItem(PARTICIPANT_CACHE_KEY(roomId), JSON.stringify(p));
+            }
+          }
 
-      setTimeout(() => scrollToBottom('auto'), 120);
+          if (mRes.data) {
+            const roomDeletedKey = `deleted_for_me_${roomId}`;
+            const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
+            const filtered = mRes.data.slice().reverse().filter(m => !deletedIds.includes(m.id));
+
+            setMessages(filtered);
+            localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filtered.slice(-80)));
+            const unread = filtered.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id);
+            if (unread.length) supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
+
+            if (
+              searchParams.get('autoAccept') === '1' &&
+              !callCtx.callActive.current 
+            ) {
+              const callMsg = [...filtered].reverse().find(
+                m => m.content.startsWith('__CALL_STARTED__') &&
+                     m.sender_id !== u.id &&
+                     (Date.now() - new Date(m.created_at).getTime() < 60000)
+              );
+
+              const type = (searchParams.get('callType') as 'voice' | 'video')
+                || (callMsg?.content.split(':')[1] as 'voice' | 'video')
+                || 'voice';
+              const callerId = searchParams.get('callerId') || pRes.data?.[0]?.user_id;
+              const callerName = searchParams.get('callerName')
+                ? decodeURIComponent(searchParams.get('callerName')!)
+                : (profData?.full_name || 'Scholar');
+
+              if (callMsg) {
+                processedCallIdRef.current = callMsg.id;
+              }
+
+              callCtx.startCall(roomId, type, callerId, callerName, true);
+            }
+          }
+          
+          await syncBlockStatus();
+          setTimeout(() => scrollToBottom('auto'), 120);
+      } catch (err) {
+          console.error("Failed to load chat data", err);
+      } finally {
+          setLoading(false);
+      }
     };
     init();
   }, [roomId, router, scrollToBottom, syncBlockStatus]);
