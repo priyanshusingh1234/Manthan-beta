@@ -100,7 +100,7 @@ export default function LeaguePage() {
           {/* Rank + pts + days row */}
           <div className="mt-4 flex items-stretch gap-3 w-full">
             {[
-              { icon: Crown, label: 'Rank', value: `#${rank}`, color: 'text-amber-500' },
+              { icon: Crown, label: 'Rank', value: `#${leagueRank}`, color: 'text-amber-500' },
               { icon: Zap, label: 'Monthly', value: `${monthlyPts} pts`, color: 'text-indigo-500' },
               { icon: Calendar, label: 'Days Left', value: `${daysLeft}d`, color: 'text-emerald-500' },
             ].map(({ icon: Icon, label, value, color }) => (
@@ -167,7 +167,7 @@ export default function LeaguePage() {
             {myEntry && !leaderboard.slice(0, 20).find((p: any) => p.id === userId) && (
               <div className="mb-3 p-3 rounded-2xl border-2 flex items-center gap-3"
                 style={{ borderColor: league.color, background: `${league.color}10` }}>
-                <span className="text-xs font-black text-slate-400 w-8 text-center">#{rank}</span>
+                <span className="text-xs font-black text-slate-400 w-8 text-center">#{leagueRank}</span>
                 <div className="flex-1">
                   <p className="font-black text-sm text-slate-900 dark:text-white">You</p>
                 </div>

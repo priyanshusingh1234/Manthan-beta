@@ -864,6 +864,12 @@ const StudentProfile: React.FC = () => {
                   >
                     <Pencil className="w-3.5 h-3.5" /> Edit Profile
                   </button>
+                  <Link
+                    href="/league"
+                    className="flex items-center justify-center gap-2 px-5 py-2 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-bold rounded-xl transition-all active:scale-95 text-sm border border-indigo-200 dark:border-indigo-700"
+                  >
+                    <Trophy className="w-3.5 h-3.5" /> League
+                  </Link>
                   {/* Desktop: stats inline with Edit button */}
                   <div className="hidden sm:block">
                     {currentUser && <FollowButton profileUserId={currentUser.id} />}
