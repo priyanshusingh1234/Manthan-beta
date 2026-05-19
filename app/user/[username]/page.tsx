@@ -9,6 +9,7 @@ import BadgedName from '@/components/BadgedName';
 import PublicProfileTabs from '@/components/PublicProfileTabs';
 import FollowButton from '@/components/FollowButton';
 import { getLevel } from '@/lib/xp';
+import { getLeague } from '@/lib/leagues';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -94,7 +95,7 @@ export default async function StudentProfilePage({ params }: Props) {
         // Fast, case-insensitive ID lookup from profiles table
         const { data: profile } = await supabaseAdmin
             .from('profiles')
-            .select('id, total_points, xp, is_teacher, avatar_url, streak_count, streak_longest, daily_solve_count, daily_solve_date, is_private, last_seen') 
+            .select('id, total_points, xp, is_teacher, avatar_url, streak_count, streak_longest, daily_solve_count, daily_solve_date, is_private, last_seen, monthly_points, monthly_points_month') 
             .ilike('username', username)
             .single();
 
@@ -189,6 +190,13 @@ export default async function StudentProfilePage({ params }: Props) {
         const streakCount = Number((profile as any)?.streak_count) || 0;
         const streakLongest = Number((profile as any)?.streak_longest) || streakCount;
         const streakGoalMetToday = (profile as any)?.daily_solve_date === todayIST && (Number((profile as any)?.daily_solve_count) || 0) >= 2;
+
+        // Monthly points & league
+        const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
+        const monthlyPoints = (profile as any)?.monthly_points_month === currentMonthKey 
+            ? Number((profile as any)?.monthly_points) || 0 
+            : 0;
+        const userLeague = getLeague(monthlyPoints);
 
         // Online Status (active in last 3 minutes)
         const isOnline = profile?.last_seen 
@@ -445,6 +453,16 @@ export default async function StudentProfilePage({ params }: Props) {
                                     )}
                                 </Link>
                             )}
+
+                            {/* League badge */}
+                            <Link href="/league" className="mt-3 inline-flex items-center gap-2.5 px-4 py-2 rounded-2xl border w-fit hover:opacity-80 transition-opacity"
+                                style={{ borderColor: `${userLeague.color}55`, background: `${userLeague.color}12` }}>
+                                <span className="text-lg">🏆</span>
+                                <div>
+                                    <p className="text-xs font-black" style={{ color: userLeague.color }}>{userLeague.name} League</p>
+                                    <p className="text-[10px] text-slate-400 font-bold">{monthlyPoints} pts this month</p>
+                                </div>
+                            </Link>
 
                             <div className="mt-6">
                                 <FollowButton profileUserId={fetchedUser.id} initialFollowers={initialFollowers} initialFollowing={initialFollowing} isPrivate={isPrivate} />

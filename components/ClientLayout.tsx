@@ -25,6 +25,7 @@ import { Toaster } from 'react-hot-toast';
 import AchievementUnlockOverlay from '@/components/AchievementUnlockOverlay';
 import GlobalLevelUpListener from '@/components/GlobalLevelUpListener';
 import DailyEggDrop from '@/components/DailyEggDrop';
+import PromotionBanner from '@/components/PromotionBanner';
 
 let nativePushInitialized = false;
 
@@ -826,6 +827,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {isAuthenticated && <AchievementUnlockOverlay />}
       {isAuthenticated && <GlobalLevelUpListener />}
       {isAuthenticated && <DailyEggDrop />}
+      {isAuthenticated && <PromotionBanner />}
     </CallProvider>
   );
 }

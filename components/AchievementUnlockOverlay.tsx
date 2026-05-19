@@ -28,27 +28,47 @@ const ACHIEVEMENTS: Record<AchievementId, { title: string; subtitle: string; rar
   },
 };
 
-/* ─── Queue helpers (localStorage) ─────────────────────────────────────────── */
+/* ─── Queue helpers ─────────────────────────────────────────────────────────── */
 const QUEUE_KEY = 'pending_achievement_unlocks';
 
 export function queueAchievementUnlock(id: AchievementId) {
   if (typeof window === 'undefined') return;
   const existing: AchievementId[] = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
-  const shown: AchievementId[] = JSON.parse(localStorage.getItem('shown_achievements') || '[]');
-  if (!existing.includes(id) && !shown.includes(id)) {
+  if (!existing.includes(id)) {
     localStorage.setItem(QUEUE_KEY, JSON.stringify([...existing, id]));
     window.dispatchEvent(new Event('check_achievements'));
   }
 }
 
-function popNextAchievement(): AchievementId | null {
+// Check if already seen — reads from Supabase user_metadata (persists across reinstalls)
+async function isAlreadySeen(id: AchievementId): Promise<boolean> {
+  try {
+    const { supabase } = await import('@/lib/supabaseClient');
+    const { data: { user } } = await supabase.auth.getUser();
+    const seen: string[] = user?.user_metadata?.seen_achievements || [];
+    return seen.includes(id);
+  } catch { return false; }
+}
+
+async function markSeen(id: AchievementId) {
+  try {
+    const { supabase } = await import('@/lib/supabaseClient');
+    const { data: { user } } = await supabase.auth.getUser();
+    const seen: string[] = user?.user_metadata?.seen_achievements || [];
+    if (!seen.includes(id)) {
+      await supabase.auth.updateUser({
+        data: { seen_achievements: [...seen, id] }
+      });
+    }
+  } catch { }
+}
+
+function popNextFromQueue(): AchievementId | null {
   if (typeof window === 'undefined') return null;
   const queue: AchievementId[] = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
   if (queue.length === 0) return null;
   const [next, ...rest] = queue;
   localStorage.setItem(QUEUE_KEY, JSON.stringify(rest));
-  const shown: AchievementId[] = JSON.parse(localStorage.getItem('shown_achievements') || '[]');
-  localStorage.setItem('shown_achievements', JSON.stringify([...shown, next]));
   return next;
 }
 
@@ -68,16 +88,22 @@ export default function AchievementUnlockOverlay() {
 
   // Check queue on mount + after navigation + on custom event
   useEffect(() => {
-    const check = () => {
+  const check = async () => {
       // Don't pop if we are already showing one
+      const next = popNextFromQueue();
+      if (!next) return;
+      // Check if already seen in DB (survives reinstalls)
+      const alreadySeen = await isAlreadySeen(next);
+      if (alreadySeen) {
+        // Skip — check if there's more in queue
+        check();
+        return;
+      }
+      await markSeen(next);
       setCurrent((prev) => {
-          if (prev) return prev;
-          const next = popNextAchievement();
-          if (next) {
-              setTimeout(() => setShowContent(true), 400);
-              return next;
-          }
-          return null;
+        if (prev) return prev;
+        setTimeout(() => setShowContent(true), 400);
+        return next;
       });
     };
     
@@ -98,11 +124,15 @@ export default function AchievementUnlockOverlay() {
     setTimeout(() => {
       setCurrent(null);
       // Check if there's another one queued
-      setTimeout(() => {
-        const next = popNextAchievement();
+      setTimeout(async () => {
+        const next = popNextFromQueue();
         if (next) {
-          setCurrent(next);
-          setTimeout(() => setShowContent(true), 400);
+          const alreadySeen = await isAlreadySeen(next);
+          if (!alreadySeen) {
+            await markSeen(next);
+            setCurrent(next);
+            setTimeout(() => setShowContent(true), 400);
+          }
         }
       }, 600);
     }, 500);
