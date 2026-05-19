@@ -15,7 +15,17 @@ import RecentDuelsCard from '@/components/RecentDuelsCard';
 import DailyPlannerModal from '@/components/DailyPlannerModal';
 
 export default function Home() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const hasToken = Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+        if (hasToken) return true;
+      } catch (e) {
+        // ignore
+      }
+    }
+    return null;
+  });
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
