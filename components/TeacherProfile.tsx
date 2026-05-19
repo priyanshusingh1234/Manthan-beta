@@ -574,6 +574,13 @@ const TeacherProfile: React.FC = () => {
                         {userData.avatar}
                       </div>
                     )}
+                    {avatarUploading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/5">
+                        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                      </div>
+                    )}
+                    {/* Always online on own profile */}
+                    <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 w-6 h-6 sm:w-8 sm:h-8 bg-green-500 border-4 border-white dark:border-slate-800 rounded-full shadow-lg z-20"></div>
                   </div>
                   <label className="absolute -bottom-1 left-1/2 -translate-x-1/2 cursor-pointer opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity z-20">
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full text-[10px] font-black shadow-lg text-slate-700 dark:text-slate-300">
@@ -611,7 +618,13 @@ const TeacherProfile: React.FC = () => {
                        {currentUser?.user_metadata?.isTeacher && <TeacherBadge />}
                     </h1>
                   </div>
-                  <p className="text-slate-500 text-sm font-bold tracking-tight">@{userData.username || 'username'}</p>
+                  <div className="flex items-center gap-2 flex-wrap mt-1">
+                    <p className="text-slate-500 text-sm font-bold tracking-tight">@{userData.username || 'username'}</p>
+                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-800/50">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        Online
+                    </span>
+                  </div>
                 </div>
 
                 <div className="mt-4 flex flex-col gap-1">

@@ -94,7 +94,7 @@ export default async function StudentProfilePage({ params }: Props) {
         // Fast, case-insensitive ID lookup from profiles table
         const { data: profile } = await supabaseAdmin
             .from('profiles')
-            .select('id, total_points, xp, is_teacher, avatar_url, streak_count, streak_longest, daily_solve_count, daily_solve_date, is_private') 
+            .select('id, total_points, xp, is_teacher, avatar_url, streak_count, streak_longest, daily_solve_count, daily_solve_date, is_private, last_seen') 
             .ilike('username', username)
             .single();
 
@@ -189,6 +189,11 @@ export default async function StudentProfilePage({ params }: Props) {
         const streakCount = Number((profile as any)?.streak_count) || 0;
         const streakLongest = Number((profile as any)?.streak_longest) || streakCount;
         const streakGoalMetToday = (profile as any)?.daily_solve_date === todayIST && (Number((profile as any)?.daily_solve_count) || 0) >= 2;
+
+        // Online Status (active in last 3 minutes)
+        const isOnline = profile?.last_seen 
+            ? (new Date().getTime() - new Date(profile.last_seen).getTime()) < 3 * 60 * 1000 
+            : false;
 
         // Fetch Global Rank
         const isStudentProfile = !profile?.is_teacher;
@@ -338,6 +343,9 @@ export default async function StudentProfilePage({ params }: Props) {
                             ) : (
                                 <div className={`w-28 h-28 sm:w-40 sm:h-40 rounded-full bg-gradient-to-tr from-indigo-100 to-blue-50 dark:from-indigo-900/40 dark:to-blue-900/20 flex items-center justify-center text-5xl font-bold text-indigo-500 dark:text-indigo-400 shadow-2xl relative -mt-16 sm:-mt-20 ${meta.cosmetics?.includes('avatar_glow') ? 'ring-4 ring-transparent shadow-indigo-500/50' : 'ring-4 ring-white dark:ring-slate-900'}`}>{String(name[0] || 'S').toUpperCase()}</div>
                             )}
+                            {isOnline && (
+                                <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 bg-green-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg z-20"></div>
+                            )}
                         </div>
  
                         <div className="flex-1 w-full">
@@ -350,7 +358,15 @@ export default async function StudentProfilePage({ params }: Props) {
                                 nameClassName="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white"
                                 className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3"
                             />
-                            <p className="text-lg font-mono text-indigo-500 dark:text-indigo-400 mt-1 font-semibold">@{username}</p>
+                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1">
+                                <p className="text-lg font-mono text-indigo-500 dark:text-indigo-400 font-semibold">@{username}</p>
+                                {isOnline && (
+                                    <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-800/50">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                        Online
+                                    </span>
+                                )}
+                            </div>
 
                             {/* XP Level Bar — server-rendered static version */}
                             {(() => {

@@ -22,7 +22,7 @@ export default async function TeacherProfilePage({ params }: Props) {
     // Fast, case-insensitive ID lookup from profiles table
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('id, is_teacher, avatar_url')
+      .select('id, is_teacher, avatar_url, last_seen')
       .ilike('username', targetUsername)
       .single();
 
@@ -71,6 +71,11 @@ export default async function TeacherProfilePage({ params }: Props) {
     if (!isTeacher) {
       throw new Error("NOT_A_TEACHER");
     }
+
+    // Online Status (active in last 3 minutes)
+    const isOnline = profile?.last_seen 
+        ? (new Date().getTime() - new Date(profile.last_seen).getTime()) < 3 * 60 * 1000 
+        : false;
 
     let initialFollowers = 0;
     let initialFollowing = 0;
@@ -172,19 +177,32 @@ export default async function TeacherProfilePage({ params }: Props) {
         <div className="max-w-5xl mx-auto sm:px-6 lg:px-8 -mt-12 sm:-mt-24 relative z-10 w-full">
           {/* Teacher Profile Card - Native Look */}
           <div className="bg-white dark:bg-slate-900 rounded-t-[3rem] sm:rounded-3xl shadow-[0_-15px_30px_-5px_rgba(0,0,0,0.1)] sm:shadow-xl p-6 sm:p-10 border-t sm:border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-8 items-center sm:items-start text-center sm:text-left mb-10">
-            {avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatar} alt={name} className="w-28 h-28 sm:w-40 sm:h-40 rounded-full object-cover shadow-2xl ring-4 ring-white dark:ring-slate-900 relative -mt-16 sm:-mt-20 bg-white dark:bg-slate-900 transition-transform hover:scale-105 duration-300" />
-            ) : (
-              <div className="w-28 h-28 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-indigo-100 dark:from-indigo-900/40 to-purple-100 dark:to-purple-900/20 flex items-center justify-center text-4xl font-bold text-indigo-500 dark:text-indigo-400 shadow-2xl ring-4 ring-white dark:ring-slate-900 relative -mt-16 sm:-mt-20">{String(name[0] || 'T').toUpperCase()}</div>
-            )}
+            <div className="relative shrink-0">
+                {avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatar} alt={name} className="w-28 h-28 sm:w-40 sm:h-40 rounded-full object-cover shadow-2xl ring-4 ring-white dark:ring-slate-900 relative -mt-16 sm:-mt-20 bg-white dark:bg-slate-900 transition-transform hover:scale-105 duration-300" />
+                ) : (
+                  <div className="w-28 h-28 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br from-indigo-100 dark:from-indigo-900/40 to-purple-100 dark:to-purple-900/20 flex items-center justify-center text-4xl font-bold text-indigo-500 dark:text-indigo-400 shadow-2xl ring-4 ring-white dark:ring-slate-900 relative -mt-16 sm:-mt-20">{String(name[0] || 'T').toUpperCase()}</div>
+                )}
+                {isOnline && (
+                    <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 w-6 h-6 sm:w-8 sm:h-8 bg-green-500 border-4 border-white dark:border-slate-900 rounded-full shadow-lg z-20"></div>
+                )}
+            </div>
 
             <div className="flex-1 w-full">
               <h1 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-4 tracking-tighter">
                 {name}
                 <TeacherBadge />
               </h1>
-              <p className="text-indigo-500 dark:text-indigo-400 font-bold text-lg mt-0.5 sm:mt-1 font-mono tracking-tight">@{username}</p>
+              <div className="flex items-center gap-2 flex-wrap mt-0.5 sm:mt-1 justify-center sm:justify-start">
+                  <p className="text-indigo-500 dark:text-indigo-400 font-bold text-lg font-mono tracking-tight">@{username}</p>
+                  {isOnline && (
+                      <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-800/50">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                          Online
+                      </span>
+                  )}
+              </div>
 
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 mt-4">
                 {mainSubject && <span className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-black px-4 py-1.5 rounded-full text-xs sm:text-sm tracking-widest uppercase border border-indigo-100/50 dark:border-indigo-800/50 shadow-sm">{mainSubject}</span>}

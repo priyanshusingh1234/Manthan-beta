@@ -705,9 +705,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         }
       }
     });
+    
+    // Periodically update last_seen for online indicator
+    let pingInterval: NodeJS.Timeout;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.access_token) {
+            const ping = () => {
+                fetch('/api/profile/ping', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${session.access_token}` }
+                }).catch(() => {});
+            };
+            ping(); // ping immediately on load
+            pingInterval = setInterval(ping, 60000); // ping every 1 minute
+        }
+    });
 
     return () => {
       authListener?.subscription.unsubscribe();
+      if (pingInterval) clearInterval(pingInterval);
     };
   }, [router]);
 

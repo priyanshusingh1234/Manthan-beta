@@ -793,6 +793,8 @@ const StudentProfile: React.FC = () => {
                         <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                       </div>
                     )}
+                    {/* Always online on own profile */}
+                    <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 w-6 h-6 sm:w-8 sm:h-8 bg-green-500 border-4 border-white dark:border-slate-800 rounded-full shadow-lg z-20"></div>
                   </div>
                   <label className="absolute -bottom-1 left-1/2 -translate-x-1/2 cursor-pointer opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity z-20">
                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full text-[10px] font-black shadow-lg text-slate-700 dark:text-slate-300">
@@ -835,12 +837,23 @@ const StudentProfile: React.FC = () => {
                     {userData.school || 'Independent Learner'} {userData.grade ? `• Class ${userData.grade}` : ''}
                   </p>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-lg">
-                    {userData.bio || 'Sharing my learning journey on Dheeyudhha 🧠'}
-                  </p>
-                </div>
-
                 {/* Actions Row */}
                 <div className="mt-5 flex flex-wrap items-center gap-3">
+                  {userData.username ? (
+                      <div className="flex flex-wrap items-center gap-3">
+                          <p className="text-sm font-mono text-indigo-500 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-full w-fit">
+                            @{userData.username}
+                          </p>
+                          <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-800/50">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                              Online
+                          </span>
+                      </div>
+                  ) : (
+                    <button onClick={() => setShowEditProfile(true)} className="text-sm font-bold text-red-500 flex items-center gap-1 bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full w-fit animate-pulse">
+                      Set a Username!
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowEditProfile(true)}
                     className="flex items-center justify-center gap-2 px-5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold rounded-xl transition-all active:scale-95 text-sm border border-slate-200 dark:border-slate-700"
