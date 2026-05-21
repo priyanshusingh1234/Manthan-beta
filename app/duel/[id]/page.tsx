@@ -62,7 +62,7 @@ export default function DuelRoomPage() {
 
     useEffect(() => {
         fetchDuel();
-        pollRef.current = setInterval(fetchDuel, 4000);
+        pollRef.current = setInterval(fetchDuel, 15000);
         return () => { if (pollRef.current) clearInterval(pollRef.current); };
     }, [fetchDuel]);
 

@@ -205,7 +205,7 @@ export default function WarBattleDashboard() {
 
     useEffect(() => {
         fetchData();
-        const id = setInterval(fetchData, 4000);
+        const id = setInterval(fetchData, 15000);
         return () => clearInterval(id);
     }, [fetchData]);
 

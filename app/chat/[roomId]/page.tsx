@@ -289,6 +289,8 @@ function ChatRoomContent() {
   const [user, setUser] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [sending, setSending] = useState(false);
@@ -389,6 +391,40 @@ function ChatRoomContent() {
     // here would cause double Agora joins. Only init() handles autoAccept.
   }, [roomId, user?.id]);
 
+  const loadMoreMessages = useCallback(async () => {
+    if (!messages.length || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const oldestMsg = messages[0];
+      const { data: olderMessages, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('room_id', roomId)
+        .lt('created_at', oldestMsg.created_at)
+        .order('created_at', { ascending: false })
+        .limit(80);
+
+      if (error) throw error;
+      if (!olderMessages || olderMessages.length < 80) setHasMore(false);
+
+      if (olderMessages && olderMessages.length > 0) {
+        const roomDeletedKey = `deleted_for_me_${roomId}`;
+        const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
+        const filtered = olderMessages.slice().reverse().filter(m => !deletedIds.includes(m.id));
+        setMessages(prev => {
+           const dbIds = new Set(filtered.map(m => m.id));
+           const merged = [...filtered, ...prev.filter(m => !dbIds.has(m.id))];
+           merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+           return merged;
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [messages, roomId, loadingMore, hasMore]);
+
 
   const syncBlockStatus = useCallback(async () => {
     try {
@@ -445,6 +481,7 @@ function ChatRoomContent() {
           }
 
           if (mRes.data) {
+            if (mRes.data.length < 80) setHasMore(false);
             const roomDeletedKey = `deleted_for_me_${roomId}`;
             const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
             const filtered = mRes.data.slice().reverse().filter(m => !deletedIds.includes(m.id));
@@ -529,7 +566,7 @@ function ChatRoomContent() {
     const interval = setInterval(() => {
       void syncMessages(user.id);
       void syncBlockStatus();
-    }, 1000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [user?.id, syncMessages, syncBlockStatus]);
@@ -1053,21 +1090,35 @@ function ChatRoomContent() {
             <p className="font-bold text-slate-700 dark:text-slate-300">Say hi to {displayName}! 👋</p>
           </div>
         ) : (
-          messages.map((msg, idx) => (
-            <MessageItem
-              key={msg.id}
-              msg={msg}
-              user={user}
-              participant={participant}
-              isSelectionMode={isSelectionMode}
-              isSelected={selectedIds.includes(msg.id)}
-              onToggleSelection={(id) => setSelectedIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])}
-              onLongPress={handleLongPress}
-              onReply={(m) => { setReplyingTo(m); setTimeout(() => inputRef.current?.focus(), 100); }}
-              prevMsg={messages[idx - 1]}
-              onImageClick={(url) => setFullscreenImage(url)}
-            />
-          ))
+          <>
+            {hasMore && (
+              <div className="flex justify-center py-4">
+                <button
+                  onClick={loadMoreMessages}
+                  disabled={loadingMore}
+                  className="px-4 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[11px] uppercase tracking-wider font-bold text-slate-600 dark:text-slate-300 active:scale-95 transition-transform disabled:opacity-50 flex items-center gap-2"
+                >
+                  {loadingMore ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCcw className="w-3 h-3" />}
+                  {loadingMore ? 'Loading...' : 'Load older messages'}
+                </button>
+              </div>
+            )}
+            {messages.map((msg, idx) => (
+              <MessageItem
+                key={msg.id}
+                msg={msg}
+                user={user}
+                participant={participant}
+                isSelectionMode={isSelectionMode}
+                isSelected={selectedIds.includes(msg.id)}
+                onToggleSelection={(id) => setSelectedIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])}
+                onLongPress={handleLongPress}
+                onReply={(m) => { setReplyingTo(m); setTimeout(() => inputRef.current?.focus(), 100); }}
+                prevMsg={messages[idx - 1]}
+                onImageClick={(url) => setFullscreenImage(url)}
+              />
+            ))}
+          </>
         )}
         <div ref={messagesEndRef} className="h-2" />
       </div>
