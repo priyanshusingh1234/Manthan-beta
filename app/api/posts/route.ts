@@ -69,6 +69,10 @@ export async function GET(req: NextRequest) {
             : { data: [] };
         const profilesMap = new Map((profilesRaw || []).map((p: any) => [p.id, p]));
 
+        // Fetch raw Auth users to mirror Public Profile fallback logic
+        const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
+        const authUsersMap = new Map((authData?.users || []).map(u => [u.id, u]));
+
 
 
         const enriched = (posts || []).map(p => {
@@ -83,16 +87,21 @@ export async function GET(req: NextRequest) {
                 finalContent = finalContent.substring(8).trim();
             }
 
+            const authUser = authUsersMap.get(p.author_id);
+            const meta = authUser?.user_metadata || {};
+            const authName = authUser?.full_name || meta?.fullName || meta?.full_name || meta?.name || meta?.username;
+            const authAvatar = meta?.avatar_url || meta?.picture;
+
             const authorData = {
                 id: p.author_id,
-                name: profile?.full_name || profile?.username || 'Student',
-                username: profile?.username || null,
-                avatar_url: cleanAvatar(profile?.avatar_url),
-                school: profile?.school || null,
-                isTeacher: profile?.is_teacher || false,
-                totalPoints: Number(profile?.total_points) || 0,
+                name: profile?.full_name || profile?.username || authName || 'Student',
+                username: profile?.username || meta?.username || null,
+                avatar_url: profile?.avatar_url || authAvatar || null,
+                school: profile?.school || meta?.school || null,
+                isTeacher: profile?.is_teacher || meta?.isTeacher || meta?.is_teacher || false,
+                totalPoints: Number(profile?.total_points) || Number(meta?.totalPoints) || 0,
                 isGhost: isGhost,
-                cosmetics: profile?.cosmetics || [],
+                cosmetics: profile?.cosmetics || meta?.cosmetics || [],
             };
 
             const postObj = {
