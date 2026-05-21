@@ -90,24 +90,9 @@ function SocialFeedContent() {
             const rawData = await res.json();
             const postItems = (Array.isArray(rawData) ? rawData : []).map((p: any) => ({ ...p, type: 'post' }));
 
-            if (currentPostIdsRef.current.size > 0 && !forceApply) {
-                // Find posts in postItems that are NOT currently displayed
-                const genuinelyNew = postItems.filter((p: any) => !currentPostIdsRef.current.has(p.id));
-                if (genuinelyNew.length > 0) {
-                    // Queue them up and show the 'New Posts' banner (like IG)
-                    setNewPostsQueue(postItems);
-                } else {
-                    // No new posts, just update existing ones (like state, comments, etc)
-                    setPosts(postItems);
-                    currentPostIdsRef.current = new Set(postItems.map((p: any) => p.id));
-                }
-            } else {
-                setPosts(postItems);
-                currentPostIdsRef.current = new Set(postItems.map((p: any) => p.id));
-                setNewPostsQueue([]);
-            }
-
-            try { localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify(postItems.slice(0, 20))); } catch {}
+            setPosts(postItems);
+            currentPostIdsRef.current = new Set(postItems.map((p: any) => p.id));
+            setNewPostsQueue([]);
             if (postItems.length < 30) setHasMore(false);
         } catch (err) {
             console.error(err);
@@ -141,7 +126,6 @@ function SocialFeedContent() {
         if (newPostsQueue.length === 0) return;
         setPosts(newPostsQueue);
         currentPostIdsRef.current = new Set(newPostsQueue.map(p => p.id));
-        try { localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify(newPostsQueue.slice(0, 20))); } catch {}
         setNewPostsQueue([]);
         setHasMore(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -212,18 +196,7 @@ function SocialFeedContent() {
 
     useEffect(() => {
         let mounted = true;
-        // Show cached posts instantly while fresh data loads
-        try {
-            const cached = localStorage.getItem(POSTS_CACHE_KEY);
-            if (cached) {
-                const cachedPosts = JSON.parse(cached);
-                if (Array.isArray(cachedPosts) && cachedPosts.length > 0) {
-                    setPosts(cachedPosts);
-                    currentPostIdsRef.current = new Set(cachedPosts.map((p: any) => p.id));
-                    setLoading(false);
-                }
-            }
-        } catch {}
+        // Local cache completely removed to ensure real-time name updates
         supabase.auth.getSession().then(({ data: { session: s } }) => {
             if (mounted) {
                 setCurrentUserId(s?.user?.id || null);
