@@ -23,39 +23,10 @@ export async function GET(req: NextRequest) {
         const authHeader = req.headers.get('Authorization');
         let currentUserId: string | null = null;
 
-        // ── Fast path: first page, no filters ────────────────────────────────
-        // Serve from the shared Data Cache — no DB call needed for the post list.
-        // Only auth verification is needed to inject is_liked_by_me.
-        if (!before && !clipsOnly) {
-            if (authHeader) {
-                const token = authHeader.replace('Bearer ', '');
-                const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-                currentUserId = user?.id || null;
-            }
+        // ── Fast path disabled to ensure real-time name resolution ──
+        // Serve from direct DB query to avoid Vercel edge cache stickiness
 
-            const cached = await getCachedPublicPosts(limit);
-
-            // Score + sort (mirrors the algorithmic sort in the full path)
-            const enriched = cached.map(p => ({
-                ...p,
-                type: 'post',
-                is_liked_by_me: currentUserId ? p._likeUserIds.includes(currentUserId) : false,
-                _feedScore: p.is_pinned ? 1_000_000 : (() => {
-                    const ageHours = (Date.now() - new Date(p.created_at).getTime()) / 3_600_000;
-                    return (100 / Math.pow(ageHours + 2, 1.2)) + p.likes_count * 10 + p.comments_count * 25;
-                })(),
-                _feedLabel: p.is_pinned ? '📌 Pinned by Admin'
-                    : p.likes_count > 20 ? '🔥 Trending in Community'
-                        : '💡 Community Post',
-            }));
-            enriched.sort((a, b) => b._feedScore - a._feedScore);
-
-            const response = NextResponse.json(enriched);
-            response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60');
-            return response;
-        }
-
-        // ── Slow path: paginated or clipsOnly — direct DB query ───────────────
+        // ── Slow path: direct DB query ───────────────
         let userGrade: string | null = null;
         let userSchool: string | null = null;
         let followingIds: string[] = [];
