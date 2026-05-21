@@ -565,11 +565,19 @@ function ChatRoomContent() {
     if (!user?.id) return;
     const interval = setInterval(() => {
       void syncMessages(user.id);
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [user?.id, syncMessages]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const interval = setInterval(() => {
       void syncBlockStatus();
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [user?.id, syncMessages, syncBlockStatus]);
+  }, [user?.id, syncBlockStatus]);
 
   // ─── Realtime ────────────────────────────────────────────────────────────
   useEffect(() => {
