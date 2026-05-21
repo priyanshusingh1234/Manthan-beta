@@ -64,10 +64,13 @@ function SocialFeedContent() {
     };
 
     // ── Fetch feed (initial / manual refresh) ───────────────────────────────
-    const fetchFeed = useCallback(async () => {
-        setLoading(true);
+    // ── Fetch feed (initial / manual refresh) ───────────────────────────────
+    const fetchFeed = useCallback(async (isInitial = false) => {
+        // Only show skeleton loader if we don't have any posts loaded yet (no cache)
+        if (isInitial && currentPostIdsRef.current.size === 0) {
+            setLoading(true);
+        }
         setHasMore(true);
-        setNewPostsQueue([]);
         try {
             const { data: { session: s } } = await supabase.auth.getSession();
             const token = s?.access_token || null;
@@ -79,8 +82,31 @@ function SocialFeedContent() {
             if (!res.ok) throw new Error(await res.text());
             const rawData = await res.json();
             const postItems = (Array.isArray(rawData) ? rawData : []).map((p: any) => ({ ...p, type: 'post' }));
-            setPosts(postItems);
-            currentPostIdsRef.current = new Set(postItems.map((p: any) => p.id));
+
+            if (currentPostIdsRef.current.size > 0) {
+                // Find posts in postItems that are NOT currently displayed
+                const genuinelyNew = postItems.filter((p: any) => !currentPostIdsRef.current.has(p.id));
+                if (genuinelyNew.length > 0) {
+                    // Queue them up and show the 'New Posts' banner (like IG)
+                    setNewPostsQueue(prev => {
+                        const merged = [...genuinelyNew, ...prev];
+                        const seen = new Set();
+                        return merged.filter((p: any) => {
+                            if (seen.has(p.id)) return false;
+                            seen.add(p.id);
+                            return true;
+                        });
+                    });
+                } else {
+                    // No new posts, just update existing ones (like state, comments, etc)
+                    setPosts(postItems);
+                    currentPostIdsRef.current = new Set(postItems.map((p: any) => p.id));
+                }
+            } else {
+                setPosts(postItems);
+                currentPostIdsRef.current = new Set(postItems.map((p: any) => p.id));
+            }
+
             try { localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify(postItems.slice(0, 20))); } catch {}
             if (postItems.length < 30) setHasMore(false);
         } catch (err) {
@@ -205,7 +231,7 @@ function SocialFeedContent() {
                 setCurrentUserId(s?.user?.id || null);
                 setSession(s);
                 sessionRef.current = s;
-                fetchFeed();
+                fetchFeed(true);
             }
         });
         return () => { mounted = false; };
@@ -526,7 +552,11 @@ function SocialFeedContent() {
             }
 
             // For regular (non-video) posts: prepend immediately + background sync
-            setPosts(prev => [optimisticPost, ...prev.filter(p => p.id !== optimisticPost.id)]);
+            setPosts(prev => {
+                const merged = [optimisticPost, ...prev.filter(p => p.id !== optimisticPost.id)];
+                currentPostIdsRef.current.add(optimisticPost.id);
+                return merged;
+            });
 
             // Then silently refresh in the background to sync full db state
             fetchFeed();

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Home, Compass, LucideIcon, PlaySquare, MessageSquare, Settings, Flame } from 'lucide-react';
+import { Home, Compass, LucideIcon, PlaySquare, MessageSquare, MessageCircle, Settings, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -64,7 +64,7 @@ const BottomNav: React.FC = () => {
     { href: '/', icon: Home, label: 'Home' },
     { href: '/posts', icon: MessageSquare, label: 'Community' },
     { href: '/clips', icon: PlaySquare, label: 'Clips', isCenter: true },
-    { href: '/feed', icon: Compass, label: 'Feed' },
+    { href: '/chat', icon: MessageCircle, label: 'Chat' },
     { href: '/settings', icon: Settings, label: 'Settings' },
   ];
 
