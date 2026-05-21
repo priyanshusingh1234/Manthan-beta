@@ -1,47 +1,19 @@
 import { NextResponse } from "next/server";
-import supabaseAdmin from "@/lib/supabaseAdmin";
-import { LeaderboardUser } from "@/lib/leaderboardCache";
+import { getCachedLeaderboard } from "@/lib/cache";
 
-export const dynamic = 'force-dynamic';
+// Remove force-dynamic — this route now serves from the Next.js Data Cache.
+// The cache is shared across ALL Vercel instances for the same deployment,
+// revalidated every 60 seconds or on-demand when points change.
+export const dynamic = 'force-static';
 
 export async function GET() {
     try {
-        // No in-memory cache: every request queries Supabase directly so that
-        // avatar changes, point awards, and profile updates are reflected
-        // immediately across all serverless instances without waiting for a TTL
-        // or relying on a single instance's invalidate() call.
-        const { data, error } = await supabaseAdmin
-            .from('profiles')
-            .select('id, full_name, username, school, avatar_url, total_points, is_teacher, cosmetics')
-            .eq('is_teacher', false)
-            .not('username', 'is', null)
-            .neq('username', '')
-            .order('total_points', { ascending: false })
-            .order('id', { ascending: true })
-            .limit(10);
-
-        if (error) throw new Error(error.message);
-
-        const students: LeaderboardUser[] = (data || []).map((p: any, i: number) => ({
-            id: p.id,
-            rank: i + 1,
-            name: p.full_name || p.username || 'Student',
-            username: p.username,
-            school: p.school || 'Unknown School',
-            avatar: p.avatar_url || null,
-            points: Number(p.total_points) || 0,
-            streak: 0,
-            schoolColor: 'bg-blue-500',
-            cosmetics: p.cosmetics || [],
-        }));
-
-        const response = { topBrains: students };
-
-        return NextResponse.json(response, {
+        const topBrains = await getCachedLeaderboard();
+        return NextResponse.json({ topBrains }, {
             status: 200,
             headers: {
-                "Cache-Control": "no-store, no-cache, must-revalidate",
-                "Pragma": "no-cache",
+                // 20-minute browser cache + 5-min stale-while-revalidate window
+                'Cache-Control': 'public, max-age=1200, stale-while-revalidate=300',
             },
         });
     } catch (err: any) {

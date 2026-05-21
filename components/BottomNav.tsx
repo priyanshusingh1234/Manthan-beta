@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Home, Compass, LucideIcon, ShieldAlert, MessageSquare, FileText, Settings, Flame } from 'lucide-react';
+import { Home, Compass, LucideIcon, PlaySquare, MessageSquare, Settings, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -62,8 +62,8 @@ const BottomNav: React.FC = () => {
 
   const navItems: NavItem[] = [
     { href: '/', icon: Home, label: 'Home' },
-    { href: '/chat', icon: MessageSquare, label: 'Chat' },
-    { href: '/my-school', icon: ShieldAlert, label: 'Faction', isCenter: true },
+    { href: '/posts', icon: MessageSquare, label: 'Community' },
+    { href: '/clips', icon: PlaySquare, label: 'Clips', isCenter: true },
     { href: '/feed', icon: Compass, label: 'Feed' },
     { href: '/settings', icon: Settings, label: 'Settings' },
   ];
@@ -88,24 +88,23 @@ const BottomNav: React.FC = () => {
                 <Link
                   href={item.href}
                   onClick={handleNavClick}
-                  aria-label="War"
+                  aria-label="Clips"
                   className={`
                     flex flex-col items-center justify-center
                     w-16 h-16 rounded-full
-                    bg-gradient-to-br from-indigo-600 via-blue-600 to-violet-600
-                    text-white shadow-xl shadow-indigo-500/30 dark:shadow-indigo-500/50
+                    bg-gradient-to-br from-violet-600 via-purple-600 to-pink-600
+                    text-white shadow-xl shadow-purple-500/30 dark:shadow-purple-500/50
                     border-[6px] border-[#f8fafc] dark:border-slate-950 
                     transform transition-all duration-300 ease-out
-                    hover:scale-105 active:scale-95 hover:shadow-indigo-500/50 
+                    hover:scale-105 active:scale-95 hover:shadow-purple-500/50 
                     active:shadow-inner
                   `}
                 >
-                  <Icon size={24} strokeWidth={2.5} className="drop-shadow-md" />
-                  {/* Ripple/Pulse effect */}
+                  <Icon size={26} strokeWidth={2} className="drop-shadow-md" />
                   <div className="absolute inset-0 rounded-full border border-white/20 animate-pulse active:hidden" />
                 </Link>
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-indigo-900/50 dark:text-indigo-400/70 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                  My Faction
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-purple-900/50 dark:text-purple-400/70 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                  Clips
                 </div>
               </div>
             );

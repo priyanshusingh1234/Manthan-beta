@@ -4,11 +4,20 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
+// ⏸️  PAUSED — Schools feature is temporarily disabled.
+// Remove this block to re-enable.
+const PAUSED = true;
+const pausedResponse = () => NextResponse.json(
+    { error: 'Schools feature is temporarily unavailable. Check back soon!', paused: true },
+    { status: 503, headers: { 'Retry-After': '3600' } }
+);
+
 const normalizeSchoolName = (value: string) =>
     value.toLowerCase().trim().replace(/\s+/g, ' ');
 
 // GET /api/schools — list all schools with member count, general info, war stats
 export async function GET(req: NextRequest) {
+    if (PAUSED) return pausedResponse();
     try {
         const search = req.nextUrl.searchParams.get('search') || '';
 
@@ -78,6 +87,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/schools — create a new school (and become its General)
 export async function POST(req: NextRequest) {
+    if (PAUSED) return pausedResponse();
     try {
         const authHeader = req.headers.get('Authorization');
         if (!authHeader) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

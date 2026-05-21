@@ -1,10 +1,15 @@
 /**
- * Shared in-memory leaderboard cache.
- * By using a singleton module, both the leaderboard API and the checker-vote API
- * can share the same cache instance — so checker-vote can instantly invalidate it
- * when points change, and the next leaderboard request will always be fresh.
+ * Shared leaderboard cache — now delegates to Next.js Data Cache via revalidateTag.
+ *
+ * BEFORE: In-memory singleton. Useless on Vercel — each serverless instance has its
+ * own heap, so invalidate() on instance A has NO effect on instances B, C, D, ...
+ *
+ * AFTER: invalidate() calls revalidateTag('leaderboard') which purges the shared
+ * Next.js Data Cache, correctly invalidating across ALL instances simultaneously.
+ * The actual cached query lives in lib/cache.ts (getCachedLeaderboard).
  */
 
+// Keep the LeaderboardUser type here since it's imported across the codebase
 export interface LeaderboardUser {
     id: string;
     name: string;
@@ -19,21 +24,20 @@ export interface LeaderboardUser {
 }
 
 export const leaderboardCache = {
-    data: null as { topBrains: LeaderboardUser[] } | null,
+    /** @deprecated No-op kept for compatibility. Data Cache TTL is 60s. */
+    data: null as null,
+    /** @deprecated No-op kept for compatibility. */
     expiresAt: 0,
+    /** @deprecated No-op kept for compatibility. */
+    isValid(): boolean { return false; },
+    /** @deprecated No-op kept for compatibility. */
+    set(_data: any, _ttl?: number) {},
 
-    isValid(): boolean {
-        return this.data !== null && Date.now() < this.expiresAt;
-    },
-
-    set(data: { topBrains: LeaderboardUser[] }, ttlMs = 20_000) {
-        this.data = data;
-        this.expiresAt = Date.now() + ttlMs;
-    },
-
-    /** Call this whenever any user's points change */
-    invalidate() {
-        this.data = null;
-        this.expiresAt = 0;
-    },
+    /**
+     * No-op — leaderboard refreshes strictly on the 20-minute Data Cache TTL.
+     * Kept for call-site compatibility; do NOT call revalidateTag here or individual
+     * solves will bust the cache and defeat the 20-min rule.
+     */
+    invalidate() { /* intentional no-op — TTL handles refresh */ },
 };
+

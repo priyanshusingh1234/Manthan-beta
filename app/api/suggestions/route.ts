@@ -133,7 +133,12 @@ export async function GET(req: NextRequest) {
             })
             .filter(Boolean);
 
-        return NextResponse.json({ suggestions });
+        return NextResponse.json({ suggestions }, {
+            headers: {
+                // Per-user cache: 5 min fresh, serve stale up to 10 min while revalidating
+                'Cache-Control': 'private, max-age=300, stale-while-revalidate=600',
+            },
+        });
 
     } catch (err: any) {
         console.error('[Suggestions API]', err);

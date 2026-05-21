@@ -2,14 +2,41 @@ import { getAllProfiles } from "@/lib/profiles";
 import BadgedName from "@/components/BadgedName";
 import Link from "next/link";
 import { MapPin, Award } from "lucide-react";
-import { unstable_noStore as noStore } from 'next/cache';
 import ClientRankBanner from "@/components/ClientRankBanner";
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// ISR: regenerate this page every 20 minutes — matches the leaderboard API cache TTL.
+// No need for force-dynamic; data is the same for all users.
+export const revalidate = 1200;
+
+// Inline avatar component: shows photo if available, first-letter fallback otherwise.
+function AvatarOrInitial({ avatar, name, size, borderClass }: {
+    avatar: string | null; name: string; size: string; borderClass: string;
+}) {
+    const initial = String(name[0] || '?').toUpperCase();
+    if (avatar) {
+        return (
+            <img
+                src={avatar}
+                alt={name}
+                className={`${size} rounded-full object-cover border-4 relative z-10 bg-white ${borderClass}`}
+            />
+        );
+    }
+    // First-letter fallback — no external service needed
+    const colors = [
+        'bg-indigo-100 text-indigo-600', 'bg-violet-100 text-violet-600',
+        'bg-amber-100 text-amber-700', 'bg-emerald-100 text-emerald-700',
+        'bg-rose-100 text-rose-600',
+    ];
+    const color = colors[initial.charCodeAt(0) % colors.length];
+    return (
+        <div className={`${size} rounded-full border-4 relative z-10 ${borderClass} ${color} flex items-center justify-center font-black text-xl`}>
+            {initial}
+        </div>
+    );
+}
 
 export default async function LeaderboardPage() {
-  noStore();
   const allProfiles = await getAllProfiles();
   
   const allStudents = allProfiles.filter(p => !p.is_teacher && p.username);
@@ -41,12 +68,17 @@ export default async function LeaderboardPage() {
           <div className="flex justify-center items-end gap-2 sm:gap-6 mb-8 h-48 sm:h-60 mt-4 sm:mt-0">
             {/* 2nd Place */}
             <div className="relative flex flex-col items-center w-[30%] animate-slideUp" style={{ animationDelay: '100ms' }}>
-              <div className="relative mb-2 group flex justify-center items-center">
+            <div className="relative mb-2 group flex justify-center items-center">
                 <Link href={`/user/${students[1].username}`} className="relative">
                   {students[1].cosmetics?.includes('avatar_glow') && (
                      <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-md opacity-70 animate-pulse"></div>
                   )}
-                  <img src={students[1].avatar || `https://ui-avatars.com/api/?name=${students[1].name}&background=e2e8f0&color=475569`} alt={students[1].name} className={`w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 relative z-10 bg-white ${students[1].cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-white dark:border-slate-800 shadow-md'}`} />
+                  <AvatarOrInitial
+                    avatar={students[1].avatar}
+                    name={students[1].name}
+                    size="w-14 h-14 sm:w-20 sm:h-20"
+                    borderClass={students[1].cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-white dark:border-slate-800 shadow-md'}
+                  />
                 </Link>
                 <div className="absolute -bottom-1.5 right-0 bg-slate-200 text-slate-700 w-5 h-5 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-[10px] z-20">2</div>
               </div>
@@ -73,7 +105,12 @@ export default async function LeaderboardPage() {
                   {students[0].cosmetics?.includes('avatar_glow') && (
                      <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-lg opacity-80 animate-pulse"></div>
                   )}
-                  <img src={students[0].avatar || `https://ui-avatars.com/api/?name=${students[0].name}&background=fef3c7&color=d97706`} alt={students[0].name} className={`w-18 h-18 sm:w-24 sm:h-24 rounded-full object-cover border-4 shadow-[0_0_20px_rgba(251,191,36,0.2)] relative z-10 bg-white ${students[0].cosmetics?.includes('avatar_glow') ? 'border-transparent' : 'border-amber-400'}`} />
+                  <AvatarOrInitial
+                    avatar={students[0].avatar}
+                    name={students[0].name}
+                    size="w-18 h-18 sm:w-24 sm:h-24"
+                    borderClass={students[0].cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_20px_rgba(251,191,36,0.2)]' : 'border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.2)]'}
+                  />
                 </Link>
                 <div className="absolute -bottom-1.5 right-1 bg-gradient-to-br from-amber-400 to-amber-600 text-white w-6 h-6 sm:w-8 sm:h-8 rounded-full border-[2px] border-white flex items-center justify-center font-black shadow-md text-xs z-20">1</div>
               </div>
@@ -99,7 +136,12 @@ export default async function LeaderboardPage() {
                   {students[2].cosmetics?.includes('avatar_glow') && (
                      <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full blur-md opacity-70 animate-pulse"></div>
                   )}
-                  <img src={students[2].avatar || `https://ui-avatars.com/api/?name=${students[2].name}&background=ffedd5&color=ea580c`} alt={students[2].name} className={`w-14 h-14 sm:w-20 sm:h-20 rounded-full object-cover border-4 relative z-10 bg-white ${students[2].cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-white dark:border-slate-800 shadow-md'}`} />
+                  <AvatarOrInitial
+                    avatar={students[2].avatar}
+                    name={students[2].name}
+                    size="w-14 h-14 sm:w-20 sm:h-20"
+                    borderClass={students[2].cosmetics?.includes('avatar_glow') ? 'border-transparent shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'border-white dark:border-slate-800 shadow-md'}
+                  />
                 </Link>
                 <div className="absolute -bottom-1.5 right-0 bg-orange-200 text-orange-800 w-5 h-5 sm:w-7 sm:h-7 rounded-full border-2 border-white flex items-center justify-center font-black shadow-sm text-[10px] z-20">3</div>
               </div>

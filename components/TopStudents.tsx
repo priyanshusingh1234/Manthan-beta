@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Trophy, Flame, Loader2, ChevronRight, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 
 interface Student {
     rank: number;
@@ -61,67 +60,40 @@ export default function TopStudents() {
 
     const load = useCallback(async () => {
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, full_name, username, school, avatar_url, total_points, cosmetics')
-                .eq('is_teacher', false)
-                .not('username', 'is', null)
-                .neq('username', '')
-                .order('total_points', { ascending: false })
-                .order('id', { ascending: true })
-                .limit(10);
-
-            if (!error && data) {
-                const fetched = data.map((p, i) => ({
-                    id: p.id,
-                    rank: i + 1,
-                    name: p.full_name || p.username || 'Student',
-                    username: p.username,
-                    school: p.school || 'Unknown',
-                    avatar: p.avatar_url || null,
-                    points: Number(p.total_points) || 0,
-                    streak: 0,
-                    schoolColor: 'bg-blue-500',
-                    cosmetics: p.cosmetics || [],
-                }));
-                setStudents(fetched);
-                setLastUpdated(new Date());
-            }
+            // Use the cached API endpoint (20-min Data Cache) instead of querying
+            // Supabase directly — previously this bypassed the cache entirely.
+            const res = await fetch('/api/leaderboard');
+            if (!res.ok) return;
+            const data = await res.json();
+            const fetched: Student[] = (data.topBrains || []).map((p: any) => ({
+                rank: p.rank,
+                name: p.name || 'Student',
+                username: p.username,
+                school: p.school || 'Unknown',
+                avatar: p.avatar || null,
+                points: Number(p.points) || 0,
+                streak: 0,
+                schoolColor: 'bg-blue-500',
+                cosmetics: p.cosmetics || [],
+            }));
+            setStudents(fetched);
+            setLastUpdated(new Date());
         } catch {
-            // silent — polling will retry
+            // silent
         } finally {
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        // Always load fresh on mount
         load();
-
-        // Listen for profile point changes via Realtime  
-        const profileChannel = supabaseRealtime
-            .channel('topstudents-profiles')
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'profiles',
-            }, () => setTimeout(load, 600))
-            .subscribe();
-
-        // Refresh when user returns to this tab (e.g. after doing a quiz)
+        // Reload when the user comes back to the tab — browser Cache-Control
+        // handles not re-fetching until max-age expires (20 min)
         const handleVisibility = () => {
             if (document.visibilityState === 'visible') load();
         };
         document.addEventListener('visibilitychange', handleVisibility);
-
-        // Fallback poll every 30s
-        const interval = setInterval(load, 30_000);
-
-        return () => {
-            supabaseRealtime.removeChannel(profileChannel);
-            document.removeEventListener('visibilitychange', handleVisibility);
-            clearInterval(interval);
-        };
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
     }, [load]);
 
     const topScore = students.length > 0 ? students[0].points : 1;

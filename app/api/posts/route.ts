@@ -1,8 +1,11 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
-import { getProfilesMap, upsertProfile } from "@/lib/profiles";
+import { upsertProfile } from "@/lib/profiles";
 import { createNotification } from "@/lib/createNotification";
+import { getCachedPublicPosts, CACHE_TAGS } from "@/lib/cache";
+import { revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
+// force-dynamic only for the POST/mutation handlers — GET uses the Data Cache
 export const dynamic = 'force-dynamic';
 
 // Never expose Google OAuth profile pictures — users must upload a custom avatar.
@@ -18,9 +21,43 @@ export async function GET(req: NextRequest) {
         const clipsOnly = url.searchParams.get('clipsOnly') === 'true';
 
         const authHeader = req.headers.get('Authorization');
-        let currentUserId = null;
-        let userGrade = null;
-        let userSchool = null;
+        let currentUserId: string | null = null;
+
+        // ── Fast path: first page, no filters ────────────────────────────────
+        // Serve from the shared Data Cache — no DB call needed for the post list.
+        // Only auth verification is needed to inject is_liked_by_me.
+        if (!before && !clipsOnly) {
+            if (authHeader) {
+                const token = authHeader.replace('Bearer ', '');
+                const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+                currentUserId = user?.id || null;
+            }
+
+            const cached = await getCachedPublicPosts(limit);
+
+            // Score + sort (mirrors the algorithmic sort in the full path)
+            const enriched = cached.map(p => ({
+                ...p,
+                type: 'post',
+                is_liked_by_me: currentUserId ? p._likeUserIds.includes(currentUserId) : false,
+                _feedScore: p.is_pinned ? 1_000_000 : (() => {
+                    const ageHours = (Date.now() - new Date(p.created_at).getTime()) / 3_600_000;
+                    return (100 / Math.pow(ageHours + 2, 1.2)) + p.likes_count * 10 + p.comments_count * 25;
+                })(),
+                _feedLabel: p.is_pinned ? '📌 Pinned by Admin'
+                    : p.likes_count > 20 ? '🔥 Trending in Community'
+                    : '💡 Community Post',
+            }));
+            enriched.sort((a, b) => b._feedScore - a._feedScore);
+
+            const response = NextResponse.json(enriched);
+            response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60');
+            return response;
+        }
+
+        // ── Slow path: paginated or clipsOnly — direct DB query ───────────────
+        let userGrade: string | null = null;
+        let userSchool: string | null = null;
         let followingIds: string[] = [];
 
         if (authHeader) {
@@ -33,7 +70,7 @@ export async function GET(req: NextRequest) {
 
                 const [profileRes, followsRes] = await Promise.all([
                     supabaseAdmin.from('profiles').select('school').eq('id', user.id).maybeSingle(),
-                    supabaseAdmin.from('follows').select('following_id').eq('follower_id', user.id)
+                    supabaseAdmin.from('follows').select('following_id').eq('follower_id', user.id),
                 ]);
                 if (profileRes.data?.school) userSchool = profileRes.data.school;
                 if (followsRes.data) followingIds = followsRes.data.map((f: any) => f.following_id);
@@ -42,23 +79,26 @@ export async function GET(req: NextRequest) {
 
         let query = supabaseAdmin
             .from('posts')
-            .select('*, post_likes ( user_id )')
+            .select('id, author_id, content, image_url, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id )')
             .order('created_at', { ascending: false })
             .limit(limit);
 
-        if (clipsOnly) {
-            query = query.not('video_url', 'is', null);
-        }
-
-        if (before) {
-            query = query.lt('created_at', before);
-        }
+        if (clipsOnly) query = query.not('video_url', 'is', null);
+        if (before) query = query.lt('created_at', before);
 
         const { data: posts, error } = await query;
         if (error) throw error;
 
-        const authorIds = [...new Set((posts || []).map((p: any) => p.author_id))];
-        const profilesMap = await getProfilesMap(authorIds);
+        const authorIds = [...new Set((posts || []).map((p: any) => p.author_id))] as string[];
+        const { data: profilesRaw } = authorIds.length
+            ? await supabaseAdmin
+                .from('profiles')
+                .select('id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics')
+                .in('id', authorIds)
+            : { data: [] };
+        const profilesMap = new Map((profilesRaw || []).map((p: any) => [p.id, p]));
+
+
 
         const enriched = (posts || []).map(p => {
             const profile = profilesMap.get(p.author_id);
@@ -136,7 +176,10 @@ export async function GET(req: NextRequest) {
             enriched.sort((a, b) => b._feedScore - a._feedScore);
         }
 
-        return NextResponse.json(enriched);
+        const response = NextResponse.json(enriched);
+        // Cache for 30s on first page; pagination pages are unique so no caching needed
+        if (!before) response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60');
+        return response;
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
@@ -287,6 +330,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // Purge the shared posts cache so the next GET sees the new post
+        revalidateTag(CACHE_TAGS.posts);
         return NextResponse.json(post);
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });

@@ -347,21 +347,26 @@ function ChatRoomContent() {
     // Merge DB messages with any optimistic messages still in flight.
     // Without this, the 1-second poll would replace the entire array and wipe
     // optimistic messages before they are confirmed/rejected by the server.
+    const unreadIds = new Set(filtered.filter(m => !m.is_read && m.sender_id !== activeUserId).map(m => m.id));
+    // Optimistically mark as read in the local copy before setting state
+    const filteredWithRead = unreadIds.size
+      ? filtered.map(m => unreadIds.has(m.id) ? { ...m, is_read: true } : m)
+      : filtered;
+
     setMessages(prev => {
-      const dbIds = new Set(filtered.map(m => m.id));
+      const dbIds = new Set(filteredWithRead.map(m => m.id));
       // Keep optimistic (temp-*) messages that haven't landed in the DB yet
       const stillPending = prev.filter(m => m.id.startsWith('temp-') && !dbIds.has(m.id));
-      const merged = [...filtered, ...stillPending];
+      const merged = [...filteredWithRead, ...stillPending];
       merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       return merged;
     });
 
     setLoading(false);
-    localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filtered.slice(-80)));
+    localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filteredWithRead.slice(-80)));
 
-    const unread = filtered.filter(m => !m.is_read && m.sender_id !== activeUserId).map(m => m.id);
-    if (unread.length) {
-      supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
+    if (unreadIds.size) {
+      supabase.from('chat_messages').update({ is_read: true }).in('id', [...unreadIds]);
     }
     // Note: autoAccept / startCall is intentionally NOT done here.
     // syncMessages runs every 1 second and has a stale closure — doing startCall
@@ -428,10 +433,15 @@ function ChatRoomContent() {
             const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
             const filtered = mRes.data.slice().reverse().filter(m => !deletedIds.includes(m.id));
 
-            setMessages(filtered);
-            localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filtered.slice(-80)));
-            const unread = filtered.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id);
-            if (unread.length) supabase.from('chat_messages').update({ is_read: true }).in('id', unread);
+            const unreadIds = new Set(filtered.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id));
+            // Optimistically flip is_read so UI is immediately correct
+            const filteredWithRead = unreadIds.size
+              ? filtered.map(m => unreadIds.has(m.id) ? { ...m, is_read: true } : m)
+              : filtered;
+
+            setMessages(filteredWithRead);
+            localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filteredWithRead.slice(-80)));
+            if (unreadIds.size) supabase.from('chat_messages').update({ is_read: true }).in('id', [...unreadIds]);
 
             if (
               searchParams.get('autoAccept') === '1' &&

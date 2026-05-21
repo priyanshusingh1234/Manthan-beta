@@ -138,7 +138,17 @@ export default function ChatListPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_participants', filter: `user_id=eq.${user.id}` }, () => fetchRooms(user.id))
       .subscribe();
     const interval = setInterval(() => fetchRooms(user.id), 60000);
-    return () => { supabaseRealtime.removeChannel(ch); clearInterval(interval); };
+
+    // Re-fetch when the user navigates back to this tab/page so unread dots
+    // clear immediately without waiting for the 60-second polling interval.
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchRooms(user.id); };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      supabaseRealtime.removeChannel(ch);
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [user?.id, fetchRooms]);
 
   // Debounced search

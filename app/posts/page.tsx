@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
-import { ImageIcon, X, Sparkles, User, Send, Video, Loader2 } from 'lucide-react';
+import { ImageIcon, X, Sparkles, User, Send, Video, Loader2, ArrowUp } from 'lucide-react';
 import Image from 'next/image';
 import { compressImage } from '@/utils/compressImage';
 import { Check } from 'lucide-react';
@@ -16,6 +16,7 @@ const MAX_CHARS = 500;
 function SocialFeedContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const POSTS_CACHE_KEY = 'community_posts_cache_v2';
     const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -25,6 +26,11 @@ function SocialFeedContent() {
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const observerTarget = useRef<HTMLDivElement>(null);
+
+    // Background refresh — queued new posts waiting to be shown
+    const [newPostsQueue, setNewPostsQueue] = useState<any[]>([]);
+    const currentPostIdsRef = useRef<Set<string>>(new Set());
+    const sessionRef = useRef<any>(null);
 
     // Composer state
     const [content, setContent] = useState('');
@@ -57,48 +63,65 @@ function SocialFeedContent() {
         el.style.height = `${el.scrollHeight}px`;
     };
 
-    // ── Fetch feed ──────────────────────────────────────────────────────────
+    // ── Fetch feed (initial / manual refresh) ───────────────────────────────
     const fetchFeed = useCallback(async () => {
         setLoading(true);
         setHasMore(true);
+        setNewPostsQueue([]);
         try {
             const { data: { session: s } } = await supabase.auth.getSession();
             const token = s?.access_token || null;
-            const res = await fetch(`/api/feed?limit=60&t=${Date.now()}`, {
+            sessionRef.current = s;
+            // Go directly to /api/posts — fast, targeted, no heavy feed logic
+            const res = await fetch(`/api/posts?limit=30`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
-                cache: 'no-store',
             });
             if (!res.ok) throw new Error(await res.text());
             const rawData = await res.json();
-            const allItems = Array.isArray(rawData) ? rawData : (rawData?.questions || []);
-            const postItems = allItems.filter((item: any) => item.type === 'post');
-
-            if (postItems.length < 5) {
-                const fbRes = await fetch(`/api/posts?limit=20&t=${Date.now()}`, {
-                    headers: token ? { Authorization: `Bearer ${token}` } : {},
-                    cache: 'no-store',
-                });
-                if (fbRes.ok) {
-                    const fbData = await fbRes.json();
-                    const existingIds = new Set(postItems.map((p: any) => p.id));
-                    const fallbackPosts = (Array.isArray(fbData) ? fbData : [])
-                        .filter((p: any) => !existingIds.has(p.id))
-                        .map((p: any) => ({ ...p, type: 'post', _feedLabel: '💡 Community Post' }));
-                    const combined = [...postItems, ...fallbackPosts];
-                    setPosts(combined);
-                    if (fallbackPosts.length < 20) setHasMore(false);
-                    return;
-                }
-            }
+            const postItems = (Array.isArray(rawData) ? rawData : []).map((p: any) => ({ ...p, type: 'post' }));
             setPosts(postItems);
-            // If very few items, probably reached the end
-            if (postItems.length < 10 && allItems.length < 60) setHasMore(false);
+            currentPostIdsRef.current = new Set(postItems.map((p: any) => p.id));
+            try { localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify(postItems.slice(0, 20))); } catch {}
+            if (postItems.length < 30) setHasMore(false);
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
         }
     }, []);
+
+    // ── Background poll: silently check for new posts ────────────────────────
+    const pollForNewPosts = useCallback(async () => {
+        // Don't poll if page is hidden or still doing initial load
+        if (document.visibilityState !== 'visible') return;
+        try {
+            const token = sessionRef.current?.access_token || null;
+            const res = await fetch(`/api/posts?limit=10`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
+            if (!res.ok) return;
+            const rawData = await res.json();
+            const fresh = (Array.isArray(rawData) ? rawData : []).map((p: any) => ({ ...p, type: 'post' }));
+            // Find posts not currently displayed
+            const genuinelyNew = fresh.filter((p: any) => !currentPostIdsRef.current.has(p.id));
+            if (genuinelyNew.length > 0) {
+                setNewPostsQueue(genuinelyNew);
+            }
+        } catch { /* silent */ }
+    }, []);
+
+    // ── Apply queued new posts (when banner is tapped) ───────────────────────
+    const applyNewPosts = useCallback(() => {
+        if (newPostsQueue.length === 0) return;
+        setPosts(prev => {
+            const merged = [...newPostsQueue, ...prev.filter(p => !newPostsQueue.some((n: any) => n.id === p.id))];
+            currentPostIdsRef.current = new Set(merged.map(p => p.id));
+            try { localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify(merged.slice(0, 20))); } catch {}
+            return merged;
+        });
+        setNewPostsQueue([]);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [newPostsQueue]);
 
     const loadMore = async () => {
         if (!hasMore || loadingMore || posts.length === 0) return;
@@ -165,22 +188,40 @@ function SocialFeedContent() {
 
     useEffect(() => {
         let mounted = true;
+        // Show cached posts instantly while fresh data loads
+        try {
+            const cached = localStorage.getItem(POSTS_CACHE_KEY);
+            if (cached) {
+                const cachedPosts = JSON.parse(cached);
+                if (Array.isArray(cachedPosts) && cachedPosts.length > 0) {
+                    setPosts(cachedPosts);
+                    currentPostIdsRef.current = new Set(cachedPosts.map((p: any) => p.id));
+                    setLoading(false);
+                }
+            }
+        } catch {}
         supabase.auth.getSession().then(({ data: { session: s } }) => {
             if (mounted) {
                 setCurrentUserId(s?.user?.id || null);
                 setSession(s);
+                sessionRef.current = s;
                 fetchFeed();
             }
         });
         return () => { mounted = false; };
     }, [fetchFeed]);
 
-    // Scroll to top whenever the feed first loads with fresh posts
+    // Background polling — check for new posts every 60 seconds
     useEffect(() => {
-        if (posts.length > 0) {
-            window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-        }
-    }, [posts.length > 0 ? 'loaded' : 'empty']); // only fires the first time posts arrive
+        const interval = setInterval(pollForNewPosts, 60_000);
+        // Also poll when the user comes back to the tab
+        const onVisible = () => { if (document.visibilityState === 'visible') pollForNewPosts(); };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
+    }, [pollForNewPosts]);
 
     // Handle incoming shared text
     useEffect(() => {
@@ -508,6 +549,20 @@ function SocialFeedContent() {
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-400/10 dark:bg-purple-600/10 rounded-full mix-blend-overlay filter blur-3xl" />
             <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-400/10 dark:bg-indigo-600/10 rounded-full mix-blend-overlay filter blur-3xl" />
 
+            {/* Fixed floating new-posts pill — always visible when scrolled down */}
+            {newPostsQueue.length > 0 && (
+                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 duration-400">
+                    <button
+                        onClick={applyNewPosts}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-full font-black text-sm text-white shadow-2xl shadow-indigo-600/40 active:scale-95 transition-transform"
+                        style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+                    >
+                        <ArrowUp className="w-3.5 h-3.5 animate-bounce" />
+                        {newPostsQueue.length === 1 ? '1 new post' : `${newPostsQueue.length} new posts`}
+                    </button>
+                </div>
+            )}
+
             <main className="max-w-[1240px] px-4 sm:px-6 mx-auto relative z-10 w-full lg:flex lg:gap-8 justify-center">
                 <div className="w-full lg:max-w-2xl flex-shrink overflow-x-hidden">
 
@@ -726,6 +781,20 @@ function SocialFeedContent() {
                                 )}
                             </form>
                         </div>
+                    )}
+
+                    {/* ── New Posts Banner ── */}
+                    {newPostsQueue.length > 0 && (
+                        <button
+                            onClick={applyNewPosts}
+                            className="w-full mb-3 flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-black text-sm text-white shadow-lg shadow-indigo-500/30 animate-in slide-in-from-top-2 duration-300"
+                            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                        >
+                            <ArrowUp className="w-4 h-4 animate-bounce" />
+                            {newPostsQueue.length === 1
+                                ? '1 new post — tap to see it'
+                                : `${newPostsQueue.length} new posts — tap to see them`}
+                        </button>
                     )}
 
                     {/* ── Feed ── */}
