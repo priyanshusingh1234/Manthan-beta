@@ -366,7 +366,23 @@ function ChatRoomContent() {
     localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filteredWithRead.slice(-80)));
 
     if (unreadIds.size) {
-      supabase.from('chat_messages').update({ is_read: true }).in('id', [...unreadIds]);
+      fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [...unreadIds] }) }).catch(() => {});
+      try {
+        const cacheKey = `chat_rooms_cache_${activeUserId}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          let didUpdate = false;
+          const newCache = parsed.map((r: any) => {
+            if (r.id === roomId && r.last_message && !r.last_message.is_read) {
+              didUpdate = true;
+              return { ...r, last_message: { ...r.last_message, is_read: true } };
+            }
+            return r;
+          });
+          if (didUpdate) localStorage.setItem(cacheKey, JSON.stringify(newCache));
+        }
+      } catch {}
     }
     // Note: autoAccept / startCall is intentionally NOT done here.
     // syncMessages runs every 1 second and has a stale closure — doing startCall
@@ -441,7 +457,25 @@ function ChatRoomContent() {
 
             setMessages(filteredWithRead);
             localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filteredWithRead.slice(-80)));
-            if (unreadIds.size) supabase.from('chat_messages').update({ is_read: true }).in('id', [...unreadIds]);
+            if (unreadIds.size) {
+                fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [...unreadIds] }) }).catch(() => {});
+                try {
+                  const cacheKey = `chat_rooms_cache_${u.id}`;
+                  const cached = localStorage.getItem(cacheKey);
+                  if (cached) {
+                    const parsed = JSON.parse(cached);
+                    let didUpdate = false;
+                    const newCache = parsed.map((r: any) => {
+                      if (r.id === roomId && r.last_message && !r.last_message.is_read) {
+                        didUpdate = true;
+                        return { ...r, last_message: { ...r.last_message, is_read: true } };
+                      }
+                      return r;
+                    });
+                    if (didUpdate) localStorage.setItem(cacheKey, JSON.stringify(newCache));
+                  }
+                } catch {}
+            }
 
             if (
               searchParams.get('autoAccept') === '1' &&
@@ -542,7 +576,23 @@ function ChatRoomContent() {
         if (msg.sender_id !== user.id) {
           playNotifSound();
           vibrate('light');
-          supabase.from('chat_messages').update({ is_read: true }).eq('id', msg.id);
+          fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [msg.id] }) }).catch(() => {});
+          try {
+            const cacheKey = `chat_rooms_cache_${user.id}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              let didUpdate = false;
+              const newCache = parsed.map((r: any) => {
+                if (r.id === roomId && r.last_message && !r.last_message.is_read) {
+                  didUpdate = true;
+                  return { ...r, last_message: { ...r.last_message, is_read: true } };
+                }
+                return r;
+              });
+              if (didUpdate) localStorage.setItem(cacheKey, JSON.stringify(newCache));
+            }
+          } catch {}
         }
         setTimeout(() => scrollToBottom(), 60);
       })
@@ -595,8 +645,15 @@ function ChatRoomContent() {
 
     let content = newMessage.trim();
     if (replyingTo) {
-      const isImage = replyingTo.message_type === 'image';
-      const preview = isImage ? 'Photo 📷' : replyingTo.content.replace(/\n/g, ' ').slice(0, 40);
+      let rawPreviewText = replyingTo.content;
+      if (rawPreviewText.startsWith('> Replying to **')) {
+        const splitIndex = rawPreviewText.indexOf('\n\n');
+        if (splitIndex !== -1) {
+          rawPreviewText = rawPreviewText.substring(splitIndex + 2);
+        }
+      }
+      const isImage = replyingTo.message_type === 'image' || replyingTo.message_type === 'image_once';
+      const preview = isImage ? 'Photo 📷' : rawPreviewText.replace(/\n/g, ' ').slice(0, 40);
       const who = replyingTo.sender_id === user.id ? 'You' : (participant?.full_name || 'Scholar');
       content = `> Replying to **${who}**: "${preview}"\n\n${content}`;
       setReplyingTo(null);

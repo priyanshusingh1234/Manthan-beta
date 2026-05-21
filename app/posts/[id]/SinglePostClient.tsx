@@ -22,6 +22,30 @@ export default function SinglePostClient({ postId }: { postId: string }) {
     const [newComment, setNewComment] = useState('');
     const [submittingComment, setSubmittingComment] = useState(false);
     const [showComments, setShowComments] = useState(false);
+    const [currentUserData, setCurrentUserData] = useState<any>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                return JSON.parse(localStorage.getItem('dheeyudha_user_meta_cache') || 'null');
+            } catch {}
+        }
+        return null;
+    });
+
+    useEffect(() => {
+        const handleUpdate = () => {
+            try {
+                const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+                if (cached) setCurrentUserData(JSON.parse(cached));
+            } catch {}
+        };
+        window.addEventListener('user_metadata_updated', handleUpdate);
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'dheeyudha_user_meta_cache') handleUpdate();
+        });
+        return () => {
+            window.removeEventListener('user_metadata_updated', handleUpdate);
+        };
+    }, []);
 
     useEffect(() => {
         let mounted = true;
@@ -248,9 +272,19 @@ export default function SinglePostClient({ postId }: { postId: string }) {
     }
 
     // ── Regular Text Post View (Standard Scrollable Page) ────────────────
-    const profileUrl = post.author?.isTeacher && post.author?.username
-        ? `/teacher/${post.author.username}`
-        : post.author?.username ? `/user/${post.author.username}` : '#';
+    const isOwner = Boolean(currentUserId && post.author?.id === currentUserId);
+    const effectiveAuthor = isOwner && currentUserData ? {
+        ...post.author,
+        avatar_url: (currentUserData.avatar_url && !currentUserData.avatar_url.includes('googleusercontent')) 
+            ? currentUserData.avatar_url 
+            : (post.author?.avatar_url || currentUserData.avatar_url),
+        name: currentUserData.fullName || post.author?.name || currentUserData.name,
+        cosmetics: currentUserData.cosmetics || post.author?.cosmetics,
+    } : post.author;
+
+    const profileUrl = effectiveAuthor?.isTeacher && effectiveAuthor?.username
+        ? `/teacher/${effectiveAuthor.username}`
+        : effectiveAuthor?.username ? `/user/${effectiveAuthor.username}` : '#';
 
     return (
         <div className="min-h-[100dvh] bg-white dark:bg-slate-950 flex flex-col">
@@ -272,18 +306,18 @@ export default function SinglePostClient({ postId }: { postId: string }) {
                     <div className="flex items-center gap-3 mb-2">
                         <Link href={profileUrl}>
                             <div className="relative w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-800 shrink-0">
-                                {post.author?.avatar_url
-                                    ? <Image src={post.author.avatar_url} alt="avatar" fill className="object-cover" />
+                                {effectiveAuthor?.avatar_url
+                                    ? <Image src={effectiveAuthor.avatar_url} alt="avatar" fill className="object-cover" />
                                     : <User className="w-5 h-5 absolute inset-0 m-auto text-slate-400" />
                                 }
                             </div>
                         </Link>
                         <div className="flex flex-col min-w-0">
                             <BadgedName
-                                name={post.author?.name || 'Scholar'}
-                                userId={post.author?.id}
-                                isTeacher={post.author?.isTeacher}
-                                totalPoints={Number(post.author?.totalPoints)}
+                                name={effectiveAuthor?.name || 'Scholar'}
+                                userId={effectiveAuthor?.id}
+                                isTeacher={effectiveAuthor?.isTeacher}
+                                totalPoints={Number(effectiveAuthor?.totalPoints)}
                                 nameClassName="font-black text-[16px] text-slate-900 dark:text-slate-100"
                                 className="flex items-center gap-1.5 min-w-0"
                             />
@@ -293,7 +327,7 @@ export default function SinglePostClient({ postId }: { postId: string }) {
                         </div>
                     </div>
                 </div>
-                <PostCard post={post} currentUserId={currentUserId} onUpdate={refreshPost} isSinglePost={true} />
+                <PostCard post={post} currentUserId={currentUserId} onUpdate={refreshPost} isSinglePost={true} suppliedCurrentUserData={currentUserData} />
             </main>
         </div>
     );

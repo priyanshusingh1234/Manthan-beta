@@ -21,6 +21,14 @@ function SocialFeedContent() {
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [session, setSession] = useState<any>(null);
+    const [currentUserData, setCurrentUserData] = useState<any>(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                return JSON.parse(localStorage.getItem('dheeyudha_user_meta_cache') || 'null');
+            } catch {}
+        }
+        return null;
+    });
 
     // Pagination state
     const [hasMore, setHasMore] = useState(true);
@@ -64,8 +72,7 @@ function SocialFeedContent() {
     };
 
     // ── Fetch feed (initial / manual refresh) ───────────────────────────────
-    // ── Fetch feed (initial / manual refresh) ───────────────────────────────
-    const fetchFeed = useCallback(async (isInitial = false) => {
+    const fetchFeed = useCallback(async (isInitial = false, forceApply = false) => {
         // Only show skeleton loader if we don't have any posts loaded yet (no cache)
         if (isInitial && currentPostIdsRef.current.size === 0) {
             setLoading(true);
@@ -83,20 +90,12 @@ function SocialFeedContent() {
             const rawData = await res.json();
             const postItems = (Array.isArray(rawData) ? rawData : []).map((p: any) => ({ ...p, type: 'post' }));
 
-            if (currentPostIdsRef.current.size > 0) {
+            if (currentPostIdsRef.current.size > 0 && !forceApply) {
                 // Find posts in postItems that are NOT currently displayed
                 const genuinelyNew = postItems.filter((p: any) => !currentPostIdsRef.current.has(p.id));
                 if (genuinelyNew.length > 0) {
                     // Queue them up and show the 'New Posts' banner (like IG)
-                    setNewPostsQueue(prev => {
-                        const merged = [...genuinelyNew, ...prev];
-                        const seen = new Set();
-                        return merged.filter((p: any) => {
-                            if (seen.has(p.id)) return false;
-                            seen.add(p.id);
-                            return true;
-                        });
-                    });
+                    setNewPostsQueue(postItems);
                 } else {
                     // No new posts, just update existing ones (like state, comments, etc)
                     setPosts(postItems);
@@ -105,6 +104,7 @@ function SocialFeedContent() {
             } else {
                 setPosts(postItems);
                 currentPostIdsRef.current = new Set(postItems.map((p: any) => p.id));
+                setNewPostsQueue([]);
             }
 
             try { localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify(postItems.slice(0, 20))); } catch {}
@@ -122,7 +122,7 @@ function SocialFeedContent() {
         if (document.visibilityState !== 'visible') return;
         try {
             const token = sessionRef.current?.access_token || null;
-            const res = await fetch(`/api/posts?limit=10`, {
+            const res = await fetch(`/api/posts?limit=30`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
             if (!res.ok) return;
@@ -131,7 +131,7 @@ function SocialFeedContent() {
             // Find posts not currently displayed
             const genuinelyNew = fresh.filter((p: any) => !currentPostIdsRef.current.has(p.id));
             if (genuinelyNew.length > 0) {
-                setNewPostsQueue(genuinelyNew);
+                setNewPostsQueue(fresh);
             }
         } catch { /* silent */ }
     }, []);
@@ -139,13 +139,11 @@ function SocialFeedContent() {
     // ── Apply queued new posts (when banner is tapped) ───────────────────────
     const applyNewPosts = useCallback(() => {
         if (newPostsQueue.length === 0) return;
-        setPosts(prev => {
-            const merged = [...newPostsQueue, ...prev.filter(p => !newPostsQueue.some((n: any) => n.id === p.id))];
-            currentPostIdsRef.current = new Set(merged.map(p => p.id));
-            try { localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify(merged.slice(0, 20))); } catch {}
-            return merged;
-        });
+        setPosts(newPostsQueue);
+        currentPostIdsRef.current = new Set(newPostsQueue.map(p => p.id));
+        try { localStorage.setItem(POSTS_CACHE_KEY, JSON.stringify(newPostsQueue.slice(0, 20))); } catch {}
         setNewPostsQueue([]);
+        setHasMore(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [newPostsQueue]);
 
@@ -231,10 +229,47 @@ function SocialFeedContent() {
                 setCurrentUserId(s?.user?.id || null);
                 setSession(s);
                 sessionRef.current = s;
+
+                try {
+                    const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+                    if (cached) setCurrentUserData(JSON.parse(cached));
+                } catch {}
+
                 fetchFeed(true);
             }
         });
-        return () => { mounted = false; };
+
+        supabase.auth.getUser().then(({ data }) => {
+            if (mounted && data?.user) {
+                const meta = data.user.user_metadata || {};
+                const effectiveAvatar = meta.avatar_url || meta.picture || null;
+                if (typeof window !== 'undefined') {
+                    try {
+                        const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+                        const parsed = cached ? JSON.parse(cached) : {};
+                        const merged = { ...parsed, ...meta, avatar_url: effectiveAvatar };
+                        localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(merged));
+                        setCurrentUserData(merged);
+                    } catch {}
+                }
+            }
+        });
+
+        const handleUpdate = () => {
+            try {
+                const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+                if (cached) setCurrentUserData(JSON.parse(cached));
+            } catch {}
+        };
+        window.addEventListener('user_metadata_updated', handleUpdate);
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'dheeyudha_user_meta_cache') handleUpdate();
+        });
+
+        return () => {
+            mounted = false;
+            window.removeEventListener('user_metadata_updated', handleUpdate);
+        };
     }, [fetchFeed]);
 
     // Background polling — check for new posts every 60 seconds
@@ -504,15 +539,7 @@ function SocialFeedContent() {
             const newPostRaw = await res.json();
 
             // ── Optimistic UI: prepend instantly so the post is immediately visible ──
-            // Grab author info from cache to avoid a round-trip
-            let cachedMeta: any = {};
-            try { cachedMeta = JSON.parse(localStorage.getItem('dheeyudha_user_meta_cache') || '{}'); } catch { }
             const localMeta = session.user?.user_metadata || {};
-            const isGoogleUrl = (u?: string | null) => !!u && u.includes('googleusercontent.com');
-            const authorAvatar = (() => {
-                const u = cachedMeta?.avatar_url || localMeta?.avatar_url;
-                return u && !isGoogleUrl(u) ? u : null;
-            })();
 
             const optimisticPost: any = {
                 id: newPostRaw.id,
@@ -528,11 +555,11 @@ function SocialFeedContent() {
                 _feedLabel: '✨ Just posted',
                 author: {
                     id: session.user.id,
-                    name: cachedMeta?.fullName || localMeta?.fullName || localMeta?.full_name || 'You',
-                    username: cachedMeta?.username || localMeta?.username || null,
-                    avatar_url: authorAvatar,
-                    isTeacher: localMeta?.is_teacher || false,
-                    totalPoints: 0,
+                    name: currentUserData?.fullName || currentUserData?.name || localMeta?.fullName || localMeta?.full_name || 'You',
+                    username: currentUserData?.username || localMeta?.username || null,
+                    avatar_url: avatarUrl,
+                    isTeacher: currentUserData?.isTeacher || currentUserData?.is_teacher || localMeta?.is_teacher || false,
+                    totalPoints: currentUserData?.totalPoints || 0,
                 },
             };
 
@@ -559,7 +586,7 @@ function SocialFeedContent() {
             });
 
             // Then silently refresh in the background to sync full db state
-            fetchFeed();
+            fetchFeed(false, true);
         } catch (err: any) {
             setPostError(err.message);
         } finally {
@@ -570,9 +597,8 @@ function SocialFeedContent() {
     const charsLeft = MAX_CHARS - content.length;
     const canPost = (content.trim() || imageFile || videoFile) && !submitting;
     const meta = session?.user?.user_metadata || {};
-    const avatarUrl = (meta.avatar_url && !meta.avatar_url.includes('googleusercontent.com'))
-        ? meta.avatar_url
-        : null;
+    const avatarUrl = currentUserData?.avatar_url || (meta.avatar_url && !meta.avatar_url.includes('googleusercontent.com') ? meta.avatar_url : null);
+    const newCount = newPostsQueue.filter(p => !currentPostIdsRef.current.has(p.id)).length;
 
     return (
         <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 pb-24 pt-4 sm:pt-8 md:pt-12 relative overflow-hidden">
@@ -580,7 +606,7 @@ function SocialFeedContent() {
             <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-400/10 dark:bg-indigo-600/10 rounded-full mix-blend-overlay filter blur-3xl" />
 
             {/* Fixed floating new-posts pill — always visible when scrolled down */}
-            {newPostsQueue.length > 0 && (
+            {newCount > 0 && (
                 <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 duration-400">
                     <button
                         onClick={applyNewPosts}
@@ -588,7 +614,7 @@ function SocialFeedContent() {
                         style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
                     >
                         <ArrowUp className="w-3.5 h-3.5 animate-bounce" />
-                        {newPostsQueue.length === 1 ? '1 new post' : `${newPostsQueue.length} new posts`}
+                        {newCount === 1 ? '1 new post' : `${newCount} new posts`}
                     </button>
                 </div>
             )}
@@ -814,16 +840,16 @@ function SocialFeedContent() {
                     )}
 
                     {/* ── New Posts Banner ── */}
-                    {newPostsQueue.length > 0 && (
+                    {newCount > 0 && (
                         <button
                             onClick={applyNewPosts}
                             className="w-full mb-3 flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-black text-sm text-white shadow-lg shadow-indigo-500/30 animate-in slide-in-from-top-2 duration-300"
                             style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
                         >
                             <ArrowUp className="w-4 h-4 animate-bounce" />
-                            {newPostsQueue.length === 1
+                            {newCount === 1
                                 ? '1 new post — tap to see it'
-                                : `${newPostsQueue.length} new posts — tap to see them`}
+                                : `${newCount} new posts — tap to see them`}
                         </button>
                     )}
 
@@ -860,6 +886,7 @@ function SocialFeedContent() {
                                         currentUserId={currentUserId}
                                         feedLabel={p._feedLabel}
                                         onUpdate={fetchFeed}
+                                        suppliedCurrentUserData={currentUserData}
                                     />
                                 ))}
                             </div>
