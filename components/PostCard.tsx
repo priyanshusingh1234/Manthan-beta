@@ -144,7 +144,7 @@ export default function PostCard({
         avatar_url: (currentUserData.avatar_url && !currentUserData.avatar_url.includes('googleusercontent')) 
             ? currentUserData.avatar_url 
             : (post.author.avatar_url || currentUserData.avatar_url),
-        name: currentUserData.fullName || post.author.name || currentUserData.name,
+        name: currentUserData.full_name || currentUserData.fullName || currentUserData.name || post.author.name,
         cosmetics: currentUserData.cosmetics || post.author.cosmetics,
     } : post.author;
 

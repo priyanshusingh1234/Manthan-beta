@@ -74,9 +74,9 @@ export const getCachedPublicPosts = unstable_cache(
     const authorIds = [...new Set((data || []).map((p: any) => p.author_id))] as string[];
     const { data: profilesRaw } = authorIds.length
       ? await supabaseAdmin
-          .from('profiles')
-          .select('id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics')
-          .in('id', authorIds)
+        .from('profiles')
+        .select('id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics')
+        .in('id', authorIds)
       : { data: [] };
     const profilesMap = new Map((profilesRaw || []).map((p: any) => [p.id, p]));
 

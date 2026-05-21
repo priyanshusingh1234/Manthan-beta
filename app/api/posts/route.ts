@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
                 })(),
                 _feedLabel: p.is_pinned ? '📌 Pinned by Admin'
                     : p.likes_count > 20 ? '🔥 Trending in Community'
-                    : '💡 Community Post',
+                        : '💡 Community Post',
             }));
             enriched.sort((a, b) => b._feedScore - a._feedScore);
 
@@ -104,12 +104,12 @@ export async function GET(req: NextRequest) {
             const profile = profilesMap.get(p.author_id);
             const isGhost = profile?.is_ghost === true;
             const likesCount = Array.isArray(p.post_likes) ? p.post_likes.length : (p.likes_count || 0);
-            
+
             let finalContent = p.content || '';
             let isPinned = false;
-            if (finalContent.startsWith('[PINNED]')) { 
-                isPinned = true; 
-                finalContent = finalContent.substring(8).trim(); 
+            if (finalContent.startsWith('[PINNED]')) {
+                isPinned = true;
+                finalContent = finalContent.substring(8).trim();
             }
 
             const authorData = {
@@ -214,13 +214,13 @@ export async function POST(req: NextRequest) {
             .single();
 
         if (error) throw error;
-        
+
 
         // --- Tagging / Mentions Logic ---
         const mentionRegex = /@([\w.-]+)/g;
         const matches = [...content.matchAll(mentionRegex)];
         let mentionedUsernames = Array.from(new Set(matches.map(m => m[1].toLowerCase())));
-        
+
         const hasCommunityTag = mentionedUsernames.includes('community');
         if (hasCommunityTag) {
             mentionedUsernames = mentionedUsernames.filter(u => u !== 'community');
@@ -285,25 +285,25 @@ export async function POST(req: NextRequest) {
                 .from('profiles')
                 .select('id')
                 .neq('id', user.id);
-                
+
             const allUserIds = (allUsers || []).map(p => String(p.id));
-            
+
             // Merge all users into followerIds to reuse the notification broadcasting logic below
             // This ensures everyone gets the notification, without sending duplicates.
             const combined = new Set([...followerIds, ...allUserIds]);
             // Remove those who already got tagged directly to avoid double notification
             taggedUserIds.forEach(id => combined.delete(id));
-            
+
             followerIds = Array.from(combined);
         }
 
         if (followerIds.length > 0) {
             const isClip = !!videoUrl;
-            
+
             let followerTitle = isClip
                 ? `🎬 ${authorName} posted a new clip`
                 : `${authorName} shared a new post`;
-                
+
             if (isCommunityBroadcast) {
                 followerTitle = `📢 Community Announcement from ${authorName}`;
             }
