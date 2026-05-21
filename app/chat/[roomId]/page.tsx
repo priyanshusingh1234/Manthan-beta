@@ -341,6 +341,36 @@ function ChatRoomContent() {
 
     if (error || !latestMessages) return;
 
+    // ─── Call Banner Detection via Manual Polling ───
+    if (!isBlockedRef.current && latestMessages.length > 0) {
+      const newestMsg = latestMessages[0];
+      if (
+        newestMsg.content.startsWith('__CALL_STARTED__') &&
+        newestMsg.sender_id !== activeUserId &&
+        !callCtx.callActive.current &&
+        processedCallIdRef.current !== newestMsg.id
+      ) {
+        const ageMs = Date.now() - new Date(newestMsg.created_at).getTime();
+        if (ageMs < 45000) { // Call is still ringing
+          processedCallIdRef.current = newestMsg.id;
+          const callType = (newestMsg.content.split(':')[1] || 'voice') as 'voice' | 'video';
+          const banner = { type: callType, callerId: newestMsg.sender_id };
+          setIncomingCallBanner(banner);
+          incomingCallBannerRef.current = banner;
+          playNotifSound();
+          vibrate('medium');
+          setTimeout(() => {
+            setIncomingCallBanner(null);
+            incomingCallBannerRef.current = null;
+          }, Math.max(0, 45000 - ageMs));
+        }
+      }
+      if (newestMsg.content.startsWith('__CALL_ENDED__') && processedCallIdRef.current) {
+         setIncomingCallBanner(null);
+         incomingCallBannerRef.current = null;
+      }
+    }
+
     const roomDeletedKey = `deleted_for_me_${roomId}`;
     const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
     // Reverse so messages are displayed oldest→newest
