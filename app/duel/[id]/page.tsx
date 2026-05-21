@@ -62,9 +62,23 @@ export default function DuelRoomPage() {
 
     useEffect(() => {
         fetchDuel();
-        pollRef.current = setInterval(fetchDuel, 15000);
-        return () => { if (pollRef.current) clearInterval(pollRef.current); };
-    }, [fetchDuel]);
+        
+        // 30s slow-poll fallback just in case the socket connection drops
+        pollRef.current = setInterval(fetchDuel, 30000);
+        
+        // Instant Realtime updates
+        const channel = supabase
+            .channel(`duel-${id}`)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'duels', filter: `id=eq.${id}` }, () => {
+                fetchDuel();
+            })
+            .subscribe();
+
+        return () => { 
+            if (pollRef.current) clearInterval(pollRef.current);
+            supabase.removeChannel(channel);
+        };
+    }, [fetchDuel, id]);
 
     /* stop polling once terminal state */
     useEffect(() => {
@@ -136,11 +150,10 @@ export default function DuelRoomPage() {
                         <span className="text-xs font-bold text-slate-600 dark:text-slate-400 truncate max-w-[70px] text-right">{challenged.name.split(' ')[0]}</span>
                         <Avatar name={challenged.name} avatar={challenged.avatar} />
                     </div>
-                    <span className={`text-[10px] font-black px-2 py-1.5 rounded-xl shrink-0 ${
-                        duel.status === 'pending' ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400' :
-                        duel.status === 'accepted' ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400' :
-                        'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                    }`}>
+                    <span className={`text-[10px] font-black px-2 py-1.5 rounded-xl shrink-0 ${duel.status === 'pending' ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400' :
+                            duel.status === 'accepted' ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400' :
+                                'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                        }`}>
                         {statusLabel[duel.status] ?? duel.status}
                     </span>
                 </div>
@@ -237,11 +250,10 @@ export default function DuelRoomPage() {
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">Choose your answer</p>
                             {options.map((opt, i) => (
                                 <button key={i} onClick={() => setSelected(i)}
-                                    className={`w-full text-left p-4 rounded-2xl border-2 font-semibold text-sm transition-all active:scale-[0.98] ${
-                                        selected === i
+                                    className={`w-full text-left p-4 rounded-2xl border-2 font-semibold text-sm transition-all active:scale-[0.98] ${selected === i
                                             ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/10 text-orange-700 dark:text-orange-300'
                                             : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
-                                    }`}>
+                                        }`}>
                                     <span className="font-black text-orange-400 mr-2">{String.fromCharCode(65 + i)}.</span>{opt}
                                 </button>
                             ))}

@@ -205,9 +205,26 @@ export default function WarBattleDashboard() {
 
     useEffect(() => {
         fetchData();
-        const id = setInterval(fetchData, 15000);
-        return () => clearInterval(id);
-    }, [fetchData]);
+        
+        // 30s slow-poll fallback
+        const intervalId = setInterval(fetchData, 30000);
+
+        // Instant Realtime updates
+        const channel = supabase
+            .channel(`war-${warId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'wars', filter: `id=eq.${warId}` }, () => {
+                fetchData();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'war_submissions', filter: `war_id=eq.${warId}` }, () => {
+                fetchData();
+            })
+            .subscribe();
+
+        return () => {
+            clearInterval(intervalId);
+            supabase.removeChannel(channel);
+        };
+    }, [fetchData, warId]);
 
     useEffect(() => {
         const onFocus = () => fetchData();
@@ -443,7 +460,7 @@ export default function WarBattleDashboard() {
                         <div className="w-7 h-7 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center">
                             <Target className="w-4 h-4" />
                         </div>
-                            <h2 className="font-black text-xs sm:text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Attack These (Enemy's Questions)</h2>
+                        <h2 className="font-black text-xs sm:text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Attack These (Enemy's Questions)</h2>
                         <span className="ml-auto text-xs font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
                             {mySecured}/{myQuestions.length} destroyed
                         </span>
@@ -491,7 +508,7 @@ export default function WarBattleDashboard() {
                         <div className="w-7 h-7 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center">
                             <Shield className="w-4 h-4" />
                         </div>
-                            <h2 className="font-black text-xs sm:text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Your Side's Questions (Enemy Attacks These)</h2>
+                        <h2 className="font-black text-xs sm:text-sm uppercase tracking-widest text-slate-600 dark:text-slate-400">Your Side's Questions (Enemy Attacks These)</h2>
                         <span className="ml-auto text-xs font-bold text-red-500 bg-red-50 dark:bg-red-900/30 px-2 py-0.5 rounded-full">
                             {opponentSecured}/{opponentQuestions.length} enemy secured
                         </span>
