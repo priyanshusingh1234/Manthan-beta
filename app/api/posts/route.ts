@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
 
             const authorData = {
                 id: p.author_id,
-                name: profile?.full_name || 'Student',
+                name: profile?.full_name || profile?.username || 'Student',
                 username: profile?.username || null,
                 avatar_url: cleanAvatar(profile?.avatar_url),
                 school: profile?.school || null,

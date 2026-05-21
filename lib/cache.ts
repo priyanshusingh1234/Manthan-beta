@@ -103,7 +103,7 @@ export const getCachedPublicPosts = unstable_cache(
         _likeUserIds: (p.post_likes || []).map((l: any) => l.user_id) as string[],
         author: {
           id: p.author_id,
-          name: profile?.full_name || 'Student',
+          name: profile?.full_name || profile?.username || 'Student',
           username: profile?.username || null,
           avatar_url: isGhost ? null : (profile?.avatar_url || null),
           school: profile?.school || null,
