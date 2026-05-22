@@ -161,6 +161,7 @@ export async function GET(req: Request) {
         imagePath: r.image_path || null,
         imageUrl: r.image_url || null,
         is_vip: r.is_vip === true,
+        hasHint: !!r.hint,
         createdAt: r.created_at,
       }));
 
@@ -188,7 +189,7 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
     const body = await req.json();
-    const { title, body: questionBody, subject, classGrade, points, timeLimit, difficulty, options, correctOption, imagePath, imageUrl, chapter, isVip, questionType, matchPairs } = body || {};
+    const { title, body: questionBody, subject, classGrade, points, timeLimit, difficulty, options, correctOption, imagePath, imageUrl, chapter, isVip, questionType, matchPairs, hint, explanation } = body || {};
 
     // Basic validation server-side
     if (!title || !subject || (!classGrade && subject !== 'English') || !points || !timeLimit) {
@@ -242,6 +243,8 @@ export async function POST(req: Request) {
         is_vip: isVip === true,
         question_type: questionType || 'mcq',
         match_pairs: Array.isArray(matchPairs) && matchPairs.length ? matchPairs : null,
+        hint: hint || null,
+        explanation: explanation || null,
       };
 
       // attempt insert; if DB schema is missing `correct_option`, retry without it
@@ -285,6 +288,8 @@ export async function POST(req: Request) {
         matchPairs: data.match_pairs || null,
         imagePath: data.image_path || null,
         imageUrl: data.image_url || null,
+        hint: data.hint || null,
+        explanation: data.explanation || null,
         createdAt: data.created_at,
       };
 

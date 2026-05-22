@@ -431,6 +431,7 @@ export async function POST(req: Request) {
             newXp,
             leveledUp,
             newLevel,
+            explanation: q.explanation || null,
             streak: {
                 current: newStreakCount,
                 longest: newStreakLongest,

@@ -179,6 +179,9 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const [showXpBurst, setShowXpBurst] = useState(false);
     const [showWrongFlash, setShowWrongFlash] = useState(false);
     const playCorrect = useCorrectSound();
+    
+    const [purchasedHint, setPurchasedHint] = useState<string | null>(null);
+    const [isPurchasingHint, setIsPurchasingHint] = useState(false);
 
     const [authChecked, setAuthChecked] = useState(false);
     const [alreadyAttempted, setAlreadyAttempted] = useState<any>(null);
@@ -539,6 +542,34 @@ export default function SolveQuestionClient({ question }: { question: any }) {
         }
     };
 
+    const handlePurchaseHint = async () => {
+        if (isPurchasingHint) return;
+        setIsPurchasingHint(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            const res = await fetch("/api/solve/hint", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ questionId: question.id }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setPurchasedHint(data.hint);
+                toast.success("Hint purchased for 1 point!");
+            } else {
+                toast.error(data.error || "Failed to purchase hint.");
+            }
+        } catch (e) {
+            toast.error("Network error");
+        } finally {
+            setIsPurchasingHint(false);
+        }
+    };
+
     const renderTeacherProfile = () => {
         const tLink = question.teacherUsername ? `/teacher/${question.teacherUsername}` : "#";
         return (
@@ -884,6 +915,16 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     </div>
                 )}
 
+                {/* Explanation */}
+                {result.explanation && !result.isCorrect && (
+                    <div className="mt-6 w-full max-w-md mx-auto text-left space-y-2">
+                        <div className="text-sm font-bold text-indigo-500 dark:text-indigo-400 mb-2 uppercase tracking-wider text-center">Explanation</div>
+                        <div className="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300 p-4 rounded-2xl border border-indigo-200 dark:border-indigo-800 text-sm leading-relaxed whitespace-pre-wrap">
+                            {result.explanation}
+                        </div>
+                    </div>
+                )}
+
                 <div className="pt-6 border-t border-slate-100 dark:border-slate-800 mt-6 max-w-md mx-auto">
                     {!reviewSubmitted ? (
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
@@ -1066,6 +1107,27 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                         <div className="mb-12 rounded-[1.5rem] overflow-hidden bg-gray-50/50 dark:bg-slate-800/50 flex items-center justify-center p-6 border border-gray-100 dark:border-slate-800">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={publicUrl} alt="Question Attachment" className="max-h-[400px] object-contain rounded-xl drop-shadow-sm" />
+                        </div>
+                    )}
+
+                    {/* Hint Section */}
+                    {question.hasHint && !result && (
+                        <div className="mb-8">
+                            {!purchasedHint ? (
+                                <button
+                                    onClick={handlePurchaseHint}
+                                    disabled={isPurchasingHint}
+                                    className="flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800 px-4 py-2 rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
+                                >
+                                    <Star className="w-4 h-4" />
+                                    {isPurchasingHint ? "Purchasing..." : "Purchase Hint (1 pt)"}
+                                </button>
+                            ) : (
+                                <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl text-sm font-medium">
+                                    <strong className="block mb-1 text-amber-600">💡 Hint:</strong>
+                                    {purchasedHint}
+                                </div>
+                            )}
                         </div>
                     )}
 
