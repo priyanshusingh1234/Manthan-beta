@@ -80,6 +80,21 @@ export const getCachedPublicPosts = unstable_cache(
       : { data: [] };
     const profilesMap = new Map((profilesRaw || []).map((p: any) => [p.id, p]));
 
+    const missingAuthorIds = authorIds.filter(id => {
+      const p = profilesMap.get(id);
+      return !p || !p.full_name;
+    });
+
+    const authUsersMap = new Map();
+    if (missingAuthorIds.length > 0) {
+      await Promise.allSettled(missingAuthorIds.map(async (id) => {
+        try {
+          const { data } = await supabaseAdmin.auth.admin.getUserById(id);
+          if (data?.user) authUsersMap.set(id, data.user);
+        } catch { /* silent */ }
+      }));
+    }
+
     return (data || []).map((p: any) => {
       const profile = profilesMap.get(p.author_id);
       const isGhost = profile?.is_ghost === true;
@@ -87,6 +102,10 @@ export const getCachedPublicPosts = unstable_cache(
       let finalContent = p.content || '';
       let isPinned = false;
       if (finalContent.startsWith('[PINNED]')) { isPinned = true; finalContent = finalContent.substring(8).trim(); }
+
+      const authUser = authUsersMap.get(p.author_id);
+      const meta = authUser?.user_metadata || {};
+      const authName = authUser?.full_name || meta?.fullName || meta?.full_name || meta?.name || meta?.username || (authUser?.email ? authUser.email.split('@')[0] : null);
 
       return {
         id: p.id,
@@ -103,14 +122,14 @@ export const getCachedPublicPosts = unstable_cache(
         _likeUserIds: (p.post_likes || []).map((l: any) => l.user_id) as string[],
         author: {
           id: p.author_id,
-          name: profile?.full_name || profile?.username || 'Student',
-          username: profile?.username || null,
-          avatar_url: isGhost ? null : (profile?.avatar_url || null),
-          school: profile?.school || null,
-          isTeacher: profile?.is_teacher || false,
-          totalPoints: Number(profile?.total_points) || 0,
+          name: profile?.full_name || authName || profile?.username || 'Student',
+          username: profile?.username || meta?.username || null,
+          avatar_url: isGhost ? null : (profile?.avatar_url || meta?.avatar_url || meta?.picture || null),
+          school: profile?.school || meta?.school || null,
+          isTeacher: profile?.is_teacher || meta?.isTeacher || meta?.is_teacher || false,
+          totalPoints: Number(profile?.total_points) || Number(meta?.totalPoints) || 0,
           isGhost,
-          cosmetics: profile?.cosmetics || [],
+          cosmetics: profile?.cosmetics || meta?.cosmetics || [],
         },
       };
     });

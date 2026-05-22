@@ -21,138 +21,157 @@ export async function GET(req: NextRequest) {
         const clipsOnly = url.searchParams.get('clipsOnly') === 'true';
 
         const authHeader = req.headers.get('Authorization');
-        let currentUserId: string | null = null;
-
-        // ── Fast path disabled to ensure real-time name resolution ──
-        // Serve from direct DB query to avoid Vercel edge cache stickiness
-
-        // ── Slow path: direct DB query ───────────────
-        let userGrade: string | null = null;
-        let userSchool: string | null = null;
-        let followingIds: string[] = [];
-
-        if (authHeader) {
-            const token = authHeader.replace('Bearer ', '');
-            const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-            if (user) {
-                currentUserId = user.id;
-                userGrade = user.user_metadata?.classGrade?.toString() || user.user_metadata?.grade?.toString() || null;
-                userSchool = user.user_metadata?.school || null;
+        // ── Parallel Data Fetching ───────────────
+        const [userData, cachedPostsData] = await Promise.all([
+            // 1. Fetch current user metadata (Concurrent)
+            (async () => {
+                if (!authHeader) return null;
+                const token = authHeader.replace('Bearer ', '');
+                const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+                if (!user) return null;
 
                 const [profileRes, followsRes] = await Promise.all([
                     supabaseAdmin.from('profiles').select('school').eq('id', user.id).maybeSingle(),
                     supabaseAdmin.from('follows').select('following_id').eq('follower_id', user.id),
                 ]);
-                if (profileRes.data?.school) userSchool = profileRes.data.school;
-                if (followsRes.data) followingIds = followsRes.data.map((f: any) => f.following_id);
-            }
-        }
 
-        let query = supabaseAdmin
-            .from('posts')
-            .select('id, author_id, content, image_url, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id )')
-            .order('created_at', { ascending: false })
-            .limit(limit);
+                return {
+                    id: user.id,
+                    grade: user.user_metadata?.classGrade?.toString() || user.user_metadata?.grade?.toString() || null,
+                    school: profileRes.data?.school || user.user_metadata?.school || null,
+                    followingIds: (followsRes.data || []).map((f: any) => f.following_id)
+                };
+            })(),
+            // 2. Fetch posts (Concurrent) - Use Global Cache if not paginating
+            (async () => {
+                if (!before && !clipsOnly) {
+                    return await getCachedPublicPosts(limit);
+                } else {
+                    // Slow path: paginated or filtered
+                    let query = supabaseAdmin
+                        .from('posts')
+                        .select('id, author_id, content, image_url, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id )')
+                        .order('created_at', { ascending: false })
+                        .limit(limit);
 
-        if (clipsOnly) query = query.not('video_url', 'is', null);
-        if (before) query = query.lt('created_at', before);
+                    if (clipsOnly) query = query.not('video_url', 'is', null);
+                    if (before) query = query.lt('created_at', before);
 
-        const { data: posts, error } = await query;
-        if (error) throw error;
+                    const { data: posts, error } = await query;
+                    if (error) throw error;
 
-        const authorIds = [...new Set((posts || []).map((p: any) => p.author_id))] as string[];
-        const { data: profilesRaw } = authorIds.length
-            ? await supabaseAdmin
-                .from('profiles')
-                .select('id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics')
-                .in('id', authorIds)
-            : { data: [] };
-        const profilesMap = new Map((profilesRaw || []).map((p: any) => [p.id, p]));
+                    const authorIds = [...new Set((posts || []).map((p: any) => p.author_id))] as string[];
+                    const { data: profilesRaw } = authorIds.length
+                        ? await supabaseAdmin
+                            .from('profiles')
+                            .select('id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics')
+                            .in('id', authorIds)
+                        : { data: [] };
+                    const profilesMap = new Map((profilesRaw || []).map((p: any) => [p.id, p]));
 
-        const missingAuthorIds = authorIds.filter(id => {
-            const p = profilesMap.get(id);
-            return !p || !p.full_name;
-        });
+                    const missingAuthorIds = authorIds.filter(id => {
+                        const p = profilesMap.get(id);
+                        return !p || !p.full_name;
+                    });
 
-        const authUsersMap = new Map();
-        if (missingAuthorIds.length > 0) {
-            await Promise.allSettled(missingAuthorIds.map(async (id) => {
-                try {
-                    const { data } = await supabaseAdmin.auth.admin.getUserById(id);
-                    if (data?.user) {
-                        authUsersMap.set(id, data.user);
+                    const authUsersMap = new Map();
+                    if (missingAuthorIds.length > 0) {
+                        await Promise.allSettled(missingAuthorIds.map(async (id) => {
+                            try {
+                                const { data } = await supabaseAdmin.auth.admin.getUserById(id);
+                                if (data?.user) authUsersMap.set(id, data.user);
+                            } catch { /* silent */ }
+                        }));
                     }
-                } catch { /* silent */ }
-            }));
-        }
 
+                    return (posts || []).map(p => {
+                        const profile = profilesMap.get(p.author_id);
+                        const isGhost = profile?.is_ghost === true;
+                        const likesCount = Array.isArray(p.post_likes) ? p.post_likes.length : (p.likes_count || 0);
 
+                        let finalContent = p.content || '';
+                        let isPinned = false;
+                        if (finalContent.startsWith('[PINNED]')) {
+                            isPinned = true;
+                            finalContent = finalContent.substring(8).trim();
+                        }
 
-        const enriched = (posts || []).map(p => {
-            const profile = profilesMap.get(p.author_id);
-            const isGhost = profile?.is_ghost === true;
-            const likesCount = Array.isArray(p.post_likes) ? p.post_likes.length : (p.likes_count || 0);
+                        const authUser = authUsersMap.get(p.author_id);
+                        const meta = authUser?.user_metadata || {};
+                        const authName = authUser?.full_name || meta?.fullName || meta?.full_name || meta?.name || meta?.username || (authUser?.email ? authUser.email.split('@')[0] : null);
 
-            let finalContent = p.content || '';
-            let isPinned = false;
-            if (finalContent.startsWith('[PINNED]')) {
-                isPinned = true;
-                finalContent = finalContent.substring(8).trim();
-            }
+                        return {
+                            id: p.id,
+                            author_id: p.author_id,
+                            content: finalContent,
+                            image_url: p.image_url,
+                            video_url: p.video_url || null,
+                            video_thumbnail: p.video_thumbnail || null,
+                            likes_count: likesCount,
+                            comments_count: p.comments_count || 0,
+                            created_at: p.created_at,
+                            is_pinned: isPinned,
+                            _likeUserIds: (p.post_likes || []).map((l: any) => l.user_id) as string[],
+                            author: {
+                                id: p.author_id,
+                                name: profile?.full_name || authName || profile?.username || 'Student',
+                                username: profile?.username || meta?.username || null,
+                                avatar_url: profile?.avatar_url || meta?.avatar_url || meta?.picture || null,
+                                school: profile?.school || meta?.school || null,
+                                isTeacher: profile?.is_teacher || meta?.isTeacher || meta?.is_teacher || false,
+                                totalPoints: Number(profile?.total_points) || Number(meta?.totalPoints) || 0,
+                                isGhost: isGhost,
+                                cosmetics: profile?.cosmetics || meta?.cosmetics || [],
+                            }
+                        };
+                    });
+                }
+            })()
+        ]);
 
-            const authUser = authUsersMap.get(p.author_id);
-            const meta = authUser?.user_metadata || {};
-            const authName = authUser?.full_name || meta?.fullName || meta?.full_name || meta?.name || meta?.username || (authUser?.email ? authUser.email.split('@')[0] : null);
-            const authAvatar = meta?.avatar_url || meta?.picture;
+        const currentUserId = userData?.id || null;
+        const userGrade = userData?.grade || null;
+        const userSchool = userData?.school || null;
+        const followingIds = userData?.followingIds || [];
 
-            const authorData = {
-                id: p.author_id,
-                name: profile?.full_name || authName || profile?.username || 'Student',
-                username: profile?.username || meta?.username || null,
-                avatar_url: profile?.avatar_url || authAvatar || null,
-                school: profile?.school || meta?.school || null,
-                isTeacher: profile?.is_teacher || meta?.isTeacher || meta?.is_teacher || false,
-                totalPoints: Number(profile?.total_points) || Number(meta?.totalPoints) || 0,
-                isGhost: isGhost,
-                cosmetics: profile?.cosmetics || meta?.cosmetics || [],
-            };
-
+        // ── Personalize and Score ───────────────
+        const enriched = cachedPostsData.map(p => {
             const postObj = {
                 id: p.id,
                 type: 'post',
-                content: finalContent,
+                content: p.content,
                 image_url: p.image_url,
-                video_url: p.video_url || null,
-                video_thumbnail: p.video_thumbnail || null,
-                likes_count: likesCount,
-                comments_count: p.comments_count || 0,
+                video_url: p.video_url,
+                video_thumbnail: p.video_thumbnail,
+                likes_count: p.likes_count,
+                comments_count: p.comments_count,
                 created_at: p.created_at,
-                is_pinned: isPinned,
-                is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
-                author: authorData,
+                is_pinned: p.is_pinned,
+                is_liked_by_me: currentUserId ? p._likeUserIds.includes(currentUserId) : false,
+                author: p.author,
                 _feedLabel: '',
                 _feedScore: 0,
             };
 
             // Calculate algorithmic score
             let score = 100;
-            if (isPinned) score = 1_000_000;
+            if (p.is_pinned) score = 1_000_000;
             else {
                 const ageHours = (Date.now() - new Date(p.created_at).getTime()) / (1000 * 60 * 60);
                 score = score / Math.pow(ageHours + 2, 1.2);
-                score += (likesCount) * 10;
+                score += (p.likes_count) * 10;
                 score += (p.comments_count || 0) * 25;
                 if (followingIds.includes(p.author_id)) score *= 2.5;
-                if (userSchool && authorData.school === userSchool) score += 50;
-                if (userGrade && profile?.grade === userGrade) score += 30;
-                score += Math.floor((authorData.totalPoints || 0) / 100);
+                if (userSchool && p.author.school === userSchool) score += 50;
+                if (userGrade && p.author.grade === userGrade) score += 30; // Assuming author.grade is available if needed
+                score += Math.floor((p.author.totalPoints || 0) / 100);
             }
             postObj._feedScore = score;
 
             // Assign tags based on algorithm
-            if (isPinned) {
+            if (p.is_pinned) {
                 postObj._feedLabel = '📌 Pinned by Admin';
-            } else if (followingIds.includes(p.author_id) || (userSchool && authorData.school === userSchool)) {
+            } else if (followingIds.includes(p.author_id) || (userSchool && p.author.school === userSchool)) {
                 postObj._feedLabel = followingIds.includes(p.author_id) ? '👤 Post from Peer You Follow' : '🏫 Trending at Your School';
             } else if (score > 60) {
                 postObj._feedLabel = '🔥 Trending in Community';
