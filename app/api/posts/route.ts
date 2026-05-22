@@ -69,9 +69,22 @@ export async function GET(req: NextRequest) {
             : { data: [] };
         const profilesMap = new Map((profilesRaw || []).map((p: any) => [p.id, p]));
 
-        // Fetch raw Auth users to mirror Public Profile fallback logic
-        const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
-        const authUsersMap = new Map((authData?.users || []).map(u => [u.id, u]));
+        const missingAuthorIds = authorIds.filter(id => {
+            const p = profilesMap.get(id);
+            return !p || !p.full_name;
+        });
+
+        const authUsersMap = new Map();
+        if (missingAuthorIds.length > 0) {
+            await Promise.allSettled(missingAuthorIds.map(async (id) => {
+                try {
+                    const { data } = await supabaseAdmin.auth.admin.getUserById(id);
+                    if (data?.user) {
+                        authUsersMap.set(id, data.user);
+                    }
+                } catch { /* silent */ }
+            }));
+        }
 
 
 
@@ -89,12 +102,12 @@ export async function GET(req: NextRequest) {
 
             const authUser = authUsersMap.get(p.author_id);
             const meta = authUser?.user_metadata || {};
-            const authName = authUser?.full_name || meta?.fullName || meta?.full_name || meta?.name || meta?.username;
+            const authName = authUser?.full_name || meta?.fullName || meta?.full_name || meta?.name || meta?.username || (authUser?.email ? authUser.email.split('@')[0] : null);
             const authAvatar = meta?.avatar_url || meta?.picture;
 
             const authorData = {
                 id: p.author_id,
-                name: profile?.full_name || profile?.username || authName || 'Student',
+                name: profile?.full_name || authName || profile?.username || 'Student',
                 username: profile?.username || meta?.username || null,
                 avatar_url: profile?.avatar_url || authAvatar || null,
                 school: profile?.school || meta?.school || null,
