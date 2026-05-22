@@ -314,6 +314,9 @@ function ChatRoomContent() {
   const incomingCallBannerRef = useRef<{type:'voice'|'video', callerId: string} | null>(null);
   const isBlockedRef = useRef(isBlocked);
 
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<any>(null);
+
   useEffect(() => { isBlockedRef.current = isBlocked; }, [isBlocked]);
 
   
@@ -652,24 +655,31 @@ function ChatRoomContent() {
           playNotifSound();
           vibrate('light');
           fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [msg.id] }) }).catch(() => {});
-          try {
-            const cacheKey = `chat_rooms_cache_${user.id}`;
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              let didUpdate = false;
-              const newCache = parsed.map((r: any) => {
-                if (r.id === roomId && r.last_message && !r.last_message.is_read) {
-                  didUpdate = true;
-                  return { ...r, last_message: { ...r.last_message, is_read: true } };
-                }
-                return r;
-              });
-              if (didUpdate) localStorage.setItem(cacheKey, JSON.stringify(newCache));
-            }
-          } catch {}
         }
         setTimeout(() => scrollToBottom(), 60);
+      })
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        if (payload.payload.user_id !== user.id) {
+          setIsTyping(true);
+          clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 2000);
+        }
+      })
+      .on('broadcast', { event: 'new_message' }, (payload) => {
+        const msg = payload.payload as Message;
+        if (msg.sender_id !== user.id) {
+          setIsTyping(false);
+          setMessages(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            const updated = [...prev, msg];
+            localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(updated.slice(-80)));
+            return updated;
+          });
+          playNotifSound();
+          vibrate('light');
+          fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [msg.id] }) }).catch(() => {});
+          setTimeout(() => scrollToBottom(), 60);
+        }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
         const upd = payload.new as Message;
@@ -762,6 +772,13 @@ function ChatRoomContent() {
       if (!res.ok) throw new Error(json.error || `Send failed (${res.status})`);
 
       setMessages(p => p.map(m => m.id === tempId ? json.message : m));
+      
+      // Broadcast for instant delivery before Postgres sync
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'new_message',
+        payload: json.message
+      });
 
       if (participant?.user_id) {
         fetch('/api/chat/notify', {
@@ -950,7 +967,9 @@ function ChatRoomContent() {
             </div>
             <div className="flex-1 min-w-0 cursor-pointer" onClick={() => participant?.username && router.push(`/user/${participant.username}`)}>
               <p className="font-bold text-[15px] text-slate-900 dark:text-white truncate leading-tight">{displayName}</p>
-              <p className="text-[11px] text-slate-400 font-medium">{isOnline ? '🟢 Online' : 'Tap for info'}</p>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {isTyping ? <span className="text-indigo-500 font-bold animate-pulse">Typing...</span> : isOnline ? '🟢 Online' : 'Tap for info'}
+              </p>
             </div>
             <button onClick={() => callCtx.startCall(roomId, 'voice', participant?.user_id, participant?.full_name || 'Scholar')} className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
               <Phone className="w-5 h-5" />
@@ -1317,6 +1336,17 @@ function ChatRoomContent() {
                 setNewMessage(e.target.value);
                 e.target.style.height = 'auto';
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                
+                // Throttle typing broadcast
+                const now = Date.now();
+                if (!(window as any).lastTypingBroadcast || now - (window as any).lastTypingBroadcast > 1500) {
+                  (window as any).lastTypingBroadcast = now;
+                  channelRef.current?.send({
+                    type: 'broadcast',
+                    event: 'typing',
+                    payload: { user_id: user?.id }
+                  });
+                }
               }}
               onKeyDown={(e) => {
                 // Desktop: Enter = send, Shift+Enter = newline
