@@ -54,7 +54,7 @@ export const getCachedLeaderboard = unstable_cache(
     }));
   },
   ['leaderboard-top10'],
-  { revalidate: 1200, tags: [CACHE_TAGS.leaderboard] }  // 20 minutes
+  { revalidate: 60, tags: [CACHE_TAGS.leaderboard] }  // 1 minute
 );
 
 // ─── Community Posts (first page, non-personalized) ───────────────────────────

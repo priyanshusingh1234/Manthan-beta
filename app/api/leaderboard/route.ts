@@ -12,8 +12,8 @@ export async function GET() {
         return NextResponse.json({ topBrains }, {
             status: 200,
             headers: {
-                // 20-minute browser cache + 5-min stale-while-revalidate window
-                'Cache-Control': 'public, max-age=1200, stale-while-revalidate=300',
+                // 60-second browser cache + 60-second CDN cache
+                'Cache-Control': 'public, s-maxage=60, max-age=60, stale-while-revalidate=120',
             },
         });
     } catch (err: any) {
