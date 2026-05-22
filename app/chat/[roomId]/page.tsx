@@ -625,7 +625,12 @@ function ChatRoomContent() {
   useEffect(() => {
     if (!user?.id) return;
     const channel = supabaseRealtime
-      .channel(`room-${roomId}`, { config: { presence: { key: user.id } } })
+      .channel(`room-${roomId}`, { 
+        config: { 
+          presence: { key: user.id },
+          broadcast: { self: false, ack: false }
+        } 
+      })
       .on('presence', { event: 'sync' }, () => setIsOnline(Object.keys(channel.presenceState()).length > 1))
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
         const msg = payload.new as Message;
