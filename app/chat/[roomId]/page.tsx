@@ -86,6 +86,9 @@ const MessageItem = memo(function MessageItem({
   const swiping = useRef(false);
   const isScrolling = useRef(false);
 
+  // Long press
+  const timerRef = useRef<any>(null);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -93,13 +96,20 @@ const MessageItem = memo(function MessageItem({
     isScrolling.current = false;
   };
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!swiping.current || isScrolling.current) return;
+    if (!swiping.current) return;
     
     const dx = e.touches[0].clientX - touchStartX.current;
     const dy = e.touches[0].clientY - touchStartY.current;
 
+    // Cancel long press if the finger moves significantly
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+      clearTimeout(timerRef.current);
+    }
+
+    if (isScrolling.current) return;
+
     // Detect if user is scrolling vertically
-    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 5) {
       isScrolling.current = true;
       setSwipeX(0);
       return;
@@ -119,16 +129,15 @@ const MessageItem = memo(function MessageItem({
   };
   const handleTouchEnd = () => {
     swiping.current = false;
+    clearTimeout(timerRef.current);
     const triggerThreshold = 65;
-    if ((!isMe && swipeX >= triggerThreshold) || (isMe && swipeX <= -triggerThreshold)) {
+    if (!isScrolling.current && ((!isMe && swipeX >= triggerThreshold) || (isMe && swipeX <= -triggerThreshold))) {
       vibrate('light');
       onReply(msg);
     }
     setSwipeX(0);
   };
 
-  // Long press
-  const timerRef = useRef<any>(null);
   const handlePressStart = (e: React.TouchEvent | React.MouseEvent) => {
     timerRef.current = setTimeout(() => { vibrate('medium'); onLongPress(msg); }, 420);
   };
