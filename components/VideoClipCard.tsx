@@ -153,7 +153,8 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
     const handleShare = async (e: React.MouseEvent) => {
         e.stopPropagation();
         const url = `${window.location.origin}/posts/${post.id}`;
-        const title = `🎬 ${post.author?.name || 'Scholar'}'s clip on Dheeyudha`;
+        const authorName = post.author?.name || post.author?.full_name || post.author?.fullName || 'Scholar';
+        const title = `🎬 ${authorName}'s clip on Dheeyudha`;
         const text = post.content?.trim() ? post.content.slice(0, 100) : 'Watch this clip on Dheeyudha!';
         try {
             if (Capacitor.isNativePlatform()) {
@@ -218,12 +219,12 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
                 <div className="relative w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 shrink-0 shadow-sm">
                     {post.author?.avatar_url
                         ? <img src={post.author.avatar_url} className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center text-slate-400 font-black text-sm uppercase">{(post.author?.name || 'U')[0]}</div>
+                        : <div className="w-full h-full flex items-center justify-center text-slate-400 font-black text-sm uppercase">{(post.author?.name || post.author?.full_name || post.author?.fullName || 'U')[0]}</div>
                     }
                 </div>
                 <div className="flex flex-col min-w-0">
                     <BadgedName
-                        name={post.author?.name || 'Scholar'}
+                        name={post.author?.name || post.author?.full_name || post.author?.fullName || 'Scholar'}
                         userId={post.author?.id}
                         isTeacher={post.author?.isTeacher}
                         totalPoints={Number(post.author?.totalPoints)}
@@ -348,11 +349,11 @@ export default function VideoClipCard({ post, currentUserId, onUpdate, onComment
                     {!compact && (
                         <Link href={authorProfileUrl} className="flex items-center gap-3 mb-4 pointer-events-auto group">
                             <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/30 shadow-xl group-hover:scale-105 transition-transform duration-300">
-                                {post.author?.avatar_url ? <img src={post.author.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center text-white font-black text-lg">{(post.author?.name || 'U')[0].toUpperCase()}</div>}
+                                {post.author?.avatar_url ? <img src={post.author.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center text-white font-black text-lg">{(post.author?.name || post.author?.full_name || post.author?.fullName || 'U')[0].toUpperCase()}</div>}
                             </div>
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-1.5">
-                                    <span className="font-black text-white text-[17px] drop-shadow-2xl">{post.author?.name || 'Scholar'}</span>
+                                    <span className="font-black text-white text-[17px] drop-shadow-2xl">{post.author?.name || post.author?.full_name || post.author?.fullName || 'Scholar'}</span>
                                     {post.author?.isTeacher && <BadgeCheck className="w-4.5 h-4.5 text-blue-400 fill-blue-500" />}
                                 </div>
                                 <span className="text-[12px] text-white/60 font-black tracking-wide drop-shadow-lg">@{post.author?.username || 'scholar'} • {timeAgo}</span>

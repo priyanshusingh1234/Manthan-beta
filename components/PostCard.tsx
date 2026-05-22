@@ -143,10 +143,13 @@ export default function PostCard({
         // from the database cache.
         avatar_url: (currentUserData.avatar_url && !currentUserData.avatar_url.includes('googleusercontent')) 
             ? currentUserData.avatar_url 
-            : (post.author.avatar_url || currentUserData.avatar_url),
-        name: currentUserData.full_name || currentUserData.fullName || currentUserData.name || post.author.name,
-        cosmetics: currentUserData.cosmetics || post.author.cosmetics,
-    } : post.author;
+            : (post.author?.avatar_url || currentUserData.avatar_url),
+        name: currentUserData.full_name || currentUserData.fullName || currentUserData.name || post.author?.name || post.author?.full_name || post.author?.fullName,
+        cosmetics: currentUserData.cosmetics || post.author?.cosmetics,
+    } : {
+        ...post.author,
+        name: post.author?.name || post.author?.full_name || post.author?.fullName || 'Scholar'
+    };
 
     useEffect(() => {
         if (isSinglePost && comments.length === 0) {
@@ -614,10 +617,13 @@ export default function PostCard({
                                     ...comment.author,
                                     // Same fix as effectiveAuthor: DB avatar takes priority
                                     // over session metadata which may hold a stale Google URL.
-                                    avatar_url: comment.author.avatar_url || currentUserData.avatar_url,
-                                    name: comment.author.name || currentUserData.fullName,
-                                    cosmetics: comment.author.cosmetics || currentUserData.cosmetics,
-                                } : comment.author;
+                                    avatar_url: comment.author?.avatar_url || currentUserData.avatar_url,
+                                    name: comment.author?.name || comment.author?.full_name || comment.author?.fullName || currentUserData.fullName,
+                                    cosmetics: comment.author?.cosmetics || currentUserData.cosmetics,
+                                } : {
+                                    ...comment.author,
+                                    name: comment.author?.name || comment.author?.full_name || comment.author?.fullName || 'Scholar'
+                                };
 
                                 const commentUsername = getUsername(effectiveCommentAuthor);
                                 const safeReplyHandle = commentUsername || 'scholar';
