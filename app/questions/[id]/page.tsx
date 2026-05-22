@@ -114,6 +114,9 @@ export default async function SolveQuestionPage({
         teacherUsername: teacherMetadata.username || null,
         teacherAvatar: teacherMetadata.avatar_url || teacherMetadata.avatar || null,
         matchPairs: q.match_pairs || [],
+        hasHint: !!q.hint,
+        hint: undefined, // remove actual string from client payload
+        explanation: undefined, // remove actual string from client payload
     };
 
     // ── Route to written answer flow for high-point questions ──
