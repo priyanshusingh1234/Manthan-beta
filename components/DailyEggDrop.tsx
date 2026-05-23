@@ -263,9 +263,9 @@ export default function DailyEggDrop() {
                                         <p className="text-base font-semibold text-slate-800 dark:text-slate-100 leading-snug">
                                             {question.title}
                                         </p>
-                                        {(question.description || question.desc) && (
+                                        {question.body && (
                                             <p className="mt-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
-                                                {question.description || question.desc}
+                                                {question.body}
                                             </p>
                                         )}
                                     </div>
@@ -312,7 +312,13 @@ export default function DailyEggDrop() {
                                                     : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
                                                 }`}
                                             >
-                                                {result === 'won' ? '🎉 Correct! +5 pts added.' : '💀 Wrong! -1 pt deducted.'}
+                                                <div className="mb-2">{result === 'won' ? '🎉 Correct! +5 pts added.' : '💀 Wrong! -1 pt deducted.'}</div>
+                                                {question.explanation && (
+                                                    <div className="mt-3 pt-3 border-t border-black/10 dark:border-white/10 text-xs font-medium text-left">
+                                                        <span className="font-black uppercase tracking-wider text-[10px] opacity-70 block mb-1">Explanation</span>
+                                                        <span className="opacity-90">{question.explanation}</span>
+                                                    </div>
+                                                )}
                                             </motion.div>
                                         )}
                                     </AnimatePresence>

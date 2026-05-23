@@ -241,10 +241,32 @@ export async function POST(req: Request) {
             pointsChangeDisplay = 0;
         }
 
-        // --- STREAK LOGIC ---
+        // --- STREAK & MONTHLY LOGIC ---
         const { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
         const actualCurrentPoints = profile ? Number(profile.total_points) : currentPoints;
         const newTotal = Math.max(0, actualCurrentPoints + userPointsChange);
+
+        // ── Monthly Points Tracker ───────────────────────────────────────
+        // We calculate reset points if the month rolled over, then add the new points
+        const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000); // UTC+5:30
+        const currentMonth = `${nowIST.getFullYear()}-${String(nowIST.getMonth() + 1).padStart(2, '0')}`;
+        
+        let dbMonthlyMonth = (profile as any)?.monthly_points_month || null;
+        let currentMonthlyPts = Number((profile as any)?.monthly_points) || 0;
+        
+        if (dbMonthlyMonth !== currentMonth) {
+            // Helper logic for getResetPoints since we are in backend
+            const getResetPts = (pts: number) => {
+              if (pts >= 450) return 200; if (pts >= 350) return 200;
+              if (pts >= 250) return 150; if (pts >= 200) return 150;
+              if (pts >= 100) return 50;  return 50; // default for any rolled over month
+            };
+            currentMonthlyPts = dbMonthlyMonth === null ? 0 : getResetPts(currentMonthlyPts);
+            dbMonthlyMonth = currentMonth;
+        }
+        
+        const newMonthlyPts = Math.max(0, currentMonthlyPts + userPointsChange);
+        // ─────────────────────────────────────────────────────────────────
 
         // battles_attempted / battles_won live only in auth user_metadata (no DB column)
         const battlesAttempted = (Number(userMeta.battlesAttempted) || 0) + 1;
@@ -258,7 +280,6 @@ export async function POST(req: Request) {
         // ── 2-question-per-day streak engine ─────────────────────────────
         // We use the profiles table (DB) as the source of truth to avoid
         // stale JWT metadata causing double-counts.
-        const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000); // UTC+5:30
         const todayStr = nowIST.toISOString().slice(0, 10);          // "YYYY-MM-DD"
 
         const dbDailySolveDate  = (profile as any)?.daily_solve_date  || null;
@@ -318,6 +339,8 @@ export async function POST(req: Request) {
             lastStreakCount,        // ← the streak count before it was lost
             dailySolveCount: newDailySolveCount,
             dailySolveDate: todayStr,
+            monthlyPoints: newMonthlyPts,
+            monthlyPointsMonth: currentMonth,
         };
 
         // SYNC BOTH: Auth & Profiles

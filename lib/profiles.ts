@@ -110,6 +110,8 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         last_login_claim_date: meta.lastLoginClaimDate || null,
         login_bonus_completed: meta.loginBonusCompleted === true,
         is_private: meta.isPrivate === true,
+        monthly_points: meta.monthlyPoints !== undefined ? Number(meta.monthlyPoints) : undefined,
+        monthly_points_month: meta.monthlyPointsMonth !== undefined ? String(meta.monthlyPointsMonth) : undefined,
     }, { onConflict: 'id' });
 
 

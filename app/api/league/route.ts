@@ -74,8 +74,10 @@ export async function GET(req: NextRequest) {
       .not('full_name', 'is', null);
 
     if (userLeague.min === 0) {
-      // Scholar: include users with 0 monthly points regardless of month
-      leaderboardQuery = leaderboardQuery.lte('monthly_points', leagueMax);
+      // Scholar: include users active this month, OR users who have 0/null points regardless of month
+      leaderboardQuery = leaderboardQuery
+        .lte('monthly_points', leagueMax)
+        .or(`monthly_points_month.eq.${currentMonth},monthly_points.eq.0,monthly_points.is.null`);
     } else {
       leaderboardQuery = leaderboardQuery
         .eq('monthly_points_month', currentMonth)
@@ -104,7 +106,7 @@ export async function GET(req: NextRequest) {
         .order('total_points', { ascending: false });
       friends = (data || []).map((f: any) => ({
         ...f,
-        monthly_points: f.monthly_points_month === currentMonth ? (f.monthly_points || 0) : 0,
+        monthly_points: f.monthly_points_month === currentMonth ? (f.monthly_points || 0) : getResetPoints(f.monthly_points || 0),
       }));
     }
 
