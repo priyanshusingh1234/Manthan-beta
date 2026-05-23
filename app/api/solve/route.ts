@@ -140,6 +140,7 @@ export async function POST(req: Request) {
             isCorrect = correctOpt !== null && selectedOption === correctOpt;
         }
         const questionPoints = q.points || 0;
+        const isMcqQuestion = q.question_type !== 'match';
 
         // 4. Update User Points
         let userPointsChange = 0;
@@ -192,7 +193,7 @@ export async function POST(req: Request) {
                 }
             } else {
                 // Wrong answer in challenge
-                const calculatedPenalty = currentPoints > 0 ? Math.floor(questionPoints / 5) : 0;
+                const calculatedPenalty = isMcqQuestion && currentPoints > 0 ? 1 : 0;
                 userPointsChange = -calculatedPenalty;
                 pointsChangeDisplay = -calculatedPenalty;
 
@@ -225,9 +226,9 @@ export async function POST(req: Request) {
                     // War mode: no wrong-answer penalty
                     userPointsChange = 0;
                     pointsChangeDisplay = 0;
-                } else if (currentPoints > 0) {
-                    // Regular feed: points÷5 penalty
-                    const calculatedPenalty = Math.floor(questionPoints / 5);
+                } else if (isMcqQuestion && currentPoints > 0) {
+                    // Regular feed MCQ: fixed -1 penalty
+                    const calculatedPenalty = 1;
                     userPointsChange = -calculatedPenalty;
                     pointsChangeDisplay = -calculatedPenalty;
                 }

@@ -1060,7 +1060,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 <div className="flex items-center gap-2">
                     {/* Penalty Badge */}
                     <div className="hidden sm:flex items-center gap-1 text-gray-500 dark:text-slate-400 px-3 py-1.5 rounded-full border border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 text-xs font-medium cursor-help" title="Penalty if answered incorrectly">
-                        <span>- {Math.floor((question.points || 0) / 5)} pts if wrong</span>
+                        <span>-1 pt if wrong</span>
                     </div>
 
                     {/* Reward Badge */}
@@ -1069,6 +1069,12 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     </div>
                 </div>
             </div>
+
+            {question.question_type !== 'match' && (
+                <div className="mt-3 mb-4 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/90 dark:bg-rose-950/40 px-4 py-2.5 text-sm font-semibold text-rose-700 dark:text-rose-300">
+                    ⚠️ Negative marking is active: -1 point for every wrong MCQ answer.
+                </div>
+            )}
 
             {/* Main Card */}
             <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 sm:p-12 shadow-sm border border-gray-200 dark:border-slate-800 relative overflow-hidden">
