@@ -5,6 +5,8 @@ import { createNotification } from "@/lib/createNotification";
 import { upsertProfile } from "@/lib/profiles";
 import { getSelectedWarMemberIds } from "@/lib/warRoster";
 
+const WRONG_ANSWER_PENALTY = 1;
+
 async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
     if (!authHeader) return null;
     try {
@@ -140,6 +142,7 @@ export async function POST(req: Request) {
             isCorrect = correctOpt !== null && selectedOption === correctOpt;
         }
         const questionPoints = q.points || 0;
+        const hasNegativeMarking = q.question_type !== 'match';
 
         // 4. Update User Points
         let userPointsChange = 0;
@@ -192,7 +195,7 @@ export async function POST(req: Request) {
                 }
             } else {
                 // Wrong answer in challenge
-                const calculatedPenalty = currentPoints > 0 ? Math.floor(questionPoints / 5) : 0;
+                const calculatedPenalty = hasNegativeMarking && currentPoints > 0 ? WRONG_ANSWER_PENALTY : 0;
                 userPointsChange = -calculatedPenalty;
                 pointsChangeDisplay = -calculatedPenalty;
 
@@ -225,9 +228,9 @@ export async function POST(req: Request) {
                     // War mode: no wrong-answer penalty
                     userPointsChange = 0;
                     pointsChangeDisplay = 0;
-                } else if (currentPoints > 0) {
-                    // Regular feed: points÷5 penalty
-                    const calculatedPenalty = Math.floor(questionPoints / 5);
+                } else if (hasNegativeMarking && currentPoints > 0) {
+                    // Regular feed MCQ: fixed -1 penalty
+                    const calculatedPenalty = WRONG_ANSWER_PENALTY;
                     userPointsChange = -calculatedPenalty;
                     pointsChangeDisplay = -calculatedPenalty;
                 }
