@@ -22,7 +22,7 @@ const CHAPTERS = [
     title: 'The French Revolution',
     subject: 'History · Chapter 1',
     grade: 'Class 9',
-    emoji: '🇫🇷',
+    emoji: '⚔️',
     color: '#8b5cf6',
     bgLight: '#ede9fe',
     acts: 5,

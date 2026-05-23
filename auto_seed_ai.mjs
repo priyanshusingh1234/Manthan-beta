@@ -11,19 +11,19 @@ dotenv.config({ path: '.env.local' });
 // ─────────────────────────────────────────────────────────────
 const SYLLABUS = [
   {
-    class_grade: '9',
+    class_grade: '8',
     subject: 'English',
     chapters: [
-      'The Fun They Had',
-      'The Road Not Taken',
-      'The Sound of Music',
-      'Wind',
-      'The Little Girl',
-      'A Truly Beautiful Mind',
-      'The Legend of the Northland',
-      'My Childhood',
-      'No Men Are Foreign',
-      'The Beggar',
+      'The Best Christmas Present in the World',
+      'The Tsunami',
+      'Glimpses of the Past',
+      'Bepin Choudhury\'s Lapse of Memory',
+      'The Summit Within',
+      'This is Jody\'s Fawn',
+      'A Visit to Cambridge',
+      'A Short Monsoon Diary',
+      'The Great Stone Face - I',
+      'The Great Stone Face - II'
     ],
   },
 ];
@@ -51,8 +51,10 @@ const model = genAI.getGenerativeModel({
           title:         { type: SchemaType.STRING },
           options:       { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
           correctOption: { type: SchemaType.INTEGER },
+          hint:          { type: SchemaType.STRING },
+          explanation:   { type: SchemaType.STRING },
         },
-        required: ['title', 'options', 'correctOption'],
+        required: ['title', 'options', 'correctOption', 'hint', 'explanation'],
       },
     },
   },
@@ -109,7 +111,7 @@ async function run() {
 
       console.log(`\n🧠 [${i + 1}/${block.chapters.length}] Generating 50 questions for: "${chapterName}"...`);
 
-      const prompt = `Generate 50 high-quality, academic multiple-choice questions for Class ${block.class_grade} ${block.subject}, specifically focusing on the chapter "${chapterName}". Each question must have exactly 4 options and indicate the correct option index (0 to 3). Make the questions varied in difficulty (easy, moderate, hard) and ensure they are accurate and relevant to the NCERT curriculum.`;
+      const prompt = `Generate 50 high-quality, academic multiple-choice questions for Class ${block.class_grade} ${block.subject}, specifically focusing on the chapter "${chapterName}". Each question must have exactly 4 options and indicate the correct option index (0 to 3). Include a helpful "hint" to guide the student, and a detailed "explanation" for why the answer is correct. Make the questions varied in difficulty (easy, moderate, hard) and ensure they are accurate and relevant to the NCERT curriculum.`;
 
       let success = false;
       let retries = 0;
@@ -133,6 +135,8 @@ async function run() {
               difficulty:    'moderate',
               options:       q.options,
               correct_option: q.correctOption,
+              description:   q.explanation,
+              hint:          q.hint,
               image_path:    null,
               image_url:     null,
             });

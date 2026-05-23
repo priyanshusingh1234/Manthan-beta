@@ -21,12 +21,15 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
         }
 
+        const url = new URL(req.url);
+        const chapter = url.searchParams.get('chapter') || 'nationalism';
+
         const { data: userResp } = await supabaseAdmin.auth.admin.getUserById(userId);
         const userMeta = userResp?.user?.user_metadata || {};
         
         return NextResponse.json({ 
             success: true, 
-            unlockedLevel: Number(userMeta.gauntletLevel_nationalism) || 1 
+            unlockedLevel: Number(userMeta[`gauntletLevel_${chapter}`]) || 1 
         });
     } catch (err: any) {
         return NextResponse.json({ error: 'Failed' }, { status: 500 });
@@ -41,12 +44,12 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
         }
 
-        const { unlockedLevel } = await req.json();
+        const { unlockedLevel, chapter = 'nationalism' } = await req.json();
 
         const { data: userResp } = await supabaseAdmin.auth.admin.getUserById(userId);
         const userMeta = userResp?.user?.user_metadata || {};
 
-        const updatedMeta = { ...userMeta, gauntletLevel_nationalism: unlockedLevel };
+        const updatedMeta = { ...userMeta, [`gauntletLevel_${chapter}`]: unlockedLevel };
         await supabaseAdmin.auth.admin.updateUserById(userId, { user_metadata: updatedMeta });
 
         // Backup to profiles
