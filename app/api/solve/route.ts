@@ -5,6 +5,8 @@ import { createNotification } from "@/lib/createNotification";
 import { upsertProfile } from "@/lib/profiles";
 import { getSelectedWarMemberIds } from "@/lib/warRoster";
 
+const WRONG_ANSWER_PENALTY = 1;
+
 async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
     if (!authHeader) return null;
     try {
@@ -193,7 +195,7 @@ export async function POST(req: Request) {
                 }
             } else {
                 // Wrong answer in challenge
-                const calculatedPenalty = hasNegativeMarking && currentPoints > 0 ? 1 : 0;
+                const calculatedPenalty = hasNegativeMarking && currentPoints > 0 ? WRONG_ANSWER_PENALTY : 0;
                 userPointsChange = -calculatedPenalty;
                 pointsChangeDisplay = -calculatedPenalty;
 
@@ -228,7 +230,7 @@ export async function POST(req: Request) {
                     pointsChangeDisplay = 0;
                 } else if (hasNegativeMarking && currentPoints > 0) {
                     // Regular feed MCQ: fixed -1 penalty
-                    const calculatedPenalty = 1;
+                    const calculatedPenalty = WRONG_ANSWER_PENALTY;
                     userPointsChange = -calculatedPenalty;
                     pointsChangeDisplay = -calculatedPenalty;
                 }
