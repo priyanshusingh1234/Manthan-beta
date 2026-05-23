@@ -50,8 +50,28 @@ export default function DailyEggDrop() {
         setPhase('cracking');
         await safeHaptic(ImpactStyle.Heavy);
 
-        // Fetch question while crack animation plays
-        const { data } = await supabase.from('questions').select('*').limit(100);
+        // Fetch user class first
+        const { data: { user } } = await supabase.auth.getUser();
+        let userClass = null;
+        if (user) {
+            const { data: profile } = await supabase.from('profiles').select('class').eq('id', user.id).single();
+            if (profile) userClass = profile.class;
+        }
+
+        // Fetch question based on class while crack animation plays
+        let query = supabase.from('questions').select('*');
+        if (userClass) {
+            query = query.eq('class', userClass);
+        }
+        
+        let { data } = await query.limit(100);
+        
+        // Fallback if no questions for user's class
+        if (!data || data.length === 0) {
+            const fallback = await supabase.from('questions').select('*').limit(100);
+            data = fallback.data;
+        }
+
         if (data && data.length > 0) {
             setQuestion(data[Math.floor(Math.random() * data.length)]);
         }
@@ -205,7 +225,7 @@ export default function DailyEggDrop() {
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-                            className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl p-6 pb-10 shadow-2xl"
+                            className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl p-6 pb-28 shadow-2xl"
                             style={{ maxHeight: '88vh', overflowY: 'auto' }}
                         >
                             {/* Handle bar */}
@@ -239,9 +259,16 @@ export default function DailyEggDrop() {
                                 </div>
                             ) : (
                                 <div className="space-y-5">
-                                    <p className="text-base font-semibold text-slate-800 dark:text-slate-100 leading-snug">
-                                        {question.title}
-                                    </p>
+                                    <div>
+                                        <p className="text-base font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+                                            {question.title}
+                                        </p>
+                                        {(question.description || question.desc) && (
+                                            <p className="mt-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
+                                                {question.description || question.desc}
+                                            </p>
+                                        )}
+                                    </div>
 
                                     <div className="space-y-2.5">
                                         {question.options?.map((opt: string, idx: number) => {
