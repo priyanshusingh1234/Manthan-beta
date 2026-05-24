@@ -230,6 +230,8 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                                 title: params.title,
                                                 clickAction: isDuel ? 'duel_challenge' : 'OPEN_APP',
                                                 sound: channelId === 'duels' ? 'default' : 'default',
+                                                defaultSound: true,
+                                                defaultVibrateTimings: true,
                                                 tag: params.type,
                                                 notificationCount: 1,
                                                 visibility: 'public',
