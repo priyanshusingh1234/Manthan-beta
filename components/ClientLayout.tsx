@@ -613,7 +613,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     return () => observer.disconnect();
   }, []);
 
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const hasToken = Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+        if (hasToken) return true;
+      } catch (e) {
+        // ignore
+      }
+    }
+    return null;
+  });
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   useEffect(() => {
