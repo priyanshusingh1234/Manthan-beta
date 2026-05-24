@@ -274,14 +274,19 @@ export default function ChatListPage() {
 }
 
 function formatPreview(content: string, type?: string) {
-  if (type === 'image' || content.match(/\.(jpg|jpeg|png|webp|gif|avif)($|\?)/i)) return '📷 Photo';
-  if (content.startsWith('__CALL_ENDED__')) return '📞 Call ended';
-  if (content.startsWith('> Replying to **')) {
-    const parts = content.split('\n\n');
+  let text = content;
+  if (text.includes('|||META|||')) {
+    text = text.split('|||META|||')[0];
+  }
+  
+  if (type === 'image' || text.match(/\.(jpg|jpeg|png|webp|gif|avif)($|\?)/i)) return '📷 Photo';
+  if (text.startsWith('__CALL_ENDED__')) return '📞 Call ended';
+  if (text.startsWith('> Replying to **')) {
+    const parts = text.split('\n\n');
     const replyText = parts.slice(1).join(' ').trim();
     return replyText ? `↩ ${replyText}` : 'Replied to a message';
   }
-  return content;
+  return text;
 }
 
 const ChatCard = memo(function ChatCard({ room, onClick, user, index = 0 }: { room: ChatRoom; onClick: () => void; user: any; index?: number }) {
