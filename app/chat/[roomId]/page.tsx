@@ -6,7 +6,7 @@ import Image from 'next/image';
 import {
   ArrowLeft, MoreVertical, Send, Image as ImageIcon, CheckCheck, Check,
   Loader2, Trash2, Reply, X, Ban, Phone, Video, PhoneOff, Mic, MicOff,
-  VideoOff, Copy, MessageSquare, RefreshCcw, Volume2, Ear
+  VideoOff, Copy, MessageSquare, RefreshCcw, Volume2, Ear, Edit2, Smile
 } from 'lucide-react';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { useCallContext } from '@/components/CallProvider';
@@ -74,6 +74,7 @@ const MessageItem = memo(function MessageItem({
   onReply: (msg: Message) => void;
   prevMsg?: Message;
   onImageClick: (url: string, msgType: string, msgId: string, isSender: boolean) => void;
+  onReaction: (msgId: string, emoji: string) => void;
 }) {
   const isMe = msg.sender_id === user?.id;
   const showDate = !prevMsg || format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(prevMsg.created_at), 'yyyy-MM-dd');
@@ -159,7 +160,15 @@ const MessageItem = memo(function MessageItem({
     );
   }
 
-  let replyAuthor = '', replyPreview = '', mainContent = msg.content;
+  let rawContent = msg.content;
+  let meta: any = {};
+  if (rawContent.includes('|||META|||')) {
+    const parts = rawContent.split('|||META|||');
+    rawContent = parts[0];
+    try { meta = JSON.parse(parts[1]); } catch {}
+  }
+
+  let replyAuthor = '', replyPreview = '', mainContent = rawContent;
   if (mainContent.startsWith('> Replying to **')) {
     const splitIndex = mainContent.indexOf('\n\n');
     if (splitIndex !== -1) {
@@ -269,9 +278,22 @@ const MessageItem = memo(function MessageItem({
                 <Image src={msg.content} alt="Image" fill className="object-cover" unoptimized />
               </div>
             ) : (
-              <p className="px-3.5 py-2 text-[14.5px] leading-[1.5] whitespace-pre-wrap break-words">{mainContent}</p>
+              <p className="px-3.5 py-2 text-[14.5px] leading-[1.5] whitespace-pre-wrap break-words">
+                {mainContent}
+                {meta.edited && <span className="text-[10px] opacity-70 italic ml-1.5 font-medium">(edited)</span>}
+              </p>
             )}
           </div>
+          {meta.reactions && Object.keys(meta.reactions).length > 0 && (
+            <div className={`flex gap-1 mt-1 px-1 ${isMe ? 'justify-end' : 'justify-start'} max-w-[200px] flex-wrap`}>
+              {Object.entries(meta.reactions).map(([emoji, users]) => (
+                <div key={emoji} onClick={() => onReaction(msg.id, emoji)} className={`rounded-full px-2 py-0.5 text-[11px] flex items-center gap-1 border shadow-sm cursor-pointer select-none active:scale-95 transition-transform ${((users as string[]).includes(user?.id)) ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/30 dark:border-indigo-800' : 'bg-white border-slate-200 dark:bg-slate-800 dark:border-slate-700'}`}>
+                  <span>{emoji}</span>
+                  <span className={`font-bold ${((users as string[]).includes(user?.id)) ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}>{Array.isArray(users) ? users.length : 1}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className={`flex items-center gap-1 mt-0.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
             <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{timeStr}</span>
             {isMe && (msg.is_read
@@ -317,6 +339,7 @@ function ChatRoomContent() {
   const [showMultiDeleteSheet, setShowMultiDeleteSheet] = useState(false);
   const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   // Incoming call banner — shown when the OTHER party starts a call while we are
   // already on this chat page (GlobalCallListener skips this room in that case)
   const [incomingCallBanner, setIncomingCallBanner] = useState<{type:'voice'|'video', callerId: string} | null>(null);
@@ -739,10 +762,49 @@ function ChatRoomContent() {
   // ─── Send message ────────────────────────────────────────────────────────
   const [sendError, setSendError] = useState<string | null>(null);
 
+  const handleReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!user) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch('/api/chat/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ messageId, action: 'react', emoji })
+      });
+      // realtime handles the update
+    } catch {}
+  }, [user]);
+
   const handleSend = useCallback(async () => {
     if (!newMessage.trim() || !user || sending) return;
 
     let content = newMessage.trim();
+    if (editingMsg) {
+      setSending(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('Session expired');
+        
+        // Optimistic update
+        const tempMeta = editingMsg.content.includes('|||META|||') ? editingMsg.content.split('|||META|||')[1] : '{}';
+        const parsedMeta = JSON.parse(tempMeta || '{}');
+        parsedMeta.edited = true;
+        setMessages(p => p.map(m => m.id === editingMsg.id ? { ...m, content: `${content}|||META|||${JSON.stringify(parsedMeta)}` } : m));
+        
+        setNewMessage('');
+        setEditingMsg(null);
+        if (inputRef.current) { inputRef.current.style.height = 'auto'; }
+
+        await fetch('/api/chat/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ messageId: editingMsg.id, action: 'edit', newText: content })
+        });
+      } catch {}
+      setSending(false);
+      return;
+    }
     if (replyingTo) {
       let rawPreviewText = replyingTo.content;
       if (rawPreviewText.startsWith('> Replying to **')) {
@@ -1198,17 +1260,46 @@ function ChatRoomContent() {
       {showContextSheet && contextMsg && (
         <>
           <div className="fixed inset-0 bg-black/20 dark:bg-black/50 z-40 backdrop-blur-sm" onClick={() => setShowContextSheet(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-200 overflow-hidden">
-            <div className="w-10 h-1 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mt-3 mb-3" />
-            {/* Message preview */}
-            <div className="px-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <p className="text-[13px] text-slate-500 dark:text-slate-400 truncate">{contextMsg.content.slice(0, 60)}</p>
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-200 overflow-hidden flex flex-col">
+            <div className="w-10 h-1 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mt-3 mb-3 shrink-0" />
+            
+            {/* Reaction picker */}
+            <div className="px-5 pb-3 pt-1 flex justify-between items-center shrink-0 border-b border-slate-100 dark:border-slate-800">
+              {['❤️', '😂', '🔥', '👍', '😢', '😮'].map(emoji => (
+                <button
+                  key={emoji}
+                  onClick={() => {
+                    handleReaction(contextMsg.id, emoji);
+                    setShowContextSheet(false);
+                  }}
+                  className="text-2xl hover:scale-125 transition-transform active:scale-95 p-2 rounded-full bg-slate-50 dark:bg-slate-800"
+                >
+                  {emoji}
+                </button>
+              ))}
             </div>
+            
+            {/* Message preview */}
+            <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <p className="text-[13px] text-slate-500 dark:text-slate-400 truncate">
+                {contextMsg.content.includes('|||META|||') ? contextMsg.content.split('|||META|||')[0].slice(0, 60) : contextMsg.content.slice(0, 60)}
+              </p>
+            </div>
+            <div className="overflow-y-auto max-h-[50vh] shrink-0">
             {[
               { icon: Reply, label: 'Reply', color: 'text-indigo-600', action: () => { setReplyingTo(contextMsg); setShowContextSheet(false); setTimeout(() => inputRef.current?.focus(), 100); } },
+              ...(contextMsg.sender_id === user?.id && contextMsg.message_type === 'text' && !contextMsg.content.startsWith('__CALL_') ? [{
+                icon: Edit2, label: 'Edit', color: 'text-indigo-600', action: () => {
+                  setEditingMsg(contextMsg);
+                  setNewMessage(contextMsg.content.includes('|||META|||') ? contextMsg.content.split('|||META|||')[0] : contextMsg.content);
+                  setShowContextSheet(false);
+                  setTimeout(() => inputRef.current?.focus(), 100);
+                }
+              }] : []),
               {
                 icon: Copy, label: 'Copy', color: 'text-slate-700 dark:text-slate-200', action: () => {
-                  navigator.clipboard.writeText(contextMsg.content).catch(() => {});
+                  const raw = contextMsg.content.includes('|||META|||') ? contextMsg.content.split('|||META|||')[0] : contextMsg.content;
+                  navigator.clipboard.writeText(raw).catch(() => {});
                   setShowContextSheet(false);
                 }
               },
@@ -1246,6 +1337,7 @@ function ChatRoomContent() {
               </button>
             ))}
             <div style={{ height: 'env(safe-area-inset-bottom)' }} />
+            </div>
           </div>
         </>
       )}
@@ -1313,9 +1405,24 @@ function ChatRoomContent() {
               <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mb-0.5">
                 Replying to {replyingTo.sender_id === user?.id ? 'yourself' : participant?.full_name}
               </p>
-              <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate">{replyingTo.content.slice(0, 50)}</p>
+              <p className="text-[12px] text-slate-500 dark:text-slate-400 truncate">
+                {replyingTo.content.includes('|||META|||') ? replyingTo.content.split('|||META|||')[0].slice(0, 50) : replyingTo.content.slice(0, 50)}
+              </p>
             </div>
             <button onClick={() => setReplyingTo(null)} className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+              <X className="w-4 h-4 text-slate-500" />
+            </button>
+          </div>
+        )}
+        {editingMsg && (
+          <div className="flex items-center gap-3 px-4 pt-2.5 pb-0">
+            <div className="flex-1 border-l-[3px] border-indigo-500 pl-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 rounded-r-xl min-w-0 flex items-center gap-2">
+              <Edit2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <p className="text-[12px] font-bold text-indigo-600 dark:text-indigo-400 mb-0">
+                Editing Message
+              </p>
+            </div>
+            <button onClick={() => { setEditingMsg(null); setNewMessage(''); }} className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
               <X className="w-4 h-4 text-slate-500" />
             </button>
           </div>
