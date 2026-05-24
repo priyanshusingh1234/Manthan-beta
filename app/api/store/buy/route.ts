@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
         const { itemId, price } = body;
 
         const validItems: Record<string, string> = {
+            'streak_freeze': '',
             'avatar_glow': '',
             'banner_cyberpunk': '/banners/cyberpunk.png',
             'banner_library': '/banners/library.png',
@@ -48,30 +49,34 @@ export async function POST(req: NextRequest) {
 
         const meta = user.user_metadata || {};
         const cosmetics = Array.isArray(meta.cosmetics) ? meta.cosmetics : [];
-        if (cosmetics.includes(itemId)) {
+        if (itemId !== 'streak_freeze' && cosmetics.includes(itemId)) {
             return NextResponse.json({ error: 'Already owned' }, { status: 400 });
         }
 
-        // Deduct points & add cosmetic
+        // Deduct points & add cosmetic/item
         const newPoints = currentPoints - price;
-        const newCosmetics = [...cosmetics, itemId];
+        const newCosmetics = itemId !== 'streak_freeze' ? [...cosmetics, itemId] : cosmetics;
 
         // 1. Update Auth Metadata
-        const metaUpdate: any = { ...meta, cosmetics: newCosmetics, totalPoints: newPoints };
+        const metaUpdate: any = { ...meta, totalPoints: newPoints };
         
-        // Auto-equip banner
-        if (itemId.startsWith('banner_')) {
-            metaUpdate.banner_url = validItems[itemId];
-            
-            // Unequip other banners from cosmetics list to keep it clean (optional, but good)
-            metaUpdate.cosmetics = newCosmetics.filter(id => !id.startsWith('banner_') || id === itemId);
+        if (itemId === 'streak_freeze') {
+            metaUpdate.streakFreezes = (Number(meta.streakFreezes) || 0) + 1;
+            metaUpdate.cosmetics = cosmetics; // unchanged
+        } else {
+            metaUpdate.cosmetics = newCosmetics;
+            // Auto-equip banner
+            if (itemId.startsWith('banner_')) {
+                metaUpdate.banner_url = validItems[itemId];
+                metaUpdate.cosmetics = newCosmetics.filter(id => !id.startsWith('banner_') || id === itemId);
+            }
         }
 
         await supabaseAdmin.auth.admin.updateUserById(user.id, {
             user_metadata: metaUpdate
         });
 
-        // 2. Update Profile Table
+        // 2. Update Profile Table (we don't sync streakFreezes to a separate DB column to avoid schema errors, keeping it in auth metadata)
         await supabaseAdmin
             .from('profiles')
             .update({ 
@@ -80,7 +85,7 @@ export async function POST(req: NextRequest) {
             })
             .eq('id', user.id);
 
-        return NextResponse.json({ success: true, newPoints, cosmetics: metaUpdate.cosmetics });
+        return NextResponse.json({ success: true, newPoints, cosmetics: metaUpdate.cosmetics, streakFreezes: metaUpdate.streakFreezes });
 
     } catch (err: any) {
         console.error('[Store Buy Error]', err);

@@ -291,6 +291,18 @@ export default function StreakLostOverlay() {
               </button>
 
               <button
+                onClick={() => { close(); setTimeout(() => router.push('/store'), 500); }}
+                style={{
+                  width: '100%', padding: '13px', borderRadius: 16, border: '1px solid rgba(6,182,212,0.3)',
+                  background: 'rgba(6,182,212,0.1)',
+                  color: '#22d3ee', fontWeight: 800, fontSize: 14,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                🧊 Protect it next time (Store)
+              </button>
+
+              <button
                 onClick={close}
                 style={{
                   width: '100%', padding: '13px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)',

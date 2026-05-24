@@ -311,9 +311,17 @@ export async function POST(req: Request) {
 
             // If they missed yesterday (last solve wasn't yesterday) → break streak
             if (dbLastStreakAt && dbDailySolveDate !== yesterdayStr && dbDailySolveDate !== todayStr) {
-                // Save the streak they had before losing it
-                lastStreakCount = dbStreakCount;
-                newStreakCount = 0; // streak broken
+                const currentFreezes = Number(userMeta.streakFreezes) || 0;
+                if (currentFreezes > 0) {
+                    // Utility: They missed a day, but they have a streak freeze!
+                    // Consume 1 freeze and protect their streak.
+                    userMeta.streakFreezes = currentFreezes - 1;
+                    // Do NOT reset newStreakCount
+                } else {
+                    // Save the streak they had before losing it
+                    lastStreakCount = dbStreakCount;
+                    newStreakCount = 0; // streak broken
+                }
             }
         }
 

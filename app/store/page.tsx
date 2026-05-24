@@ -16,6 +16,13 @@ interface StoreItem {
 
 const STORE_ITEMS: StoreItem[] = [
     {
+        id: 'streak_freeze',
+        name: 'Streak Freeze',
+        description: 'Forgot to practice? This automatically protects your streak from breaking for one missed day.',
+        type: 'utility',
+        price: 200,
+    },
+    {
         id: 'avatar_glow',
         name: 'Mystic Avatar Glow',
         description: 'Adds a glowing, pulsing aura around your avatar on all profiles.',
@@ -177,6 +184,7 @@ export default function StorePage() {
     const [purchasing, setPurchasing] = useState<string | null>(null);
     const [userProfile, setUserProfile] = useState<any>(null);
     const [previewItem, setPreviewItem] = useState<StoreItem | null>(null);
+    const [streakFreezes, setStreakFreezes] = useState<number>(0);
     
     // Dialog state
     const [dialogState, setDialogState] = useState<{isOpen: boolean, item: StoreItem | null, isSuccess: boolean, message: string}>({
@@ -205,6 +213,9 @@ export default function StorePage() {
                     
                     if (meta.cosmetics) {
                         setCosmetics(meta.cosmetics);
+                    }
+                    if (meta.streakFreezes) {
+                        setStreakFreezes(Number(meta.streakFreezes) || 0);
                     }
                 }
             }
@@ -260,11 +271,14 @@ export default function StorePage() {
             if (data.success) {
                 setPoints(data.newPoints);
                 setCosmetics(data.cosmetics);
+                if (data.streakFreezes !== undefined) {
+                    setStreakFreezes(data.streakFreezes);
+                }
                 setDialogState({
                     isOpen: true,
                     item,
                     isSuccess: true,
-                    message: "Successfully purchased! Your avatar now has the mystic glow."
+                    message: item.id === 'streak_freeze' ? "Successfully purchased! Your streak is now protected." : "Successfully purchased! Your avatar now has the mystic glow."
                 });
             } else {
                 setDialogState({
@@ -341,9 +355,16 @@ export default function StorePage() {
 
                 {/* Categories */}
                 <div className="flex-1">
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white mb-5 flex items-center gap-2 ml-2">
-                        <Sparkles className="w-5 h-5 text-indigo-500 drop-shadow-sm" /> Premium Cosmetics
-                    </h3>
+                    <div className="flex items-center justify-between mb-5 ml-2">
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-indigo-500 drop-shadow-sm" /> Store Items
+                        </h3>
+                        {streakFreezes > 0 && (
+                            <div className="px-3 py-1 bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 rounded-xl font-bold text-sm flex items-center gap-1.5">
+                                🧊 {streakFreezes} {streakFreezes === 1 ? 'Freeze' : 'Freezes'} Owned
+                            </div>
+                        )}
+                    </div>
                     <div className="grid grid-cols-1 gap-5">
                         {STORE_ITEMS.map(item => (
                             <div key={item.id} className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 sm:p-8 border-2 border-slate-100 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center gap-6 transition-all hover:border-indigo-100 dark:hover:border-indigo-900 hover:shadow-xl relative overflow-hidden group">
@@ -352,6 +373,10 @@ export default function StorePage() {
                                 {item.type === 'banner' ? (
                                     <div className="relative shrink-0 w-full sm:w-40 h-24 sm:h-28 rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-shadow">
                                         <img src={item.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Preview" />
+                                    </div>
+                                ) : item.type === 'utility' ? (
+                                    <div className="relative shrink-0 w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center bg-gradient-to-br from-cyan-100 to-blue-200 dark:from-cyan-900/40 dark:to-blue-900/40 rounded-2xl group-hover:scale-105 transition-transform duration-500 shadow-inner">
+                                        <div className="text-5xl drop-shadow-md">🧊</div>
                                     </div>
                                 ) : (
                                     <div className="relative shrink-0 w-24 h-24 sm:w-28 sm:h-28 group-hover:scale-105 transition-transform duration-500">
@@ -366,13 +391,15 @@ export default function StorePage() {
                                     <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 font-medium leading-relaxed">{item.description}</p>
                                     
                                     <div className="flex w-full sm:w-auto gap-3">
-                                        <button
-                                            onClick={() => setPreviewItem(item)}
-                                            className="px-4 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold transition-colors active:scale-95 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700"
-                                            title="Live Preview"
-                                        >
-                                            <Eye className="w-5 h-5" />
-                                        </button>
+                                        {item.type !== 'utility' && (
+                                            <button
+                                                onClick={() => setPreviewItem(item)}
+                                                className="px-4 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold transition-colors active:scale-95 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700"
+                                                title="Live Preview"
+                                            >
+                                                <Eye className="w-5 h-5" />
+                                            </button>
+                                        )}
                                         
                                         <button
                                             onClick={() => triggerBuyDialog(item)}
