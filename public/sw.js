@@ -31,6 +31,11 @@ self.addEventListener('notificationclick', function (event) {
         if (event.action === 'decline' || event.action === 'decline_duel') {
             // If they clicked decline, we just let the notification close.
             return;
+        } else if (event.action === 'reply') {
+            if (urlToOpen.includes('/chat/')) {
+                const separator = urlToOpen.includes('?') ? '&' : '?';
+                urlToOpen += `${separator}reply=1`;
+            }
         } else if (event.action === 'answer') {
             // If it's a chat/call URL, auto-accept it
             if (urlToOpen.includes('/chat/')) {

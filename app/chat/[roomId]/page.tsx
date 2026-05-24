@@ -605,6 +605,10 @@ function ChatRoomContent() {
             }
           }
           
+          if (searchParams.get('reply') === '1') {
+            setTimeout(() => inputRef.current?.focus(), 300);
+          }
+          
           await syncBlockStatus();
           setTimeout(() => scrollToBottom('auto'), 120);
       } catch (err) {

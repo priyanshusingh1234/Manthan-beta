@@ -96,6 +96,10 @@ export async function createNotification(params: CreateNotificationParams): Prom
                             { action: 'answer', title: 'Answer' },
                             { action: 'decline', title: 'Decline' }
                         ]
+                    } : params.type === 'chat_message' ? {
+                        actions: [
+                            { action: 'reply', title: 'Reply' }
+                        ]
                     } : {})
                 });
 
@@ -170,6 +174,10 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         actionsData['action_1_url']   = params.href || '/duels';
                                         actionsData['action_2_id']    = 'decline_duel';
                                         actionsData['action_2_title'] = '❌ Decline';
+                                    } else if (params.type === 'chat_message') {
+                                        actionsData['action_1_id']    = 'reply';
+                                        actionsData['action_1_title'] = 'Reply';
+                                        actionsData['action_1_url']   = params.href || '/';
                                     }
 
                                     await firebaseAdmin.messaging().send({

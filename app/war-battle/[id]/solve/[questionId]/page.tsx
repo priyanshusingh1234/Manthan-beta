@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Capacitor } from "@capacitor/core";
 import { Clock, Target, Shield, CheckCircle2, XCircle, Loader2, Swords, ArrowLeft, Zap, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { useCorrectSound } from "@/hooks/useCorrectSound";
 
 async function nativeHaptic(kind: "light" | "medium" = "light") {
     if (!Capacitor.isNativePlatform()) return;
@@ -32,6 +33,7 @@ export default function WarSolvePage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [result, setResult] = useState<{ isCorrect: boolean; pointsChange: number; newTotal: number; correctOption: number } | null>(null);
     const [startedAt] = useState(() => new Date().toISOString());
+    const playCorrect = useCorrectSound();
 
     // Fetch question + war details together
     useEffect(() => {
@@ -93,6 +95,9 @@ export default function WarSolvePage() {
             const data = await res.json();
             if (!res.ok) { setError(data.error || "Failed to submit."); setIsSubmitting(false); return; }
             setResult(data);
+            if (data?.isCorrect) {
+                playCorrect();
+            }
             nativeHaptic(data?.isCorrect ? "medium" : "light");
         } catch (e: any) {
             setError("Network error: " + e.message);
