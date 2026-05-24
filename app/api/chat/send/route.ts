@@ -11,11 +11,7 @@ export async function POST(req: NextRequest) {
         const token = auth.replace(/^Bearer\s+/i, '');
         if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const anon = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-        const { data: { user }, error: authErr } = await anon.auth.getUser(token);
+        const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
         if (authErr || !user) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
         const { roomId, content, messageType = 'text' } = await req.json();

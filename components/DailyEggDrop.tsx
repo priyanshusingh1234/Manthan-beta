@@ -22,11 +22,13 @@ export default function DailyEggDrop() {
     const [result, setResult] = useState<'won' | 'lost' | null>(null);
 
     useEffect(() => {
-        const checkEligibility = () => {
+        const checkEligibility = async () => {
             const now = new Date();
             const hour = now.getHours();
+            if (hour < 18) return;
             const dateStr = now.toISOString().split('T')[0];
-            if (hour >= 18 && !localStorage.getItem(`daily_egg_claimed_${dateStr}`)) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user && user.user_metadata?.last_egg_claim_date !== dateStr) {
                 setIsEligible(true);
             }
         };
@@ -59,21 +61,23 @@ export default function DailyEggDrop() {
         }
 
         // Fetch question based on class while crack animation plays
-        let query = supabase.from('questions').select('*');
+        let query = supabase.from('questions').select('id');
         if (userClass) {
-            query = query.eq('class', userClass);
+            query = query.eq('class_grade', userClass); // Fixed 'class' to 'class_grade' which is the actual column name based on feed/route.ts
         }
         
-        let { data } = await query.limit(100);
+        let { data: idsData } = await query.limit(500);
         
         // Fallback if no questions for user's class
-        if (!data || data.length === 0) {
-            const fallback = await supabase.from('questions').select('*').limit(100);
-            data = fallback.data;
+        if (!idsData || idsData.length === 0) {
+            const fallback = await supabase.from('questions').select('id').limit(500);
+            idsData = fallback.data;
         }
 
-        if (data && data.length > 0) {
-            setQuestion(data[Math.floor(Math.random() * data.length)]);
+        if (idsData && idsData.length > 0) {
+            const randomId = idsData[Math.floor(Math.random() * idsData.length)].id;
+            const { data: qData } = await supabase.from('questions').select('*').eq('id', randomId).single();
+            setQuestion(qData);
         }
 
         setTimeout(() => setPhase('question'), 600);
@@ -82,33 +86,39 @@ export default function DailyEggDrop() {
     const submitAnswer = async (index: number) => {
         if (!question || selectedOption !== null) return;
         setSelectedOption(index);
-        const isCorrect = index === question.correct_option;
-        setResult(isCorrect ? 'won' : 'lost');
-
-        await safeHaptic(isCorrect ? ImpactStyle.Medium : ImpactStyle.Light);
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            const pts = isCorrect ? 5 : -1;
-            const { data: profile } = await supabase.from('profiles').select('total_points').eq('id', user.id).single();
-            if (profile) {
-                await supabase.from('profiles')
-                    .update({ total_points: Math.max(0, profile.total_points + pts) })
-                    .eq('id', user.id);
-            }
-        }
-
-        setTimeout(() => {
-            dismiss();
-            toast(isCorrect ? '🥚 +5 pts from the Daily Egg!' : '💀 -1 pt from the Daily Egg.', {
-                style: { fontWeight: 700 }
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        
+        try {
+            const res = await fetch('/api/daily-egg/claim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({ questionId: question.id, selectedOptionIndex: index })
             });
-        }, 2500);
+            
+            if (res.ok) {
+                const json = await res.json();
+                setResult(json.isCorrect ? 'won' : 'lost');
+                await safeHaptic(json.isCorrect ? ImpactStyle.Medium : ImpactStyle.Light);
+                
+                setTimeout(() => {
+                    dismiss();
+                    toast(json.isCorrect ? `🥚 +${json.ptsAwarded} pts from the Daily Egg!` : `💀 ${json.ptsAwarded} pt from the Daily Egg.`, {
+                        style: { fontWeight: 700 }
+                    });
+                }, 2500);
+            } else {
+                setResult('lost');
+                setTimeout(() => dismiss(), 2000);
+            }
+        } catch (e) {
+            setResult('lost');
+            setTimeout(() => dismiss(), 2000);
+        }
     };
 
     const dismiss = () => {
-        const dateStr = new Date().toISOString().split('T')[0];
-        localStorage.setItem(`daily_egg_claimed_${dateStr}`, 'true');
         setPhase('done');
         setIsEligible(false);
     };
