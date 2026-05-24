@@ -70,8 +70,21 @@ export default function Home() {
       <HomeSignPrompt />
       <DailyPlannerModal />
 
-
-
+      {/* Sliding Announcement Banner */}
+      <Link href="/poetry-competition" className="block w-full bg-gradient-to-r from-rose-500 to-purple-600 py-3 overflow-hidden shadow-lg border-b border-white/10 relative z-10">
+        <div 
+          className="whitespace-nowrap text-white font-bold text-sm sm:text-base inline-block"
+          style={{ animation: 'marquee 25s linear infinite' }}
+        >
+          ✨ GRAND POETRY COMPETITION - DAY AFTER TOMORROW! Click here to read the rules and participate to win exciting rewards! ✨
+        </div>
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes marquee {
+            0% { transform: translateX(100vw); }
+            100% { transform: translateX(-100%); }
+          }
+        `}} />
+      </Link>
       {/* Main content grid */}
       <main className="mx-auto mt-6 grid max-w-6xl grid-cols-1 gap-6 px-4 pb-28 sm:px-6 lg:grid-cols-3 lg:px-8">
         <div className="lg:col-span-2">
