@@ -11,6 +11,7 @@ import {
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { useCallContext } from '@/components/CallProvider';
 import { format, isToday, isYesterday } from 'date-fns';
+import BadgedName from '@/components/BadgedName';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 interface Message {
@@ -1046,7 +1047,7 @@ function ChatRoomContent() {
               }
             </div>
             <div className="flex-1 min-w-0 cursor-pointer" onClick={() => participant?.username && router.push(`/user/${participant.username}`)}>
-              <p className="font-bold text-[15px] text-slate-900 dark:text-white truncate leading-tight">{displayName}</p>
+              <BadgedName name={displayName} userId={participant?.user_id} nameClassName="font-bold text-[15px] text-slate-900 dark:text-white leading-tight truncate" />
               <p className="text-[11px] text-slate-400 font-medium">
                 {isTyping ? <span className="text-indigo-500 font-bold animate-pulse">Typing...</span> : isOnline ? '🟢 Online' : 'Tap for info'}
               </p>

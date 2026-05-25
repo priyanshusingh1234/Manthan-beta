@@ -9,11 +9,11 @@ import {
   Loader2,
   Check,
   CheckCheck,
-  MessageCirclePlus,
   ArrowLeft,
 } from 'lucide-react';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { formatDistanceToNow } from 'date-fns';
+import BadgedName from '@/components/BadgedName';
 
 interface ChatRoom {
   id: string;
@@ -222,8 +222,8 @@ export default function ChatListPage() {
                   {(res.avatar_url || res.avatar) ? <Image src={res.avatar_url || res.avatar} alt="Avatar" fill className="object-cover" /> : <div className="h-full w-full flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-400 text-lg">{(res.full_name || res.name)?.[0]?.toUpperCase()}</div>}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-[15px] text-slate-900 dark:text-white truncate">{res.full_name || res.name}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 truncate">@{res.username || 'scholar'}</p>
+                  <BadgedName name={res.full_name || res.name} userId={res.id} nameClassName="font-bold text-[15px] text-slate-900 dark:text-white" />
+                  <p className="text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">@{res.username || 'scholar'}</p>
                 </div>
               </button>
             ))}
@@ -312,7 +312,7 @@ const ChatCard = memo(function ChatCard({ room, onClick, user, index = 0 }: { ro
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-0.5">
-          <h3 className={`text-[15px] truncate pr-2 ${isUnread ? 'font-extrabold text-slate-900 dark:text-white' : 'font-semibold text-slate-800 dark:text-slate-200'}`}>{room.participant.full_name}</h3>
+          <BadgedName name={room.participant.full_name} userId={room.participant.user_id} nameClassName={`text-[15px] truncate pr-2 ${isUnread ? 'font-extrabold text-slate-900 dark:text-white' : 'font-semibold text-slate-800 dark:text-slate-200'}`} className="flex-1 min-w-0" />
           <span className={`text-[11px] shrink-0 font-semibold ${isUnread ? 'text-indigo-500' : 'text-slate-400'}`}>{timeLabel}</span>
         </div>
         <div className="flex items-center justify-between gap-2">

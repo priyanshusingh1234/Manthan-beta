@@ -54,12 +54,11 @@ export default function BadgedName({
 
   return (
     <div className={`flex items-center gap-1.5 flex-wrap min-w-0 ${className}`}>
-      {/* Show admin verified tick BEFORE the name */}
-      {isAdmin && <AdminVerifiedTick />}
       <span className={`${nameClassName} truncate`}>{name}</span>
       
       {/* Container for badges ensuring they stay visible and don't shrink */}
       <div className="flex items-center gap-1 shrink-0">
+        {isAdmin && <AdminVerifiedTick />}
         {isTeacher && <TeacherBadge />}
         {rank === 1 && <GoldBadge />}
         {rank === 2 && <SilverBadge />}
