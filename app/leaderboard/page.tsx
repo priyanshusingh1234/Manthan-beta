@@ -1,4 +1,4 @@
-import { getAllProfiles } from "@/lib/profiles";
+import { getTopStudents } from "@/lib/profiles";
 import BadgedName from "@/components/BadgedName";
 import Link from "next/link";
 import { MapPin, Award } from "lucide-react";
@@ -37,9 +37,7 @@ function AvatarOrInitial({ avatar, name, size, borderClass }: {
 }
 
 export default async function LeaderboardPage() {
-  const allProfiles = await getAllProfiles();
-  
-  const allStudents = allProfiles.filter(p => !p.is_teacher && p.username);
+  const allStudents = await getTopStudents(50);
   
   const students = allStudents
     .map(p => ({
@@ -50,8 +48,7 @@ export default async function LeaderboardPage() {
       totalPoints: p.total_points,
       avatar: p.avatar_url || null,
       cosmetics: p.cosmetics || [],
-    }))
-    .slice(0, 50); // Top 50
+    }));
 
   return (
     <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 pb-24 relative overflow-hidden flex flex-col items-center">

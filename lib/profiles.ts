@@ -177,3 +177,24 @@ export async function getAllProfiles(): Promise<Profile[]> {
     }
     return (data || []) as Profile[];
 }
+
+/**
+ * Fetch Top Students specifically (ignores teachers and limits count).
+ * Prevents over-fetching all users into memory just for the leaderboard.
+ */
+export async function getTopStudents(limit: number = 50): Promise<Profile[]> {
+    const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('is_teacher', false)
+        .not('username', 'is', null)
+        .order('total_points', { ascending: false })
+        .order('id', { ascending: true })
+        .limit(limit);
+
+    if (error) {
+        console.error('[getTopStudents] error:', error.message);
+        return [];
+    }
+    return (data || []) as Profile[];
+}

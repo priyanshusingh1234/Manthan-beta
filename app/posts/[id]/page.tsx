@@ -8,7 +8,7 @@ type Props = { params: { id: string } };
 export async function generateMetadata({ params }: Props): Promise<any> {
     const { data: post } = await supabaseAdmin
         .from('posts')
-        .select('content, image_url, video_url, video_thumbnail, author_id')
+        .select('content, image_url, video_url, video_thumbnail, author_id, profiles(full_name, username)')
         .eq('id', params.id)
         .single();
 
@@ -17,13 +17,10 @@ export async function generateMetadata({ params }: Props): Promise<any> {
     const isVideo = !!post.video_url;
 
     let authorName = 'A Scholar';
-    if (post.author_id) {
-        const { data: profile } = await supabaseAdmin
-            .from('profiles')
-            .select('full_name, username')
-            .eq('id', post.author_id)
-            .maybeSingle();
-        if (profile) authorName = profile.full_name || `@${profile.username}`;
+    // Handle either single object or array response from Supabase joins
+    const profile = Array.isArray(post.profiles) ? post.profiles[0] : post.profiles;
+    if (profile) {
+        authorName = profile.full_name || `@${profile.username}`;
     }
 
     const title = isVideo
