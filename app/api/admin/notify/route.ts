@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Forbidden. Admin access required.' }, { status: 403 });
         }
 
-        const { title, message } = await req.json();
+        const { title, message, redirectUrl } = await req.json();
 
         if (!message?.trim()) {
             return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
                     type: 'points_earned', // High priority alert style
                     title: title?.trim() || 'Admin Announcement',
                     body: message.trim(),
-                    href: '/',
+                    href: redirectUrl?.trim() || '/',
                     actorName: 'Admin'
                 })
             ));

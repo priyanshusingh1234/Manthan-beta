@@ -10,6 +10,7 @@ export default function AdminNotifyPage() {
     const [session, setSession] = useState<any>(null);
     const [title, setTitle] = useState('Admin Announcement');
     const [message, setMessage] = useState('');
+    const [redirectUrl, setRedirectUrl] = useState('/');
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
     const [sentCount, setSentCount] = useState(0);
@@ -38,7 +39,7 @@ export default function AdminNotifyPage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session.access_token}`
                 },
-                body: JSON.stringify({ title, message })
+                body: JSON.stringify({ title, message, redirectUrl })
             });
             
             const data = await res.json();
@@ -107,6 +108,18 @@ export default function AdminNotifyPage() {
                                 onChange={(e) => setMessage(e.target.value)}
                                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 min-h-[120px]"
                                 placeholder="Type your message here..."
+                                disabled={status === 'loading'}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Redirect URL on Click</label>
+                            <input
+                                type="text"
+                                value={redirectUrl}
+                                onChange={(e) => setRedirectUrl(e.target.value)}
+                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm"
+                                placeholder="e.g. /poetry-competition"
                                 disabled={status === 'loading'}
                             />
                         </div>
