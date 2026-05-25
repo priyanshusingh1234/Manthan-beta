@@ -29,20 +29,30 @@ export default function LinkPreview({ url }: { url: string }) {
           if (!postId) throw new Error('Invalid post ID');
 
           const { data: post, error } = await supabase
-            .from('community_posts')
-            .select('content, author_id, image_url, profiles(full_name, avatar_url, is_teacher)')
+            .from('posts')
+            .select('content, author_id, image_url')
             .eq('id', postId)
             .single();
 
           if (error || !post) throw error;
+
+          let authorName = 'Scholar';
+          let authorAvatar = null;
+          if (post.author_id) {
+            const { data: profile } = await supabase.from('profiles').select('full_name, avatar_url').eq('id', post.author_id).maybeSingle();
+            if (profile) {
+              authorName = profile.full_name || 'Scholar';
+              authorAvatar = profile.avatar_url;
+            }
+          }
 
           setData({
             type: 'post',
             title: 'Community Post',
             description: post.content?.slice(0, 80) + '...',
             image: post.image_url,
-            authorName: post.profiles?.full_name || 'Scholar',
-            authorAvatar: post.profiles?.avatar_url,
+            authorName,
+            authorAvatar,
             link: `/posts/${postId}`
           });
         } else if (path.startsWith('/questions/')) {
