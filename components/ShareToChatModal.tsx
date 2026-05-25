@@ -36,12 +36,27 @@ export default function ShareToChatModal({ url, isOpen, onClose }: ShareToChatMo
 
         const { data: otherParticipants } = await supabase
           .from('chat_participants')
-          .select('room_id, user_id, profiles!inner(full_name, avatar_url)')
+          .select('room_id, user_id')
           .in('room_id', roomIds)
           .neq('user_id', user.id);
 
-        if (otherParticipants) {
-          setRooms(otherParticipants);
+        if (otherParticipants && otherParticipants.length > 0) {
+          const userIds = [...new Set(otherParticipants.map(p => p.user_id))];
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url')
+            .in('id', userIds);
+
+          const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+          const joinedRooms = otherParticipants.map(p => ({
+            room_id: p.room_id,
+            user_id: p.user_id,
+            profiles: profileMap.get(p.user_id) || { full_name: 'Unknown', avatar_url: null }
+          }));
+          
+          setRooms(joinedRooms);
+        } else {
+          setRooms([]);
         }
       } catch (err) {
         console.error(err);
