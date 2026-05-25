@@ -7,7 +7,6 @@ import { Filter, SlidersHorizontal, BookOpen, Layers, Target, ChevronDown, Info,
 import { supabase } from '@/lib/supabaseClient';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
 import useSWR from 'swr';
-import { Virtuoso } from 'react-virtuoso';
 
 function normalizeSubject(subject?: string | null) {
     if (!subject) return '';
@@ -250,26 +249,20 @@ export default function FeedPage() {
                                 Showing {filteredQuestions.length} Questions
                             </div>
                             
-                            {/* React Virtuoso for Window Scroll Virtualization */}
-                            <Virtuoso
-                                useWindowScroll
-                                data={filteredQuestions}
-                                overscan={5}
-                                itemContent={(index, q) => (
-                                    <div className="pb-6">
-                                        {q._feedLabel && (
-                                            <div className="text-xs font-black text-slate-500 dark:text-slate-500 mb-2 px-1 flex items-center gap-1.5">
-                                                {q._feedLabel}
-                                            </div>
-                                        )}
-                                        {q.type === 'post' ? (
-                                            <PostCard post={q} currentUserId={currentUserId} showTags={true} />
-                                        ) : (
-                                            <QuestionCard q={q} />
-                                        )}
-                                    </div>
-                                )}
-                            />
+                            {filteredQuestions.map((q: any) => (
+                                <div key={q.id} className="pb-6">
+                                    {q._feedLabel && (
+                                        <div className="text-xs font-black text-slate-500 dark:text-slate-500 mb-2 px-1 flex items-center gap-1.5">
+                                            {q._feedLabel}
+                                        </div>
+                                    )}
+                                    {q.type === 'post' ? (
+                                        <PostCard post={q} currentUserId={currentUserId} showTags={true} />
+                                    ) : (
+                                        <QuestionCard q={q} />
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
