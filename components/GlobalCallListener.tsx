@@ -35,7 +35,21 @@ export default function GlobalCallListener() {
 
   useEffect(() => {
     pathnameRef.current = pathname;
-  }, [pathname]);
+    
+    // Instantly intercept deep links or router navigations with autoAccept=1
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('autoAccept') === '1' && !callCtx.callActive.current) {
+        const match = window.location.pathname.match(/\/chat\/([^?]+)/);
+        if (match && match[1]) {
+           const callType = (params.get('callType') as 'voice'|'video') || 'voice';
+           const cId = params.get('callerId') || '';
+           const cName = params.get('callerName') || 'Scholar';
+           callCtx.startCall(match[1], callType, cId, cName, true);
+        }
+      }
+    }
+  }, [pathname, callCtx]);
 
   const startHapticLoop = () => {
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
@@ -161,23 +175,9 @@ export default function GlobalCallListener() {
 
     dismissCall();
 
-    if (!Capacitor.isNativePlatform()) {
-      // ── WEB PATH ─────────────────────────────────────────────────────────
-      // Browser AudioContext REQUIRES a user gesture to start. We are currently
-      // INSIDE a button onClick (user gesture), so we must call startCall()
-      // RIGHT HERE — before any navigation — otherwise the audio context will
-      // be blocked when init() tries to start it asynchronously after page load.
-      await callCtx.startCall(roomId, type, callerId, callerName, true);
-      // Navigate without autoAccept — call is already running
-      router.push(`/chat/${roomId}`);
-    } else {
-      // ── NATIVE PATH ───────────────────────────────────────────────────────
-      // No AudioContext restriction on native. Navigate first, let chat page
-      // handle Agora join via autoAccept URL param.
-      router.push(
-        `/chat/${roomId}?autoAccept=1&callType=${type}&callerId=${callerId}&callerName=${encodeURIComponent(callerName)}`
-      );
-    }
+    // Start call IMMEDIATELY regardless of platform, so the user doesn't wait for the chat page to load!
+    await callCtx.startCall(roomId, type, callerId, callerName, true);
+    router.push(`/chat/${roomId}?autoAccept=1&callType=${type}&callerId=${callerId}&callerName=${encodeURIComponent(callerName)}`);
   };
 
   const declineCall = async () => {
@@ -221,8 +221,11 @@ export default function GlobalCallListener() {
       dismissCall();
       const callType = call?.type || 'voice';
       const callerId = call?.callerId || '';
-      const callerName = encodeURIComponent(call?.callerName || 'Scholar');
-      router.push(`/chat/${roomId}?autoAccept=1&callType=${callType}&callerId=${callerId}&callerName=${callerName}`);
+      const callerName = call?.callerName || 'Scholar';
+      
+      // Start call IMMEDIATELY to bypass loading delays
+      callCtx.startCall(roomId, callType, callerId, callerName, true);
+      router.push(`/chat/${roomId}?autoAccept=1&callType=${callType}&callerId=${callerId}&callerName=${encodeURIComponent(callerName)}`);
     });
 
     IncomingCallKit.addListener('callDeclined', async (event) => {
