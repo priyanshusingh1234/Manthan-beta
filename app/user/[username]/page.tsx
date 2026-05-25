@@ -363,6 +363,7 @@ export default async function StudentProfilePage({ params }: Props) {
                                 rank={myRank ?? undefined}
                                 isTeacher={isTeacher}
                                 totalPoints={totalPoints}
+                                cosmetics={meta.cosmetics || profile?.cosmetics || []}
                                 nameClassName="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white"
                                 className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3"
                             />
@@ -534,6 +535,7 @@ export default async function StudentProfilePage({ params }: Props) {
                                 isTeacher={isTeacher}
                                 weeklyReport={weeklyReportObj}
                                 isPrivate={isPrivate}
+                                cosmetics={meta.cosmetics || profile?.cosmetics || []}
                             />
                         </div>
                     )}

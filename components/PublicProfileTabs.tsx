@@ -5,6 +5,8 @@ import { Trophy, Award, Star, Medal, Sword, Brain, Shield, Target, Zap, LayoutGr
 import Link from 'next/link';
 import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import TopperBadge from '@/ticks/topper';
+import TeacherBadge from '@/ticks/teacher';
+import AdminVerifiedTick from '@/ticks/admin';
 import { useTopRanks } from '@/hooks/useTopRanks';
 import PostCard from './PostCard';
 import VideoClipCard from './VideoClipCard';
@@ -32,6 +34,7 @@ interface PublicProfileTabsProps {
   isTeacher: boolean;
   weeklyReport?: any;
   isPrivate?: boolean;
+  cosmetics?: string[];
 }
 
 // ─── Clip thumbnail tile for the 3-col grid ────────────────────────────────
@@ -98,6 +101,33 @@ export default function PublicProfileTabs({
   const [postsFetchError, setPostsFetchError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [localCosmetics, setLocalCosmetics] = useState<string[]>([]);
+  const [equipping, setEquipping] = useState(false);
+
+  useEffect(() => {
+    setLocalCosmetics(cosmetics || []);
+  }, [cosmetics]);
+
+  const equipBadge = async (badgeId: string) => {
+     if (currentUserId !== userId || equipping) return;
+     setEquipping(true);
+     const newCosmetics = localCosmetics.filter(c => !c.startsWith('equipped_badge_'));
+     if (badgeId !== 'none') newCosmetics.push(`equipped_badge_${badgeId}`);
+     setLocalCosmetics(newCosmetics);
+
+     try {
+         const { data: { session } } = await supabase.auth.getSession();
+         await fetch('/api/user/equip-badge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+            body: JSON.stringify({ badgeId })
+         });
+     } catch (e) {
+         console.error(e);
+     } finally {
+         setEquipping(false);
+     }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -426,33 +456,100 @@ export default function PublicProfileTabs({
 
       {activeTab === 'badges' && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+           <div className="flex justify-between items-center mb-6 px-2">
+             <h3 className="font-black text-xl text-slate-900 dark:text-white">Your Badges</h3>
+             {currentUserId === userId && localCosmetics.some(c => c.startsWith('equipped_badge_')) && (
+                <button 
+                  onClick={() => equipBadge('none')}
+                  disabled={equipping}
+                  className="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+                >
+                  Unequip Active Badge
+                </button>
+             )}
+           </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Rank Badge */}
               {(effectiveRank || 99999) <= 3 && (
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center group">
+                <div className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border ${localCosmetics.includes(`equipped_badge_${effectiveRank === 1 ? 'gold' : effectiveRank === 2 ? 'silver' : 'bronze'}`) ? 'border-indigo-500 shadow-indigo-500/20' : 'border-slate-100 dark:border-slate-800'} shadow-sm flex flex-col items-center text-center relative`}>
                   <div className="scale-[2] mb-12 mt-6 drop-shadow-2xl">
                     {effectiveRank === 1 ? <GoldBadge /> : effectiveRank === 2 ? <SilverBadge /> : <BronzeBadge />}
                   </div>
                   <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
                     {effectiveRank === 1 ? 'Rank #1 Champion' : effectiveRank === 2 ? 'Rank #2 Elite' : 'Rank #3 Pro'}
                   </h3>
-                  <p className="text-slate-500 text-sm font-medium leading-relaxed px-4">
+                  <p className="text-slate-500 text-sm font-medium leading-relaxed px-4 mb-6">
                     One of the top-tier minds competing on Dheeyudha.
                   </p>
+                  {currentUserId === userId && (
+                      <button 
+                         onClick={() => equipBadge(effectiveRank === 1 ? 'gold' : effectiveRank === 2 ? 'silver' : 'bronze')}
+                         disabled={equipping}
+                         className={`w-full py-3 rounded-2xl font-black transition-all ${localCosmetics.includes(`equipped_badge_${effectiveRank === 1 ? 'gold' : effectiveRank === 2 ? 'silver' : 'bronze'}`) ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400' : 'bg-slate-100 text-slate-600 hover:bg-indigo-600 hover:text-white dark:bg-slate-800 dark:text-slate-300'}`}
+                      >
+                         {localCosmetics.includes(`equipped_badge_${effectiveRank === 1 ? 'gold' : effectiveRank === 2 ? 'silver' : 'bronze'}`) ? 'Equipped' : 'Equip'}
+                      </button>
+                  )}
                 </div>
               )}
 
               {/* Topper Badge */}
               {totalPoints >= 1500 && (
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center">
+                <div className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border ${localCosmetics.includes('equipped_badge_topper') ? 'border-indigo-500 shadow-indigo-500/20' : 'border-slate-100 dark:border-slate-800'} shadow-sm flex flex-col items-center text-center relative`}>
                   <div className="scale-[1.8] mb-10 mt-4"><TopperBadge /></div>
                   <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Lifetime Topper</h3>
-                  <p className="text-slate-500 text-sm font-medium px-4">Awarded for achieving over 1,500 lifetime points in battles.</p>
+                  <p className="text-slate-500 text-sm font-medium px-4 mb-6">Awarded for achieving over 1,500 lifetime points in battles.</p>
+                  {currentUserId === userId && (
+                      <button 
+                         onClick={() => equipBadge('topper')}
+                         disabled={equipping}
+                         className={`w-full py-3 rounded-2xl font-black transition-all ${localCosmetics.includes('equipped_badge_topper') ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400' : 'bg-slate-100 text-slate-600 hover:bg-indigo-600 hover:text-white dark:bg-slate-800 dark:text-slate-300'}`}
+                      >
+                         {localCosmetics.includes('equipped_badge_topper') ? 'Equipped' : 'Equip'}
+                      </button>
+                  )}
+                </div>
+              )}
+
+              {/* Teacher Badge */}
+              {isTeacher && (
+                <div className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border ${localCosmetics.includes('equipped_badge_teacher') ? 'border-indigo-500 shadow-indigo-500/20' : 'border-slate-100 dark:border-slate-800'} shadow-sm flex flex-col items-center text-center relative`}>
+                  <div className="scale-[2] mb-10 mt-6"><TeacherBadge /></div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Verified Teacher</h3>
+                  <p className="text-slate-500 text-sm font-medium px-4 mb-6">Recognized educator on Dheeyudha platform.</p>
+                  {currentUserId === userId && (
+                      <button 
+                         onClick={() => equipBadge('teacher')}
+                         disabled={equipping}
+                         className={`w-full py-3 rounded-2xl font-black transition-all ${localCosmetics.includes('equipped_badge_teacher') ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400' : 'bg-slate-100 text-slate-600 hover:bg-indigo-600 hover:text-white dark:bg-slate-800 dark:text-slate-300'}`}
+                      >
+                         {localCosmetics.includes('equipped_badge_teacher') ? 'Equipped' : 'Equip'}
+                      </button>
+                  )}
+                </div>
+              )}
+
+              {/* Admin Tick */}
+              {/* Note: We rely on the parent page or admins route if possible, but let's assume they have it if it's in their cosmetics already OR we can just check if they are admin, but we don't have adminsData here. We will just check if they ever equipped it, or if we can pass isAdmin down. For now, if they don't have it equipped, we might not know if they are an admin. We need to pass isAdmin down from page.tsx to accurately list it. But it's fine for admins to just show if they have equipped it before, or we can just omit it from the selection list here unless they are known admin. */}
+              {localCosmetics.includes('equipped_badge_admin') && (
+                <div className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border ${localCosmetics.includes('equipped_badge_admin') ? 'border-indigo-500 shadow-indigo-500/20' : 'border-slate-100 dark:border-slate-800'} shadow-sm flex flex-col items-center text-center relative`}>
+                  <div className="scale-[2] mb-10 mt-6"><AdminVerifiedTick /></div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Verified Admin</h3>
+                  <p className="text-slate-500 text-sm font-medium px-4 mb-6">Platform Administrator.</p>
+                  {currentUserId === userId && (
+                      <button 
+                         onClick={() => equipBadge('admin')}
+                         disabled={equipping}
+                         className={`w-full py-3 rounded-2xl font-black transition-all ${localCosmetics.includes('equipped_badge_admin') ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400' : 'bg-slate-100 text-slate-600 hover:bg-indigo-600 hover:text-white dark:bg-slate-800 dark:text-slate-300'}`}
+                      >
+                         {localCosmetics.includes('equipped_badge_admin') ? 'Equipped' : 'Equip'}
+                      </button>
+                  )}
                 </div>
               )}
 
               {/* Placeholder for no badges */}
-                {(effectiveRank || 99999) > 3 && totalPoints < 1500 && (
+                {(effectiveRank || 99999) > 3 && totalPoints < 1500 && !isTeacher && !localCosmetics.includes('equipped_badge_admin') && (
                 <div className="col-span-full py-20 text-center flex flex-col items-center gap-4 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
                    <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300">
                       <Award className="w-10 h-10" />

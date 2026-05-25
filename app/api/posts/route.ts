@@ -286,7 +286,7 @@ export async function POST(req: NextRequest) {
 
         // 3. Handle @community for Admins
         const envAdmins = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
-        const adminEmails = ['kpk22128@gmail.com', 's61038955@gmail.com', ...envAdmins];
+        const adminEmails = [...envAdmins].filter(Boolean);
         const isAdmin = authorProfile?.is_teacher || adminEmails.includes(user.email?.toLowerCase());
         let isCommunityBroadcast = false;
 

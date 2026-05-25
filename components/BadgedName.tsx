@@ -16,6 +16,7 @@ interface BadgedNameProps {
   totalPoints?: number;
   className?: string;
   nameClassName?: string;
+  cosmetics?: string[] | null;
 }
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
@@ -27,7 +28,8 @@ export default function BadgedName({
   isTeacher, 
   totalPoints, 
   className = "",
-  nameClassName = "font-bold text-slate-900 dark:text-white"
+  nameClassName = "font-bold text-slate-900 dark:text-white",
+  cosmetics
 }: BadgedNameProps) {
   const { getRank } = useTopRanks();
   const { data: adminsData } = useSWR('/api/admins', fetcher, { 
@@ -51,6 +53,8 @@ export default function BadgedName({
   
   // Ensure we get a boolean, avoiding rendering 'NaN' if totalPoints is malformed
   const isTopper = typeof totalPoints === 'number' && !isNaN(totalPoints) && totalPoints >= 1500;
+  
+  const equippedBadgeId = cosmetics?.find(c => c.startsWith('equipped_badge_'))?.replace('equipped_badge_', '');
 
   return (
     <div className={`flex items-center gap-1.5 flex-wrap min-w-0 ${className}`}>
@@ -58,12 +62,12 @@ export default function BadgedName({
       
       {/* Container for badges ensuring they stay visible and don't shrink */}
       <div className="flex items-center gap-1 shrink-0">
-        {isAdmin && <AdminVerifiedTick />}
-        {isTeacher && <TeacherBadge />}
-        {rank === 1 && <GoldBadge />}
-        {rank === 2 && <SilverBadge />}
-        {rank === 3 && <BronzeBadge />}
-        {isTopper && <TopperBadge />}
+        {(!equippedBadgeId || equippedBadgeId === 'admin') && isAdmin && <AdminVerifiedTick />}
+        {(!equippedBadgeId || equippedBadgeId === 'teacher') && isTeacher && <TeacherBadge />}
+        {(!equippedBadgeId || equippedBadgeId === 'gold') && rank === 1 && <GoldBadge />}
+        {(!equippedBadgeId || equippedBadgeId === 'silver') && rank === 2 && <SilverBadge />}
+        {(!equippedBadgeId || equippedBadgeId === 'bronze') && rank === 3 && <BronzeBadge />}
+        {(!equippedBadgeId || equippedBadgeId === 'topper') && isTopper && <TopperBadge />}
       </div>
     </div>
   );

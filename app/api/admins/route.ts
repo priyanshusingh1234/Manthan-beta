@@ -15,7 +15,7 @@ export async function GET() {
     }
 
     const envAdmins = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
-    const adminEmails = ['kpk22128@gmail.com', 's61038955@gmail.com', ...envAdmins].filter(Boolean);
+    const adminEmails = [...envAdmins].filter(Boolean);
 
     const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
     

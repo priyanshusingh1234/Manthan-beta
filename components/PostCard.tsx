@@ -457,6 +457,7 @@ export default function PostCard({
                                     userId={effectiveAuthor?.id}
                                     isTeacher={isTeacherUser(effectiveAuthor)}
                                     totalPoints={Number(effectiveAuthor?.totalPoints)}
+                                    cosmetics={effectiveAuthor?.cosmetics || []}
                                     nameClassName="font-bold text-[15px] sm:text-[16px] text-slate-900 dark:text-white group-hover/name:underline decoration-1"
                                     className="flex items-center gap-1 min-w-0"
                                 />
