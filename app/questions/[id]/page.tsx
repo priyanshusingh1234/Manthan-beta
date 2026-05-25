@@ -15,7 +15,7 @@ export async function generateMetadata({
     const { id } = params;
     const { data: q } = await supabaseAdmin
         .from("questions")
-        .select("id, title, body, subject, class_grade, points, difficulty, image_url, question_type")
+        .select("id, title, body, subject, class_grade, points, difficulty, image_url, image_path, question_type")
         .eq("id", id)
         .maybeSingle();
 
@@ -34,9 +34,14 @@ export async function generateMetadata({
         : `Class ${q.class_grade || '?'} ${q.subject || 'Question'} · ${q.points || 0} points`;
         
     const description = (q.body || defaultDesc).toString().slice(0, 160);
-    const image = q.image_url
-        ? (q.image_url.startsWith('http') ? q.image_url : `${APP_URL}${q.image_url}`)
-        : `${APP_URL}/og-social.png`;
+    let image = `${APP_URL}/og-social.png`;
+    if (q.image_url) {
+        image = q.image_url.startsWith('http') ? q.image_url : `${APP_URL}${q.image_url}`;
+    } else if (q.image_path) {
+        const { data: publicUrlData } = supabaseAdmin.storage.from('question-images').getPublicUrl(q.image_path);
+        image = publicUrlData.publicUrl;
+    }
+    
     const canonical = `${APP_URL}/questions/${id}`;
 
     return {
