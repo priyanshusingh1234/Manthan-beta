@@ -302,37 +302,41 @@ function StudyNotesModal({ level, onClose, onWin }: { level: MapLevel; onClose: 
         )}
 
         {phase === 'quiz' && (
-          <div className="absolute inset-0 overflow-y-auto p-6 flex flex-col justify-center bg-slate-50 dark:bg-slate-950">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-8 max-w-2xl mx-auto w-full">
-              <div className="inline-block bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 font-black text-xs uppercase px-3 py-1 rounded-full mb-4 border border-sky-200 dark:border-sky-500/30">
-                Knowledge Check • {qIndex + 1}/{level.questions.length}
+          <div className="absolute inset-0 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950">
+            <div className="min-h-full flex flex-col justify-center py-4">
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-8 max-w-2xl mx-auto w-full">
+                <div className="inline-block bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 font-black text-xs uppercase px-3 py-1 rounded-full mb-4 border border-sky-200 dark:border-sky-500/30">
+                  Knowledge Check • {qIndex + 1}/{level.questions.length}
+                </div>
+                <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-snug font-serif">{q.q}</h3>
+              </motion.div>
+              <div className="space-y-3 max-w-2xl mx-auto w-full">
+                {q.opts.map((opt, i) => (
+                  <motion.button key={i} whileTap={{ scale: 0.98 }} onClick={() => handleAnswer(i)} className="w-full text-left p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-semibold text-slate-700 dark:text-slate-300 hover:border-sky-400 dark:hover:border-sky-500 hover:bg-sky-50 dark:hover:bg-slate-800 transition-all flex items-start gap-4">
+                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold px-3 py-1 rounded-lg text-sm shrink-0">{['A','B','C','D'][i]}</span>
+                    <span className="mt-0.5 leading-snug">{opt}</span>
+                  </motion.button>
+                ))}
               </div>
-              <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-snug font-serif">{q.q}</h3>
-            </motion.div>
-            <div className="space-y-3 max-w-2xl mx-auto w-full">
-              {q.opts.map((opt, i) => (
-                <motion.button key={i} whileTap={{ scale: 0.98 }} onClick={() => handleAnswer(i)} className="w-full text-left p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-semibold text-slate-700 dark:text-slate-300 hover:border-sky-400 dark:hover:border-sky-500 hover:bg-sky-50 dark:hover:bg-slate-800 transition-all flex items-start gap-4">
-                  <span className="bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold px-3 py-1 rounded-lg text-sm shrink-0">{['A','B','C','D'][i]}</span>
-                  <span className="mt-0.5 leading-snug">{opt}</span>
-                </motion.button>
-              ))}
             </div>
           </div>
         )}
 
         {phase === 'feedback' && (
-          <div className={`absolute inset-0 flex flex-col justify-center p-6 ${selected === q.ans ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'bg-rose-50 dark:bg-rose-950/30'}`}>
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl mx-auto">
-              <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-800">
-                {selected === q.ans ? <CheckCircle2 className="w-12 h-12 text-emerald-500" /> : <X className="w-12 h-12 text-rose-500" />}
-              </div>
-              <h3 className={`text-4xl font-black mb-6 font-serif ${selected === q.ans ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                {selected === q.ans ? 'Correct!' : 'Incorrect'}
-              </h3>
-              <div className={`p-6 rounded-2xl border text-left ${selected === q.ans ? 'bg-white dark:bg-slate-900 border-emerald-200 dark:border-emerald-900' : 'bg-white dark:bg-slate-900 border-rose-200 dark:border-rose-900'}`}>
-                <p className="font-medium text-lg text-slate-700 dark:text-slate-300 leading-relaxed"><span className="font-black text-slate-800 dark:text-slate-100">Explanation:</span> {q.explain}</p>
-              </div>
-            </motion.div>
+          <div className={`absolute inset-0 overflow-y-auto p-6 ${selected === q.ans ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'bg-rose-50 dark:bg-rose-950/30'}`}>
+            <div className="min-h-full flex flex-col justify-center py-4">
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-xl mx-auto">
+                <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-6 bg-white dark:bg-slate-900 shadow-xl border border-slate-100 dark:border-slate-800">
+                  {selected === q.ans ? <CheckCircle2 className="w-12 h-12 text-emerald-500" /> : <X className="w-12 h-12 text-rose-500" />}
+                </div>
+                <h3 className={`text-4xl font-black mb-6 font-serif ${selected === q.ans ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
+                  {selected === q.ans ? 'Correct!' : 'Incorrect'}
+                </h3>
+                <div className={`p-6 rounded-2xl border text-left ${selected === q.ans ? 'bg-white dark:bg-slate-900 border-emerald-200 dark:border-emerald-900' : 'bg-white dark:bg-slate-900 border-rose-200 dark:border-rose-900'}`}>
+                  <p className="font-medium text-lg text-slate-700 dark:text-slate-300 leading-relaxed"><span className="font-black text-slate-800 dark:text-slate-100">Explanation:</span> {q.explain}</p>
+                </div>
+              </motion.div>
+            </div>
           </div>
         )}
       </div>
