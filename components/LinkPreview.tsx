@@ -51,16 +51,23 @@ export default function LinkPreview({ url }: { url: string }) {
 
           const { data: q, error } = await supabase
             .from('questions')
-            .select('title, subject, points')
+            .select('title, subject, points, image_url, image_path')
             .eq('id', qId)
             .single();
 
           if (error || !q) throw error;
 
+          let qImage = q.image_url;
+          if (!qImage && q.image_path) {
+            const { data: publicUrlData } = supabase.storage.from('question-images').getPublicUrl(q.image_path);
+            qImage = publicUrlData.publicUrl;
+          }
+
           setData({
             type: 'question',
             title: q.title || 'Question Challenge',
             description: `Subject: ${q.subject} • ${q.points} Points`,
+            image: qImage,
             link: `/questions/${qId}`
           });
         } else {

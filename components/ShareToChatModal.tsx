@@ -14,6 +14,65 @@ interface ShareToChatModalProps {
   onClose: () => void;
 }
 
+let globalRoomsCache: any[] | null = null;
+let globalRoomsPromise: Promise<any[]> | null = null;
+
+async function getCachedRooms() {
+  if (globalRoomsCache) return globalRoomsCache;
+  if (globalRoomsPromise) return globalRoomsPromise;
+
+  globalRoomsPromise = (async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data: myRooms } = await supabase
+        .from('chat_participants')
+        .select('room_id')
+        .eq('user_id', user.id);
+
+      if (!myRooms?.length) return [];
+      
+      const roomIds = myRooms.map(r => r.room_id);
+      const { data: otherParticipants } = await supabase
+        .from('chat_participants')
+        .select('room_id, user_id')
+        .in('room_id', roomIds)
+        .neq('user_id', user.id);
+
+      if (otherParticipants && otherParticipants.length > 0) {
+        const userIds = [...new Set(otherParticipants.map(p => p.user_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url')
+          .in('id', userIds);
+
+        const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+        const joinedRooms = otherParticipants.map(p => ({
+          room_id: p.room_id,
+          user_id: p.user_id,
+          profiles: profileMap.get(p.user_id) || { full_name: 'Unknown', avatar_url: null }
+        }));
+        
+        globalRoomsCache = joinedRooms;
+        return joinedRooms;
+      }
+      globalRoomsCache = [];
+      return [];
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
+  })();
+
+  return globalRoomsPromise;
+}
+
+if (typeof window !== 'undefined') {
+  // Fire and forget prefetch as soon as this component module is evaluated on client
+  getCachedRooms().catch(() => {});
+}
+
 export default function ShareToChatModal({ url, isOpen, onClose }: ShareToChatModalProps) {
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,52 +82,20 @@ export default function ShareToChatModal({ url, isOpen, onClose }: ShareToChatMo
   useEffect(() => {
     if (!isOpen) return;
     
-    async function fetchRooms() {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-
-      try {
-        const { data: myRooms } = await supabase
-          .from('chat_participants')
-          .select('room_id')
-          .eq('user_id', user.id);
-
-        if (!myRooms?.length) { setRooms([]); setLoading(false); return; }
-        const roomIds = myRooms.map(r => r.room_id);
-
-        const { data: otherParticipants } = await supabase
-          .from('chat_participants')
-          .select('room_id, user_id')
-          .in('room_id', roomIds)
-          .neq('user_id', user.id);
-
-        if (otherParticipants && otherParticipants.length > 0) {
-          const userIds = [...new Set(otherParticipants.map(p => p.user_id))];
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url')
-            .in('id', userIds);
-
-          const profileMap = new Map((profiles || []).map(p => [p.id, p]));
-          const joinedRooms = otherParticipants.map(p => ({
-            room_id: p.room_id,
-            user_id: p.user_id,
-            profiles: profileMap.get(p.user_id) || { full_name: 'Unknown', avatar_url: null }
-          }));
-          
-          setRooms(joinedRooms);
-        } else {
-          setRooms([]);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
+    async function loadRooms() {
+      if (globalRoomsCache) {
+        setRooms(globalRoomsCache);
         setLoading(false);
+        return;
       }
+      
+      setLoading(true);
+      const data = await getCachedRooms();
+      setRooms(data);
+      setLoading(false);
     }
     
-    fetchRooms();
+    loadRooms();
   }, [isOpen]);
 
   const handleSend = async (roomId: string, receiverId: string) => {
@@ -98,7 +125,7 @@ export default function ShareToChatModal({ url, isOpen, onClose }: ShareToChatMo
          fetch('/api/chat/notify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ receiverId, senderId: user.id, roomId, content: "Shared a link" })
+            body: JSON.stringify({ receiverId, senderId: user.id, roomId, content: "Shared a new question or post in chat" })
          }).catch(()=>{});
       }
     } catch (err) {
