@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { X, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
@@ -108,10 +109,17 @@ export default function ShareToChatModal({ url, isOpen, onClose }: ShareToChatMo
 
   if (!isOpen) return null;
 
-  return (
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <>
-      <div className="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-[101] bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl p-6 sm:max-w-md sm:mx-auto sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:rounded-[2rem] animate-in slide-in-from-bottom duration-300">
+      <div className="fixed inset-0 bg-black/40 z-[9999] backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-[10000] bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl p-6 sm:max-w-md sm:mx-auto sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:rounded-[2rem] animate-in slide-in-from-bottom duration-300">
         <div className="flex justify-between items-center mb-6">
           <h3 className="font-black text-xl text-slate-900 dark:text-white">Share to Chat</h3>
           <button onClick={onClose} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
@@ -193,6 +201,7 @@ export default function ShareToChatModal({ url, isOpen, onClose }: ShareToChatMo
           </div>
         )}
       </div>
-    </>
+    </>,
+    document.body
   );
 }
