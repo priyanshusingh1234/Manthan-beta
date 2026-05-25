@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { X, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
+import { Share } from "@capacitor/share";
+import { Capacitor } from "@capacitor/core";
 
 interface ShareToChatModalProps {
   url: string;
@@ -136,10 +138,19 @@ export default function ShareToChatModal({ url, isOpen, onClose }: ShareToChatMo
           >
             Copy Link
           </button>
-          {typeof navigator !== 'undefined' && navigator.share && (
+          {((typeof navigator !== 'undefined' && navigator.share) || Capacitor.isNativePlatform()) && (
             <button
-              onClick={() => {
-                navigator.share({ url }).catch(() => {});
+              onClick={async () => {
+                try {
+                  if (Capacitor.isNativePlatform()) {
+                    await Share.share({ url, dialogTitle: "Share this link" });
+                    return;
+                  }
+                  if (typeof navigator !== 'undefined' && navigator.share) {
+                    await navigator.share({ url });
+                    return;
+                  }
+                } catch (e) {}
               }}
               className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
             >
