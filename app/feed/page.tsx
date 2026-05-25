@@ -6,8 +6,8 @@ import PostCard from '@/components/PostCard';
 import { Filter, SlidersHorizontal, BookOpen, Layers, Target, ChevronDown, Info, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
-import dynamic from 'next/dynamic';
-
+import useSWR from 'swr';
+import { Virtuoso } from 'react-virtuoso';
 
 function normalizeSubject(subject?: string | null) {
     if (!subject) return '';
@@ -17,10 +17,16 @@ function normalizeSubject(subject?: string | null) {
     return value;
 }
 
+const fetcher = async (url: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = {};
+    if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) throw new Error('Failed to fetch data');
+    return res.json();
+};
+
 export default function FeedPage() {
-    const [questions, setQuestions] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [feedMeta, setFeedMeta] = useState<any>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     // Filters
@@ -36,57 +42,40 @@ export default function FeedPage() {
     }, [selectedSubject, selectedClass]);
 
     useEffect(() => {
-        let mounted = true;
-        setLoading(true);
-
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
             setCurrentUserId(session?.user?.id || null);
-            const params = new URLSearchParams({ limit: '40' });
-            if (selectedSubject) params.set('subject', selectedSubject);
-            if (selectedClass && selectedSubject !== 'English') params.set('class', selectedClass);
-            if (selectedDifficulty) params.set('difficulty', selectedDifficulty);
-            if (selectedChapter) params.set('chapter', selectedChapter);
-
-            const headers: Record<string, string> = {};
-            if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
-
-            const feedRes = await fetch(`/api/feed?${params}`, { headers, cache: 'no-store' });
-            if (!mounted) return;
-
-            const feedData = await feedRes.json();
-            const feedQuestions: any[] = Array.isArray(feedData) ? feedData : feedData.questions || [];
-
-            setQuestions(feedQuestions);
-            setFeedMeta(feedData.meta || null);
-            setLoading(false);
-        }).catch(err => {
-            console.error(err);
-            if (mounted) setLoading(false);
         });
+    }, []);
 
-        return () => { mounted = false; };
-    }, [selectedSubject, selectedClass, selectedDifficulty, selectedChapter]);
+    // Construct URL based on filters
+    const params = new URLSearchParams({ limit: '40' });
+    if (selectedSubject) params.set('subject', selectedSubject);
+    if (selectedClass && selectedSubject !== 'English') params.set('class', selectedClass);
+    if (selectedDifficulty) params.set('difficulty', selectedDifficulty);
+    if (selectedChapter) params.set('chapter', selectedChapter);
 
-    // Filter logic
+    // SWR takes care of fetching, caching, and optimistic UI
+    const { data, error, isLoading } = useSWR(`/api/feed?${params.toString()}`, fetcher, {
+        revalidateOnFocus: false, // Better for native apps to not jitter on refocus
+        dedupingInterval: 60000,  // Cache feed aggressively for 1 minute
+    });
+
+    const questions = Array.isArray(data) ? data : (data?.questions || []);
+    const feedMeta = data?.meta || null;
+
+    // Filter logic applied to the cached SWR data
     const filteredQuestions = questions.filter((q: any) => {
         if (selectedSubject && normalizeSubject(q.subject) !== normalizeSubject(selectedSubject)) return false;
 
         if (selectedClass) {
-            // Handle "All" class mapping, or actual number matching.
-            // Convert everything to string because the DB might store it as a number or string.
             const qClass = String(q.classGrade || q.class_grade || '');
-            if (qClass !== selectedClass && qClass !== 'All') {
-                return false;
-            }
+            if (qClass !== selectedClass && qClass !== 'All') return false;
         }
 
         if (selectedDifficulty) {
             const qDiff = (q.difficulty || '').toLowerCase();
             const sDiff = selectedDifficulty.toLowerCase();
-            
-            // Treat moderate and medium as synonyms
             const isModerateMatch = (sDiff === 'moderate' || sDiff === 'medium') && (qDiff === 'moderate' || qDiff === 'medium');
-            
             if (!isModerateMatch && qDiff !== sDiff) return false;
         }
 
@@ -101,8 +90,8 @@ export default function FeedPage() {
     return (
         <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-24 pt-4 sm:pt-8 md:pt-12 relative overflow-hidden">
             {/* Decorative Blur Backgrounds */}
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/10 dark:bg-blue-600/10 rounded-full mix-blend-overlay filter blur-3xl" />
-            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-400/10 dark:bg-indigo-600/10 rounded-full mix-blend-overlay filter blur-3xl" />
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/10 dark:bg-blue-600/10 rounded-full mix-blend-overlay filter blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-400/10 dark:bg-indigo-600/10 rounded-full mix-blend-overlay filter blur-3xl pointer-events-none" />
 
             <main className="max-w-[1240px] px-4 sm:px-6 mx-auto relative z-10 w-full lg:flex lg:gap-8 justify-center">
 
@@ -232,7 +221,7 @@ export default function FeedPage() {
                     </div>
 
                     {/* Feed Content */}
-                    {loading ? (
+                    {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-20 space-y-4">
                             <div className="w-10 h-10 border-4 border-slate-200 dark:border-slate-800 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin"></div>
                             <p className="font-bold text-slate-500 dark:text-slate-400">Loading feed...</p>
@@ -260,20 +249,27 @@ export default function FeedPage() {
                             <div className="text-sm font-bold text-slate-500 dark:text-slate-400 px-2 pb-2 mb-2 border-b border-slate-200/60 dark:border-slate-800/60 inline-flex items-center gap-2">
                                 Showing {filteredQuestions.length} Questions
                             </div>
-                            {filteredQuestions.map((q: any) => (
-                                <div key={q.id}>
-                                    {q._feedLabel && (
-                                        <div className="text-xs font-black text-slate-500 dark:text-slate-500 mb-2 px-1 flex items-center gap-1.5">
-                                            {q._feedLabel}
-                                        </div>
-                                    )}
-                                    {q.type === 'post' ? (
-                                        <PostCard post={q} currentUserId={currentUserId} showTags={true} />
-                                    ) : (
-                                        <QuestionCard q={q} />
-                                    )}
-                                </div>
-                            ))}
+                            
+                            {/* React Virtuoso for Window Scroll Virtualization */}
+                            <Virtuoso
+                                useWindowScroll
+                                data={filteredQuestions}
+                                overscan={5}
+                                itemContent={(index, q) => (
+                                    <div className="pb-6">
+                                        {q._feedLabel && (
+                                            <div className="text-xs font-black text-slate-500 dark:text-slate-500 mb-2 px-1 flex items-center gap-1.5">
+                                                {q._feedLabel}
+                                            </div>
+                                        )}
+                                        {q.type === 'post' ? (
+                                            <PostCard post={q} currentUserId={currentUserId} showTags={true} />
+                                        ) : (
+                                            <QuestionCard q={q} />
+                                        )}
+                                    </div>
+                                )}
+                            />
                         </div>
                     )}
                 </div>
@@ -290,5 +286,3 @@ export default function FeedPage() {
         </div>
     );
 }
-
-
