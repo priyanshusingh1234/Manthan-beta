@@ -30,7 +30,7 @@ export default function LinkPreview({ url }: { url: string }) {
 
           const { data: post, error } = await supabase
             .from('community_posts')
-            .select('title, content, author_id, image_url, profiles(full_name, avatar_url, is_teacher)')
+            .select('content, author_id, image_url, profiles(full_name, avatar_url, is_teacher)')
             .eq('id', postId)
             .single();
 
@@ -38,7 +38,7 @@ export default function LinkPreview({ url }: { url: string }) {
 
           setData({
             type: 'post',
-            title: post.title || 'Community Post',
+            title: 'Community Post',
             description: post.content?.slice(0, 80) + '...',
             image: post.image_url,
             authorName: post.profiles?.full_name || 'Scholar',
