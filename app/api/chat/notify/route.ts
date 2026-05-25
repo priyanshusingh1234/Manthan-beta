@@ -22,7 +22,10 @@ export async function POST(req: Request) {
 
     let notifType = 'chat_message';
     let title = `New message from ${realSenderName}`;
-    let body = content?.substring(0, 50) || 'New message';
+    
+    // Strip internal metadata tokens before creating notification body
+    const cleanContent = content ? content.replace(/\|\|\|META\|\|\|.*?\|\|\|/g, '').trim() : '';
+    let body = cleanContent.substring(0, 50) || 'New message';
     // Extract call type from content like "📞 Incoming video call"
     let callType: 'voice' | 'video' = 'voice';
 
