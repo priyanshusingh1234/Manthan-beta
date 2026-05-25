@@ -4,11 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { X, Star, Heart, CheckCircle2, ArrowLeft, BookOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import RoughSketch from './RoughSketch';
 
 export type NoteBlock = {
-  type: 'heading' | 'subheading' | 'paragraph' | 'highlight' | 'quote' | 'bullet' | 'narrative';
+  type: 'heading' | 'subheading' | 'paragraph' | 'highlight' | 'quote' | 'bullet' | 'narrative' | 'sketch';
   content?: string;
   title?: string;
+  sketchType?: string;
 };
 
 export type Question = {
@@ -292,6 +294,7 @@ function StudyNotesModal({ level, onClose, onWin }: { level: MapLevel; onClose: 
                     </div>
                 );
                 if (note.type === 'narrative') return <div key={i} className="text-center italic text-slate-400 dark:text-slate-500 text-sm my-8 font-serif px-8">{note.content}</div>;
+                if (note.type === 'sketch' && note.sketchType) return <RoughSketch key={i} type={note.sketchType} width={250} height={250} />;
                 return null;
               })}
             </div>
