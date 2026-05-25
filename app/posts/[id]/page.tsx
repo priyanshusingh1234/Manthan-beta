@@ -7,7 +7,7 @@ type Props = { params: { id: string } };
 
 export async function generateMetadata({ params }: Props): Promise<any> {
     const { data: post } = await supabaseAdmin
-        .from('posts')
+        .from('community_posts')
         .select('content, image_url, video_url, video_thumbnail, author_id')
         .eq('id', params.id)
         .single();
