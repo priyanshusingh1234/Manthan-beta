@@ -9,6 +9,7 @@ import {
   Loader2,
   Check,
   CheckCheck,
+  MessageCirclePlus,
   ArrowLeft,
 } from 'lucide-react';
 import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
