@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
+import useSWR from 'swr';
 import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import TopperBadge from '@/ticks/topper';
 import TeacherBadge from '@/ticks/teacher';
+import AdminVerifiedTick from '@/ticks/admin';
 import { useTopRanks } from '@/hooks/useTopRanks';
 
 interface BadgedNameProps {
@@ -16,6 +18,8 @@ interface BadgedNameProps {
   nameClassName?: string;
 }
 
+const fetcher = (url: string) => fetch(url).then(res => res.json());
+
 export default function BadgedName({ 
   name, 
   userId,
@@ -26,6 +30,13 @@ export default function BadgedName({
   nameClassName = "font-bold text-slate-900 dark:text-white"
 }: BadgedNameProps) {
   const { getRank } = useTopRanks();
+  const { data: adminsData } = useSWR('/api/admins', fetcher, { 
+    revalidateOnFocus: false,
+    dedupingInterval: 300000 // 5 minutes
+  });
+  
+  const isAdmin = userId && adminsData?.adminIds?.includes(userId);
+
   const liveRank = userId ? getRank(userId) : null;
   const normalizedPropRank = (propRank !== undefined && propRank !== null && !isNaN(Number(propRank)) && Number(propRank) > 0)
     ? Number(propRank)
@@ -43,6 +54,8 @@ export default function BadgedName({
 
   return (
     <div className={`flex items-center gap-1.5 flex-wrap min-w-0 ${className}`}>
+      {/* Show admin verified tick BEFORE the name */}
+      {isAdmin && <AdminVerifiedTick />}
       <span className={`${nameClassName} truncate`}>{name}</span>
       
       {/* Container for badges ensuring they stay visible and don't shrink */}
