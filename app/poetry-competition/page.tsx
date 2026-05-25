@@ -1,22 +1,55 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Sparkles, Calendar, Trophy, Users, Share2, CheckCircle, UserPlus } from 'lucide-react';
 import { Share } from '@capacitor/share';
 
+interface Participant {
+  id: number;
+  name: string;
+}
+
 export default function PoetryCompetition() {
   const [hasParticipated, setHasParticipated] = useState(false);
-  const [participants, setParticipants] = useState([
-    { id: 1, name: 'Aarav' },
-    { id: 2, name: 'Diya' },
-    { id: 3, name: 'Kabir' },
-  ]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleParticipate = () => {
+  useEffect(() => {
+    fetch('/api/poetry-participants')
+      .then(res => res.json())
+      .then(data => {
+        setParticipants(data);
+        const participated = localStorage.getItem('hasParticipatedPoetry');
+        if (participated) {
+          setHasParticipated(true);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch participants', err);
+        setLoading(false);
+      });
+  }, []);
+
+  const handleParticipate = async () => {
     if (!hasParticipated) {
       setHasParticipated(true);
-      setParticipants([...participants, { id: Date.now(), name: 'You' }]);
+      localStorage.setItem('hasParticipatedPoetry', 'true');
+      
+      const newParticipant = { id: Date.now(), name: 'You' };
+      // Optimistic update
+      setParticipants(prev => [...prev, newParticipant]);
+
+      try {
+        await fetch('/api/poetry-participants', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newParticipant),
+        });
+      } catch (err) {
+        console.error('Failed to save participant', err);
+      }
     }
   };
 
