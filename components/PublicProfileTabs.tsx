@@ -31,7 +31,6 @@ interface PublicProfileTabsProps {
   stats: any[];
   recentSolvedQs: any[];
   isTeacher: boolean;
-  isTeacher: boolean;
   weeklyReport?: any;
   isPrivate?: boolean;
   cosmetics?: string[];
@@ -88,7 +87,8 @@ export default function PublicProfileTabs({
   recentSolvedQs,
   isTeacher,
   weeklyReport,
-  isPrivate
+  isPrivate,
+  cosmetics
 }: PublicProfileTabsProps) {
   const { getRank } = useTopRanks();
   const [activeTab, setActiveTab] = useState<'stats' | 'badges' | 'solved' | 'posts' | 'clips'>('stats');

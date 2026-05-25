@@ -12,6 +12,7 @@ import { supabase, supabaseRealtime } from '@/lib/supabaseClient';
 import { useCallContext } from '@/components/CallProvider';
 import { format, isToday, isYesterday } from 'date-fns';
 import BadgedName from '@/components/BadgedName';
+import LinkPreview from '@/components/LinkPreview';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 interface Message {
@@ -279,10 +280,21 @@ const MessageItem = memo(function MessageItem({
                 <Image src={msg.content} alt="Image" fill className="object-cover" unoptimized />
               </div>
             ) : (
-              <p className="px-3.5 py-2 text-[14.5px] leading-[1.5] whitespace-pre-wrap break-words">
-                {mainContent}
-                {meta.edited && <span className="text-[10px] opacity-70 italic ml-1.5 font-medium">(edited)</span>}
-              </p>
+              <div className="flex flex-col">
+                <p className="px-3.5 py-2 text-[14.5px] leading-[1.5] whitespace-pre-wrap break-words">
+                  {mainContent}
+                  {meta.edited && <span className="text-[10px] opacity-70 italic ml-1.5 font-medium">(edited)</span>}
+                </p>
+                {(() => {
+                  const urlMatch = mainContent.match(/(https?:\/\/[^\/]+(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+|(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+)/);
+                  const previewUrl = urlMatch ? urlMatch[0] : null;
+                  return previewUrl ? (
+                    <div className="px-2 pb-2 pt-0 w-full max-w-[280px]">
+                      <LinkPreview url={previewUrl} />
+                    </div>
+                  ) : null;
+                })()}
+              </div>
             )}
           </div>
           {meta.reactions && Object.keys(meta.reactions).length > 0 && (

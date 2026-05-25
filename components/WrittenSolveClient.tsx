@@ -3,7 +3,8 @@
 import { compressImage } from "@/utils/compressImage";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, Loader2, Clock, Zap, ArrowLeft, Shield, Users } from "lucide-react";
+import { CheckCircle2, Loader2, Clock, Zap, ArrowLeft, Shield, Users, Send } from "lucide-react";
+import ShareToChatModal from '@/components/ShareToChatModal';
 import { supabase } from "@/lib/supabaseClient";
 import ChallengeFriendModal from "@/components/ChallengeFriendModal";
 import CoopChallengeHeader from "@/components/CoopChallengeHeader";
@@ -23,6 +24,7 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
 
     const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     // Auth / gate states
     const [authChecked, setAuthChecked] = useState(false);
@@ -353,6 +355,14 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
                         <Zap className="w-3.5 h-3.5 fill-current" />
                         {question.points} pts — Written
                     </div>
+                    {/* Share Button */}
+                    <button
+                        onClick={() => setShowShareModal(true)}
+                        className="p-2 ml-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                        title="Share Question"
+                    >
+                        <Send className="w-4 h-4 -mt-0.5 ml-[-1px]" />
+                    </button>
                 </div>
             </div>
 
@@ -428,6 +438,12 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
                     currentUserId={currentUserId}
                 />
             )}
+
+            <ShareToChatModal
+                url={typeof window !== 'undefined' ? `${window.location.origin}/questions/${question.id}` : ''}
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+            />
         </div>
     );
 }

@@ -1,0 +1,183 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { X, Send, Loader2, CheckCircle2 } from 'lucide-react';
+import Image from 'next/image';
+
+interface ShareToChatModalProps {
+  url: string;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function ShareToChatModal({ url, isOpen, onClose }: ShareToChatModalProps) {
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sendingTo, setSendingTo] = useState<Record<string, boolean>>({});
+  const [sentTo, setSentTo] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    async function fetchRooms() {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      try {
+        const { data: myRooms } = await supabase
+          .from('chat_participants')
+          .select('room_id')
+          .eq('user_id', user.id);
+
+        if (!myRooms?.length) { setRooms([]); setLoading(false); return; }
+        const roomIds = myRooms.map(r => r.room_id);
+
+        const { data: otherParticipants } = await supabase
+          .from('chat_participants')
+          .select('room_id, user_id, profiles!inner(full_name, avatar_url)')
+          .in('room_id', roomIds)
+          .neq('user_id', user.id);
+
+        if (otherParticipants) {
+          setRooms(otherParticipants);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchRooms();
+  }, [isOpen]);
+
+  const handleSend = async (roomId: string, receiverId: string) => {
+    if (sendingTo[roomId] || sentTo[roomId]) return;
+    setSendingTo(p => ({ ...p, [roomId]: true }));
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+
+      const res = await fetch('/api/chat/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ roomId, content: url, messageType: 'text' }),
+      });
+
+      if (!res.ok) throw new Error('Send failed');
+      
+      setSentTo(p => ({ ...p, [roomId]: true }));
+      
+      // Attempt notification
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+         fetch('/api/chat/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ receiverId, senderId: user.id, roomId, content: "Shared a link" })
+         }).catch(()=>{});
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send link');
+    } finally {
+      setSendingTo(p => ({ ...p, [roomId]: false }));
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-[100] backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 z-[101] bg-white dark:bg-slate-900 rounded-t-[2rem] shadow-2xl p-6 sm:max-w-md sm:mx-auto sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:rounded-[2rem] animate-in slide-in-from-bottom duration-300">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="font-black text-xl text-slate-900 dark:text-white">Share to Chat</h3>
+          <button onClick={onClose} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex gap-3 mb-6">
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(url);
+              alert('Link copied to clipboard!');
+            }}
+            className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            Copy Link
+          </button>
+          {typeof navigator !== 'undefined' && navigator.share && (
+            <button
+              onClick={() => {
+                navigator.share({ url }).catch(() => {});
+              }}
+              className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            >
+              More Options
+            </button>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          </div>
+        ) : rooms.length === 0 ? (
+          <div className="text-center py-10 text-slate-500 dark:text-slate-400 font-medium">
+            You don&apos;t have any active chats yet.
+          </div>
+        ) : (
+          <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-3">
+            {rooms.map((room) => {
+              const profile = room.profiles;
+              const isSent = sentTo[room.room_id];
+              const isSending = sendingTo[room.room_id];
+              
+              return (
+                <div key={room.room_id} className="flex items-center justify-between p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {profile.avatar_url ? (
+                      <Image src={profile.avatar_url} alt="" width={40} height={40} className="rounded-full object-cover w-10 h-10 shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center font-bold text-indigo-600 shrink-0">
+                        {profile.full_name?.[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm text-slate-900 dark:text-white truncate">{profile.full_name}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleSend(room.room_id, room.user_id)}
+                    disabled={isSent || isSending}
+                    className={`shrink-0 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${
+                      isSent ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      : isSending ? 'bg-slate-100 text-slate-400' 
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    }`}
+                  >
+                    {isSent ? (
+                      <><CheckCircle2 className="w-4 h-4" /> Sent</>
+                    ) : isSending ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Sending</>
+                    ) : (
+                      <><Send className="w-4 h-4" /> Send</>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}

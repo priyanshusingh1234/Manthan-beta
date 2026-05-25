@@ -18,6 +18,7 @@ import { queueAchievementUnlock } from '@/components/AchievementUnlockOverlay';
 import { useCorrectSound } from '@/hooks/useCorrectSound';
 import { schedulePetFeedingReminder } from '@/lib/petNotifications';
 import { getRandomMessage } from '@/lib/feedbackMessages';
+import ShareToChatModal from '@/components/ShareToChatModal';
 
 const PreGameSpinner = ({ question, onComplete }: { question: any, onComplete: () => void }) => {
     const [isSpinning, setIsSpinning] = useState(true);
@@ -193,6 +194,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
     const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [recoveredViaCoop, setRecoveredViaCoop] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     const [challengeInitiator, setChallengeInitiator] = useState<string | null>(null);
     const [challengePartner, setChallengePartner] = useState<string | null>(null);
@@ -1068,6 +1070,15 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     <div className="flex items-center gap-1.5 bg-gray-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-1.5 rounded-full text-sm font-medium shadow-sm transition-transform hover:scale-105 cursor-help" title="Reward if correct">
                         <span className="font-semibold">{question.points || 0} points</span>
                     </div>
+
+                    {/* Share Button */}
+                    <button
+                        onClick={() => setShowShareModal(true)}
+                        className="p-2 ml-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                        title="Share Question"
+                    >
+                        <Send className="w-4 h-4 -mt-0.5 ml-[-1px]" />
+                    </button>
                 </div>
             </div>
 

@@ -11,9 +11,10 @@ import VideoClipCard from './VideoClipCard';
 
 const TeacherBadge = dynamic(() => import('@/ticks/teacher'), { ssr: false });
 const TopperBadge = dynamic(() => import('@/ticks/topper'), { ssr: false });
-import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
+import { Share as CapacitorShare } from '@capacitor/share';
 import BadgedName from './BadgedName';
+import ShareToChatModal from './ShareToChatModal';
 
 export default function PostCard({
     post,
@@ -43,6 +44,7 @@ export default function PostCard({
     const [deletingPost, setDeletingPost] = useState(false);
     const [likingPost, setLikingPost] = useState(false);
     const [isHidden, setIsHidden] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     // MENTION LOGIC
     const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -576,22 +578,10 @@ export default function PostCard({
                         {/* Share */}
                         <button
                             className="group flex items-center transition-colors hover:text-sky-500"
-                            onClick={async (e) => {
+                            onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                const url = typeof window !== 'undefined' ? `${window.location.origin}/posts/${post.id}` : '';
-                                try {
-                                    if (Capacitor.isNativePlatform()) {
-                                        await Share.share({ title: 'Dheeyudha Academy Post', url, dialogTitle: 'Share this post' });
-                                        return;
-                                    }
-                                    if (navigator.share) {
-                                        await navigator.share({ title: 'Dheeyudha Academy Post', url });
-                                        return;
-                                    }
-                                    navigator.clipboard.writeText(url);
-                                    alert('Link copied!');
-                                } catch (err) { console.error(err); }
+                                setShowShareModal(true);
                             }}
                         >
                             <div className="p-2 rounded-full group-hover:bg-sky-500/10 transition-all">
@@ -764,6 +754,12 @@ export default function PostCard({
                     />
                 </div>
             )}
+
+            <ShareToChatModal
+                url={typeof window !== 'undefined' ? `${window.location.origin}/posts/${post.id}` : ''}
+                isOpen={showShareModal}
+                onClose={() => setShowShareModal(false)}
+            />
         </div>
     );
 }
