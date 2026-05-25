@@ -107,13 +107,12 @@ export default function ShareToChatModal({ url, isOpen, onClose }: ShareToChatMo
     }
   };
 
-  if (!isOpen) return null;
-
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  if (!isOpen) return null;
   if (!mounted) return null;
 
   return createPortal(

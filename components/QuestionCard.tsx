@@ -23,6 +23,7 @@ import { Capacitor } from "@capacitor/core";
 import TeacherBadge from "@/ticks/teacher";
 import { supabase } from "@/lib/supabaseClient";
 import DuelChallengeModal from "@/components/DuelChallengeModal";
+import ShareToChatModal from "@/components/ShareToChatModal";
 
 type Question = {
   id: string;
@@ -197,6 +198,7 @@ export default function QuestionCard({ q }: { q: Question }) {
   const [duelOpen, setDuelOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(q.isSaved || false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -584,7 +586,10 @@ export default function QuestionCard({ q }: { q: Question }) {
 
           <button
             type="button"
-            onClick={handleShare}
+            onClick={(e) => {
+              e.preventDefault();
+              setShowShareModal(true);
+            }}
             className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-300 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-[10px] sm:text-xs font-bold uppercase tracking-wider"
             aria-label="Share question"
           >
@@ -669,6 +674,13 @@ export default function QuestionCard({ q }: { q: Question }) {
         currentUserId={user.id}
       />
     )}
+
+    {/* Share to Chat Modal */}
+    <ShareToChatModal
+        url={typeof window !== 'undefined' ? `${window.location.origin}/questions/${q.id}` : ''}
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+    />
     </>
   );
 }
