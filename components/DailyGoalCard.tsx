@@ -74,7 +74,12 @@ export default function DailyGoalCard() {
         setGoal(g);
 
         const meta = freshUser?.user_metadata || session.user.user_metadata || {};
-        const isClaimed = meta.daily_goal_claimed_date === today || cached?.claimed === true;
+        const metadataClaimed = meta.daily_goal_claimed_date === today;
+        const cacheClaimed = cached?.claimed === true;
+        if (cacheClaimed && !metadataClaimed) {
+          console.warn('Daily goal claimed cache mismatch: cache=true but metadata=false');
+        }
+        const isClaimed = metadataClaimed || cacheClaimed;
         setClaimed(isClaimed);
 
         if (isClaimed) {

@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { FileText, HelpCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
-const DOMAIN_WITH_PATH_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+(?:\/.*)?$/;
+const DOMAIN_WITH_OPTIONAL_PATH_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+(?:\/.*)?$/;
 
 export default function LinkPreview({ url }: { url: string }) {
   const [data, setData] = useState<any>(null);
@@ -22,7 +22,7 @@ export default function LinkPreview({ url }: { url: string }) {
           parsedUrl = new URL(trimmedUrl, typeof window !== 'undefined' ? window.location.origin : 'https://manthan-beta-c975.vercel.app');
         } else if (/^https?:\/\//i.test(trimmedUrl)) {
           parsedUrl = new URL(trimmedUrl);
-        } else if (DOMAIN_WITH_PATH_REGEX.test(trimmedUrl)) {
+        } else if (DOMAIN_WITH_OPTIONAL_PATH_REGEX.test(trimmedUrl)) {
           parsedUrl = new URL(`https://${trimmedUrl}`);
         } else {
           parsedUrl = new URL(trimmedUrl, 'https://manthan-beta-c975.vercel.app');

@@ -34,6 +34,9 @@ interface Participant {
 
 const MESSAGES_CACHE_KEY = (r: string) => `chat_msgs_${r}`;
 const PARTICIPANT_CACHE_KEY = (r: string) => `chat_part_${r}`;
+// Matches shareable post/question links in chat:
+// - absolute URLs (with or without protocol) containing /posts/{id} or /questions/{id}
+// - relative paths like /posts/{id} or /questions/{id}
 const CHAT_LINK_PREVIEW_REGEX = /((?:https?:\/\/)?(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+|(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+)/i;
 
 // ─── Haptics (graceful) ─────────────────────────────────────────────────────
