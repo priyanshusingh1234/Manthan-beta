@@ -66,11 +66,12 @@ Student's Answer is provided as an image.
 Task:
 Determine if the student's actual final answer is correct. They do not need to perfectly show every step exactly as the teacher if their main conclusion and technique are right. 
 IMPORTANT LIMITATION: Do not blindly fail a student for using alternative math formulas or different problem-solving techniques. Check their work intelligently to see if it is mathematically and logically sound on its own merit.
+CRITICAL CHEAT DETECTION: Check if the student's image is a screenshot (e.g., showing a mobile UI, status bar, or digital text) or a photograph of a digital screen instead of handwritten work. If it is a screenshot or a photo of a screen, you MUST mark it as "wrong" and explicitly state that uploading screenshots/digital text is considered cheating and unfair means.
 
 Respond ONLY with a valid JSON object matching this schema (no markdown formatting):
 {
   "verdict": "correct" or "wrong",
-  "breakdown": "A clear, encouraging 3-4 sentence explanation addressing the student directly. Explain exactly where their math/logic fails, or why it was graded correctly despite using a different format."
+  "breakdown": "A clear, encouraging 3-4 sentence explanation addressing the student directly. Explain exactly where their math/logic fails, or why it was graded correctly despite using a different format. If they cheated by using a screenshot, firmly explain that unfair means are not allowed."
 }`;
 
         const contents = [];
