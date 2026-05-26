@@ -286,7 +286,7 @@ const MessageItem = memo(function MessageItem({
                   {meta.edited && <span className="text-[10px] opacity-70 italic ml-1.5 font-medium">(edited)</span>}
                 </p>
                 {(() => {
-                  const urlMatch = mainContent.match(/(https?:\/\/[^\/]+(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+|(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+)/);
+                  const urlMatch = mainContent.match(/((?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+|(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+)/i);
                   const previewUrl = urlMatch ? urlMatch[0] : null;
                   return previewUrl ? (
                     <div className="px-2 pb-2 pt-0 w-full max-w-[280px]">

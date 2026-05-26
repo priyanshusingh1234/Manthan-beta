@@ -68,12 +68,13 @@ export default function DailyGoalCard() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
+        const { data: { user: freshUser } } = await supabase.auth.getUser();
 
         const g = getDailyGoal(session.user.id, today);
         setGoal(g);
 
-        const meta = session.user.user_metadata || {};
-        const isClaimed = meta.daily_goal_claimed_date === today;
+        const meta = freshUser?.user_metadata || session.user.user_metadata || {};
+        const isClaimed = meta.daily_goal_claimed_date === today || cached?.claimed === true;
         setClaimed(isClaimed);
 
         if (isClaimed) {
