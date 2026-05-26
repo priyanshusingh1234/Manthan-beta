@@ -6,7 +6,9 @@ import Image from 'next/image';
 import { FileText, HelpCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
+// Validates host-like values with optional path for protocol-less links (e.g. example.com/posts/123).
 const DOMAIN_WITH_OPTIONAL_PATH_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+(?:\/.*)?$/;
+const MAX_PREVIEW_LENGTH = 80;
 
 export default function LinkPreview({ url }: { url: string }) {
   const [data, setData] = useState<any>(null);
@@ -57,7 +59,7 @@ export default function LinkPreview({ url }: { url: string }) {
             type: 'post',
             title: 'Community Post',
             description: post.content
-              ? `${post.content.slice(0, 80)}${post.content.length > 80 ? '...' : ''}`
+              ? `${post.content.slice(0, MAX_PREVIEW_LENGTH)}${post.content.length > MAX_PREVIEW_LENGTH ? '...' : ''}`
               : 'Open this community post.',
             image: post.image_url,
             authorName,

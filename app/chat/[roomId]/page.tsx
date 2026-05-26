@@ -34,10 +34,11 @@ interface Participant {
 
 const MESSAGES_CACHE_KEY = (r: string) => `chat_msgs_${r}`;
 const PARTICIPANT_CACHE_KEY = (r: string) => `chat_part_${r}`;
-// Matches shareable post/question links in chat:
-// - absolute URLs (with or without protocol) containing /posts/{id} or /questions/{id}
-// - relative paths like /posts/{id} or /questions/{id}
-const CHAT_LINK_PREVIEW_REGEX = /((?:https?:\/\/)?(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+|(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+)/i;
+// Absolute links: optional protocol + valid domain labels + /posts/{id} or /questions/{id}
+const CHAT_ABSOLUTE_LINK_PATTERN = /(?:https?:\/\/)?(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+/;
+// Relative links: /posts/{id} or /questions/{id}
+const CHAT_RELATIVE_LINK_PATTERN = /(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+/;
+const CHAT_LINK_PREVIEW_REGEX = new RegExp(`(${CHAT_ABSOLUTE_LINK_PATTERN.source}|${CHAT_RELATIVE_LINK_PATTERN.source})`, 'i');
 
 // ─── Haptics (graceful) ─────────────────────────────────────────────────────
 async function vibrate(style: 'light' | 'medium' = 'light') {

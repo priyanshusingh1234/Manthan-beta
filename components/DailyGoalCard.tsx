@@ -79,6 +79,9 @@ export default function DailyGoalCard() {
         if (cacheClaimed && !metadataClaimed) {
           console.warn('Daily goal claimed cache mismatch: cache=true but metadata=false');
         }
+        if (metadataClaimed && !cacheClaimed) {
+          console.warn('Daily goal claimed cache mismatch: metadata=true but cache=false');
+        }
         const isClaimed = metadataClaimed || cacheClaimed;
         setClaimed(isClaimed);
 
