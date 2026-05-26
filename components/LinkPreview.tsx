@@ -6,6 +6,10 @@ import Image from 'next/image';
 import { FileText, HelpCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
+// Validates host-like values with optional path for protocol-less links (e.g. example.com/posts/123).
+const DOMAIN_WITH_OPTIONAL_PATH_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+(?:\/.*)?$/;
+const MAX_PREVIEW_LENGTH = 80;
+
 export default function LinkPreview({ url }: { url: string }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -14,18 +18,25 @@ export default function LinkPreview({ url }: { url: string }) {
   useEffect(() => {
     async function fetchMeta() {
       try {
-        let parsedUrl;
-        try {
-          parsedUrl = new URL(url);
-        } catch {
-          // Attempt to parse as relative or with synthetic base
-          parsedUrl = new URL(url, 'https://manthan-beta-c975.vercel.app');
+        const trimmedUrl = url.trim();
+        let parsedUrl: URL;
+        if (trimmedUrl.startsWith('/')) {
+          parsedUrl = new URL(trimmedUrl, typeof window !== 'undefined' ? window.location.origin : 'https://manthan-beta-c975.vercel.app');
+        } else if (/^https?:\/\//i.test(trimmedUrl)) {
+          parsedUrl = new URL(trimmedUrl);
+        } else if (DOMAIN_WITH_OPTIONAL_PATH_REGEX.test(trimmedUrl)) {
+          parsedUrl = new URL(`https://${trimmedUrl}`);
+        } else {
+          parsedUrl = new URL(trimmedUrl, 'https://manthan-beta-c975.vercel.app');
         }
 
         const path = parsedUrl.pathname;
+        const segments = path.split('/').filter(Boolean);
+        const postIdx = segments.indexOf('posts');
+        const questionIdx = segments.indexOf('questions');
 
-        if (path.startsWith('/posts/')) {
-          const postId = path.split('/')[2];
+        if (postIdx !== -1) {
+          const postId = segments[postIdx + 1];
           if (!postId) throw new Error('Invalid post ID');
 
           const { data: post, error } = await supabase
@@ -47,14 +58,16 @@ export default function LinkPreview({ url }: { url: string }) {
           setData({
             type: 'post',
             title: 'Community Post',
-            description: post.content?.slice(0, 80) + '...',
+            description: post.content
+              ? `${post.content.slice(0, MAX_PREVIEW_LENGTH)}${post.content.length > MAX_PREVIEW_LENGTH ? '...' : ''}`
+              : 'Open this community post.',
             image: post.image_url,
             authorName,
             authorAvatar,
             link: `/posts/${postId}`
           });
-        } else if (path.startsWith('/questions/')) {
-          const qId = path.split('/')[2];
+        } else if (questionIdx !== -1) {
+          const qId = segments[questionIdx + 1];
           if (!qId) throw new Error('Invalid question ID');
 
           const { data: q, error } = await supabase
