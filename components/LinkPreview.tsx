@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { FileText, HelpCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
+const DOMAIN_WITH_PATH_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+(?:\/.*)?$/;
+
 export default function LinkPreview({ url }: { url: string }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +22,7 @@ export default function LinkPreview({ url }: { url: string }) {
           parsedUrl = new URL(trimmedUrl, typeof window !== 'undefined' ? window.location.origin : 'https://manthan-beta-c975.vercel.app');
         } else if (/^https?:\/\//i.test(trimmedUrl)) {
           parsedUrl = new URL(trimmedUrl);
-        } else if (/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\/.*)?$/.test(trimmedUrl)) {
+        } else if (DOMAIN_WITH_PATH_REGEX.test(trimmedUrl)) {
           parsedUrl = new URL(`https://${trimmedUrl}`);
         } else {
           parsedUrl = new URL(trimmedUrl, 'https://manthan-beta-c975.vercel.app');
@@ -56,7 +58,7 @@ export default function LinkPreview({ url }: { url: string }) {
             title: 'Community Post',
             description: post.content
               ? `${post.content.slice(0, 80)}${post.content.length > 80 ? '...' : ''}`
-              : 'Open this community post on Dheeyudha.',
+              : 'Open this community post.',
             image: post.image_url,
             authorName,
             authorAvatar,

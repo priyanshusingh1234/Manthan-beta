@@ -34,6 +34,7 @@ interface Participant {
 
 const MESSAGES_CACHE_KEY = (r: string) => `chat_msgs_${r}`;
 const PARTICIPANT_CACHE_KEY = (r: string) => `chat_part_${r}`;
+const CHAT_LINK_PREVIEW_REGEX = /((?:https?:\/\/)?(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+|(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+)/i;
 
 // ─── Haptics (graceful) ─────────────────────────────────────────────────────
 async function vibrate(style: 'light' | 'medium' = 'light') {
@@ -286,7 +287,7 @@ const MessageItem = memo(function MessageItem({
                   {meta.edited && <span className="text-[10px] opacity-70 italic ml-1.5 font-medium">(edited)</span>}
                 </p>
                 {(() => {
-                  const urlMatch = mainContent.match(/((?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+|(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+)/i);
+                  const urlMatch = mainContent.match(CHAT_LINK_PREVIEW_REGEX);
                   const previewUrl = urlMatch ? urlMatch[0] : null;
                   return previewUrl ? (
                     <div className="px-2 pb-2 pt-0 w-full max-w-[280px]">
