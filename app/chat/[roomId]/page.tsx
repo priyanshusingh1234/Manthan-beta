@@ -34,6 +34,11 @@ interface Participant {
 
 const MESSAGES_CACHE_KEY = (r: string) => `chat_msgs_${r}`;
 const PARTICIPANT_CACHE_KEY = (r: string) => `chat_part_${r}`;
+// Absolute links: optional protocol + valid domain labels + /posts/{id} or /questions/{id}
+const CHAT_ABSOLUTE_LINK_PATTERN = /(?:https?:\/\/)?(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+/;
+// Relative links: /posts/{id} or /questions/{id}
+const CHAT_RELATIVE_LINK_PATTERN = /(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+/;
+const CHAT_LINK_PREVIEW_REGEX = new RegExp(`(${CHAT_ABSOLUTE_LINK_PATTERN.source}|${CHAT_RELATIVE_LINK_PATTERN.source})`, 'i');
 
 // ─── Haptics (graceful) ─────────────────────────────────────────────────────
 async function vibrate(style: 'light' | 'medium' = 'light') {
@@ -286,7 +291,7 @@ const MessageItem = memo(function MessageItem({
                   {meta.edited && <span className="text-[10px] opacity-70 italic ml-1.5 font-medium">(edited)</span>}
                 </p>
                 {(() => {
-                  const urlMatch = mainContent.match(/(https?:\/\/[^\/]+(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+|(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+)/);
+                  const urlMatch = mainContent.match(CHAT_LINK_PREVIEW_REGEX);
                   const previewUrl = urlMatch ? urlMatch[0] : null;
                   return previewUrl ? (
                     <div className="px-2 pb-2 pt-0 w-full max-w-[280px]">

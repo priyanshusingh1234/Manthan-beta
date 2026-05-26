@@ -68,12 +68,21 @@ export default function DailyGoalCard() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) return;
+        const { data: { user: freshUser } } = await supabase.auth.getUser();
 
         const g = getDailyGoal(session.user.id, today);
         setGoal(g);
 
-        const meta = session.user.user_metadata || {};
-        const isClaimed = meta.daily_goal_claimed_date === today;
+        const meta = freshUser?.user_metadata || session.user.user_metadata || {};
+        const metadataClaimed = meta.daily_goal_claimed_date === today;
+        const cacheClaimed = cached?.claimed === true;
+        if (cacheClaimed && !metadataClaimed) {
+          console.warn('Daily goal claimed cache mismatch: cache=true but metadata=false');
+        }
+        if (metadataClaimed && !cacheClaimed) {
+          console.warn('Daily goal claimed cache mismatch: metadata=true but cache=false');
+        }
+        const isClaimed = metadataClaimed || cacheClaimed;
         setClaimed(isClaimed);
 
         if (isClaimed) {
