@@ -13,6 +13,7 @@ import { useCallContext } from '@/components/CallProvider';
 import { format, isToday, isYesterday } from 'date-fns';
 import BadgedName from '@/components/BadgedName';
 import LinkPreview from '@/components/LinkPreview';
+import { compressImage } from '@/utils/compressImage';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 interface Message {
@@ -39,6 +40,7 @@ const CHAT_ABSOLUTE_LINK_PATTERN = /(?:https?:\/\/)?(?:[a-zA-Z0-9](?:[a-zA-Z0-9-
 // Relative links: /posts/{id} or /questions/{id}
 const CHAT_RELATIVE_LINK_PATTERN = /(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+/;
 const CHAT_LINK_PREVIEW_REGEX = new RegExp(`(${CHAT_ABSOLUTE_LINK_PATTERN.source}|${CHAT_RELATIVE_LINK_PATTERN.source})`, 'i');
+const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 // ─── Haptics (graceful) ─────────────────────────────────────────────────────
 async function vibrate(style: 'light' | 'medium' = 'light') {
@@ -940,12 +942,24 @@ function ChatRoomContent() {
     if (!file || !user) return;
     setUploadingImage(true);
     try {
+      let uploadFile = file;
+      if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+        uploadFile = await compressImage(uploadFile, 'answer');
+      }
+      if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+        throw new Error('Image is too large. Please select an image under 4MB.');
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       const formData = new FormData();
-      formData.append('file', file);
+      const ext = (uploadFile.name || 'chat-image.jpg').split('.').pop() || 'jpg';
+      formData.append('file', uploadFile, `chat-${Date.now()}.${ext}`);
       formData.append('roomId', roomId);
       const res = await fetch('/api/chat/upload', { method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}` }, body: formData });
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Upload failed');
+      }
       const uploadData = await res.json();
       
       const { data, error } = await supabase.from('chat_messages').insert({ 

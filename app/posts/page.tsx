@@ -12,6 +12,7 @@ import { Check } from 'lucide-react';
 import { Suspense } from 'react';
 
 const MAX_CHARS = 500;
+const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 function SocialFeedContent() {
     const router = useRouter();
@@ -473,10 +474,18 @@ function SocialFeedContent() {
 
             // Upload image if present
             if (imageFile) {
-                const ext = (imageFile.name || 'post-image.jpg').split('.').pop() || 'webp';
+                let uploadFile = imageFile;
+                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                    uploadFile = await compressImage(uploadFile, 'answer');
+                }
+                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                    throw new Error('Image is too large. Please select an image under 4MB.');
+                }
+
+                const ext = (uploadFile.name || 'post-image.jpg').split('.').pop() || 'webp';
                 const form = new FormData();
                 // imageFile is already a compressed Blob/File from compressImage — use it directly
-                form.append('file', imageFile, `post-${Date.now()}.${ext}`);
+                form.append('file', uploadFile, `post-${Date.now()}.${ext}`);
                 const up = await fetch('/api/posts/upload', {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${session.access_token}` },

@@ -7,6 +7,8 @@ import { ImageIcon, X, Send, User, ChevronLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { compressImage } from '@/utils/compressImage';
 
+const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024;
+
 export default function CreatePostPage() {
     const router = useRouter();
     const [content, setContent] = useState('');
@@ -157,9 +159,22 @@ export default function CreatePostPage() {
                     throw new Error("No valid image data available. Please re-select the image.");
                 }
 
-                const ext = (imageFile as any)?.name?.split('.').pop() || 'jpg';
+                let uploadFile = uploadBlob instanceof File
+                    ? uploadBlob
+                    : new File([uploadBlob], (imageFile as any)?.name || `post-${Date.now()}.jpg`, {
+                        type: uploadBlob.type || 'image/jpeg'
+                    });
+
+                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                    uploadFile = await compressImage(uploadFile, 'answer');
+                }
+                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                    throw new Error("Image is too large. Please select an image under 4MB.");
+                }
+
+                const ext = (uploadFile as any)?.name?.split('.').pop() || 'jpg';
                 const form = new FormData();
-                form.append('file', uploadBlob, `post-${Date.now()}.${ext}`);
+                form.append('file', uploadFile, `post-${Date.now()}.${ext}`);
 
                 const uploadRes = await fetch('/api/posts/upload', {
                     method: 'POST',
