@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
+import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL } from '@/lib/uploadLimits';
 
 function parseJwtSub(bearer?: string | null) {
     try {
@@ -51,6 +52,12 @@ export async function POST(req: Request) {
         }
 
         const buffer = Buffer.from(arrayBuffer);
+        if (buffer.byteLength > MAX_IMAGE_UPLOAD_BYTES) {
+            return NextResponse.json(
+                { error: `Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.` },
+                { status: 413 }
+            );
+        }
 
         const { error: uploadErr } = await supabaseAdmin.storage.from(bucket).upload(filePath, buffer, {
             upsert: false,

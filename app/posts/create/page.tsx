@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ImageIcon, X, Send, User, ChevronLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { compressImage } from '@/utils/compressImage';
+import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL } from '@/lib/uploadLimits';
 
 export default function CreatePostPage() {
     const router = useRouter();
@@ -157,9 +158,24 @@ export default function CreatePostPage() {
                     throw new Error("No valid image data available. Please re-select the image.");
                 }
 
-                const ext = (imageFile as any)?.name?.split('.').pop() || 'jpg';
+                let uploadFile = uploadBlob instanceof File
+                    ? uploadBlob
+                    : new File([uploadBlob], (imageFile as any)?.name || `post-${Date.now()}.webp`, {
+                        type: uploadBlob.type || 'image/webp'
+                    });
+
+                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                    uploadFile = await compressImage(uploadFile, 'post');
+                }
+                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                    throw new Error(`Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.`);
+                }
+
+                const extFromName = (uploadFile as any)?.name?.split('.').pop();
+                const extFromType = uploadFile.type?.split('/')[1]?.split('+')[0];
+                const ext = (extFromName || extFromType || 'webp').toLowerCase();
                 const form = new FormData();
-                form.append('file', uploadBlob, `post-${Date.now()}.${ext}`);
+                form.append('file', uploadFile, `post-${Date.now()}.${ext}`);
 
                 const uploadRes = await fetch('/api/posts/upload', {
                     method: 'POST',

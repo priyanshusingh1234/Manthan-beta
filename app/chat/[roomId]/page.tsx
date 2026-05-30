@@ -13,6 +13,8 @@ import { useCallContext } from '@/components/CallProvider';
 import { format, isToday, isYesterday } from 'date-fns';
 import BadgedName from '@/components/BadgedName';
 import LinkPreview from '@/components/LinkPreview';
+import { compressImage } from '@/utils/compressImage';
+import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL } from '@/lib/uploadLimits';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 interface Message {
@@ -940,12 +942,26 @@ function ChatRoomContent() {
     if (!file || !user) return;
     setUploadingImage(true);
     try {
+      let uploadFile = file;
+      if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+        uploadFile = await compressImage(uploadFile, 'chat');
+      }
+      if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+        throw new Error(`Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.`);
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       const formData = new FormData();
-      formData.append('file', file);
+      const extFromName = uploadFile.name?.split('.').pop();
+      const extFromType = uploadFile.type?.split('/')[1]?.split('+')[0];
+      const ext = (extFromName || extFromType || 'webp').toLowerCase();
+      formData.append('file', uploadFile, `chat-${Date.now()}.${ext}`);
       formData.append('roomId', roomId);
       const res = await fetch('/api/chat/upload', { method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}` }, body: formData });
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Upload failed');
+      }
       const uploadData = await res.json();
       
       const { data, error } = await supabase.from('chat_messages').insert({ 

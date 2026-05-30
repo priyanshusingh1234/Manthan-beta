@@ -8,6 +8,7 @@ import SuggestedUsersCard from '@/components/SuggestedUsersCard';
 import { ImageIcon, X, Sparkles, User, Send, Video, Loader2, ArrowUp } from 'lucide-react';
 import Image from 'next/image';
 import { compressImage } from '@/utils/compressImage';
+import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL } from '@/lib/uploadLimits';
 import { Check } from 'lucide-react';
 import { Suspense } from 'react';
 
@@ -473,10 +474,18 @@ function SocialFeedContent() {
 
             // Upload image if present
             if (imageFile) {
-                const ext = (imageFile.name || 'post-image.jpg').split('.').pop() || 'webp';
+                let uploadFile = imageFile;
+                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                    uploadFile = await compressImage(uploadFile, 'post');
+                }
+                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                    throw new Error(`Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.`);
+                }
+
+                const ext = (uploadFile.name || 'post-image.jpg').split('.').pop() || 'webp';
                 const form = new FormData();
                 // imageFile is already a compressed Blob/File from compressImage — use it directly
-                form.append('file', imageFile, `post-${Date.now()}.${ext}`);
+                form.append('file', uploadFile, `post-${Date.now()}.${ext}`);
                 const up = await fetch('/api/posts/upload', {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${session.access_token}` },
