@@ -14,6 +14,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import BadgedName from '@/components/BadgedName';
 import LinkPreview from '@/components/LinkPreview';
 import { compressImage } from '@/utils/compressImage';
+import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL } from '@/lib/uploadLimits';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 interface Message {
@@ -40,7 +41,6 @@ const CHAT_ABSOLUTE_LINK_PATTERN = /(?:https?:\/\/)?(?:[a-zA-Z0-9](?:[a-zA-Z0-9-
 // Relative links: /posts/{id} or /questions/{id}
 const CHAT_RELATIVE_LINK_PATTERN = /(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+/;
 const CHAT_LINK_PREVIEW_REGEX = new RegExp(`(${CHAT_ABSOLUTE_LINK_PATTERN.source}|${CHAT_RELATIVE_LINK_PATTERN.source})`, 'i');
-const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 // ─── Haptics (graceful) ─────────────────────────────────────────────────────
 async function vibrate(style: 'light' | 'medium' = 'light') {
@@ -947,12 +947,14 @@ function ChatRoomContent() {
         uploadFile = await compressImage(uploadFile, 'chat');
       }
       if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
-        throw new Error('Image is too large. Please select an image under 4MB.');
+        throw new Error(`Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.`);
       }
 
       const { data: { session } } = await supabase.auth.getSession();
       const formData = new FormData();
-      const ext = (uploadFile.name || 'chat-image.jpg').split('.').pop() || 'jpg';
+      const extFromName = uploadFile.name?.split('.').pop();
+      const extFromType = uploadFile.type?.split('/')[1]?.split('+')[0];
+      const ext = (extFromName || extFromType || 'webp').toLowerCase();
       formData.append('file', uploadFile, `chat-${Date.now()}.${ext}`);
       formData.append('roomId', roomId);
       const res = await fetch('/api/chat/upload', { method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}` }, body: formData });

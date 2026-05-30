@@ -8,11 +8,11 @@ import SuggestedUsersCard from '@/components/SuggestedUsersCard';
 import { ImageIcon, X, Sparkles, User, Send, Video, Loader2, ArrowUp } from 'lucide-react';
 import Image from 'next/image';
 import { compressImage } from '@/utils/compressImage';
+import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL } from '@/lib/uploadLimits';
 import { Check } from 'lucide-react';
 import { Suspense } from 'react';
 
 const MAX_CHARS = 500;
-const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024;
 
 function SocialFeedContent() {
     const router = useRouter();
@@ -479,7 +479,7 @@ function SocialFeedContent() {
                     uploadFile = await compressImage(uploadFile, 'post');
                 }
                 if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
-                    throw new Error('Image is too large. Please select an image under 4MB.');
+                    throw new Error(`Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.`);
                 }
 
                 const ext = (uploadFile.name || 'post-image.jpg').split('.').pop() || 'webp';

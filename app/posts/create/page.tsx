@@ -6,8 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ImageIcon, X, Send, User, ChevronLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { compressImage } from '@/utils/compressImage';
-
-const MAX_IMAGE_UPLOAD_BYTES = 4 * 1024 * 1024;
+import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL } from '@/lib/uploadLimits';
 
 export default function CreatePostPage() {
     const router = useRouter();
@@ -161,18 +160,20 @@ export default function CreatePostPage() {
 
                 let uploadFile = uploadBlob instanceof File
                     ? uploadBlob
-                    : new File([uploadBlob], (imageFile as any)?.name || `post-${Date.now()}.jpg`, {
-                        type: uploadBlob.type || 'image/jpeg'
+                    : new File([uploadBlob], (imageFile as any)?.name || `post-${Date.now()}.webp`, {
+                        type: uploadBlob.type || 'image/webp'
                     });
 
                 if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
                     uploadFile = await compressImage(uploadFile, 'post');
                 }
                 if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
-                    throw new Error("Image is too large. Please select an image under 4MB.");
+                    throw new Error(`Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.`);
                 }
 
-                const ext = (uploadFile as any)?.name?.split('.').pop() || 'jpg';
+                const extFromName = (uploadFile as any)?.name?.split('.').pop();
+                const extFromType = uploadFile.type?.split('/')[1]?.split('+')[0];
+                const ext = (extFromName || extFromType || 'webp').toLowerCase();
                 const form = new FormData();
                 form.append('file', uploadFile, `post-${Date.now()}.${ext}`);
 
