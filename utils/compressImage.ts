@@ -1,6 +1,22 @@
 import imageCompression from "browser-image-compression";
 
-type CompressionPreset = "avatar" | "banner" | "answer";
+type CompressionPreset = "avatar" | "banner" | "answer" | "post" | "chat";
+
+const POST_IMAGE_PRESET: Parameters<typeof imageCompression>[1] = {
+    maxSizeMB: 0.6,
+    maxWidthOrHeight: 1280,
+    useWebWorker: true,
+    fileType: "image/webp",
+    initialQuality: 0.82,
+};
+
+const LARGE_IMAGE_PRESET: Parameters<typeof imageCompression>[1] = {
+    maxSizeMB: 1.0,
+    maxWidthOrHeight: 1600,
+    useWebWorker: true,
+    fileType: "image/webp",
+    initialQuality: 0.88,
+};
 
 const PRESETS: Record<CompressionPreset, Parameters<typeof imageCompression>[1]> = {
     avatar: {
@@ -17,13 +33,9 @@ const PRESETS: Record<CompressionPreset, Parameters<typeof imageCompression>[1]>
         fileType: "image/webp",
         initialQuality: 0.82,
     },
-    answer: {
-        maxSizeMB: 1.0,         // 1 MB max — needs to stay readable for AI
-        maxWidthOrHeight: 1600,
-        useWebWorker: true,
-        fileType: "image/webp",
-        initialQuality: 0.88,
-    },
+    answer: { ...LARGE_IMAGE_PRESET }, // readable upload preset for answer OCR
+    post: { ...POST_IMAGE_PRESET }, // post upload fallback preset
+    chat: { ...LARGE_IMAGE_PRESET }, // chat upload fallback preset
 };
 
 const MB = 1024 * 1024;

@@ -944,7 +944,7 @@ function ChatRoomContent() {
     try {
       let uploadFile = file;
       if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
-        uploadFile = await compressImage(uploadFile, 'answer');
+        uploadFile = await compressImage(uploadFile, 'chat');
       }
       if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
         throw new Error('Image is too large. Please select an image under 4MB.');

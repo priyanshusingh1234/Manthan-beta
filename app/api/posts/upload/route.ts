@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         const buffer = Buffer.from(arrayBuffer);
         if (buffer.byteLength > MAX_UPLOAD_BYTES) {
             return NextResponse.json(
-                { error: 'Image is too large. Please choose an image under 4MB.' },
+                { error: 'Image is too large. Please select an image under 4MB.' },
                 { status: 413 }
             );
         }
