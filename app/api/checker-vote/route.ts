@@ -22,6 +22,7 @@ const STUDENT_EXTRA_PENALTY = 3;
 
 import { verifyWithGemini, AIVerdict } from "@/lib/aiVerification";
 import { processCoopWin, processCoopLoss } from "@/lib/coopUtils";
+import { upsertProfile } from "@/lib/profiles";
 
 // POST: Submit a checker vote
 export async function POST(req: Request) {
@@ -164,9 +165,11 @@ export async function POST(req: Request) {
                 for (const cv of correctVotes) {
                     const { data: voterData } = await supabaseAdmin.auth.admin.getUserById(cv.checker_id);
                     const voterMeta = voterData?.user?.user_metadata || {};
+                    const updatedMeta = { ...voterMeta, totalPoints: (Number(voterMeta.totalPoints) || 0) + CHECKER_CORRECT_REWARD_POINTS };
                     await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
-                        user_metadata: { ...voterMeta, totalPoints: (Number(voterMeta.totalPoints) || 0) + CHECKER_CORRECT_REWARD_POINTS },
+                        user_metadata: updatedMeta,
                     });
+                    await upsertProfile(cv.checker_id, updatedMeta);
 
                     // 🔔 Notify voter they earned points
                     await createNotification({
@@ -204,9 +207,11 @@ export async function POST(req: Request) {
                     const { data: voterData } = await supabaseAdmin.auth.admin.getUserById(cv.checker_id);
                     const voterMeta = voterData?.user?.user_metadata || {};
                     const penalized = Math.max(0, (Number(voterMeta.totalPoints) || 0) - CHECKER_REWARD_POINTS);
+                    const updatedMeta = { ...voterMeta, totalPoints: penalized };
                     await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
-                        user_metadata: { ...voterMeta, totalPoints: penalized },
+                        user_metadata: updatedMeta,
                     });
+                    await upsertProfile(cv.checker_id, updatedMeta);
 
                     // 🔔 Notify voter of penalty
                     await createNotification({
@@ -229,9 +234,11 @@ export async function POST(req: Request) {
                 }
                 const newStudentTotal = Math.max(0, currentPoints - totalDeduction);
                 const battlesWon = Math.max(0, (Number(studentMeta.battlesWon) || 0) - 1);
+                const updatedStudentMeta = { ...studentMeta, totalPoints: newStudentTotal, battlesWon };
                 await supabaseAdmin.auth.admin.updateUserById(sub.student_id, {
-                    user_metadata: { ...studentMeta, totalPoints: newStudentTotal, battlesWon },
+                    user_metadata: updatedStudentMeta,
                 });
+                await upsertProfile(sub.student_id, updatedStudentMeta);
                 leaderboardCache.invalidate();
 
                 await createNotification({
@@ -327,9 +334,11 @@ export async function POST(req: Request) {
                     const { data: voterData } = await supabaseAdmin.auth.admin.getUserById(cv.checker_id);
                     const voterMeta = voterData?.user?.user_metadata || {};
                     const voterPoints = Math.max(0, (Number(voterMeta.totalPoints) || 0) - SPAMMER_PENALTY);
+                    const updatedMeta = { ...voterMeta, totalPoints: voterPoints };
                     await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
-                        user_metadata: { ...voterMeta, totalPoints: voterPoints },
+                        user_metadata: updatedMeta,
                     });
+                    await upsertProfile(cv.checker_id, updatedMeta);
 
                     // 🔔 Notify voter of penalty
                     await createNotification({
@@ -382,22 +391,26 @@ export async function POST(req: Request) {
                 // Fix stats (remove falsely claimed win)
                 const battlesWon = Math.max(0, (Number(studentMeta.battlesWon) || 0) - 1);
 
-                await supabaseAdmin.auth.admin.updateUserById(sub.student_id, {
-                    user_metadata: {
+                const updatedStudentMeta = {
                         ...studentMeta,
                         totalPoints: newStudentTotal,
                         battlesWon,
-                    },
+                };
+                await supabaseAdmin.auth.admin.updateUserById(sub.student_id, {
+                    user_metadata: updatedStudentMeta,
                 });
+                await upsertProfile(sub.student_id, updatedStudentMeta);
 
                 // 2. Reward Checkers +2 points
                 for (const cv of wrongVotes) {
                     const { data: voterData } = await supabaseAdmin.auth.admin.getUserById(cv.checker_id);
                     const voterMeta = voterData?.user?.user_metadata || {};
                     const voterPoints = (Number(voterMeta.totalPoints) || 0) + CHECKER_REWARD_POINTS;
+                    const updatedMeta = { ...voterMeta, totalPoints: voterPoints };
                     await supabaseAdmin.auth.admin.updateUserById(cv.checker_id, {
-                        user_metadata: { ...voterMeta, totalPoints: voterPoints },
+                        user_metadata: updatedMeta,
                     });
+                    await upsertProfile(cv.checker_id, updatedMeta);
 
                     // 🔔 Notify voter of reward
                     await createNotification({

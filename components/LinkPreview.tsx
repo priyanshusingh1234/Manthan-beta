@@ -41,7 +41,7 @@ export default function LinkPreview({ url }: { url: string }) {
 
           const { data: post, error } = await supabase
             .from('posts')
-            .select('content, author_id, image_url, profiles(full_name, avatar_url)')
+            .select('content, author_id, image_url')
             .eq('id', postId)
             .single();
 
@@ -49,10 +49,18 @@ export default function LinkPreview({ url }: { url: string }) {
 
           let authorName = 'Scholar';
           let authorAvatar = null;
-          const profile = Array.isArray(post.profiles) ? post.profiles[0] : post.profiles;
-          if (profile) {
-            authorName = profile.full_name || 'Scholar';
-            authorAvatar = profile.avatar_url;
+          
+          if (post.author_id) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name, avatar_url')
+                .eq('id', post.author_id)
+                .maybeSingle();
+                
+            if (profile) {
+              authorName = profile.full_name || 'Scholar';
+              authorAvatar = profile.avatar_url;
+            }
           }
 
           setData({
