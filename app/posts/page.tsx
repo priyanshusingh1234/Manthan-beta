@@ -43,8 +43,8 @@ function SocialFeedContent() {
 
     // Composer state
     const [content, setContent] = useState('');
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imageFiles, setImageFiles] = useState<File[]>([]);
+    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     // Video clip state
     const [videoFile, setVideoFile] = useState<File | null>(null);
     const [videoPreview, setVideoPreview] = useState<string | null>(null);
@@ -319,21 +319,50 @@ function SocialFeedContent() {
 
     // ── Image handling ──────────────────────────────────────────────────────
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.size > 20 * 1024 * 1024) { setPostError('Image exceeds 20MB.'); return; }
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+        if (videoFile) {
+            setPostError('Remove the video to add images.');
+            return;
+        }
+        if (imageFiles.length + files.length > 5) {
+            setPostError('You can only upload up to 5 images per post.');
+            return;
+        }
         setPostError('');
         try {
-            const compressed = await compressImage(file, 'banner');
-            setImageFile(compressed);
-            setImagePreview(URL.createObjectURL(compressed));
-        } catch { setPostError('Failed to process image.'); }
+            const newFiles: File[] = [];
+            const newPreviews: string[] = [];
+            let skippedOversize = 0;
+            for (const file of files) {
+                if (file.size > 20 * 1024 * 1024) {
+                    skippedOversize += 1;
+                    continue;
+                }
+                const compressed = await compressImage(file, 'banner');
+                newFiles.push(compressed);
+                newPreviews.push(URL.createObjectURL(compressed));
+            }
+            setImageFiles(prev => [...prev, ...newFiles]);
+            setImagePreviews(prev => [...prev, ...newPreviews]);
+            if (skippedOversize > 0) {
+                setPostError(`${skippedOversize} image${skippedOversize > 1 ? 's' : ''} ${skippedOversize > 1 ? 'were' : 'was'} skipped for exceeding 20MB.`);
+            }
+        } catch {
+            setPostError('Failed to process image.');
+        } finally {
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
     };
 
-    const removeImage = () => {
-        setImageFile(null);
-        if (imagePreview) URL.revokeObjectURL(imagePreview);
-        setImagePreview(null);
+    const removeImage = (index: number) => {
+        setImageFiles(prev => prev.filter((_, i) => i !== index));
+        setImagePreviews(prev => {
+            const next = [...prev];
+            URL.revokeObjectURL(next[index]);
+            next.splice(index, 1);
+            return next;
+        });
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -355,7 +384,10 @@ function SocialFeedContent() {
         // Reading it entirely into an arrayBuffer creates a high risk of out-of-memory crashes on mobile devices.
         setVideoFile(file);
 
-        removeImage();
+        imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
+        setImageFiles([]);
+        setImagePreviews([]);
+        if (fileInputRef.current) fileInputRef.current.value = '';
 
         // Perform duration check in background
         try {
@@ -463,40 +495,43 @@ function SocialFeedContent() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!content.trim() && !imageFile && !videoFile) return;
+        if (!content.trim() && imageFiles.length === 0 && !videoFile) return;
         if (!session) return;
         setSubmitting(true);
         setPostError('');
         try {
             let imageUrl = null;
+            let imageUrls: string[] = [];
             let videoUrl = null;
             let videoThumbnail = null;
 
-            // Upload image if present
-            if (imageFile) {
-                let uploadFile = imageFile;
-                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
-                    uploadFile = await compressImage(uploadFile, 'post');
-                }
-                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
-                    throw new Error(`Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.`);
-                }
+            // Upload images if present
+            if (imageFiles.length > 0) {
+                for (let i = 0; i < imageFiles.length; i++) {
+                    let uploadFile = imageFiles[i];
+                    if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                        uploadFile = await compressImage(uploadFile, 'post');
+                    }
+                    if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                        throw new Error(`Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.`);
+                    }
 
-                const ext = (uploadFile.name || 'post-image.jpg').split('.').pop() || 'webp';
-                const form = new FormData();
-                // imageFile is already a compressed Blob/File from compressImage — use it directly
-                form.append('file', uploadFile, `post-${Date.now()}.${ext}`);
-                const up = await fetch('/api/posts/upload', {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${session.access_token}` },
-                    body: form,
-                });
-                if (!up.ok) {
-                    const upData = await up.json().catch(() => ({}));
-                    throw new Error(upData.error || `Upload failed (${up.status})`);
+                    const ext = (uploadFile.name || `post-image-${i}.webp`).split('.').pop() || 'webp';
+                    const form = new FormData();
+                    form.append('file', uploadFile, `post-${Date.now()}-${i}.${ext}`);
+                    const up = await fetch('/api/posts/upload', {
+                        method: 'POST',
+                        headers: { Authorization: 'Bearer ' + session.access_token },
+                        body: form,
+                    });
+                    if (!up.ok) {
+                        const upData = await up.json().catch(() => ({}));
+                        throw new Error(upData.error || `Upload failed (${up.status})`);
+                    }
+                    const upData = await up.json();
+                    imageUrls.push(upData.url);
                 }
-                const upData = await up.json();
-                imageUrl = upData.url;
+                imageUrl = imageUrls[0] || null;
             }
 
             // Upload video if present
@@ -515,7 +550,7 @@ function SocialFeedContent() {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${session.access_token}`,
                 },
-                body: JSON.stringify({ content: finalContent, imageUrl, videoUrl, videoThumbnail }),
+                body: JSON.stringify({ content: finalContent, imageUrl, imageUrls, videoUrl, videoThumbnail }),
             });
             if (!res.ok) throw new Error((await res.json()).error || 'Failed');
             const newPostRaw = await res.json();
@@ -528,6 +563,7 @@ function SocialFeedContent() {
                 type: 'post',
                 content: finalContent,
                 image_url: imageUrl,
+                image_urls: imageUrls,
                 video_url: videoUrl,
                 video_thumbnail: videoThumbnail,
                 likes_count: 0,
@@ -547,7 +583,10 @@ function SocialFeedContent() {
 
             // Reset composer
             setContent('');
-            removeImage();
+            imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
+            setImageFiles([]);
+            setImagePreviews([]);
+            if (fileInputRef.current) fileInputRef.current.value = '';
             removeVideo();
             setSelectedCategory('general');
             setFocused(false);
@@ -577,7 +616,7 @@ function SocialFeedContent() {
     };
 
     const charsLeft = MAX_CHARS - content.length;
-    const canPost = (content.trim() || imageFile || videoFile) && !submitting;
+    const canPost = (content.trim() || imageFiles.length > 0 || videoFile) && !submitting;
     const meta = session?.user?.user_metadata || {};
     const avatarUrl = currentUserData?.avatar_url || (meta.avatar_url && !meta.avatar_url.includes('googleusercontent.com') ? meta.avatar_url : null);
     const newCount = newPostsQueue.filter(p => !currentPostIdsRef.current.has(p.id)).length;
@@ -673,16 +712,20 @@ function SocialFeedContent() {
                                 </div>
 
                                 {/* Image Preview */}
-                                {imagePreview && (
-                                    <div className="mx-4 mb-3 relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 group max-h-80">
-                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-contain max-h-80" />
-                                        <button
-                                            type="button"
-                                            onClick={removeImage}
-                                            className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full backdrop-blur transition-colors"
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
+                                {imagePreviews.length > 0 && (
+                                    <div className="mx-4 mb-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        {imagePreviews.map((preview, idx) => (
+                                            <div key={idx} className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 group aspect-square">
+                                                <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeImage(idx)}
+                                                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full backdrop-blur transition-colors"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
 
@@ -762,27 +805,27 @@ function SocialFeedContent() {
                                 )}
 
                                 {/* Action bar — only visible when focused or has content */}
-                                {(focused || content || imagePreview || videoPreview) && (
+                                {(focused || content || imagePreviews.length > 0 || videoPreview) && (
                                     <div className="flex items-center justify-between px-4 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800">
                                         <div className="flex items-center gap-1">
                                             {/* Image attach */}
-                                            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                                            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} aria-label="Upload images" />
                                             <button
                                                 type="button"
                                                 onClick={() => fileInputRef.current?.click()}
-                                                disabled={submitting || !!videoFile}
+                                                disabled={submitting || !!videoFile || imageFiles.length >= 5}
                                                 className="p-2 rounded-full text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors disabled:opacity-40"
-                                                title="Add image"
+                                                title="Add images"
                                             >
                                                 <ImageIcon className="w-5 h-5" />
                                             </button>
 
                                             {/* Video clip attach */}
-                                            <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} />
+                                            <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} aria-label="Upload video clip" />
                                             <button
                                                 type="button"
                                                 onClick={() => videoInputRef.current?.click()}
-                                                disabled={submitting || !!imageFile}
+                                                disabled={submitting || imageFiles.length > 0}
                                                 className="p-2 rounded-full text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors disabled:opacity-40"
                                                 title="Add 30s clip"
                                             >
