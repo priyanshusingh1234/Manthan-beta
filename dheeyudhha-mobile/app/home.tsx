@@ -24,35 +24,42 @@ export default function HomeScreen() {
   const [profile, setProfile] = useState<ProfileSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
-    const { data } = await supabase.auth.getUser();
-    const authUser = data.user ?? null;
-    setUser(authUser);
+    setError(null);
+    try {
+      const { data, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
 
-    if (!authUser) {
-      router.replace('/login');
-      return;
+      const authUser = data.user ?? null;
+      setUser(authUser);
+
+      if (!authUser) {
+        router.replace('/login');
+        return;
+      }
+
+      const { data: profileRow, error: profileError } = await supabase
+        .from('profiles')
+        .select('username, full_name, points')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+
+      setProfile(profileRow ?? null);
+    } catch (loadError: unknown) {
+      const message =
+        loadError instanceof Error ? loadError.message : 'Failed to load account data.';
+      setError(message);
+    } finally {
+      setLoading(false);
     }
-
-    const { data: profileRow } = await supabase
-      .from('profiles')
-      .select('username, full_name, points')
-      .eq('id', authUser.id)
-      .maybeSingle();
-
-    setProfile(profileRow ?? null);
   };
 
   useEffect(() => {
-    let isMounted = true;
-    loadData()
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-    return () => {
-      isMounted = false;
-    };
+    loadData();
   }, []);
 
   const onRefresh = async () => {
@@ -93,6 +100,7 @@ export default function HomeScreen() {
         <Text style={styles.value}>{profile?.full_name ?? 'Not set'}</Text>
         <Text style={styles.label}>Points</Text>
         <Text style={styles.value}>{profile?.points ?? 0}</Text>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
 
       <Pressable onPress={signOut} style={styles.button}>
@@ -123,6 +131,10 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 18,
     padding: 18,
+  },
+  error: {
+    color: '#dc2626',
+    marginTop: 8,
   },
   container: {
     flexGrow: 1,

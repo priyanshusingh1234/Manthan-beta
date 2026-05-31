@@ -42,7 +42,7 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>Welcome to Dheeyudha</Text>
+        <Text style={styles.title}>Welcome to Dheeyudhha</Text>
         <Text style={styles.subtitle}>Sign in to continue your learning battles.</Text>
 
         <TextInput
