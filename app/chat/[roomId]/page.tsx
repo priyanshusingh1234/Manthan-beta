@@ -74,7 +74,7 @@ function playNotifSound() {
 // ─── Message item (memoized) ─────────────────────────────────────────────────
 const MessageItem = memo(function MessageItem({
   msg, user, participant, isSelectionMode, isSelected,
-  onToggleSelection, onLongPress, onReply, prevMsg, onImageClick
+  onToggleSelection, onLongPress, onReply, prevMsg, onImageClick, onReaction
 }: {
   msg: Message; user: any; participant: Participant | null;
   isSelectionMode: boolean; isSelected: boolean;
@@ -265,7 +265,7 @@ const MessageItem = memo(function MessageItem({
                 className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none active:bg-black/5 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onImageClick(msg.content, msg.message_type, msg.id, isMe);
+                  onImageClick(rawContent, msg.message_type, msg.id, isMe);
                 }}
               >
                 <div className={`flex items-center justify-center w-8 h-8 rounded-full ${isMe ? 'bg-white/20' : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'}`}>
@@ -276,15 +276,15 @@ const MessageItem = memo(function MessageItem({
                   <span className={`text-[10px] font-semibold mt-0.5 opacity-80 ${isMe ? 'text-white/80' : 'text-slate-500'}`}>View once</span>
                 </div>
               </div>
-            ) : msg.message_type === 'image' || msg.content.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
+            ) : msg.message_type === 'image' || rawContent.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
               <div 
                 className="relative w-[200px] h-[200px] cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onImageClick(msg.content, msg.message_type, msg.id, isMe);
+                  onImageClick(rawContent, msg.message_type, msg.id, isMe);
                 }}
               >
-                <Image src={msg.content} alt="Image" fill className="object-cover" unoptimized />
+                <Image src={rawContent} alt="Image" fill className="object-cover" unoptimized />
               </div>
             ) : (
               <div className="flex flex-col">
@@ -1286,7 +1286,8 @@ function ChatRoomContent() {
                 onLongPress={handleLongPress}
                 onReply={(m) => { setReplyingTo(m); setTimeout(() => inputRef.current?.focus(), 100); }}
                 prevMsg={messages[idx - 1]}
-                onImageClick={(url) => setFullscreenImage(url)}
+                onImageClick={handleImageClick}
+                onReaction={handleReaction}
               />
             ))}
           </>
