@@ -16,6 +16,9 @@ import { Share as CapacitorShare } from '@capacitor/share';
 import BadgedName from './BadgedName';
 import ShareToChatModal from './ShareToChatModal';
 
+const MIN_HORIZONTAL_SWIPE_DISTANCE = 45;
+const MAX_VERTICAL_SWIPE_TOLERANCE = 80;
+
 export default function PostCard({
     post,
     currentUserId,
@@ -59,6 +62,8 @@ export default function PostCard({
     const images = post.image_urls && post.image_urls.length > 0 ? post.image_urls : (post.image_url ? [post.image_url] : []);
 
     const suggestionsRef = useRef<HTMLDivElement>(null);
+    const touchStartXRef = useRef<number | null>(null);
+    const touchStartYRef = useRef<number | null>(null);
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true }).replace('about ', '').replace('less than ', '');
     const ownerId = post.author?.id || post.author_id || null;
     const isOwner = Boolean(currentUserId && ownerId === currentUserId);
@@ -299,6 +304,39 @@ export default function PostCard({
         setShowComments((v) => !v);
     };
 
+    const handleMediaTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (images.length < 2) return;
+        const touch = e.touches[0];
+        touchStartXRef.current = touch.clientX;
+        touchStartYRef.current = touch.clientY;
+    };
+
+    const handleMediaTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (images.length < 2 || touchStartXRef.current === null || touchStartYRef.current === null) return;
+
+        const touch = e.changedTouches[0];
+        const diffX = touch.clientX - touchStartXRef.current;
+        const diffY = touch.clientY - touchStartYRef.current;
+
+        touchStartXRef.current = null;
+        touchStartYRef.current = null;
+
+        const isHorizontalSwipe =
+            Math.abs(diffX) > MIN_HORIZONTAL_SWIPE_DISTANCE &&
+            Math.abs(diffX) > Math.abs(diffY) &&
+            Math.abs(diffY) < MAX_VERTICAL_SWIPE_TOLERANCE;
+        if (!isHorizontalSwipe) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (diffX > 0) {
+            setCurrentImageIndex((prev) => Math.max(prev - 1, 0));
+            return;
+        }
+        setCurrentImageIndex((prev) => Math.min(prev + 1, images.length - 1));
+    };
+
     const handleDeletePost = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!isOwner || deletingPost) return;
@@ -526,7 +564,11 @@ export default function PostCard({
 
                     {/* Post Media */}
                     {images.length > 0 && (
-                        <div className={`relative mb-3 sm:mb-4 overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 group/slider ${isSinglePost ? 'cursor-pointer transition-opacity' : 'cursor-pointer hover:border-slate-200 dark:hover:border-slate-700 transition-colors'}`}>
+                        <div
+                            onTouchStart={handleMediaTouchStart}
+                            onTouchEnd={handleMediaTouchEnd}
+                            className={`relative mb-3 sm:mb-4 overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 group/slider ${isSinglePost ? 'cursor-pointer transition-opacity' : 'cursor-pointer hover:border-slate-200 dark:hover:border-slate-700 transition-colors'}`}
+                        >
                             {images.length > 1 && (
                                 <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[11px] font-black tracking-widest px-2.5 py-1 rounded-full z-20 shadow-lg">
                                     {currentImageIndex + 1} / {images.length}
@@ -806,4 +848,3 @@ export default function PostCard({
         </div>
     );
 }
-
