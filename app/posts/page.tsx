@@ -333,14 +333,21 @@ function SocialFeedContent() {
         try {
             const newFiles: File[] = [];
             const newPreviews: string[] = [];
+            let skippedOversize = 0;
             for (const file of files) {
-                if (file.size > 20 * 1024 * 1024) continue;
+                if (file.size > 20 * 1024 * 1024) {
+                    skippedOversize += 1;
+                    continue;
+                }
                 const compressed = await compressImage(file, 'banner');
                 newFiles.push(compressed);
                 newPreviews.push(URL.createObjectURL(compressed));
             }
             setImageFiles(prev => [...prev, ...newFiles]);
             setImagePreviews(prev => [...prev, ...newPreviews]);
+            if (skippedOversize > 0) {
+                setPostError(`${skippedOversize} image${skippedOversize > 1 ? 's' : ''} ${skippedOversize > 1 ? 'were' : 'was'} skipped for exceeding 20MB.`);
+            }
         } catch {
             setPostError('Failed to process image.');
         } finally {
@@ -509,7 +516,7 @@ function SocialFeedContent() {
                         throw new Error(`Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.`);
                     }
 
-                    const ext = (uploadFile.name || `post-image-${i}.jpg`).split('.').pop() || 'webp';
+                    const ext = (uploadFile.name || `post-image-${i}.webp`).split('.').pop() || 'webp';
                     const form = new FormData();
                     form.append('file', uploadFile, `post-${Date.now()}-${i}.${ext}`);
                     const up = await fetch('/api/posts/upload', {
@@ -708,7 +715,7 @@ function SocialFeedContent() {
                                 {imagePreviews.length > 0 && (
                                     <div className="mx-4 mb-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
                                         {imagePreviews.map((preview, idx) => (
-                                            <div key={`${preview}-${idx}`} className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 group aspect-square">
+                                            <div key={idx} className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 group aspect-square">
                                                 <img src={preview} alt="Preview" className="w-full h-full object-cover" />
                                                 <button
                                                     type="button"
