@@ -16,6 +16,9 @@ import { Share as CapacitorShare } from '@capacitor/share';
 import BadgedName from './BadgedName';
 import ShareToChatModal from './ShareToChatModal';
 
+const MIN_HORIZONTAL_SWIPE_DISTANCE = 45;
+const MAX_VERTICAL_SWIPE_TOLERANCE = 80;
+
 export default function PostCard({
     post,
     currentUserId,
@@ -318,7 +321,10 @@ export default function PostCard({
         touchStartXRef.current = null;
         touchStartYRef.current = null;
 
-        const isHorizontalSwipe = Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffY) < 80;
+        const isHorizontalSwipe =
+            Math.abs(diffX) > MIN_HORIZONTAL_SWIPE_DISTANCE &&
+            Math.abs(diffX) > Math.abs(diffY) &&
+            Math.abs(diffY) < MAX_VERTICAL_SWIPE_TOLERANCE;
         if (!isHorizontalSwipe) return;
 
         e.preventDefault();
