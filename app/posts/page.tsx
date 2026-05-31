@@ -809,7 +809,7 @@ function SocialFeedContent() {
                                     <div className="flex items-center justify-between px-4 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800">
                                         <div className="flex items-center gap-1">
                                             {/* Image attach */}
-                                            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} />
+                                            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageChange} aria-label="Upload images" />
                                             <button
                                                 type="button"
                                                 onClick={() => fileInputRef.current?.click()}
@@ -821,7 +821,7 @@ function SocialFeedContent() {
                                             </button>
 
                                             {/* Video clip attach */}
-                                            <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} />
+                                            <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} aria-label="Upload video clip" />
                                             <button
                                                 type="button"
                                                 onClick={() => videoInputRef.current?.click()}
