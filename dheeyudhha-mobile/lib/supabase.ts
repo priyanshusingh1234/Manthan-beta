@@ -5,7 +5,16 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+const runtimeUrl = supabaseUrl || 'https://127.0.0.1';
+const runtimeAnonKey = supabaseAnonKey || 'missing-key';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    'Supabase environment variables are missing. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.'
+  );
+}
+
+export const supabase = createClient(runtimeUrl, runtimeAnonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,

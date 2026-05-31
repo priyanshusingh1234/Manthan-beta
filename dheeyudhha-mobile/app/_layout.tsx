@@ -1,6 +1,13 @@
-import '../global.css';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 
 export default function Layout() {
-  return <Slot />;
+  return (
+    <Stack
+      screenOptions={{
+        headerBackTitle: 'Back',
+        headerTintColor: '#0f172a',
+        contentStyle: { backgroundColor: '#f8fafc' },
+      }}
+    />
+  );
 }
