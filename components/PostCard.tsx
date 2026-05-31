@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X, ArrowLeft } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
@@ -54,6 +54,9 @@ export default function PostCard({
     // LINK PREVIEW LOGIC
     const [linkPreview, setLinkPreview] = useState<any>(null);
     const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    const images = post.image_urls && post.image_urls.length > 0 ? post.image_urls : (post.image_url ? [post.image_url] : []);
 
     const suggestionsRef = useRef<HTMLDivElement>(null);
     const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true }).replace('about ', '').replace('less than ', '');
@@ -72,7 +75,7 @@ export default function PostCard({
     }, [post.id, post.is_liked_by_me, post.likes_count, post.comments_count, post.recent_comments]);
 
     useEffect(() => {
-        if (!post.image_url && !post.video_url && post.content) {
+        if (images.length === 0 && !post.video_url && post.content) {
             const match = post.content.match(/https?:\/\/[^\s]+/);
             if (match) {
                 fetch(`/api/metadata?url=${encodeURIComponent(match[0])}`)
@@ -83,7 +86,7 @@ export default function PostCard({
                     .catch(() => {});
             }
         }
-    }, [post.content, post.image_url, post.video_url]);
+    }, [post.content, post.image_url, post.image_urls, post.video_url]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -522,14 +525,54 @@ export default function PostCard({
                     </Link>
 
                     {/* Post Media */}
-                    {post.image_url && (
-                        <div className={`mb-3 sm:mb-4 overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 ${isSinglePost ? 'cursor-pointer transition-opacity' : 'cursor-pointer hover:border-slate-200 dark:hover:border-slate-700 transition-colors'}`}>
+                    {images.length > 0 && (
+                        <div className={`relative mb-3 sm:mb-4 overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 group/slider ${isSinglePost ? 'cursor-pointer transition-opacity' : 'cursor-pointer hover:border-slate-200 dark:hover:border-slate-700 transition-colors'}`}>
+                            {images.length > 1 && (
+                                <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[11px] font-black tracking-widest px-2.5 py-1 rounded-full z-20 shadow-lg">
+                                    {currentImageIndex + 1} / {images.length}
+                                </div>
+                            )}
+
                             {isSinglePost ? (
-                                <img src={post.image_url} alt="Post content" className="w-full h-auto max-h-[800px] object-contain hover:opacity-95 transition-opacity" onClick={(e) => { e.stopPropagation(); setFullscreenImage(post.image_url); }} />
+                                <img src={images[currentImageIndex]} alt="Post content" className="w-full h-auto max-h-[800px] object-contain hover:opacity-95 transition-opacity" onClick={(e) => { e.stopPropagation(); setFullscreenImage(images[currentImageIndex]); }} />
                             ) : (
                                 <Link href={`/posts/${post.id}`} className="block">
-                                    <img src={post.image_url} alt="Post content" className="w-full h-auto max-h-[512px] object-contain hover:opacity-95 transition-opacity" />
+                                    <img src={images[currentImageIndex]} alt="Post content" className="w-full h-auto max-h-[512px] object-contain hover:opacity-95 transition-opacity" />
                                 </Link>
+                            )}
+
+                            {images.length > 1 && (
+                                <>
+                                    {currentImageIndex > 0 && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setCurrentImageIndex(prev => prev - 1);
+                                            }}
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-sm opacity-0 group-hover/slider:opacity-100 transition-all z-20"
+                                        >
+                                            <ChevronLeft className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                    {currentImageIndex < images.length - 1 && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setCurrentImageIndex(prev => prev + 1);
+                                            }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-sm opacity-0 group-hover/slider:opacity-100 transition-all z-20"
+                                        >
+                                            <ChevronRight className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                    <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+                                        {images.map((_, i) => (
+                                            <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === currentImageIndex ? 'w-4 bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'w-1.5 bg-white/50'}`} />
+                                        ))}
+                                    </div>
+                                </>
                             )}
                         </div>
                     )}

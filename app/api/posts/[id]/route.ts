@@ -63,6 +63,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             content: finalContent,
             is_pinned: isPinned,
             image_url: post.image_url || null,
+            image_urls: post.image_urls || [],
             video_url: post.video_url || null,
             video_thumbnail: post.video_thumbnail || null,
             likes_count: likesCount,
@@ -125,7 +126,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
         const { data: post, error: postError } = await supabaseAdmin
             .from('posts')
-            .select('id, author_id, image_url, video_url')
+            .select('id, author_id, image_url, image_urls, video_url')
             .eq('id', postId)
             .maybeSingle();
 
@@ -143,11 +144,18 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
         await supabaseAdmin.from('post_comments').delete().eq('post_id', postId);
         await supabaseAdmin.from('post_likes').delete().eq('post_id', postId);
 
-        // Delete Image from Supabase Db
-        if (post.image_url) {
-            const storagePath = getStoragePathFromPublicUrl(post.image_url);
-            if (storagePath) {
-                await supabaseAdmin.storage.from('public-images').remove([storagePath]);
+        // Delete Image(s) from Supabase Db
+        const urlsToDelete = post.image_urls && post.image_urls.length > 0 
+            ? post.image_urls 
+            : (post.image_url ? [post.image_url] : []);
+            
+        if (urlsToDelete.length > 0) {
+            const pathsToRemove = urlsToDelete
+                .map((url: string) => getStoragePathFromPublicUrl(url))
+                .filter(Boolean);
+            
+            if (pathsToRemove.length > 0) {
+                await supabaseAdmin.storage.from('public-images').remove(pathsToRemove);
             }
         }
 

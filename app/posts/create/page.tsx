@@ -11,8 +11,8 @@ import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL } from '@/lib/uploadLimi
 export default function CreatePostPage() {
     const router = useRouter();
     const [content, setContent] = useState('');
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imageFiles, setImageFiles] = useState<File[]>([]);
+    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [session, setSession] = useState<any>(null);
     const [error, setError] = useState('');
@@ -97,40 +97,49 @@ export default function CreatePostPage() {
     };
 
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 20 * 1024 * 1024) {
-                setError('Image exceeds 20MB limit. Please choose a smaller file.');
-                return;
-            }
-            setError('');
-            setLoading(true);
-            try {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+        
+        if (imageFiles.length + files.length > 5) {
+            setError('You can only upload up to 5 images per post.');
+            return;
+        }
+
+        setError('');
+        setLoading(true);
+        try {
+            const newFiles: File[] = [];
+            const newPreviews: string[] = [];
+            for (const file of files) {
+                if (file.size > 20 * 1024 * 1024) continue;
                 const finalFile = await compressImage(file, 'banner'); 
-                setImageFile(finalFile);
-                const objectUrl = URL.createObjectURL(finalFile);
-                setImagePreview(objectUrl);
-            } catch (err) {
-                console.error("Image processing failed", err);
-                setError("Failed to process image.");
-            } finally {
-                setLoading(false);
+                newFiles.push(finalFile);
+                newPreviews.push(URL.createObjectURL(finalFile));
             }
+            setImageFiles(prev => [...prev, ...newFiles]);
+            setImagePreviews(prev => [...prev, ...newPreviews]);
+        } catch (err) {
+            console.error("Image processing failed", err);
+            setError("Failed to process some images.");
+        } finally {
+            setLoading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
-    const removeImage = () => {
-        setImageFile(null);
-        if (imagePreview) {
-            URL.revokeObjectURL(imagePreview);
-            setImagePreview(null);
-        }
-        if (fileInputRef.current) fileInputRef.current.value = '';
+    const removeImage = (index: number) => {
+        setImageFiles(prev => prev.filter((_, i) => i !== index));
+        setImagePreviews(prev => {
+            const newPreviews = [...prev];
+            URL.revokeObjectURL(newPreviews[index]);
+            newPreviews.splice(index, 1);
+            return newPreviews;
+        });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!content.trim() && !imageFile) {
+        if (!content.trim() && imageFiles.length === 0) {
             setError("Post cannot be completely empty.");
             return;
         }
@@ -139,53 +148,55 @@ export default function CreatePostPage() {
         setError('');
 
         try {
-            let imageUrl = null;
+            let imageUrls: string[] = [];
 
-            if (imageFile && session) {
-                // Ensure we have a real Blob before uploading.
-                // On mobile, imageFile from compressImage may not be a standard Blob.
-                // Fetch from the imagePreview blob: URL to get a guaranteed real Blob.
-                let uploadBlob: Blob;
-                const isRealBlob = (imageFile instanceof Blob) ||
-                    (imageFile && typeof (imageFile as any).size === 'number' && typeof (imageFile as any).slice === 'function');
+            if (imageFiles.length > 0 && session) {
+                for (let i = 0; i < imageFiles.length; i++) {
+                    const imgFile = imageFiles[i];
+                    const imgPreview = imagePreviews[i];
 
-                if (isRealBlob) {
-                    uploadBlob = imageFile as unknown as Blob;
-                } else if (imagePreview) {
-                    const res = await fetch(imagePreview);
-                    uploadBlob = await res.blob();
-                } else {
-                    throw new Error("No valid image data available. Please re-select the image.");
-                }
+                    let uploadBlob: Blob;
+                    const isRealBlob = (imgFile instanceof Blob) ||
+                        (imgFile && typeof (imgFile as any).size === 'number' && typeof (imgFile as any).slice === 'function');
 
-                let uploadFile = uploadBlob instanceof File
-                    ? uploadBlob
-                    : new File([uploadBlob], (imageFile as any)?.name || `post-${Date.now()}.webp`, {
-                        type: uploadBlob.type || 'image/webp'
+                    if (isRealBlob) {
+                        uploadBlob = imgFile as unknown as Blob;
+                    } else if (imgPreview) {
+                        const res = await fetch(imgPreview);
+                        uploadBlob = await res.blob();
+                    } else {
+                        throw new Error("No valid image data available. Please re-select the image.");
+                    }
+
+                    let uploadFile = uploadBlob instanceof File
+                        ? uploadBlob
+                        : new File([uploadBlob], (imgFile as any)?.name || `post-${Date.now()}-${i}.webp`, {
+                            type: uploadBlob.type || 'image/webp'
+                        });
+
+                    if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                        uploadFile = await compressImage(uploadFile, 'post');
+                    }
+                    if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+                        throw new Error(`Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.`);
+                    }
+
+                    const extFromName = (uploadFile as any)?.name?.split('.').pop();
+                    const extFromType = uploadFile.type?.split('/')[1]?.split('+')[0];
+                    const ext = (extFromName || extFromType || 'webp').toLowerCase();
+                    const form = new FormData();
+                    form.append('file', uploadFile, `post-${Date.now()}-${i}.${ext}`);
+
+                    const uploadRes = await fetch('/api/posts/upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${session.access_token}` },
+                        body: form,
                     });
 
-                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
-                    uploadFile = await compressImage(uploadFile, 'post');
+                    const uploadData = await uploadRes.json();
+                    if (!uploadRes.ok) throw new Error(uploadData.error || "Image upload failed");
+                    imageUrls.push(uploadData.url);
                 }
-                if (uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
-                    throw new Error(`Image is too large. Please select an image under ${MAX_IMAGE_UPLOAD_LABEL}.`);
-                }
-
-                const extFromName = (uploadFile as any)?.name?.split('.').pop();
-                const extFromType = uploadFile.type?.split('/')[1]?.split('+')[0];
-                const ext = (extFromName || extFromType || 'webp').toLowerCase();
-                const form = new FormData();
-                form.append('file', uploadFile, `post-${Date.now()}.${ext}`);
-
-                const uploadRes = await fetch('/api/posts/upload', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${session.access_token}` },
-                    body: form,
-                });
-
-                const uploadData = await uploadRes.json();
-                if (!uploadRes.ok) throw new Error(uploadData.error || "Image upload failed");
-                imageUrl = uploadData.url;
             }
 
             const res = await fetch('/api/posts', {
@@ -194,7 +205,11 @@ export default function CreatePostPage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session.access_token}`
                 },
-                body: JSON.stringify({ content: content.trim(), imageUrl })
+                body: JSON.stringify({ 
+                    content: content.trim(), 
+                    imageUrl: imageUrls.length > 0 ? imageUrls[0] : null,
+                    imageUrls: imageUrls
+                })
             });
 
             if (!res.ok) {
@@ -297,17 +312,21 @@ export default function CreatePostPage() {
                             </p>
                         </div>
 
-                        {imagePreview && (
-                            <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-[400px] bg-slate-100 dark:bg-slate-950 flex items-center justify-center group">
-                                <img src={imagePreview} alt="Preview" className="max-w-full max-h-[400px] object-contain transition-transform group-hover:scale-[1.02] duration-500" />
-                                <button
-                                    type="button"
-                                    onClick={removeImage}
-                                    disabled={loading}
-                                    className="absolute top-3 right-3 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-md transition-colors z-10 shadow-lg"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
+                        {imagePreviews.length > 0 && (
+                            <div className="flex flex-wrap gap-3">
+                                {imagePreviews.map((preview, idx) => (
+                                    <div key={idx} className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 flex items-center justify-center group w-[120px] h-[120px] sm:w-[150px] sm:h-[150px]">
+                                        <img src={preview} alt="Preview" className="w-full h-full object-cover transition-transform group-hover:scale-[1.05] duration-500" />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeImage(idx)}
+                                            disabled={loading}
+                                            className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-full backdrop-blur-md transition-colors z-10 shadow-lg"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
                         )}
 
@@ -315,27 +334,28 @@ export default function CreatePostPage() {
                             <input
                                 type="file"
                                 accept="image/*"
+                                multiple
                                 className="hidden"
                                 ref={fileInputRef}
                                 onChange={handleImageChange}
-                                disabled={loading}
+                                disabled={loading || imageFiles.length >= 5}
                             />
                             
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                disabled={loading}
-                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 dark:hover:text-indigo-400 transition-colors group"
+                                disabled={loading || imageFiles.length >= 5}
+                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950 dark:hover:text-indigo-400 transition-colors group disabled:opacity-50"
                             >
                                 <ImageIcon className="w-5 h-5 text-slate-400 group-hover:text-indigo-500" />
-                                Add high-res Image
+                                Add Images ({imageFiles.length}/5)
                             </button>
 
                             <button
                                 type="submit"
-                                disabled={loading || (!content.trim() && !imageFile)}
+                                disabled={loading || (!content.trim() && imageFiles.length === 0)}
                                 className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold transition-all ${
-                                    (content.trim() || imageFile) 
+                                    (content.trim() || imageFiles.length > 0) 
                                         ? 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white shadow-lg hover:shadow-indigo-500/25 shadow-indigo-500/10 hover:-translate-y-0.5' 
                                         : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                                 }`}

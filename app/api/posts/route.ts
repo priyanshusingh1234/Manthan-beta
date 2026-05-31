@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
                     // Slow path: paginated or filtered
                     let query = supabaseAdmin
                         .from('posts')
-                        .select('id, author_id, content, image_url, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id )')
+                        .select('id, author_id, content, image_url, image_urls, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id )')
                         .order('created_at', { ascending: false })
                         .limit(limit);
 
@@ -105,6 +105,7 @@ export async function GET(req: NextRequest) {
                             author_id: p.author_id,
                             content: finalContent,
                             image_url: p.image_url,
+                            image_urls: p.image_urls || [],
                             video_url: p.video_url || null,
                             video_thumbnail: p.video_thumbnail || null,
                             likes_count: likesCount,
@@ -141,6 +142,7 @@ export async function GET(req: NextRequest) {
                 type: 'post',
                 content: p.content,
                 image_url: p.image_url,
+                image_urls: p.image_urls,
                 video_url: p.video_url,
                 video_thumbnail: p.video_thumbnail,
                 likes_count: p.likes_count,
@@ -207,7 +209,7 @@ export async function POST(req: NextRequest) {
         const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
         if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { content, imageUrl, videoUrl, videoThumbnail } = await req.json();
+        const { content, imageUrl, imageUrls, videoUrl, videoThumbnail } = await req.json();
 
         if (!content?.trim() && !videoUrl) {
             return NextResponse.json({ error: 'Post must contain text or a video.' }, { status: 400 });
@@ -219,6 +221,7 @@ export async function POST(req: NextRequest) {
                 author_id: user.id,
                 content: content?.trim() || '',
                 image_url: imageUrl || null,
+                image_urls: imageUrls || [],
                 video_url: videoUrl || null,
                 video_thumbnail: videoThumbnail || null,
             })
