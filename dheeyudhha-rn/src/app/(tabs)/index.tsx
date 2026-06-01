@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Trophy, Target, Zap, Play } from 'lucide-react-native';
+import QuestionsFeed from '@/components/QuestionsFeed';
 
 export default function FeedScreen() {
   return (
@@ -54,6 +55,14 @@ export default function FeedScreen() {
           <Text className="text-slate-900 font-bold text-center">No Recent Duels</Text>
           <Text className="text-slate-500 text-xs text-center mt-1">Challenge your friends to a 1v1 battle.</Text>
         </View>
+      </View>
+
+      {/* Questions Feed Section */}
+      <View className="mt-4">
+        <View className="px-6 mb-4">
+          <Text className="text-xl font-black text-slate-900">For You</Text>
+        </View>
+        <QuestionsFeed />
       </View>
     </ScrollView>
   );
