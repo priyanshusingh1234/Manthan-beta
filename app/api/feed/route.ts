@@ -325,14 +325,14 @@ export async function GET(req: NextRequest) {
             if (userGrade) vipQuery = vipQuery.in('class_grade', [String(userGrade), 'All', 'Any']);
             const { data: vipData } = await vipQuery;
             const vipItems = shuffle(vipData || []).filter((r: any) => !userAttempted.has(String(r.id))).slice(0, 5);
-            vipItems.forEach((r: any) => pool.push({ ...r, _layer: 9, _label: '👑 VIP Daily Challenge', _score: 150, is_vip: true }));
+            vipItems.forEach((r: any) => pool.push({ ...r, _layer: -2, _label: '👑 VIP Daily Challenge', _score: 150, is_vip: true }));
 
             // Layer 10 — Written Challenges (Target: same class grade)
             let writtenQuery = supabaseAdmin.from('questions').select('*').eq('question_type', 'written').order('created_at', { ascending: false }).limit(40);
             if (userGrade) writtenQuery = writtenQuery.in('class_grade', [String(userGrade), 'All', 'Any']);
             const { data: writtenData } = await writtenQuery;
             const writtenItems = shuffle(writtenData || []).filter((r: any) => !userAttempted.has(String(r.id)) && !pool.some((p: any) => p.id === r.id)).slice(0, 8); // Good amount: 8 challenges
-            writtenItems.forEach((r: any) => pool.push({ ...r, _layer: 10, _label: '✍️ Written Challenge', _score: 145, is_written_challenge: true }));
+            writtenItems.forEach((r: any) => pool.push({ ...r, _layer: -1, _label: '✍️ Written Challenge', _score: 145, is_written_challenge: true }));
 
         }
 
@@ -348,7 +348,7 @@ export async function GET(req: NextRequest) {
         }
         const { data: arenaData } = await arenaQuery;
         const arenaItemsArr = shuffle(arenaData || []).slice(0, 3);
-        arenaItemsArr.forEach((r: any) => pool.push({ ...r, _layer: 11, _label: '⚔️ Arena Battle Challenge', _score: 160, type: 'gauntlet' }));
+        arenaItemsArr.forEach((r: any) => pool.push({ ...r, _layer: -3, _label: '⚔️ Arena Battle Challenge', _score: 160, type: 'gauntlet' }));
 
         // Layer 6 — Following solved (NO listUsers call — profiles table only)
         if (followingRaw && followingIds.length > 0) {
