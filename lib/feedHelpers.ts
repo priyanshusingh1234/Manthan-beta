@@ -30,6 +30,7 @@ export interface FeedPost {
     author_id: string;
     content?: string;
     image_url?: string;
+    image_urls?: string[];
     video_url?: string;
     video_thumbnail?: string;
     likes_count?: number;
@@ -91,6 +92,7 @@ export function normalizePost(p: FeedPost, profilesMap: Map<string, any>, curren
     if (finalContent.startsWith('[PINNED]')) { isPinned = true; finalContent = finalContent.substring(8).trim(); }
     return {
         id: p.id, type: 'post', content: finalContent, image_url: p.image_url,
+        image_urls: p.image_urls,
         video_url: p.video_url, video_thumbnail: p.video_thumbnail,
         likes_count: likesCount, comments_count: p.comments_count || 0,
         created_at: p.created_at, is_pinned: isPinned,
