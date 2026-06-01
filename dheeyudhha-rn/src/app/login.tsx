@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Link, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
@@ -99,7 +100,33 @@ export default function LoginScreen() {
           <View className="flex-1 h-px bg-slate-200" />
         </View>
 
-        <TouchableOpacity className="flex-row items-center justify-center py-3.5 border border-slate-300 rounded-xl bg-white mb-6">
+        <TouchableOpacity 
+          className="flex-row items-center justify-center py-3.5 border border-slate-300 rounded-xl bg-white mb-6"
+          onPress={async () => {
+            if (Platform.OS === 'web') {
+              supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+            } else {
+              try {
+                GoogleSignin.configure({
+                  webClientId: 'YOUR_WEB_CLIENT_ID_HERE', // Needed for Firebase/Supabase
+                });
+                await GoogleSignin.hasPlayServices();
+                const userInfo = await GoogleSignin.signIn();
+                
+                if (userInfo.data?.idToken) {
+                  const { error } = await supabase.auth.signInWithIdToken({
+                    provider: 'google',
+                    token: userInfo.data.idToken,
+                  });
+                  if (error) throw error;
+                  router.replace('/(tabs)');
+                }
+              } catch (error: any) {
+                setError(error.message);
+              }
+            }
+          }}
+        >
           <Text className="text-slate-700 font-bold">Continue with Google</Text>
         </TouchableOpacity>
 

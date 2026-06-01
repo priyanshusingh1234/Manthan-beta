@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Target, Zap, Star, LogOut, Settings } from 'lucide-react-native';
+import { Trophy, Target, Zap, Star, LogOut, Settings, Camera } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   
   useEffect(() => {
     loadProfile();
@@ -17,6 +20,7 @@ export default function ProfileScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setUserId(user.id);
       
       const { data: dbProfile } = await supabase
         .from('profiles')
@@ -39,6 +43,52 @@ export default function ProfileScreen() {
       console.error('Error loading profile', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets[0].uri) {
+        await uploadAvatar(result.assets[0].uri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const uploadAvatar = async (uri: string) => {
+    if (!userId) return;
+    try {
+      setUploading(true);
+      const res = await fetch(uri);
+      const blob = await res.blob();
+      const path = `avatars/${userId}/avatar_${Date.now()}.jpg`;
+
+      const { data, error } = await supabase.storage.from('avatars').upload(path, blob, {
+        contentType: 'image/jpeg',
+      });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+
+      await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl, avatar_path: path }
+      });
+
+      setProfile((prev: any) => ({ ...prev, avatar: publicUrl }));
+      Alert.alert('Success', 'Profile picture updated!');
+    } catch (error: any) {
+      Alert.alert('Upload Failed', error.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -69,13 +119,20 @@ export default function ProfileScreen() {
       {/* Avatar & Basic Info */}
       <View className="px-6 relative">
         <View className="flex-row justify-between items-start -mt-12">
-          <View className="w-24 h-24 rounded-full border-4 border-white bg-white shadow-xl overflow-hidden items-center justify-center">
-            {profile?.avatar ? (
-              <Image source={{ uri: profile.avatar }} className="w-full h-full object-cover" />
-            ) : (
-              <Text className="text-4xl">🧠</Text>
-            )}
-          </View>
+          <TouchableOpacity onPress={pickImage} disabled={uploading}>
+            <View className="w-24 h-24 rounded-full border-4 border-white bg-white shadow-xl overflow-hidden items-center justify-center">
+              {uploading ? (
+                <ActivityIndicator color="#4f46e5" />
+              ) : profile?.avatar ? (
+                <Image source={{ uri: profile.avatar }} className="w-full h-full object-cover" />
+              ) : (
+                <Text className="text-4xl">🧠</Text>
+              )}
+              <View className="absolute bottom-0 w-full h-6 bg-black/50 items-center justify-center">
+                <Camera size={12} color="white" />
+              </View>
+            </View>
+          </TouchableOpacity>
           
           <View className="flex-row gap-2 mt-16">
             <TouchableOpacity className="bg-white border border-slate-200 p-2.5 rounded-full shadow-sm">

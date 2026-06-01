@@ -177,8 +177,6 @@ export async function GET(req: Request) {
         createdAt: r.created_at,
       }));
 
-      });
-
       const gauntletItems = (gauntletResult.data || []).map((r: any) => ({ ...r, type: 'gauntlet', _feedLabel: '⚔️ Arena Battle Challenge' }));
       
       const finalFeed: any[] = [];
