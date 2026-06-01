@@ -93,6 +93,17 @@ export default function PostCard({
         }
     }, [post.content, post.image_url, post.image_urls, post.video_url]);
 
+    // Auto-slide effect for posts with multiple images
+    useEffect(() => {
+        if (images.length <= 1) return;
+
+        const timer = setTimeout(() => {
+            setCurrentImageIndex((prev) => (prev + 1) % images.length);
+        }, 4000); // Slide every 4 seconds
+
+        return () => clearTimeout(timer);
+    }, [currentImageIndex, images.length]);
+
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node)) {
