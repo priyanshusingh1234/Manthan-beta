@@ -192,7 +192,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         let withdrawMessage = "";
         if (action === 'withdraw') {
             const questionPoints = Number((challenge.questions as any)?.points || 0);
-            const standardPenalty = Math.floor(questionPoints / 5);
+            const standardPenalty = 0; // Removed withdrawal penalty: Math.floor(questionPoints / 5);
             
             if (standardPenalty > 0) {
                  const { data: partnerData } = await supabaseAdmin.auth.admin.getUserById(user.id);

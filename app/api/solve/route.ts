@@ -195,7 +195,7 @@ export async function POST(req: Request) {
                 }
             } else {
                 // Wrong answer in challenge
-                const calculatedPenalty = hasNegativeMarking && currentPoints > 0 ? WRONG_ANSWER_PENALTY : 0;
+                const calculatedPenalty = isPartner ? Math.floor(questionPoints * 0.2) : 0;
                 userPointsChange = -calculatedPenalty;
                 pointsChangeDisplay = -calculatedPenalty;
 
