@@ -64,7 +64,7 @@ export const getCachedPublicPosts = unstable_cache(
   async (limit = 30) => {
     const { data, error } = await supabaseAdmin
       .from('posts')
-      .select('id, author_id, content, image_url, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes(user_id)')
+      .select('id, author_id, content, image_url, image_urls, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes(user_id)')
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -112,6 +112,7 @@ export const getCachedPublicPosts = unstable_cache(
         author_id: p.author_id,
         content: finalContent,
         image_url: p.image_url,
+        image_urls: p.image_urls || [],
         video_url: p.video_url || null,
         video_thumbnail: p.video_thumbnail || null,
         likes_count: likesCount,
