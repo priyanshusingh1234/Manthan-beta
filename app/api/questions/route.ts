@@ -77,7 +77,19 @@ export async function GET(req: Request) {
         builder = builder.ilike('chapter', `%${chapterParam}%`);
       }
 
-      const { data, error } = await builder;
+      // Fetch Gauntlets as well
+      let gauntletBuilder: any = supabaseAdmin.from('gauntlets').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(5);
+      if (classParam) {
+        const numericMatch = String(classParam).match(/\d+/);
+        const normalizedClass = numericMatch ? numericMatch[0] : classParam;
+        gauntletBuilder = gauntletBuilder.or(`class_grade.eq.${normalizedClass},class_grade.ilike.${normalizedClass}%,class_grade.ilike.All,class_grade.ilike.Any`);
+      }
+      if (subject) {
+        gauntletBuilder = gauntletBuilder.ilike('subject', `%${subject}%`);
+      }
+
+      const [qResult, gauntletResult] = await Promise.all([builder, gauntletBuilder]);
+      const { data, error } = qResult;
 
       if (error) return NextResponse.json({ error: (error && (error.message || JSON.stringify(error))) || String(error) }, { status: 500 });
 
@@ -165,7 +177,21 @@ export async function GET(req: Request) {
         createdAt: r.created_at,
       }));
 
-      return NextResponse.json({ questions: apps });
+      });
+
+      const gauntletItems = (gauntletResult.data || []).map((r: any) => ({ ...r, type: 'gauntlet', _feedLabel: '⚔️ Arena Battle Challenge' }));
+      
+      const finalFeed: any[] = [];
+      let gIdx = 0;
+      for (let i = 0; i < apps.length; i++) {
+        if (gIdx < gauntletItems.length && (i === 0 || (i > 0 && i % 5 === 0))) {
+           finalFeed.push(gauntletItems[gIdx++]);
+        }
+        finalFeed.push(apps[i]);
+      }
+      while (gIdx < gauntletItems.length) finalFeed.push(gauntletItems[gIdx++]);
+
+      return NextResponse.json({ questions: finalFeed });
     }
 
     // fallback to local file — ensure `createdByName` and avatar exist for each item

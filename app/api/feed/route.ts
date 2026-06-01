@@ -334,13 +334,21 @@ export async function GET(req: NextRequest) {
             const writtenItems = shuffle(writtenData || []).filter((r: any) => !userAttempted.has(String(r.id)) && !pool.some((p: any) => p.id === r.id)).slice(0, 8); // Good amount: 8 challenges
             writtenItems.forEach((r: any) => pool.push({ ...r, _layer: 10, _label: '✍️ Written Challenge', _score: 145, is_written_challenge: true }));
 
-            // Layer 11 — Arena Battles (Gauntlets)
-            let arenaQuery = supabaseAdmin.from('gauntlets').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(20);
-            if (userGrade) arenaQuery = arenaQuery.in('class_grade', [String(userGrade), 'All', 'Any']);
-            const { data: arenaData } = await arenaQuery;
-            const arenaItemsArr = shuffle(arenaData || []).slice(0, 3);
-            arenaItemsArr.forEach((r: any) => pool.push({ ...r, _layer: 11, _label: '⚔️ Arena Battle Challenge', _score: 160, type: 'gauntlet' }));
         }
+
+        // Layer 11 — Arena Battles (Gauntlets)
+        let arenaQuery = supabaseAdmin.from('gauntlets').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(20);
+        if (userGrade) {
+            const numericMatch = String(userGrade).match(/\d+/);
+            const normalizedClass = numericMatch ? numericMatch[0] : userGrade;
+            arenaQuery = arenaQuery.or(`class_grade.eq.${normalizedClass},class_grade.ilike.${normalizedClass}%,class_grade.ilike.All,class_grade.ilike.Any`);
+        }
+        if (subject) {
+            arenaQuery = arenaQuery.ilike('subject', `%${subject}%`);
+        }
+        const { data: arenaData } = await arenaQuery;
+        const arenaItemsArr = shuffle(arenaData || []).slice(0, 3);
+        arenaItemsArr.forEach((r: any) => pool.push({ ...r, _layer: 11, _label: '⚔️ Arena Battle Challenge', _score: 160, type: 'gauntlet' }));
 
         // Layer 6 — Following solved (NO listUsers call — profiles table only)
         if (followingRaw && followingIds.length > 0) {
