@@ -47,6 +47,5 @@ patch_jwt.js
 redesign_profiles.js
 show_users.js
 scripts/
-data/
 # Firebase secrets
 firebase-service-account.json
