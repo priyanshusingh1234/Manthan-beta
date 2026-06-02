@@ -17,6 +17,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "package": "com.dheeyudha.academy",
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -38,8 +39,14 @@
       "@react-native-google-signin/google-signin"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "501fde34-5b88-4997-8960-ac5e2065b9e8"
+      }
+    },
+    "owner": "kpk22128"
   }
 }
