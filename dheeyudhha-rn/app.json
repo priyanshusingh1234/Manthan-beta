@@ -4,7 +4,7 @@
     "slug": "dheeyudhha-rn",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/manthan-logo.png",
     "scheme": "dheeyudhharn",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -20,9 +20,9 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "foregroundImage": "./assets/images/manthan-logo.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "monochromeImage": "./assets/images/manthan-logo.png"
       },
       "package": "com.dheeyudha.app",
       "googleServicesFile": "./google-services.json",
@@ -40,15 +40,15 @@
         {
           "backgroundColor": "#208AEF",
           "android": {
-            "image": "./assets/images/splash-icon.png",
-            "imageWidth": 76
+            "image": "./assets/images/manthan-logo.png",
+            "imageWidth": 150
           }
         }
       ],
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "icon": "./assets/images/manthan-logo.png",
           "color": "#4f46e5",
           "androidMode": "default",
           "androidCollapsedTitle": "Manthan",
