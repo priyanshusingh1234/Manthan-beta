@@ -5,7 +5,11 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import DuelChallengeModal from './DuelChallengeModal';
 
-export default function QuestionCard({ q }: { q: any }) {
+interface Props {
+  q: any;
+}
+
+const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
   const router = useRouter();
   const [duelOpen, setDuelOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -152,5 +156,7 @@ export default function QuestionCard({ q }: { q: any }) {
       )}
     </>
   );
-}
+});
+
+export default QuestionCard;
 

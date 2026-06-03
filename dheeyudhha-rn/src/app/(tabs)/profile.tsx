@@ -22,6 +22,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import * as ImagePicker from 'expo-image-picker';
+import PostCard from '@/components/PostCard';
 
 type TabKey = 'stats' | 'posts' | 'achievements';
 
@@ -547,26 +548,11 @@ export default function ProfileScreen() {
             </View>
           ) : (
             myPosts.map((post) => (
-              <Pressable
-                key={post.id}
-                onPress={() => router.push(`/posts/${post.id}` as any)}
-                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm px-4 py-3 mb-3 active:bg-slate-50 dark:active:bg-slate-800"
-              >
-                <Text className="text-[15px] text-slate-800 dark:text-slate-200 leading-[22px] mb-2" numberOfLines={3}>
-                  {post.content}
-                </Text>
-                <View className="flex-row items-center gap-4">
-                  <View className="flex-row items-center gap-1">
-                    <Star size={13} color="#ef4444" />
-                    <Text className="text-[12px] text-slate-500 dark:text-slate-400">{post.post_likes?.length || post.likes_count || 0}</Text>
-                  </View>
-                  <View className="flex-row items-center gap-1">
-                    <MessageSquare size={13} color={isDark ? '#64748b' : '#94a3b8'} />
-                    <Text className="text-[12px] text-slate-500 dark:text-slate-400">{post.comments_count || 0}</Text>
-                  </View>
-                  <Text className="text-[12px] text-slate-400 dark:text-slate-500 ml-auto">{formatTimeAgo(post.created_at)}</Text>
-                </View>
-              </Pressable>
+              <PostCard 
+                key={post.id} 
+                post={post} 
+                currentUserId={session?.user?.id || null} 
+              />
             ))
           )}
         </View>

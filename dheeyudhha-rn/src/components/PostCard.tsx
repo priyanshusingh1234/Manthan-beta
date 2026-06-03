@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Image, Pressable, ScrollView, FlatList, D
 import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -35,6 +36,11 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
       setCurrentImageIndex(index);
     }
   };
+
+  const player = useVideoPlayer(post.video_url, (p) => {
+    p.loop = true;
+    p.muted = false;
+  });
 
   const formatTimeAgo = (dateStr: string) => {
     if (!dateStr) return '';
@@ -157,7 +163,16 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
           </Text>
 
           {/* Media Support */}
-          {images.length > 0 && (
+          {post.video_url ? (
+            <View className="mb-3 w-full h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 relative">
+              <VideoView 
+                player={player}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                nativeControls={true}
+              />
+            </View>
+          ) : images.length > 0 && (
             <View className="mb-3">
               {images.length === 1 ? (
                 <View className="w-full h-56 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700">

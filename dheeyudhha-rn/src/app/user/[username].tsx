@@ -35,12 +35,14 @@ import {
   Play,
   Clock,
   CheckCircle,
+  Layers,
 } from 'lucide-react-native';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Circle } from 'react-native-svg';
 import { supabase } from '@/lib/supabaseClient';
 import { useColorScheme } from 'nativewind';
 import { getLevel } from '@/lib/xp';
 import { getLeague } from '@/lib/leagues';
+import PostCard from '@/components/PostCard';
 
 const { width } = Dimensions.get('window');
 
@@ -120,7 +122,7 @@ const TeacherVerifiedBadge = () => (
   </View>
 );
 
-type StudentTabKey = 'stats' | 'badges' | 'solved';
+type StudentTabKey = 'stats' | 'badges' | 'posts';
 type TeacherTabKey = 'questions';
 
 export default function PublicProfileScreen() {
@@ -145,7 +147,7 @@ export default function PublicProfileScreen() {
 
   // Student specific stats
   const [studentTab, setStudentTab] = useState<StudentTabKey>('stats');
-  const [solvedQuestions, setSolvedQuestions] = useState<any[]>([]);
+  const [userPosts, setUserPosts] = useState<any[]>([]);
   const [favSubject, setFavSubject] = useState('Exploring');
   const [favTeacher, setFavTeacher] = useState('Various Teachers');
   const [weeklyReport, setWeeklyReport] = useState<any>(null);
@@ -240,7 +242,21 @@ export default function PublicProfileScreen() {
           .gt('total_points', dbProfile.total_points || 0);
         setGlobalRank((higherRanked || 0) + 1);
 
-        // B. Fetch question attempts safely using RPC (bypasses RLS)
+        // B. Fetch user's posts
+        const { data: postsData } = await supabase
+          .from('posts')
+          .select('*, author:profiles(*), post_likes(user_id)')
+          .eq('author_id', dbProfile.id)
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (postsData) {
+          setUserPosts(postsData);
+        } else {
+          setUserPosts([]);
+        }
+
+        // Fetch question attempts safely using RPC (bypasses RLS)
         const { data: qAttempts } = await supabase.rpc('get_public_solved_questions', { target_user_id: dbProfile.id });
 
         const { data: wSubs } = await supabase
@@ -903,10 +919,10 @@ export default function PublicProfileScreen() {
         {/* Dynamic Tabs Selectors */}
         {!isTeacher ? (
           <View className="flex-row mx-4 mb-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-            {(['stats', 'badges', 'solved'] as StudentTabKey[]).map((tab) => {
+            {(['stats', 'badges', 'posts'] as StudentTabKey[]).map((tab) => {
               const isActive = studentTab === tab;
-              const labels = { stats: 'Stats', badges: 'Badges', solved: 'Solved' };
-              const icons = { stats: Award, badges: Shield, solved: BookOpen };
+              const labels = { stats: 'Stats', badges: 'Badges', posts: 'Posts' } as any;
+              const icons = { stats: Award, badges: Shield, posts: Layers } as any;
               const TabIcon = icons[tab];
               return (
                 <TouchableOpacity
@@ -1091,43 +1107,23 @@ export default function PublicProfileScreen() {
           </View>
         )}
 
-        {!isTeacher && studentTab === 'solved' && (
+        {!isTeacher && studentTab === 'posts' && (
           <View className="px-4 pb-24 gap-3">
-            {solvedQuestions.length === 0 ? (
+            {userPosts.length === 0 ? (
               <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center">
                 <BookOpen size={36} color={isDark ? '#475569' : '#cbd5e1'} />
-                <Text className="text-slate-500 dark:text-slate-400 font-bold mt-2 text-sm">No questions solved</Text>
+                <Text className="text-slate-500 dark:text-slate-400 font-bold mt-2 text-sm">No posts found</Text>
                 <Text className="text-[11px] text-slate-450 dark:text-slate-500 text-center mt-1">
-                  Questions solved by @{profile.username} will appear here.
+                  Posts shared by @{profile.username} will appear here.
                 </Text>
               </View>
             ) : (
-              solvedQuestions.map((q) => (
-                <View
-                  key={q.id}
-                  className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-3xl shadow-sm flex-row items-center justify-between"
-                >
-                  <View className="flex-1 mr-3">
-                    <Text className="text-xs font-black text-slate-900 dark:text-white" numberOfLines={1}>
-                      {q.title || 'Untitled Question'}
-                    </Text>
-                    <View className="flex-row items-center gap-1.5 mt-1.5">
-                      <Text className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                        {q.subject || 'General'}
-                      </Text>
-                      <View className="w-[3px] h-[3px] rounded-full bg-slate-350 dark:bg-slate-650" />
-                      <Text className="text-[9px] font-bold text-slate-400 uppercase">
-                        {q.difficulty || 'Easy'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View className="bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-900/30 flex-row items-center gap-1">
-                    <Zap size={10} color="#eab308" fill="#eab308" />
-                    <Text className="text-[10px] font-black text-amber-700 dark:text-amber-400">
-                      {q.points || 0} PTS
-                    </Text>
-                  </View>
-                </View>
+              userPosts.map((post) => (
+                <PostCard 
+                  key={post.id} 
+                  post={post} 
+                  currentUserId={currentUser?.id || null} 
+                />
               ))
             )}
           </View>

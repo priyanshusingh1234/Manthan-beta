@@ -166,6 +166,11 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
           }
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          removeClippedSubviews={true}
+          updateCellsBatchingPeriod={50}
           ListFooterComponent={
             loadingMore ? (
               <View className="py-4">
