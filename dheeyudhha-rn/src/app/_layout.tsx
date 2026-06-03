@@ -11,8 +11,22 @@ import { StatusBar } from 'expo-status-bar';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { registerForPushNotificationsAsync } from '@/lib/pushUtils';
+import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold, Inter_900Black } from '@expo-google-fonts/inter';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Prevent splash screen from hiding while fonts load
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
+  const [fontsLoaded, error] = useFonts({
+    Inter: Inter_400Regular,
+    'Inter-Medium': Inter_500Medium,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Bold': Inter_700Bold,
+    'Inter-ExtraBold': Inter_800ExtraBold,
+    'Inter-Black': Inter_900Black,
+  });
+
   const [session, setSession] = useState<Session | null>(null);
   const [initialized, setInitialized] = useState(false);
   const segments = useSegments();
@@ -20,6 +34,12 @@ export default function RootLayout() {
   const { colorScheme, setColorScheme } = useColorScheme();
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+
+  useEffect(() => {
+    if (fontsLoaded || error) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, error]);
 
   useEffect(() => {
     // Load theme from AsyncStorage on startup
