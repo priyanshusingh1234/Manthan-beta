@@ -122,22 +122,33 @@ export default function ProfileScreen() {
   }, [router]);
 
   const fetchMyPosts = useCallback(async () => {
-    if (!currentUser || postsLoaded) return;
+    if (!currentUser || !profile || postsLoaded) return;
     setLoadingPosts(true);
     try {
       const { data } = await supabase
         .from('posts').select('*, post_likes(user_id)')
         .eq('author_id', currentUser.id)
         .order('created_at', { ascending: false }).limit(20);
-      setMyPosts(data || []);
+      
+      const formattedPosts = (data || []).map(post => ({
+        ...post,
+        is_liked_by_me: post.post_likes?.some((like: any) => like.user_id === currentUser.id) || false,
+        likes_count: post.likes_count ?? post.post_likes?.length ?? 0,
+        author: {
+          avatar_url: profile.avatar_url,
+          name: profile.name,
+          username: profile.username,
+        }
+      }));
+      setMyPosts(formattedPosts);
       setPostsLoaded(true);
     } catch (e) { console.error(e); }
     finally { setLoadingPosts(false); }
-  }, [currentUser, postsLoaded]);
+  }, [currentUser, profile, postsLoaded]);
 
   useEffect(() => { fetchProfile(); }, []);
-  // Pre-load posts as soon as we have user — no lag on tab switch
-  useEffect(() => { if (currentUser) fetchMyPosts(); }, [currentUser]);
+  // Pre-load posts as soon as we have user and profile
+  useEffect(() => { if (currentUser && profile) fetchMyPosts(); }, [currentUser, profile]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -551,7 +562,7 @@ export default function ProfileScreen() {
               <PostCard 
                 key={post.id} 
                 post={post} 
-                currentUserId={session?.user?.id || null} 
+                currentUserId={currentUser?.id || null} 
               />
             ))
           )}

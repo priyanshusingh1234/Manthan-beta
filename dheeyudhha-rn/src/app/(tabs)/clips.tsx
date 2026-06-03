@@ -212,8 +212,8 @@ export default function ClipsScreen() {
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: caption.trim(),
-          video_url: videoUrl,
-          video_thumbnail: thumbnailUrl,
+          videoUrl: videoUrl,
+          videoThumbnail: thumbnailUrl,
           category: 'general',
         }),
       });

@@ -148,7 +148,7 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
               <Text className="font-bold text-[15px] text-slate-900 dark:text-slate-100 mr-1" numberOfLines={1}>
                 {name}
               </Text>
-              <Text className="text-[14px] text-slate-500 dark:text-slate-405" numberOfLines={1}>
+              <Text className="text-[14px] text-slate-500 dark:text-slate-400" numberOfLines={1}>
                 @{username} · {formatTimeAgo(post.created_at)}
               </Text>
             </TouchableOpacity>
@@ -221,7 +221,7 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
               disabled={isSinglePost}
             >
               <MessageCircle size={18} color="#64748b" />
-              <Text className="text-[13px] text-slate-505 dark:text-slate-400 font-medium">
+              <Text className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">
                 {post.comments_count > 0 ? post.comments_count : ''}
               </Text>
             </TouchableOpacity>

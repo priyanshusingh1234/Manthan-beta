@@ -245,13 +245,23 @@ export default function PublicProfileScreen() {
         // B. Fetch user's posts
         const { data: postsData } = await supabase
           .from('posts')
-          .select('*, author:profiles(*), post_likes(user_id)')
+          .select('*, post_likes(user_id)')
           .eq('author_id', dbProfile.id)
           .order('created_at', { ascending: false })
           .limit(20);
 
         if (postsData) {
-          setUserPosts(postsData);
+          const formattedPosts = postsData.map(post => ({
+            ...post,
+            is_liked_by_me: post.post_likes?.some((like: any) => like.user_id === user?.id) || false,
+            likes_count: post.likes_count ?? post.post_likes?.length ?? 0,
+            author: {
+              avatar_url: dbProfile.avatar_url,
+              name: dbProfile.name || dbProfile.full_name,
+              username: dbProfile.username,
+            }
+          }));
+          setUserPosts(formattedPosts);
         } else {
           setUserPosts([]);
         }
