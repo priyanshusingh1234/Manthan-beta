@@ -82,64 +82,129 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
         {/* Body */}
         <View className="mb-3">
           <View className="flex-row flex-wrap gap-2 mb-2">
+            {/* Algorithm Tag / Feed Label */}
+            {q?._feedLabel && (
+              <View className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50 px-1.5 py-0.5 rounded flex-row items-center">
+                <Text className="text-[9px] font-bold text-indigo-700 dark:text-indigo-400 uppercase">{q._feedLabel}</Text>
+              </View>
+            )}
+            
+            {/* Match The Following Badge */}
+            {q?.question_type === 'match' && (
+              <View className="bg-amber-100 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-800 px-1.5 py-0.5 rounded flex-row items-center">
+                <Text className="text-[9px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">Match</Text>
+              </View>
+            )}
+            
+            {/* Written Badge */}
+            {(q?.points || 0) > 15 && q?.question_type !== 'match' && (
+              <View className="bg-violet-100 dark:bg-violet-900/40 border border-violet-200 dark:border-violet-800 px-1.5 py-0.5 rounded flex-row items-center">
+                <Text className="text-[9px] font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wider">Written</Text>
+              </View>
+            )}
+
             {q?.difficulty && (
               <View className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 px-1.5 py-0.5 rounded flex-row items-center">
-                <Text className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase">{q.difficulty}</Text>
+                <Text className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">{q.difficulty}</Text>
               </View>
             )}
             {q?.time_limit && (
               <View className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded flex-row items-center gap-1">
                 <Clock size={9} color="#64748b" />
-                <Text className="text-[9px] font-bold text-slate-600 dark:text-slate-300 uppercase">{q.time_limit}m</Text>
+                <Text className="text-[9px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">{q.time_limit}m</Text>
               </View>
             )}
             {(q?.solved_count !== undefined && q?.solved_count !== null) && (
               <View className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 px-1.5 py-0.5 rounded flex-row items-center gap-1">
                 <Users size={9} color="#3b82f6" />
-                <Text className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase">{q.solved_count} Solved</Text>
+                <Text className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">{q.solved_count} Solved</Text>
               </View>
             )}
           </View>
           
-          {imageUrl && (
-            <Image 
-              source={{ uri: imageUrl }} 
-              alt="Question image"
-              className="w-full h-40 rounded-xl bg-slate-100 dark:bg-slate-800 mb-3"
-              resizeMode="cover"
-            />
-          )}
+          <Text className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2 leading-snug group-hover:text-blue-700 transition-colors">
+            {q?.title || 'Untitled Question'}
+          </Text>
           
-          <Text className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1 leading-snug">{q?.title || 'Untitled Question'}</Text>
           {q?.body && (
-            <Text className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed" numberOfLines={2}>{q.body}</Text>
+            <Text className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3" numberOfLines={3}>
+              {q.body}
+            </Text>
+          )}
+
+          {imageUrl && (
+            <View className="relative w-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 mb-3">
+              <View className="flex items-center justify-center bg-slate-100/50 dark:bg-slate-900/50 p-2">
+                <Image 
+                  source={{ uri: imageUrl }} 
+                  alt="Attachment"
+                  className="w-full h-48 rounded-lg"
+                  resizeMode="contain"
+                />
+              </View>
+              <View className="absolute bottom-2 right-2 px-2 py-1 bg-black/60 rounded flex-row items-center">
+                <Text className="text-[10px] font-bold text-white uppercase tracking-wider">Attachment</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Match the following preview for UI parity */}
+          {q?.question_type === 'match' && q?.match_pairs && q.match_pairs.length > 0 && (
+            <View className="mt-1 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800/80 p-3">
+              <View className="flex-row items-stretch justify-between gap-4">
+                <View className="flex-1 gap-2">
+                  {q.match_pairs.slice(0, 2).map((pair: any, idx: number) => (
+                    <View key={`left-${idx}`} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-center shadow-sm relative">
+                      <Text className="text-xs font-semibold text-slate-700 dark:text-slate-300" numberOfLines={1}>{pair.left}</Text>
+                      <View className="absolute top-1/2 -right-1 w-1.5 h-1.5 rounded-full bg-indigo-400 -translate-y-0.5" />
+                    </View>
+                  ))}
+                </View>
+                <View className="w-8 items-center justify-around opacity-30">
+                  <View className="flex-1 w-[2px] border-l-2 border-indigo-500 border-dashed" />
+                </View>
+                <View className="flex-1 gap-2">
+                  {q.match_pairs.slice(0, 2).map((pair: any, idx: number) => (
+                    <View key={`right-${idx}`} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-center shadow-sm relative">
+                      <View className="absolute top-1/2 -left-1 w-1.5 h-1.5 rounded-full bg-indigo-400 -translate-y-0.5" />
+                      <Text className="text-xs font-semibold text-slate-700 dark:text-slate-300" numberOfLines={1}>{pair.right}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+              {q.match_pairs.length > 2 && (
+                <Text className="mt-2 text-center text-[10px] text-slate-400 font-medium">+{q.match_pairs.length - 2} more pairs</Text>
+              )}
+            </View>
           )}
         </View>
 
         {/* Footer */}
         <View className="flex-row items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3 mt-1">
-          <View className="flex-row items-center gap-1 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/30 px-2 py-1 rounded-lg">
-            <Zap size={12} color="#f59e0b" fill="#f59e0b" />
-            <Text className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{q?.points || 0} PTS</Text>
+          <View className="flex-row items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-100/80 dark:border-amber-900/50 px-2 py-1.5 rounded-lg shadow-sm">
+            <View className="bg-amber-100 dark:bg-amber-900/50 p-0.5 rounded-full">
+              <Zap size={10} color="#f59e0b" fill="#f59e0b" />
+            </View>
+            <Text className="text-[10px] font-bold text-amber-900 dark:text-amber-300">{q?.points || 0} <Text className="font-normal opacity-70">PTS</Text></Text>
           </View>
 
-          <View className="flex-row gap-2">
+          <View className="flex-row gap-2 items-center">
             {showDuelButton && (
               <TouchableOpacity
                 onPress={() => setDuelOpen(true)}
-                className="bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900/30 px-3 py-2 rounded-xl flex-row items-center gap-1.5 active:scale-95 transition-transform"
+                className="bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900/30 px-3 py-1.5 rounded-lg flex-row items-center gap-1.5 active:scale-95 transition-transform"
               >
                 <Swords size={12} color="#ea580c" />
-                <Text className="text-orange-600 dark:text-orange-400 font-bold text-xs">Duel</Text>
+                <Text className="text-orange-600 dark:text-orange-400 font-bold text-[10px] uppercase tracking-wider">Duel</Text>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity 
               onPress={() => router.push(`/solve/${q.id}` as any)}
-              className="bg-indigo-600 flex-row items-center gap-1.5 px-4 py-2 rounded-xl active:scale-95 transition-transform"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 flex-row items-center gap-1.5 px-3 py-1.5 rounded-lg active:scale-95 transition-transform shadow-sm"
             >
-              <Play size={12} color="white" fill="white" />
-              <Text className="text-white font-bold text-xs">Attempt</Text>
+              <Play size={10} color="white" fill="white" />
+              <Text className="text-white font-bold text-[10px] uppercase tracking-wider">Attempt</Text>
             </TouchableOpacity>
           </View>
         </View>

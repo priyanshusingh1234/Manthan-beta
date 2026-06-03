@@ -23,6 +23,11 @@ export default function SolveQuestionScreen() {
   const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
+  // Match-the-following state
+  const [matchConnections, setMatchConnections] = useState<Record<string, string>>({}); // left.id -> right.id
+  const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+  const [shuffledRightItems, setShuffledRightItems] = useState<any[]>([]);
+  
   // Rich features
   const [purchasedHint, setPurchasedHint] = useState<string | null>(null);
   const [isPurchasingHint, setIsPurchasingHint] = useState(false);
@@ -93,7 +98,30 @@ export default function SolveQuestionScreen() {
     if (id) fetchQuestionAndAuth();
   }, [id, router]);
 
-  const handleSubmit = useCallback(async (forcedOption?: number | null) => {
+  // Prepare shuffled right items for match questions
+  useEffect(() => {
+    if (question?.question_type === 'match' && question.match_pairs && shuffledRightItems.length === 0) {
+      const pairs = question.match_pairs.map((p: any, i: number) => ({ ...p, id: `p${i}` }));
+      let right = pairs.map((p: any) => ({ id: p.id, text: p.right }));
+      
+      // Shuffle right items
+      if (right.length > 1) {
+        let isSame = true;
+        let attempts = 0;
+        while (isSame && attempts < 5) {
+          for (let i = right.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [right[i], right[j]] = [right[j], right[i]];
+          }
+          isSame = right.every((r: any, idx: number) => r.id === pairs[idx].id);
+          attempts++;
+        }
+      }
+      setShuffledRightItems(right);
+    }
+  }, [question]);
+
+  const handleSubmit = useCallback(async (forcedOption?: number | null, forcedIsCorrect?: boolean) => {
     if (isSubmitting || result || alreadyAttempted) return;
     setIsSubmitting(true);
     
@@ -115,6 +143,7 @@ export default function SolveQuestionScreen() {
         body: JSON.stringify({
           questionId: question.id,
           selectedOption: optionToSend ?? null,
+          isCorrect: forcedIsCorrect,
           startedAt,
           timeTaken: Math.max(0, question.time_limit * 60 - timeLeft),
           challengeId: challenge || null,
@@ -148,7 +177,11 @@ export default function SolveQuestionScreen() {
     if (loading || alreadyAttempted || result || isSubmitting) return;
 
     if (timeLeft <= 0) {
-      handleSubmit(selectedOption);
+      if (question?.question_type === 'match') {
+        handleSubmit(-1, false);
+      } else {
+        handleSubmit(selectedOption);
+      }
       return;
     }
 
@@ -374,6 +407,26 @@ export default function SolveQuestionScreen() {
             </View>
           )}
 
+          {/* Match Feedback */}
+          {!result.isCorrect && question?.question_type === 'match' && question?.match_pairs && (
+            <View className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 mb-6 w-full">
+              <Text className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 mb-3 text-center">
+                The correct matches were:
+              </Text>
+              <View className="gap-2">
+                {question.match_pairs.map((pair: any, idx: number) => (
+                  <View key={idx} className="flex-row items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                    <Text className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300 text-right">{pair.left}</Text>
+                    <View className="px-3">
+                      <Text className="text-emerald-500 font-black">→</Text>
+                    </View>
+                    <Text className="flex-1 text-sm font-medium text-emerald-600 dark:text-emerald-400 text-left">{pair.right}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* Rating */}
           <View className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 mb-8 w-full items-center">
             {!reviewSubmitted ? (
@@ -488,51 +541,162 @@ export default function SolveQuestionScreen() {
           </View>
         )}
 
-        <View className="space-y-3">
-          {question.options?.map((option: string, index: number) => {
-            const isSelected = selectedOption === index;
-            return (
-              <TouchableOpacity
-                key={index}
-                onPress={() => setSelectedOption(index)}
-                activeOpacity={0.7}
-                className={`w-full p-4 rounded-2xl border-2 mb-3 flex-row items-center ${
-                  isSelected 
-                    ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' 
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
-                }`}
-              >
-                <View className={`w-6 h-6 rounded-full border-2 items-center justify-center mr-3 ${
-                  isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 dark:border-slate-600'
-                }`}>
-                  {isSelected && <View className="w-2.5 h-2.5 bg-white rounded-full" />}
-                </View>
-                <Text className={`flex-1 text-lg ${isSelected ? 'text-indigo-900 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300 font-medium'}`}>
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        {question.question_type === 'match' ? (
+          <View className="mt-4">
+            <View className="flex-row justify-between gap-4">
+              {/* Left Column */}
+              <View className="flex-1 gap-3">
+                {question.match_pairs?.map((pair: any, i: number) => {
+                  const id = `p${i}`;
+                  const isSelected = selectedLeft === id;
+                  const isConnected = !!matchConnections[id];
+                  return (
+                    <TouchableOpacity
+                      key={`left-${i}`}
+                      onPress={() => setSelectedLeft(isSelected ? null : id)}
+                      activeOpacity={0.7}
+                      className={`relative p-4 min-h-[5rem] items-center justify-center rounded-2xl border-2 shadow-sm ${
+                        isConnected 
+                          ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800' 
+                          : isSelected
+                            ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-400'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      <Text className={`text-center font-bold text-sm ${isConnected ? 'text-violet-900 dark:text-violet-300' : 'text-slate-700 dark:text-slate-200'}`}>
+                        {pair.left}
+                      </Text>
+                      {/* Connection indicator */}
+                      <View className={`absolute -right-2 top-1/2 -mt-2 w-4 h-4 rounded-full border-2 ${
+                        isConnected ? 'bg-violet-500 border-white dark:border-slate-900' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'
+                      }`} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Right Column */}
+              <View className="flex-1 gap-3">
+                {shuffledRightItems.map((item, i) => {
+                  let connectedLeftId: string | null = null;
+                  for (const [l, r] of Object.entries(matchConnections)) {
+                    if (r === item.id) connectedLeftId = l;
+                  }
+                  
+                  const handleRightTap = () => {
+                    if (!selectedLeft) return;
+                    setMatchConnections(prev => {
+                      const next = { ...prev };
+                      for (const k in next) {
+                        if (next[k] === item.id) delete next[k]; // remove existing connections to this right item
+                      }
+                      next[selectedLeft] = item.id;
+                      return next;
+                    });
+                    setSelectedLeft(null); // deselect after connecting
+                  };
+
+                  return (
+                    <TouchableOpacity
+                      key={`right-${i}`}
+                      onPress={handleRightTap}
+                      activeOpacity={selectedLeft ? 0.7 : 1}
+                      className={`relative p-4 min-h-[5rem] items-center justify-center rounded-2xl border-2 shadow-sm ${
+                        connectedLeftId
+                          ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800'
+                          : selectedLeft 
+                            ? 'bg-white dark:bg-slate-800 border-blue-200 dark:border-blue-800 border-dashed'
+                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      <Text className={`text-center font-bold text-sm ${connectedLeftId ? 'text-violet-900 dark:text-violet-300' : 'text-slate-700 dark:text-slate-200'}`}>
+                        {item.text}
+                      </Text>
+                      {/* Connection indicator */}
+                      <View className={`absolute -left-2 top-1/2 -mt-2 w-4 h-4 rounded-full border-2 ${
+                        connectedLeftId ? 'bg-violet-500 border-white dark:border-slate-900' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'
+                      }`} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View className="space-y-3">
+            {question.options?.map((option: string, index: number) => {
+              const isSelected = selectedOption === index;
+              return (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => setSelectedOption(index)}
+                  activeOpacity={0.7}
+                  className={`w-full p-4 rounded-2xl border-2 mb-3 flex-row items-center ${
+                    isSelected 
+                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' 
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
+                  }`}
+                >
+                  <View className={`w-6 h-6 rounded-full border-2 items-center justify-center mr-3 ${
+                    isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 dark:border-slate-600'
+                  }`}>
+                    {isSelected && <View className="w-2.5 h-2.5 bg-white rounded-full" />}
+                  </View>
+                  <Text className={`flex-1 text-lg ${isSelected ? 'text-indigo-900 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300 font-medium'}`}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
 
       {/* Footer Submit */}
       <View className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
-        <TouchableOpacity
-          onPress={() => handleSubmit()}
-          disabled={selectedOption === null || isSubmitting}
-          className={`w-full py-4 rounded-xl items-center flex-row justify-center ${
-            selectedOption === null ? 'bg-slate-200 dark:bg-slate-800' : 'bg-indigo-600'
-          }`}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text className={`text-lg font-bold ${selectedOption === null ? 'text-slate-400 dark:text-slate-500' : 'text-white'}`}>
-              Submit Answer
-            </Text>
-          )}
-        </TouchableOpacity>
+        {question.question_type === 'match' ? (
+          <TouchableOpacity
+            onPress={() => {
+              const pairs = question.match_pairs.map((p: any, i: number) => ({ ...p, id: `p${i}` }));
+              let isCorrect = true;
+              for (const p of pairs) {
+                if (matchConnections[p.id] !== p.id) {
+                  isCorrect = false;
+                  break;
+                }
+              }
+              handleSubmit(-1, isCorrect);
+            }}
+            disabled={Object.keys(matchConnections).length < (question.match_pairs?.length || 0) || isSubmitting}
+            className={`w-full py-4 rounded-xl items-center flex-row justify-center ${
+              Object.keys(matchConnections).length < (question.match_pairs?.length || 0) ? 'bg-slate-200 dark:bg-slate-800' : 'bg-violet-600'
+            }`}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className={`text-lg font-bold ${Object.keys(matchConnections).length < (question.match_pairs?.length || 0) ? 'text-slate-400 dark:text-slate-500' : 'text-white'}`}>
+                Submit Matches
+              </Text>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={() => handleSubmit()}
+            disabled={selectedOption === null || isSubmitting}
+            className={`w-full py-4 rounded-xl items-center flex-row justify-center ${
+              selectedOption === null ? 'bg-slate-200 dark:bg-slate-800' : 'bg-indigo-600'
+            }`}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className={`text-lg font-bold ${selectedOption === null ? 'text-slate-400 dark:text-slate-500' : 'text-white'}`}>
+                Submit Answer
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
