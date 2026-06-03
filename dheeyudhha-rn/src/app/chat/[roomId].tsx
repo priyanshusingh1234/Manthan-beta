@@ -349,16 +349,22 @@ export default function ChatRoomScreen() {
     if (!user) return;
     setUploadingImage(true);
     try {
-      const res = await fetch(uri);
-      const blob = await res.blob();
       const fileExtension = uri.split('.').pop() || 'jpg';
       const path = `avatars/chat_${roomId}_${user.id}_${Date.now()}.${fileExtension}`;
 
+      // React Native does not support creating blobs from arraybuffers reliably.
+      // We must construct a FormData object and append the file uri directly.
+      const formData = new FormData();
+      formData.append('file', {
+        uri,
+        name: `chat_img.${fileExtension}`,
+        type: `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`,
+      } as any);
+
       const { data, error } = await supabase.storage
         .from('avatars')
-        .upload(path, blob, {
+        .upload(path, formData, {
           upsert: true,
-          contentType: `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`
         });
 
       if (error) throw error;
