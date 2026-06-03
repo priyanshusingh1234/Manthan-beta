@@ -543,7 +543,7 @@ export default function PublicProfileScreen() {
         {/* Floating Back Button */}
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{ top: insets.top + 10 }}
+          style={{ top: 10 }}
           className="absolute left-4 z-50 w-10 h-10 bg-black/45 rounded-full justify-center items-center shadow-md active:scale-95"
         >
           <ChevronLeft size={24} color="white" />
@@ -588,7 +588,7 @@ export default function PublicProfileScreen() {
   const userLeague = getLeague(monthlyPoints);
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
       <Stack.Screen
         options={{
           headerShown: false,
@@ -598,7 +598,7 @@ export default function PublicProfileScreen() {
       {/* Floating Back Button */}
       <TouchableOpacity
         onPress={() => router.back()}
-        style={{ top: insets.top + 10 }}
+        style={{ top: 10 }}
         className="absolute left-4 z-50 w-10 h-10 bg-black/45 rounded-full justify-center items-center shadow-md active:scale-95"
       >
         <ChevronLeft size={24} color="white" />

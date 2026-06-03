@@ -384,7 +384,7 @@ export default function ProfileScreen() {
   const bannerPreview = newBanner?.uri || profile.banner_url;
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
