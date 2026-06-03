@@ -197,7 +197,8 @@ export default function ChatListPage() {
       fetchRooms(user.id);
 
       // Setup realtime listener
-      const channel = supabase.channel(`chat-list-${user.id}`)
+      const channelName = `chat-list-${user.id}-${Date.now()}`;
+      const channel = supabase.channel(channelName)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => fetchRooms(user.id))
         .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_participants', filter: `user_id=eq.${user.id}` }, () => fetchRooms(user.id))
         .subscribe();

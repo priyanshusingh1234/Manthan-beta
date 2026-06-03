@@ -1,27 +1,124 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Image } from 'react-native';
 import { Bell, CheckCheck, Trash2, X, UserPlus, CheckCircle2, XCircle, Zap, BookOpen, Sparkles, Swords, MessageSquare, ArrowRight, Users, BarChart3, AtSign } from 'lucide-react-native';
-// import { supabase } from '@/lib/supabaseClient'; // Stubbed for now
+import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
 
-// Dummy implementation for now to prevent errors
 export default function NotificationBell({ isMobile = false }: { isMobile?: boolean }) {
     const [open, setOpen] = useState(false);
     const [filter, setFilter] = useState('All');
     const [notifications, setNotifications] = useState<any[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [token, setToken] = useState<string | null>(null);
+    const [user, setUser] = useState<any>(null);
     const router = useRouter();
 
-    const markAllRead = () => setUnreadCount(0);
-    const clearAll = () => setNotifications([]);
+    // Get auth token and user
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                setToken(session.access_token);
+                setUser(session.user);
+            }
+        });
+        const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => {
+            setToken(sess?.access_token ?? null);
+            setUser(sess?.user ?? null);
+        });
+        return () => sub.subscription.unsubscribe();
+    }, []);
+
+    const fetchNotifications = useCallback(async () => {
+        if (!token) return;
+        setLoading(true);
+        try {
+            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+            const res = await fetch(`${API_URL}/api/notifications`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setNotifications(data.notifications || []);
+                setUnreadCount(data.unreadCount || 0);
+            }
+        } catch { /* ignore */ } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
+    // Stable ref so the realtime callback always calls latest fetchNotifications
+    const fetchNotificationsRef = useRef(fetchNotifications);
+    useEffect(() => { fetchNotificationsRef.current = fetchNotifications; }, [fetchNotifications]);
+
+    // Track the active channel so we never double-subscribe
+    const channelRef = useRef<any>(null);
+
+    // Subscribe ONCE per user session — do NOT put token in deps.
+    // Token changes (e.g. silent refresh) update fetchNotificationsRef, not the channel.
+    useEffect(() => {
+        if (!user?.id) return;
+
+        // Initial fetch
+        fetchNotificationsRef.current();
+
+        // Tear down any existing channel before creating a new one
+        if (channelRef.current) {
+            supabase.removeChannel(channelRef.current);
+            channelRef.current = null;
+        }
+
+        // Generate a uniquely named channel every time the effect runs.
+        // This prevents the "cannot add callbacks after subscribe" crash which happens
+        // when React double-renders and tries to reuse the same channel name before
+        // removeChannel (which is async) has finished cleaning it up.
+        const channelName = `bell-notif-${user.id}-${Date.now()}`;
+        const channel = supabase
+            .channel(channelName)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+            () => fetchNotificationsRef.current())
+            .subscribe();
+
+        channelRef.current = channel;
+
+        return () => {
+            if (channelRef.current) {
+                supabase.removeChannel(channelRef.current);
+                channelRef.current = null;
+            }
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id]);
+
+    const markAllRead = async () => {
+        if (!token) return;
+        setNotifications(n => n.map(x => ({ ...x, read: true })));
+        setUnreadCount(0);
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+        await fetch(`${API_URL}/api/notifications`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+    };
+
+    const clearAll = async () => {
+        if (!token) return;
+        setNotifications([]);
+        setUnreadCount(0);
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+        await fetch(`${API_URL}/api/notifications`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+        });
+    };
 
     return (
         <View className="relative z-50">
             <TouchableOpacity
                 onPress={() => {
                     if (isMobile) {
-                        router.push('/notifications');
+                        router.push('/notifications' as any);
                         return;
                     }
                     setOpen(!open);
@@ -86,7 +183,7 @@ export default function NotificationBell({ isMobile = false }: { isMobile?: bool
                                 <Trash2 size={12} color="#94a3b8" />
                                 <Text className="text-[10px] font-black text-slate-400 uppercase">Clear All</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={() => { setOpen(false); router.push('/notifications'); }} className="flex-row items-center gap-1.5">
+                            <TouchableOpacity onPress={() => { setOpen(false); router.push('/notifications' as any); }} className="flex-row items-center gap-1.5">
                                 <Text className="text-[10px] font-black text-indigo-600 uppercase">See All</Text>
                                 <ArrowRight size={12} color="#4f46e5" />
                             </TouchableOpacity>

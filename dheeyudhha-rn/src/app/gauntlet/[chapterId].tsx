@@ -14,6 +14,7 @@ import { X, Star, Heart, CheckCircle2, ArrowLeft, BookOpen } from 'lucide-react-
 import Svg, { Path as SvgPath, Circle as SvgCircle, Rect as SvgRect } from 'react-native-svg';
 import { supabase } from '@/lib/supabaseClient';
 import { useColorScheme } from 'nativewind';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Import level data
 import { ALL_LEVELS as nationalismEuropeLevels } from '@/data/gauntlet/nationalism-europe';
@@ -387,6 +388,7 @@ function StudyNotesModal({
   const [lives, setLives] = useState(3);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
 
   const q = level.questions[qIndex];
 
@@ -424,7 +426,7 @@ function StudyNotesModal({
       visible={true}
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-slate-50 dark:bg-slate-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
         {/* Header bar */}
         <View className="flex-row items-center justify-between p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
           <TouchableOpacity 

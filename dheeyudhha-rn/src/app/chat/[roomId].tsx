@@ -210,7 +210,8 @@ export default function ChatRoomScreen() {
   // Realtime handlers
   useEffect(() => {
     if (user?.id && roomId) {
-      const channel = supabase.channel(`room-${roomId}`)
+      const channelName = `room-${roomId}-${Date.now()}`;
+      const channel = supabase.channel(channelName)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
           const msg = payload.new as Message;
           setMessages(prev => {

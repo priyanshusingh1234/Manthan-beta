@@ -10,6 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Clock,
   Trophy,
@@ -251,6 +252,7 @@ export default function ArenaGauntletScreen() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
 
   // Determine if view-only mode
   const view = useLocalSearchParams<{ view?: string }>().view;
@@ -459,7 +461,7 @@ export default function ArenaGauntletScreen() {
 
   // ── LOADING ──
   if (loading) return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950 items-center justify-center">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950 items-center justify-center" style={{ paddingTop: insets.top }}>
       <ActivityIndicator size="large" color="#4f46e5" />
       <Text className="mt-4 text-indigo-600 dark:text-indigo-400 font-bold text-xs uppercase tracking-widest">
         Initializing Gauntlet…
@@ -469,7 +471,7 @@ export default function ArenaGauntletScreen() {
 
   // ── ERROR ──
   if (error || !gauntlet) return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950 items-center justify-center p-6">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950 items-center justify-center p-6" style={{ paddingTop: insets.top }}>
       <View className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 p-8 rounded-3xl w-full max-w-sm items-center">
         <ShieldAlert size={48} color="#ef4444" />
         <Text className="text-xl font-black mb-2 text-red-600 dark:text-red-400 mt-4 text-center">Gauntlet Unavailable</Text>
@@ -504,6 +506,7 @@ export default function ArenaGauntletScreen() {
       <ScrollView
         className="flex-1 bg-slate-50 dark:bg-slate-950"
         contentContainerStyle={{ paddingBottom: 120 }}
+        style={{ paddingTop: insets.top }}
       >
         {/* Header */}
         <View className="bg-white/80 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex-row items-center justify-between">
@@ -634,7 +637,7 @@ export default function ArenaGauntletScreen() {
   const isLowTime = timeLeft < 300;
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="bg-white/90 dark:bg-slate-950/90 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex-row items-center justify-between gap-3">
         {/* Timer */}

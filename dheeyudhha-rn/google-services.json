@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1055907916128",
+    "project_id": "heeyudha",
+    "storage_bucket": "heeyudha.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1055907916128:android:a50e4bba4e3868b4915605",
+        "android_client_info": {
+          "package_name": "com.dheeyudha.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAj1m_KJ1J3PrcehMMjn6FJ5RnoWUx1LQ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

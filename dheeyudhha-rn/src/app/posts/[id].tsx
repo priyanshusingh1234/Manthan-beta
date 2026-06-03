@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -14,19 +14,29 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
-import { User, Send, ArrowLeft } from 'lucide-react-native';
+import { User, Send, X, CornerDownRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
+
+type ReplyingTo = {
+  userId: string;
+  username: string;
+  commentId: string;
+};
 
 export default function SinglePostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
+  const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   const fetchUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -49,38 +59,23 @@ export default function SinglePostScreen() {
   const fetchPostAndComments = async () => {
     if (!id) return;
     try {
-      // 1. Fetch Post
-      const { data: postData, error: postError } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          author:profiles(id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics),
-          post_likes(user_id)
-        `)
-        .eq('id', id)
-        .single();
-
-      if (postError) throw postError;
-
-      // 2. Fetch Comments
-      const { data: commentsData, error: commentsError } = await supabase
-        .from('post_comments')
-        .select(`
-          *,
-          author:profiles(id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics)
-        `)
-        .eq('post_id', id)
-        .order('created_at', { ascending: false });
-
-      if (commentsError) throw commentsError;
-
-      const formattedPost = {
-        ...postData,
-        is_liked_by_me: currentUser ? postData.post_likes?.some((l: any) => l.user_id === currentUser.id) : false,
-        likes_count: postData.post_likes ? postData.post_likes.length : (postData.likes_count || 0)
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': session ? `Bearer ${session.access_token}` : ''
       };
 
-      setPost(formattedPost);
+      const [postRes, commentsRes] = await Promise.all([
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/posts/${id}`, { headers }),
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/posts/${id}/comments`, { headers }),
+      ]);
+
+      if (!postRes.ok) throw new Error('Failed to fetch post');
+      if (!commentsRes.ok) throw new Error('Failed to fetch comments');
+
+      const [postData, commentsData] = await Promise.all([postRes.json(), commentsRes.json()]);
+
+      setPost(postData);
       setComments(commentsData || []);
     } catch (error) {
       console.error('Error fetching single post:', error);
@@ -93,41 +88,54 @@ export default function SinglePostScreen() {
     fetchUser().then(fetchPostAndComments);
   }, [id]);
 
+  const handleReply = (comment: any) => {
+    const author = comment.author || {};
+    const username = author.username || 'scholar';
+    setReplyingTo({
+      userId: author.id,
+      username,
+      commentId: comment.id,
+    });
+    // Pre-fill @mention and focus input
+    setNewComment(`@${username} `);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
+    setNewComment('');
+  };
+
   const handleCommentSubmit = async () => {
     if (!newComment.trim() || !currentUser || submitting) return;
     
     setSubmitting(true);
     try {
-      // 1. Insert comment
-      const { data: commentData, error } = await supabase
-        .from('post_comments')
-        .insert({
-          post_id: id,
-          author_id: currentUser.id,
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/posts/${id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': session ? `Bearer ${session.access_token}` : ''
+        },
+        body: JSON.stringify({
           content: newComment.trim(),
+          replying_to_user_id: replyingTo?.userId || null,
         })
-        .select(`
-          *,
-          author:profiles(id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics)
-        `)
-        .single();
+      });
 
-      if (error) throw error;
-
-      // 2. Increment comments_count on post (optional, denormalized counter)
-      const { error: rpcError } = await supabase.rpc('increment_post_comments', { post_id_arg: id });
-      if (rpcError) {
-        console.log('RPC increment failed (optional)', rpcError);
-        // Fallback: manually update the post count if RPC doesn't exist
-        const { data: currentPost } = await supabase.from('posts').select('comments_count').eq('id', id).single();
-        if (currentPost) {
-          await supabase.from('posts').update({ comments_count: (currentPost.comments_count || 0) + 1 }).eq('id', id);
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to post comment');
       }
+
+      const commentData = await response.json();
 
       setComments(prev => [commentData, ...prev]);
       setPost((prev: any) => ({ ...prev, comments_count: (prev?.comments_count || 0) + 1 }));
       setNewComment('');
+      setReplyingTo(null);
       Keyboard.dismiss();
     } catch (e) {
       console.error('Error posting comment:', e);
@@ -142,22 +150,40 @@ export default function SinglePostScreen() {
     const date = new Date(dateStr);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
     if (diffInSeconds < 60) return `${diffInSeconds}s`;
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
     return `${Math.floor(diffInSeconds / 86400)}d`;
   };
 
+  // Highlight @mentions in comment text
+  const renderCommentContent = (text: string) => {
+    if (!text) return null;
+    const parts = text.split(/(@[\w.-]+)/g);
+    return (
+      <Text className="text-[15px] text-slate-800 dark:text-slate-200 leading-[22px]">
+        {parts.map((part, i) =>
+          part.startsWith('@') ? (
+            <Text key={i} className="text-indigo-600 dark:text-indigo-400 font-semibold">{part}</Text>
+          ) : (
+            <Text key={i}>{part}</Text>
+          )
+        )}
+      </Text>
+    );
+  };
+
   const renderComment = ({ item }: { item: any }) => {
     const author = item.author || {};
-    const name = author.full_name || 'Scholar';
+    const name = author.name || author.full_name || 'Scholar';
     const username = author.username || 'scholar';
+    const isCurrentUser = currentUser?.id === author.id;
 
     return (
-      <View className="flex-row px-4 py-3 border-b border-slate-50">
-        <View className="mr-3">
-          <View className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 border border-slate-200 justify-center items-center">
+      <View className="flex-row px-4 py-3 border-b border-slate-50 dark:border-slate-800/60">
+        {/* Avatar */}
+        <View className="mr-3 shrink-0">
+          <View className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 justify-center items-center">
             {author.avatar_url ? (
               <Image source={{ uri: author.avatar_url }} className="w-full h-full" />
             ) : (
@@ -165,14 +191,29 @@ export default function SinglePostScreen() {
             )}
           </View>
         </View>
+
+        {/* Content */}
         <View className="flex-1">
           <View className="flex-row items-center flex-wrap mb-0.5">
-            <Text className="font-bold text-[14px] text-slate-900 mr-1">{name}</Text>
-            <Text className="text-[13px] text-slate-500">@{username}</Text>
-            <Text className="text-slate-400 mx-1">·</Text>
-            <Text className="text-[13px] text-slate-500">{formatTimeAgo(item.created_at)}</Text>
+            <Text className="font-bold text-[14px] text-slate-900 dark:text-slate-100 mr-1">{name}</Text>
+            <Text className="text-[13px] text-slate-500 dark:text-slate-400">@{username}</Text>
+            <Text className="text-slate-400 dark:text-slate-600 mx-1">·</Text>
+            <Text className="text-[13px] text-slate-500 dark:text-slate-400">{formatTimeAgo(item.created_at)}</Text>
           </View>
-          <Text className="text-[15px] text-slate-800 leading-[22px]">{item.content}</Text>
+
+          {renderCommentContent(item.content)}
+
+          {/* Reply button */}
+          {currentUser && !isCurrentUser && (
+            <TouchableOpacity
+              onPress={() => handleReply(item)}
+              className="flex-row items-center gap-1 mt-2"
+              activeOpacity={0.6}
+            >
+              <CornerDownRight size={12} color={isDark ? '#6366f1' : '#4f46e5'} />
+              <Text className="text-indigo-600 dark:text-indigo-400 text-[12px] font-semibold">Reply</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
@@ -180,7 +221,7 @@ export default function SinglePostScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-white justify-center items-center">
+      <View className="flex-1 bg-white dark:bg-slate-950 justify-center items-center">
         <ActivityIndicator size="large" color="#4f46e5" />
       </View>
     );
@@ -188,7 +229,7 @@ export default function SinglePostScreen() {
 
   if (!post) {
     return (
-      <View className="flex-1 bg-white justify-center items-center">
+      <View className="flex-1 bg-white dark:bg-slate-950 justify-center items-center">
         <Text className="text-slate-500 font-bold">Post not found</Text>
       </View>
     );
@@ -196,7 +237,7 @@ export default function SinglePostScreen() {
 
   return (
     <KeyboardAvoidingView 
-      className="flex-1 bg-white" 
+      className="flex-1 bg-white dark:bg-slate-950" 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
@@ -211,39 +252,72 @@ export default function SinglePostScreen() {
               currentUserId={currentUser?.id || null} 
               isSinglePost={true} 
             />
-            <View className="h-2 bg-slate-50" />
+            <View className="h-2 bg-slate-50 dark:bg-slate-900" />
+            {comments.length === 0 && !loading && (
+              <View className="items-center py-10">
+                <Text className="text-slate-400 dark:text-slate-500 text-sm">No comments yet. Be the first!</Text>
+              </View>
+            )}
           </>
         }
         contentContainerStyle={{ paddingBottom: 20 }}
       />
 
-      {/* Comment Input */}
+      {/* Comment Input Area */}
       {currentUser && (
-        <View 
-          className="flex-row items-end px-4 py-3 border-t border-slate-100 bg-white"
+        <View
+          className="border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950"
           style={{ paddingBottom: Math.max(insets.bottom, 12) }}
         >
-          <View className="flex-1 flex-row items-center bg-slate-100 rounded-3xl px-4 py-1 min-h-[44px]">
-            <TextInput
-              value={newComment}
-              onChangeText={setNewComment}
-              placeholder="Post your reply..."
-              placeholderTextColor="#94a3b8"
-              multiline
-              className="flex-1 text-[15px] text-slate-900 py-2 max-h-[100px]"
-              editable={!submitting}
-            />
-            <TouchableOpacity 
-              onPress={handleCommentSubmit}
-              disabled={!newComment.trim() || submitting}
-              className={`ml-2 p-1.5 rounded-full ${newComment.trim() ? 'bg-indigo-600' : 'bg-transparent'}`}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color={newComment.trim() ? "white" : "#94a3b8"} />
+          {/* Replying to banner */}
+          {replyingTo && (
+            <View className="flex-row items-center justify-between px-4 pt-2 pb-1">
+              <View className="flex-row items-center gap-1.5 flex-1">
+                <CornerDownRight size={12} color={isDark ? '#818cf8' : '#6366f1'} />
+                <Text className="text-indigo-600 dark:text-indigo-400 text-[13px] font-semibold" numberOfLines={1}>
+                  Replying to @{replyingTo.username}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={cancelReply} className="p-1 ml-2">
+                <X size={14} color={isDark ? '#94a3b8' : '#64748b'} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Input row */}
+          <View className="flex-row items-end px-4 pt-2">
+            {/* Current user avatar */}
+            <View className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 justify-center items-center mr-2 mb-1 shrink-0">
+              {currentUser.avatar_url ? (
+                <Image source={{ uri: currentUser.avatar_url }} className="w-full h-full" />
               ) : (
-                <Send size={16} color={newComment.trim() ? "white" : "#94a3b8"} />
+                <User size={14} color="#94a3b8" />
               )}
-            </TouchableOpacity>
+            </View>
+
+            <View className="flex-1 flex-row items-center bg-slate-100 dark:bg-slate-800 rounded-3xl px-4 py-1 min-h-[44px]">
+              <TextInput
+                ref={inputRef}
+                value={newComment}
+                onChangeText={setNewComment}
+                placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : 'Add a comment...'}
+                placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+                multiline
+                className="flex-1 text-[15px] text-slate-900 dark:text-slate-100 py-2 max-h-[100px]"
+                editable={!submitting}
+              />
+              <TouchableOpacity 
+                onPress={handleCommentSubmit}
+                disabled={!newComment.trim() || submitting}
+                className={`ml-2 p-1.5 rounded-full ${newComment.trim() ? 'bg-indigo-600' : 'bg-transparent'}`}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color={newComment.trim() ? 'white' : '#94a3b8'} />
+                ) : (
+                  <Send size={16} color={newComment.trim() ? 'white' : (isDark ? '#475569' : '#94a3b8')} />
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}

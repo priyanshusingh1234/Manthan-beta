@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Dimensions } from 'react-nati
 import { Link, useRouter } from 'expo-router';
 import Animated, { FadeInUp, FadeInRight, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
 import { Trophy, Zap, Users, Shield, Swords, BrainCircuit, ArrowRight, Flame, BookOpen, Target, TrendingUp, CheckCircle2, Star } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -48,9 +49,10 @@ function FloatingElement({ children, delay = 0, distance = -8 }: { children: Rea
 
 export default function LandingPage() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView className="flex-1 bg-[#0a0a0f]" contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView className="flex-1 bg-[#0a0a0f]" contentContainerStyle={{ paddingBottom: 40, paddingTop: insets.top }}>
       {/* Navbar */}
       <View className="flex-row items-center justify-between px-6 py-5">
         <Text className="text-2xl font-black text-violet-400">Dheeyudha</Text>

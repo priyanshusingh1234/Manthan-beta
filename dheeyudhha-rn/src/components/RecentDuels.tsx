@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { Swords, Trophy, Minus } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { supabase } from '@/lib/supabaseClient';
 
 interface DuelPlayer {
@@ -128,6 +130,10 @@ async function fetchRecentDuels(): Promise<Duel[]> {
 }
 
 export default function RecentDuels() {
+  const router = useRouter();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   const [duels, setDuels] = useState<Duel[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -166,9 +172,10 @@ export default function RecentDuels() {
         <TouchableOpacity
           key={duel.id}
           activeOpacity={0.85}
+          onPress={() => router.push(`/duel/${duel.id}` as any)}
           style={{
             width: 200,
-            backgroundColor: 'white',
+            backgroundColor: isDark ? '#0f172a' : 'white',
             borderRadius: 20,
             padding: 14,
             shadowColor: '#000',
@@ -177,13 +184,13 @@ export default function RecentDuels() {
             shadowOffset: { width: 0, height: 2 },
             elevation: 2,
             borderWidth: 1,
-            borderColor: '#f1f5f9',
+            borderColor: isDark ? '#1e293b' : '#f1f5f9',
           }}
         >
           {/* Subject badge */}
           <View className="flex-row items-center gap-1.5 mb-3">
             <Swords size={12} color="#6366f1" />
-            <Text className="text-indigo-600 text-[10px] font-black uppercase tracking-wider" numberOfLines={1}>
+            <Text className="text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-wider" numberOfLines={1}>
               {duel.subject}
             </Text>
           </View>
@@ -193,13 +200,13 @@ export default function RecentDuels() {
             {/* Winner / Challenger */}
             <View className="items-center flex-1">
               <Avatar uri={duel.winner?.avatar ?? null} name={duel.winner?.name || duel.challenger.name} size={38} />
-              <Text className="text-xs font-bold text-slate-900 mt-1 text-center" numberOfLines={1}>
+              <Text className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-1 text-center" numberOfLines={1}>
                 {duel.isDraw ? duel.challenger.name : (duel.winner?.name || '?')}
               </Text>
               {!duel.isDraw && (
-                <View className="bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 mt-1 flex-row items-center gap-1">
+                <View className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/30 rounded-full px-2 py-0.5 mt-1 flex-row items-center gap-1">
                   <Trophy size={9} color="#d97706" />
-                  <Text className="text-amber-700 text-[9px] font-black">WIN</Text>
+                  <Text className="text-amber-700 dark:text-amber-400 text-[9px] font-black">WIN</Text>
                 </View>
               )}
             </View>
@@ -208,14 +215,14 @@ export default function RecentDuels() {
             <View className="items-center mx-2">
               {duel.isDraw ? (
                 <>
-                  <Minus size={16} color="#94a3b8" />
-                  <Text className="text-[9px] text-slate-400 font-bold mt-0.5">DRAW</Text>
+                  <Minus size={16} color={isDark ? '#475569' : '#94a3b8'} />
+                  <Text className="text-[9px] text-slate-400 dark:text-slate-500 font-bold mt-0.5">DRAW</Text>
                 </>
               ) : (
                 <>
-                  <Text className="text-slate-400 font-black text-xs">VS</Text>
+                  <Text className="text-slate-400 dark:text-slate-500 font-black text-xs">VS</Text>
                   {duel.winnerCorrect != null && duel.loserCorrect != null && (
-                    <Text className="text-[9px] text-slate-400 font-semibold mt-0.5">
+                    <Text className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
                       {duel.winnerCorrect}-{duel.loserCorrect}
                     </Text>
                   )}
@@ -226,19 +233,19 @@ export default function RecentDuels() {
             {/* Loser / Challenged */}
             <View className="items-center flex-1">
               <Avatar uri={duel.loser?.avatar ?? null} name={duel.loser?.name || duel.challenged.name} size={38} />
-              <Text className="text-xs font-bold text-slate-400 mt-1 text-center" numberOfLines={1}>
+              <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-1 text-center" numberOfLines={1}>
                 {duel.isDraw ? duel.challenged.name : (duel.loser?.name || '?')}
               </Text>
               {!duel.isDraw && (
-                <View className="bg-red-50 border border-red-100 rounded-full px-2 py-0.5 mt-1">
-                  <Text className="text-red-400 text-[9px] font-black">LOST</Text>
+                <View className="bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/30 rounded-full px-2 py-0.5 mt-1">
+                  <Text className="text-red-500 dark:text-red-400 text-[9px] font-black text-center">LOST</Text>
                 </View>
               )}
             </View>
           </View>
 
           {/* Time */}
-          <Text className="text-[10px] text-slate-400 text-center font-medium">
+          <Text className="text-[10px] text-slate-400 dark:text-slate-500 text-center font-medium">
             {timeAgo(duel.createdAt)}
           </Text>
         </TouchableOpacity>

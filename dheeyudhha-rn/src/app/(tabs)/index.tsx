@@ -1,12 +1,15 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Trophy, Target, Zap, Play } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import QuestionsFeed from '@/components/QuestionsFeed';
 import RecentDuels from '@/components/RecentDuels';
 
 export default function FeedScreen() {
-  return (
-    <ScrollView className="flex-1 bg-slate-50 dark:bg-slate-950" contentContainerStyle={{ paddingBottom: 40, paddingTop: 40 }}>
+  const router = useRouter();
+  
+  const Header = (
+    <View style={{ paddingTop: 40, paddingBottom: 16 }}>
       {/* Top Banner */}
       <View className="px-6 mb-6">
         <View className="flex-row items-center justify-between">
@@ -49,7 +52,7 @@ export default function FeedScreen() {
             <Zap size={18} color="#6366f1" />
             <Text className="text-lg font-black text-slate-900 dark:text-slate-100">Recent Duels</Text>
           </View>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/duels' as any)}>
             <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-sm">View All</Text>
           </TouchableOpacity>
         </View>
@@ -60,14 +63,17 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      {/* Questions Feed Section */}
-      <View className="mt-4">
-        <View className="px-6 mb-4">
+        {/* Questions Feed Section Header */}
+        <View className="mt-4 px-6 mb-4">
           <Text className="text-xl font-black text-slate-900 dark:text-slate-100">For You</Text>
         </View>
-        <QuestionsFeed />
       </View>
-    </ScrollView>
+  );
+
+  return (
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+      <QuestionsFeed ListHeaderComponent={Header} />
+    </View>
   );
 }
 

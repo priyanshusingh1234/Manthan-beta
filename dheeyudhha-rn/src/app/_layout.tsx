@@ -2,12 +2,15 @@ import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import '../global.css';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+import { registerForPushNotificationsAsync } from '@/lib/pushUtils';
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
@@ -15,6 +18,8 @@ export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
   const { colorScheme, setColorScheme } = useColorScheme();
+  const notificationListener = useRef<Notifications.EventSubscription | null>(null);
+  const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
     // Load theme from AsyncStorage on startup
@@ -38,13 +43,60 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Register push notifications once user is signed in
+  useEffect(() => {
+    if (!session?.user || Platform.OS === 'web') return;
+
+    // Register FCM token with Supabase
+    registerForPushNotificationsAsync().catch(console.error);
+
+    // Handle notifications received while app is OPEN (foreground)
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log('[Push] Received in foreground:', notification.request.content.title);
+    });
+
+    // Handle notification TAPS (user tapped notification from tray)
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data as any;
+      const href: string = data?.href || data?.url || data?.link || data?.deep_link || '';
+      
+      if (!href) return;
+
+      // Translate web hrefs to mobile routes
+      let targetRoute = href;
+      if (href.startsWith('/questions/')) {
+        targetRoute = href.replace('/questions/', '/solve/');
+      } else if (href.startsWith('/posts/')) {
+        targetRoute = href; // same on mobile
+      } else if (href.startsWith('/duel/')) {
+        targetRoute = href.replace('/duel/', '/arena/');
+      } else if (href.startsWith('/chat/')) {
+        targetRoute = href; // chat route
+      }
+
+      try {
+        router.push(targetRoute as any);
+      } catch (e) {
+        console.warn('[Push] Could not navigate to:', targetRoute);
+      }
+    });
+
+    return () => {
+      if (notificationListener.current) {
+        Notifications.removeNotificationSubscription(notificationListener.current);
+      }
+      if (responseListener.current) {
+        Notifications.removeNotificationSubscription(responseListener.current);
+      }
+    };
+  }, [session?.user?.id]);
+
   useEffect(() => {
     if (!initialized) return;
 
     // Define routes that do not require authentication
     const unprotectedRoutes = ['login', 'signup', 'index'];
     const isUnprotected = unprotectedRoutes.includes(segments[0] as string);
-    const inTabsGroup = segments[0] === '(tabs)';
 
     if (session && isUnprotected && segments[0] !== 'index') {
       // User is logged in but on login/signup page, redirect them to home
@@ -63,6 +115,8 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="signup" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="notifications" />
+        <Stack.Screen name="coop/[id]" />
         <Stack.Screen 
           name="posts/[id]" 
           options={{ 
@@ -82,4 +136,3 @@ export default function RootLayout() {
     </>
   );
 }
-

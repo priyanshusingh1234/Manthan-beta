@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, Pressable, ScrollView } from 'react-native';
-import { Heart, MessageCircle, Share2, MoreVertical, User } from 'lucide-react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, Image, Pressable, ScrollView, FlatList, Dimensions } from 'react-native';
+import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface PostCardProps {
   post: any;
@@ -23,6 +25,16 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
   const username = author.username || 'scholar';
 
   const images = post.image_urls && post.image_urls.length > 0 ? post.image_urls : (post.image_url ? [post.image_url] : []);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const handleScroll = (event: any) => {
+    const slideSize = event.nativeEvent.layoutMeasurement.width;
+    const offset = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offset / slideSize);
+    if (index !== currentImageIndex && index >= 0 && index < images.length) {
+      setCurrentImageIndex(index);
+    }
+  };
 
   const formatTimeAgo = (dateStr: string) => {
     if (!dateStr) return '';
@@ -91,6 +103,17 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
       disabled={isSinglePost}
       className={`bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 ${!isSinglePost ? 'active:bg-slate-50 dark:active:bg-slate-850' : ''}`}
     >
+      {post._feedLabel ? (
+        <View className="flex-row items-center mb-3">
+          <View className="bg-indigo-50 dark:bg-indigo-900/30 rounded-full px-2.5 py-1 flex-row items-center border border-indigo-100 dark:border-indigo-800/50">
+            <Sparkles size={12} color="#4f46e5" />
+            <Text className="text-indigo-600 dark:text-indigo-400 text-[10px] font-bold ml-1 tracking-wider uppercase">
+              {post._feedLabel}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
       <View className="flex-row">
         {/* Avatar */}
         <TouchableOpacity 
@@ -141,17 +164,36 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
                   <Image source={{ uri: images[0] }} className="w-full h-full" resizeMode="cover" />
                 </View>
               ) : (
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  className="-mx-4 px-4"
-                >
-                  {images.map((img: string, idx: number) => (
-                    <View key={idx} className="w-64 h-48 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 mr-2">
-                      <Image source={{ uri: img }} className="w-full h-full" resizeMode="cover" />
+                <View>
+                  <ScrollView 
+                    horizontal 
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    className="-mx-4"
+                    onMomentumScrollEnd={handleScroll}
+                    scrollEventThrottle={16}
+                  >
+                    {images.map((item: string, index: number) => (
+                      <View key={`img-${index}`} className="bg-slate-100 dark:bg-slate-800 border-y border-slate-200 dark:border-slate-700" style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.75 }}>
+                        <Image source={{ uri: item }} className="w-full h-full" resizeMode="cover" />
+                      </View>
+                    ))}
+                  </ScrollView>
+                  {images.length > 1 && (
+                    <View className="flex-row justify-center items-center gap-1.5 mt-3">
+                      {images.map((_: any, idx: number) => (
+                        <View 
+                          key={idx} 
+                          className={`h-1.5 rounded-full transition-all duration-300 ${
+                            idx === currentImageIndex 
+                              ? 'w-4 bg-indigo-500' 
+                              : 'w-1.5 bg-slate-200 dark:bg-slate-700'
+                          }`} 
+                        />
+                      ))}
                     </View>
-                  ))}
-                </ScrollView>
+                  )}
+                </View>
               )}
             </View>
           )}

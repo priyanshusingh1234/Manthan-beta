@@ -575,15 +575,7 @@ export default function PublicProfileScreen() {
     <View className="flex-1 bg-slate-50 dark:bg-slate-950">
       <Stack.Screen
         options={{
-          title: headerTitle,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} className="mr-4">
-              <ChevronLeft size={24} color={isDark ? '#cbd5e1' : '#0f172a'} />
-            </TouchableOpacity>
-          ),
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: isDark ? '#0f172a' : '#f8fafc' },
-          headerTintColor: isDark ? '#cbd5e1' : '#0f172a',
+          headerShown: false,
         }}
       />
 

@@ -5,9 +5,11 @@ import { Link, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Logo from '@/components/ui/Logo';
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,7 +38,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white px-6">
+    <ScrollView className="flex-1 bg-white px-6" style={{ paddingTop: insets.top }}>
       <View className="items-center mt-12 mb-8">
         <Logo width={80} showTagline={true} />
       </View>

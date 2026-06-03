@@ -66,6 +66,11 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const centerBtnBorder = isDark ? '#0f172a' : '#f8fafc';
   const tabLabelColor = isDark ? '#cbd5e1' : '#94a3b8';
 
+  const activeRouteName = state.routes[state.index]?.name;
+
+  // Hide the tab bar entirely on the Clips screen (fullscreen TikTok-style)
+  if (activeRouteName === 'clips') return null;
+
   return (
     <View
       pointerEvents="box-none"

@@ -2,47 +2,102 @@ import { supabase } from '@/lib/supabaseClient';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-export async function subscribeToPushNotifications() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('You must be signed in to subscribe.');
+/**
+ * Set default notification behavior (show alert, sound, badge while app is open)
+ */
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,   // shows banner when app is in foreground (replaces shouldShowAlert in v56+)
+    shouldShowList: true,     // shows in notification center
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
-  if (Platform.OS === 'web') {
-    // Web fallback using standard Push API
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        throw new Error('Push notifications are not supported by this browser.');
+/**
+ * Register for push notifications and save the FCM token to push_subscriptions.
+ * 
+ * The web backend (createNotification.ts) reads from push_subscriptions where
+ * p256dh_key = 'native', and uses the endpoint as an FCM token to send via firebase-admin.
+ * This function registers the device token in that exact format.
+ */
+export async function registerForPushNotificationsAsync(): Promise<string | null> {
+  // Skip on web — web push uses VAPID/service workers, not FCM
+  if (Platform.OS === 'web') return null;
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // 1. Ask for permissions
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
     }
-    // Just a placeholder since the full SW logic requires a VAPID key and NextJS API routes
-    console.log('Web push not fully implemented in this Expo migration phase.');
-    return true;
+
+    if (finalStatus !== 'granted') {
+      console.log('[Push] Permission denied by user');
+      return null;
+    }
+
+    // 2. Get the native device push token (raw FCM token on Android, APNs on iOS)
+    // This is the token the web firebase-admin SDK sends to directly.
+    const tokenData = await Notifications.getDevicePushTokenAsync();
+    const fcmToken = tokenData.data as string;
+
+    if (!fcmToken) {
+      console.warn('[Push] Could not get device push token');
+      return null;
+    }
+
+    // 3. Upsert this FCM token into push_subscriptions matching web's format:
+    //    - endpoint = the FCM token
+    //    - p256dh_key = 'native'  (signals to backend: send via Firebase Admin, not web-push)
+    //    - auth_key = 'native'
+    //    - user_id = current user
+    const { error } = await supabase
+      .from('push_subscriptions')
+      .upsert(
+        {
+          user_id: user.id,
+          endpoint: fcmToken,
+          p256dh_key: 'native',
+          auth_key: 'native',
+        },
+        { onConflict: 'endpoint' }
+      );
+
+    if (error) {
+      console.error('[Push] Failed to save push token to push_subscriptions:', error.message);
+      return null;
+    }
+
+    console.log('[Push] FCM token registered:', fcmToken.substring(0, 20) + '...');
+    return fcmToken;
+  } catch (err) {
+    console.error('[Push] registerForPushNotificationsAsync error:', err);
+    return null;
   }
+}
 
-  // Native Platform using Expo Notifications
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-  
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
+/**
+ * Remove the current device's push token from push_subscriptions on logout.
+ */
+export async function unregisterPushNotificationsAsync(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    const tokenData = await Notifications.getDevicePushTokenAsync();
+    const fcmToken = tokenData.data as string;
+    if (fcmToken) {
+      await supabase
+        .from('push_subscriptions')
+        .delete()
+        .eq('endpoint', fcmToken);
+    }
+  } catch (err) {
+    console.error('[Push] Failed to unregister push token:', err);
   }
-  
-  if (finalStatus !== 'granted') {
-    throw new Error('Push notification permission denied on the device.');
-  }
-
-  // Get Expo Push Token
-  const tokenData = await Notifications.getExpoPushTokenAsync();
-  const token = tokenData.data;
-
-  // Save the token to Supabase or your backend
-  // For Expo, we would hit a custom Edge Function or insert into a `user_tokens` table.
-  const { error } = await supabase
-    .from('profiles')
-    .update({ push_token: token })
-    .eq('id', user.id);
-
-  if (error) {
-    throw new Error('Failed to save native push token: ' + error.message);
-  }
-
-  return true;
 }

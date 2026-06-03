@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabaseClient';
 import { Mail, Lock, Eye, EyeOff, User, ArrowLeft } from 'lucide-react-native';
 import Logo from '@/components/ui/Logo';
 
 export default function SignupScreen() {
+  const insets = useSafeAreaInsets();
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
@@ -43,7 +45,7 @@ export default function SignupScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white px-6">
+    <ScrollView className="flex-1 bg-white px-6" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center mt-12 mb-6">
         <TouchableOpacity onPress={() => router.back()} className="mr-4">
           <ArrowLeft size={24} color="#64748b" />

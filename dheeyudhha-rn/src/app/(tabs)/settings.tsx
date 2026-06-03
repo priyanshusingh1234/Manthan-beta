@@ -40,11 +40,13 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ScreenKey = 'main' | 'profile' | 'notifications' | 'child-safety' | 'privacy' | 'terms' | 'help' | 'delete-confirm';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   
   // Color scheme
   const { colorScheme, setColorScheme } = useColorScheme();
@@ -205,7 +207,7 @@ export default function SettingsScreen() {
       <View className="flex-1 bg-slate-50 dark:bg-slate-950">
         <Stack.Screen options={{ headerShown: false }} />
         {/* Header */}
-        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 pt-12 flex-row items-center gap-4">
+        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center gap-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
           <TouchableOpacity onPress={() => setCurrentScreen('main')} className="p-2 -ml-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800">
             <ArrowLeft size={24} color={isDarkMode ? '#cbd5e1' : '#334155'} />
           </TouchableOpacity>
@@ -313,7 +315,7 @@ export default function SettingsScreen() {
       <View className="flex-1 bg-slate-50 dark:bg-slate-950">
         <Stack.Screen options={{ headerShown: false }} />
         {/* Header */}
-        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 pt-12 flex-row items-center gap-3">
+        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center gap-3" style={{ paddingTop: Math.max(insets.top, 16) }}>
           <TouchableOpacity onPress={() => setCurrentScreen('main')} className="p-2 -ml-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800">
             <ChevronLeft size={24} color={isDarkMode ? '#cbd5e1' : '#334155'} />
           </TouchableOpacity>
@@ -429,7 +431,7 @@ export default function SettingsScreen() {
     return (
       <View className="flex-1 bg-slate-50 dark:bg-slate-950">
         <Stack.Screen options={{ headerShown: false }} />
-        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 pt-12 flex-row items-center gap-4">
+        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center gap-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
           <TouchableOpacity onPress={() => setCurrentScreen('main')} className="p-2 -ml-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800">
             <ArrowLeft size={24} color={isDarkMode ? '#cbd5e1' : '#334155'} />
           </TouchableOpacity>
@@ -514,7 +516,7 @@ export default function SettingsScreen() {
     return (
       <View className="flex-1 bg-slate-50 dark:bg-slate-950">
         <Stack.Screen options={{ headerShown: false }} />
-        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 pt-12 flex-row items-center gap-4">
+        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center gap-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
           <TouchableOpacity onPress={() => setCurrentScreen('main')} className="p-2 -ml-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800">
             <ArrowLeft size={24} color={isDarkMode ? '#cbd5e1' : '#334155'} />
           </TouchableOpacity>
@@ -572,7 +574,7 @@ export default function SettingsScreen() {
     return (
       <View className="flex-1 bg-slate-50 dark:bg-slate-950">
         <Stack.Screen options={{ headerShown: false }} />
-        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 pt-12 flex-row items-center gap-4">
+        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center gap-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
           <TouchableOpacity onPress={() => setCurrentScreen('main')} className="p-2 -ml-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800">
             <ArrowLeft size={24} color={isDarkMode ? '#cbd5e1' : '#334155'} />
           </TouchableOpacity>
@@ -610,7 +612,7 @@ export default function SettingsScreen() {
     return (
       <View className="flex-1 bg-slate-50 dark:bg-slate-950">
         <Stack.Screen options={{ headerShown: false }} />
-        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 pt-12 flex-row items-center gap-4">
+        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center gap-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
           <TouchableOpacity onPress={() => setCurrentScreen('main')} className="p-2 -ml-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800">
             <ArrowLeft size={24} color={isDarkMode ? '#cbd5e1' : '#334155'} />
           </TouchableOpacity>
@@ -654,7 +656,7 @@ export default function SettingsScreen() {
     return (
       <View className="flex-1 bg-slate-50 dark:bg-slate-950">
         <Stack.Screen options={{ headerShown: false }} />
-        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 pt-12 flex-row items-center gap-4">
+        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center gap-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
           <TouchableOpacity onPress={() => setCurrentScreen('main')} className="p-2 -ml-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800">
             <ArrowLeft size={24} color={isDarkMode ? '#cbd5e1' : '#334155'} />
           </TouchableOpacity>
@@ -719,7 +721,7 @@ export default function SettingsScreen() {
     <View className="flex-1 bg-slate-50 dark:bg-slate-950">
       <Stack.Screen options={{ headerShown: false }} />
       {/* Header */}
-      <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-6 pt-12 shadow-sm flex-row items-center gap-3">
+      <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-6 shadow-sm flex-row items-center gap-3" style={{ paddingTop: Math.max(insets.top, 16) }}>
         <View className="p-2 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
           <SettingsIcon size={22} color={isDarkMode ? '#818cf8' : '#4f46e5'} />
         </View>

@@ -1,13 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { Play, Clock, Users, Zap } from 'lucide-react-native';
+import { Play, Clock, Users, Zap, Swords } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabaseClient';
+import DuelChallengeModal from './DuelChallengeModal';
 
 export default function QuestionCard({ q }: { q: any }) {
   const router = useRouter();
+  const [duelOpen, setDuelOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isTeacher, setIsTeacher] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setCurrentUserId(user.id);
+        setIsTeacher(!!user.user_metadata?.isTeacher);
+      }
+    });
+  }, []);
+
   const teacherName = q?.profiles?.full_name || 'Teacher';
   const teacherAvatar = q?.profiles?.avatar_url;
   const teacherUsername = q?.profiles?.username;
+
+  const imageUrl = q?.image_url 
+    ? `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${q.image_url}`
+    : null;
 
   const HeaderWrapper = ({ children }: { children: React.ReactNode }) => {
     if (teacherUsername) {
@@ -28,72 +47,110 @@ export default function QuestionCard({ q }: { q: any }) {
     );
   };
 
+  const showDuelButton = currentUserId && !isTeacher && Array.isArray(q.options) && q.options.length > 0 && !q.hasAttempted;
+
   return (
-    <View className="bg-white dark:bg-slate-900 rounded-3xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 mb-4">
-      {/* Header */}
-      <HeaderWrapper>
-        {teacherAvatar && !teacherAvatar.includes('googleusercontent') ? (
-          <Image source={{ uri: teacherAvatar }} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800" />
-        ) : (
-          <View className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950 items-center justify-center border border-blue-200 dark:border-blue-900">
-            <Text className="text-blue-600 dark:text-blue-400 font-bold text-sm">{teacherName.substring(0, 2).toUpperCase()}</Text>
+    <>
+      <View className="bg-white dark:bg-slate-900 rounded-3xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 mb-4">
+        {/* Header */}
+        <HeaderWrapper>
+          {teacherAvatar && !teacherAvatar.includes('googleusercontent') ? (
+            <Image source={{ uri: teacherAvatar }} alt={teacherName} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800" />
+          ) : (
+            <View className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-950 items-center justify-center border border-blue-200 dark:border-blue-900">
+              <Text className="text-blue-600 dark:text-blue-400 font-bold text-sm">{teacherName.substring(0, 2).toUpperCase()}</Text>
+            </View>
+          )}
+          <View className="flex-1">
+            <Text className="font-bold text-slate-900 dark:text-slate-100 text-sm">{teacherName}</Text>
+            <View className="flex-row items-center gap-2 mt-0.5">
+              <Text className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{q?.subject || 'General'}</Text>
+              {q?.class_grade && (
+                <>
+                  <View className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                  <Text className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Class {q.class_grade}</Text>
+                </>
+              )}
+            </View>
           </View>
-        )}
-        <View className="flex-1">
-          <Text className="font-bold text-slate-900 dark:text-slate-100 text-sm">{teacherName}</Text>
-          <View className="flex-row items-center gap-2 mt-0.5">
-            <Text className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{q?.subject || 'General'}</Text>
-            {q?.class_grade && (
-              <>
-                <View className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
-                <Text className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Class {q.class_grade}</Text>
-              </>
+        </HeaderWrapper>
+
+        {/* Body */}
+        <View className="mb-3">
+          <View className="flex-row flex-wrap gap-2 mb-2">
+            {q?.difficulty && (
+              <View className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 px-1.5 py-0.5 rounded flex-row items-center">
+                <Text className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase">{q.difficulty}</Text>
+              </View>
+            )}
+            {q?.time_limit && (
+              <View className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded flex-row items-center gap-1">
+                <Clock size={9} color="#64748b" />
+                <Text className="text-[9px] font-bold text-slate-600 dark:text-slate-300 uppercase">{q.time_limit}m</Text>
+              </View>
+            )}
+            {(q?.solved_count !== undefined && q?.solved_count !== null) && (
+              <View className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 px-1.5 py-0.5 rounded flex-row items-center gap-1">
+                <Users size={9} color="#3b82f6" />
+                <Text className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase">{q.solved_count} Solved</Text>
+              </View>
             )}
           </View>
+          
+          {imageUrl && (
+            <Image 
+              source={{ uri: imageUrl }} 
+              alt="Question image"
+              className="w-full h-40 rounded-xl bg-slate-100 dark:bg-slate-800 mb-3"
+              resizeMode="cover"
+            />
+          )}
+          
+          <Text className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1 leading-snug">{q?.title || 'Untitled Question'}</Text>
+          {q?.body && (
+            <Text className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed" numberOfLines={2}>{q.body}</Text>
+          )}
         </View>
-      </HeaderWrapper>
 
-      {/* Body */}
-      <View className="mb-3">
-        <View className="flex-row flex-wrap gap-2 mb-2">
-          {q?.difficulty && (
-            <View className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 px-1.5 py-0.5 rounded flex-row items-center">
-              <Text className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase">{q.difficulty}</Text>
-            </View>
-          )}
-          {q?.time_limit && (
-            <View className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded flex-row items-center gap-1">
-              <Clock size={9} color="#64748b" />
-              <Text className="text-[9px] font-bold text-slate-600 dark:text-slate-300 uppercase">{q.time_limit}m</Text>
-            </View>
-          )}
-          {(q?.solved_count !== undefined && q?.solved_count !== null) && (
-            <View className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 px-1.5 py-0.5 rounded flex-row items-center gap-1">
-              <Users size={9} color="#3b82f6" />
-              <Text className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase">{q.solved_count} Solved</Text>
-            </View>
-          )}
+        {/* Footer */}
+        <View className="flex-row items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3 mt-1">
+          <View className="flex-row items-center gap-1 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/30 px-2 py-1 rounded-lg">
+            <Zap size={12} color="#f59e0b" fill="#f59e0b" />
+            <Text className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{q?.points || 0} PTS</Text>
+          </View>
+
+          <View className="flex-row gap-2">
+            {showDuelButton && (
+              <TouchableOpacity
+                onPress={() => setDuelOpen(true)}
+                className="bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900/30 px-3 py-2 rounded-xl flex-row items-center gap-1.5 active:scale-95 transition-transform"
+              >
+                <Swords size={12} color="#ea580c" />
+                <Text className="text-orange-600 dark:text-orange-400 font-bold text-xs">Duel</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity 
+              onPress={() => router.push(`/solve/${q.id}` as any)}
+              className="bg-indigo-600 flex-row items-center gap-1.5 px-4 py-2 rounded-xl active:scale-95 transition-transform"
+            >
+              <Play size={12} color="white" fill="white" />
+              <Text className="text-white font-bold text-xs">Attempt</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        
-        <Text className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1 leading-snug">{q?.title || 'Untitled Question'}</Text>
-        {q?.body && (
-          <Text className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed" numberOfLines={2}>{q.body}</Text>
-        )}
       </View>
 
-      {/* Footer */}
-      <View className="flex-row items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3 mt-1">
-        <View className="flex-row items-center gap-1 bg-amber-50 dark:bg-amber-950/30 border border-amber-105 dark:border-amber-900/30 px-2 py-1 rounded-lg">
-          <Zap size={12} color="#f59e0b" fill="#f59e0b" />
-          <Text className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{q?.points || 0} PTS</Text>
-        </View>
-
-        <TouchableOpacity className="bg-indigo-600 flex-row items-center gap-1.5 px-4 py-2 rounded-xl active:scale-95 transition-transform">
-          <Play size={12} color="white" fill="white" />
-          <Text className="text-white font-bold text-xs">Attempt</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      {duelOpen && currentUserId && (
+        <DuelChallengeModal
+          isOpen={duelOpen}
+          onClose={() => setDuelOpen(false)}
+          questionId={q.id}
+          questionTitle={q.title}
+          currentUserId={currentUserId}
+        />
+      )}
+    </>
   );
 }
 

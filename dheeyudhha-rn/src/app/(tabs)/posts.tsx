@@ -21,6 +21,8 @@ export default function PostsScreen() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [content, setContent] = useState('');
   
@@ -47,33 +49,41 @@ export default function PostsScreen() {
     }
   };
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (isLoadMore = false) => {
     try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          author:profiles(id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics),
-          post_likes(user_id)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(30);
+      if (isLoadMore) setLoadingMore(true);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      let url = `${process.env.EXPO_PUBLIC_API_URL}/api/posts?limit=15`;
+      if (isLoadMore && posts.length > 0) {
+        const oldestPost = posts[posts.length - 1];
+        if (oldestPost?.created_at) {
+          url += `&before=${encodeURIComponent(oldestPost.created_at)}`;
+        }
+      }
 
-      if (error) throw error;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': session ? `Bearer ${session.access_token}` : '',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch posts');
+      const data = await response.json();
 
-      // Transform data for PostCard
-      const transformed = (data || []).map(p => ({
-        ...p,
-        is_liked_by_me: currentUser ? p.post_likes?.some((l: any) => l.user_id === currentUser.id) : false,
-        likes_count: p.post_likes ? p.post_likes.length : (p.likes_count || 0)
-      }));
+      if (data.length < 15) {
+        setHasMore(false);
+      }
 
-      setPosts(transformed);
+      setPosts(prev => isLoadMore ? [...prev, ...data] : data);
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
   };
 
@@ -81,40 +91,52 @@ export default function PostsScreen() {
     fetchUser().then(fetchPosts);
   }, []);
 
-  // Fetch again when user resolves (handles race condition)
+  // The API already returns `is_liked_by_me` correctly, so we don't strictly need this local patch anymore.
+  // We keep it as a fallback just in case.
   useEffect(() => {
-    if (currentUser && posts.length > 0) {
+    if (currentUser && posts.length > 0 && posts[0].is_liked_by_me === undefined) {
       setPosts(prev => prev.map(p => ({
         ...p,
-        is_liked_by_me: p.post_likes?.some((l: any) => l.user_id === currentUser.id)
+        is_liked_by_me: p._likeUserIds?.includes(currentUser.id)
       })));
     }
   }, [currentUser?.id]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    setHasMore(true);
     fetchPosts();
   }, [currentUser]);
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading && !refreshing) {
+      fetchPosts(true);
+    }
+  };
 
   const handlePostSubmit = async () => {
     if (!content.trim() || !currentUser || submitting) return;
     
     setSubmitting(true);
     try {
-      const { data: newPost, error } = await supabase
-        .from('posts')
-        .insert({
-          author_id: currentUser.id,
-          content: content.trim(),
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/posts`, {
+        method: 'POST',
+        headers: {
+          'Authorization': session ? `Bearer ${session.access_token}` : '',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          content: content.trim()
         })
-        .select(`
-          *,
-          author:profiles(id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics),
-          post_likes(user_id)
-        `)
-        .single();
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to post');
+      }
+      const newPost = await response.json();
 
       const formattedPost = {
         ...newPost,
@@ -223,6 +245,15 @@ export default function PostsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4f46e5']} />
         }
         showsVerticalScrollIndicator={false}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loadingMore ? (
+            <View className="py-4">
+              <ActivityIndicator size="small" color="#4f46e5" />
+            </View>
+          ) : null
+        }
       />
     </KeyboardAvoidingView>
   );
