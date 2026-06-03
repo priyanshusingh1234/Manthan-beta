@@ -26,6 +26,7 @@
       },
       "package": "com.dheeyudha.app",
       "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false
     },
     "web": {
