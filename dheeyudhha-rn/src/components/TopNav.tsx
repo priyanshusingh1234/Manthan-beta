@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, Platform, Image } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Flame, Trophy, BookOpen, Swords, Zap, Search, PlaySquare, Compass, Shield, CheckSquare, HelpCircle, Mail, User } from 'lucide-react-native';
+import { Flame, Trophy, BookOpen, Swords, Zap, Search, PlaySquare, Compass, Shield, CheckSquare, HelpCircle, Mail, User, Lock } from 'lucide-react-native';
 import NotificationBell from '@/components/ui/NotificationBell';
 import { supabase } from '@/lib/supabaseClient';
 import { useColorScheme } from 'nativewind';
@@ -20,6 +20,7 @@ const NAV_LINKS = [
   { label: 'Solved', href: '/solved', icon: CheckSquare },
   { label: 'Docs', href: '/docs', icon: HelpCircle },
   { label: 'Support', href: '/contact', icon: Mail },
+  { label: 'Privacy', href: '/privacy', icon: Lock },
 ];
 
 export default function TopNav() {
