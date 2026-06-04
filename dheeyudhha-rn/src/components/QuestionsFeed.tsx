@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 import { fetchFeed } from '@/lib/feedService';
 import QuestionCard from './QuestionCard';
+import PostCard from './PostCard';
 import { ArrowUp } from 'lucide-react-native';
+import { supabase } from '@/lib/supabaseClient';
 
 const PAGE_SIZE = 10;
 
@@ -30,6 +32,7 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [subjectFilter, setSubjectFilter] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [freshItems, setFreshItems] = useState<any[]>([]);
@@ -73,6 +76,14 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
   }, [subjectFilter]); // Re-fetch on filter change
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     // Silent background polling every 30 seconds
     pollRef.current = setInterval(() => {
       loadFeed(false, true);
@@ -100,9 +111,20 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
 
   const visibleData = allData.slice(0, visibleCount);
 
-  const renderItem = ({ item }: { item: any }) => (
-    <QuestionCard key={item.id} q={item} />
-  );
+  const renderItem = ({ item }: { item: any }) => {
+    if (item.type === 'post') {
+      return (
+        <View className="mb-4">
+          <PostCard 
+            post={item} 
+            currentUserId={currentUserId} 
+            onUpdate={() => {}} 
+          />
+        </View>
+      );
+    }
+    return <QuestionCard key={item.id} q={item} />;
+  };
 
   return (
     <View className="flex-1">

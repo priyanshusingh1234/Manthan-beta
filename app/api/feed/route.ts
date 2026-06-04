@@ -484,7 +484,7 @@ export async function GET(req: NextRequest) {
         const userInfoMap: Record<string, any> = {};
         for (const id of creatorIds) {
             const p = profilesMap.get(id);
-            userInfoMap[id] = { name: p?.full_name || 'Teacher', avatar: p?.avatar_url || null, username: p?.username || null };
+            userInfoMap[id] = { name: p?.full_name || 'Teacher', avatar: p?.avatar_url || null, username: p?.username || null, is_teacher: p?.is_teacher || false };
         }
 
         const attemptsMap: Record<string, { total: number; solved: number }> = {};
