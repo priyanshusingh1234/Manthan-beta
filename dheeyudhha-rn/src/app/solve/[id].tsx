@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import { Clock, Zap, CheckCircle2, XCircle, ArrowLeft, Trophy, Users, Star, Lightbulb, Send } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
 import ChallengeFriendModal from '@/components/ChallengeFriendModal';
 import { getRandomMessage } from '@/lib/feedbackMessages';
 import MatchArena from '@/components/MatchArena';
@@ -13,6 +14,8 @@ export default function SolveQuestionScreen() {
   const { id, challenge } = useLocalSearchParams<{ id: string; challenge?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   const [question, setQuestion] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -466,11 +469,11 @@ export default function SolveQuestionScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <TouchableOpacity onPress={() => router.back()} className="p-2">
-          <ArrowLeft size={24} className="text-slate-900 dark:text-white" />
+        <ArrowLeft size={24} color={isDark ? '#cbd5e1' : '#0f172a'} />
         </TouchableOpacity>
-        <View className="bg-slate-100 px-3 py-1.5 rounded-full flex-row items-center gap-2">
+        <View className="bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full flex-row items-center gap-2">
           <Clock size={16} color={timeLeft <= 10 ? "#dc2626" : "#64748b"} />
-          <Text className={`font-bold ${timeLeft <= 10 ? "text-red-600" : "text-slate-700"}`}>
+          <Text className={`font-bold ${timeLeft <= 10 ? "text-red-600" : "text-slate-700 dark:text-slate-300"}`}>
             {formatTime(timeLeft)}
           </Text>
         </View>

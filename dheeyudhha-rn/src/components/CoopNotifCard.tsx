@@ -378,7 +378,13 @@ export default function CoopNotifCard({
                              isExpired ? <Clock size={14} color="#94a3b8" /> :
                              isInitiator ? <ActivityIndicator size="small" color="#4f46e5" /> :
                              <Users size={14} color="#4f46e5" />}
-                            <Text className="text-[11px] font-semibold flex-1 leading-normal">
+                            <Text className={`text-[11px] font-semibold flex-1 leading-normal ${
+                                won ? 'text-emerald-700 dark:text-emerald-400'
+                                : lost ? 'text-red-700 dark:text-red-400'
+                                : iHaveSubmitted ? 'text-amber-800 dark:text-amber-400'
+                                : isExpired ? 'text-slate-500 dark:text-slate-400'
+                                : 'text-indigo-700 dark:text-indigo-400'
+                            }`}>
                                 {won ? `Help Success! Both players earned +${splitPoints} points.`
                                     : lost ? "The help request wasn't completed in time."
                                     : iHaveSubmitted ? "Your answer is being verified by the community."
