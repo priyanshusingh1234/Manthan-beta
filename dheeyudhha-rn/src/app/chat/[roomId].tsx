@@ -349,27 +349,45 @@ export default function ChatRoomScreen() {
     if (!user) return;
     setUploadingImage(true);
     try {
-      const fileExtension = uri.split('.').pop() || 'jpg';
-      const path = `avatars/chat_${roomId}_${user.id}_${Date.now()}.${fileExtension}`;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not signed in');
 
-      // React Native does not support creating blobs from arraybuffers reliably.
-      // We must construct a FormData object and append the file uri directly.
+      const fileExtension = uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
+      const fileName = `chat_${roomId}_${user.id}_${Date.now()}.${fileExtension}`;
+      const path = `avatars/${fileName}`;
+
+      // React Native: use fetch directly against Supabase Storage REST API
+      // supabase.storage.upload() cannot handle RN file URIs via FormData
+      const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+      const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+
       const formData = new FormData();
-      formData.append('file', {
+      formData.append('', {
         uri,
-        name: `chat_img.${fileExtension}`,
-        type: `image/${fileExtension === 'png' ? 'png' : 'jpeg'}`,
+        name: fileName,
+        type: mimeType,
       } as any);
 
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .upload(path, formData, {
-          upsert: true,
-        });
+      const uploadRes = await fetch(
+        `${SUPABASE_URL}/storage/v1/object/avatars/${fileName}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: SUPABASE_ANON_KEY,
+            'x-upsert': 'true',
+          },
+          body: formData,
+        }
+      );
 
-      if (error) throw error;
+      if (!uploadRes.ok) {
+        const errText = await uploadRes.text();
+        throw new Error(`Upload failed: ${errText}`);
+      }
 
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(data.path);
+      const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${fileName}`;
 
       const { data: msg, error: msgErr } = await supabase
         .from('chat_messages')
@@ -401,7 +419,7 @@ export default function ChatRoomScreen() {
         }).catch(null);
       }
     } catch (err: any) {
-      Alert.alert('Upload Failed', err.message);
+      Alert.alert('Upload Failed', err.message || 'Could not upload image. Please try again.');
     } finally {
       setUploadingImage(false);
     }

@@ -154,12 +154,16 @@ export default function SolveQuestionScreen() {
         Vibration.vibrate([0, 100, 50, 100]); // Happy vibration
       } else {
         Vibration.vibrate(300); // Heavy buzz
+        // Automatically open the Co-op (Ask for Help) modal instantly on wrong answer
+        if (!challenge && !recoveredViaCoop) {
+          setTimeout(() => setIsChallengeModalOpen(true), 800);
+        }
       }
     } catch (err: any) {
       alert("Network error: " + err.message);
       setIsSubmitting(false);
     }
-  }, [isSubmitting, result, alreadyAttempted, selectedOption, startedAt, question, timeLeft]);
+  }, [isSubmitting, result, alreadyAttempted, selectedOption, startedAt, question, timeLeft, challenge, recoveredViaCoop]);
 
   // Timer logic
   useEffect(() => {
@@ -611,7 +615,7 @@ export default function SolveQuestionScreen() {
             {isSubmitting ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text className={`text-lg font-bold ${selectedOption === null ? 'text-slate-400 dark:text-slate-500' : 'text-white'}`}>
+              <Text className={`text-lg font-bold ${selectedOption === null ? 'text-slate-500 dark:text-slate-500' : 'text-white'}`}>
                 Submit Answer
               </Text>
             )}

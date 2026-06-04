@@ -294,7 +294,7 @@ export default function MatchArena({
         {isSubmitting ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text className={`text-lg font-bold ${!allConnected || disabled ? 'text-slate-400 dark:text-slate-500' : 'text-white'}`}>
+          <Text className={`text-lg font-bold ${!allConnected || disabled ? 'text-slate-500 dark:text-slate-500' : 'text-white'}`}>
             Submit Matches
           </Text>
         )}

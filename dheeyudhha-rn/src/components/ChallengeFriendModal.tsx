@@ -107,26 +107,42 @@ export default function ChallengeFriendModal({ visible, onClose, questionId, cur
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      transparent={false}
       onRequestClose={onClose}
     >
-      <View className="flex-1 justify-end bg-black/60">
-        <View className="bg-white dark:bg-slate-900 rounded-t-3xl h-5/6 shadow-lg border-t border-slate-200 dark:border-slate-800">
-          
-          {/* Header */}
-          <View className="flex-row items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
-            <View>
-              <Text className="text-xl font-black text-slate-900 dark:text-white">Ask for Help</Text>
-              <Text className="text-sm text-slate-500 dark:text-slate-400">Tag a friend to split the points</Text>
+      <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+        {/* Full Screen Header */}
+        <View 
+          className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-6 pb-6 relative shadow-lg"
+          style={{ paddingTop: 60 }}
+        >
+          {/* Header Controls */}
+          <View className="flex-row items-center justify-between mb-2">
+            <View className="w-10 h-10" /> 
+            
+            <View className="flex-row items-center gap-2">
+              <Users size={22} color="#fff" />
+              <Text className="text-xl font-black text-white tracking-widest uppercase">
+                CO-OP RECOVERY
+              </Text>
             </View>
-            <TouchableOpacity onPress={onClose} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full">
-              <X size={20} className="text-slate-500 dark:text-slate-400" />
+
+            <TouchableOpacity
+              onPress={onClose}
+              className="p-2.5 bg-white/20 rounded-full backdrop-blur-md"
+            >
+              <X size={20} color="#fff" />
             </TouchableOpacity>
           </View>
+          
+          <Text className="text-center text-indigo-100 mt-2 font-medium">Tag a friend to help you solve this and split the points!</Text>
+        </View>
 
+        {/* Content Area */}
+        <View className="flex-1 px-4 pt-4">
           {/* Search */}
-          <View className="p-4 border-b border-slate-100 dark:border-slate-800">
-            <View className="flex-row items-center bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3">
+          <View className="mb-4">
+            <View className="flex-row items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm">
               <Search size={20} className="text-slate-400 dark:text-slate-500" />
               <TextInput
                 className="flex-1 ml-3 text-base text-slate-900 dark:text-white"
