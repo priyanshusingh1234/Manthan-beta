@@ -1,14 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, ActivityIndicator, FlatList, Image, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  Modal,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+  ScrollView,
+} from 'react-native';
+import {
+  X,
+  Search,
+  Send,
+  Users,
+  CheckCircle2,
+  ArrowLeft,
+  Sparkles,
+  MessageSquare,
+  Zap,
+} from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
-import { X, Search, Users, Trophy } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface User {
+interface UserType {
   id: string;
-  name: string;
   username: string;
-  avatar_url: string | null;
+  name: string;
+  avatar: string | null;
 }
+
+const QUICK_MESSAGES = [
+  "Need your brain on this one 🧠",
+  "Let's crush this together 💪",
+  "I failed — rescue me! 🆘",
+  "Tag! You're it 🎯",
+  "Come on, we can win this 🏆",
+];
 
 interface ChallengeFriendModalProps {
   visible: boolean;
@@ -17,90 +49,136 @@ interface ChallengeFriendModalProps {
   currentUserId: string;
 }
 
-export default function ChallengeFriendModal({ visible, onClose, questionId, currentUserId }: ChallengeFriendModalProps) {
+export default function ChallengeFriendModal({
+  visible,
+  onClose,
+  questionId,
+  currentUserId,
+}: ChallengeFriendModalProps) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
+
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedFriend, setSelectedFriend] = useState<UserType | null>(null);
+  const [message, setMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [users, setUsers] = useState<User[]>([]);
+  const [results, setResults] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(false);
-  const [sendingTo, setSendingTo] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+
+  const debounceTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (visible) {
-      searchUsers('');
-    } else {
+      setStep(1);
+      setSelectedFriend(null);
+      setMessage('');
       setSearchQuery('');
-      setUsers([]);
+      setResults([]);
+      setSent(false);
+      setError('');
     }
   }, [visible]);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (visible) {
-        searchUsers(searchQuery);
-      }
-    }, 500);
+    if (!visible || step !== 1) return;
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
-
-  const searchUsers = async (query: string) => {
-    setLoading(true);
-    try {
-      let reqUrl = '';
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
-      
-      if (query.trim() === '') {
-        // If empty, let's just fetch random users or followers. For now, fetch top users from supabase directly as a fallback
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, name, username, avatar_url')
-          .neq('id', currentUserId)
-          .limit(10);
-        if (data) setUsers(data);
-      } else {
-        const res = await fetch(`${API_URL}/api/users/search?q=${encodeURIComponent(query.trim())}&exclude=${currentUserId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setUsers(data.users || []);
-        }
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
+    if (searchQuery.trim().length < 2) {
+      setResults([]);
+      return;
     }
-  };
 
-  const handleChallenge = async (partnerId: string) => {
-    setSendingTo(partnerId);
+    debounceTimeout.current = setTimeout(async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
+        const res = await fetch(
+          `${API_URL}/api/users/search?q=${encodeURIComponent(
+            searchQuery.trim()
+          )}&exclude=${currentUserId}`
+        );
+        if (res.ok) {
+          const d = await res.json();
+          setResults(d.users || []);
+        } else {
+          setError('Failed to query users');
+        }
+      } catch (err) {
+        console.error('Search error:', err);
+      } finally {
+        setLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    };
+  }, [searchQuery, visible, currentUserId, step]);
+
+  const handleSend = async () => {
+    if (!selectedFriend || sending) return;
+    setSending(true);
+    setError('');
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
       const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
-
+      
       const res = await fetch(`${API_URL}/api/coop/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
         body: JSON.stringify({
           questionId,
-          partnerId
-        })
+          partnerId: selectedFriend.id,
+          message: message.trim() || undefined,
+        }),
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        Alert.alert('Error', errorData.error || 'Failed to send request');
+      if (res.ok) {
+        setSent(true);
+        setTimeout(() => {
+          onClose();
+          setSent(false);
+        }, 2000);
       } else {
-        Alert.alert('Success', 'Help request sent! If they solve it, you both get points.');
-        onClose();
+        const d = await res.json();
+        setError(d.error || 'Failed to send request');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Network error');
+    } catch (err) {
+      setError('Error connecting to co-op service');
     } finally {
-      setSendingTo(null);
+      setSending(false);
     }
+  };
+
+  const renderAvatar = (user: UserType, size = 48) => {
+    if (user.avatar) {
+      return (
+        <Image
+          source={{ uri: user.avatar }}
+          alt={user.name}
+          style={{ width: size, height: size, borderRadius: size / 2 }}
+          className="border-2 border-white dark:border-slate-800 shadow-sm"
+        />
+      );
+    }
+    const initials = user.name.substring(0, 1).toUpperCase();
+    return (
+      <View
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+        className="bg-gradient-to-br from-indigo-400 to-purple-500 items-center justify-center border-2 border-white dark:border-slate-800 shadow-sm"
+      >
+        <Text className="text-white font-black text-lg">{initials}</Text>
+      </View>
+    );
   };
 
   return (
@@ -110,20 +188,32 @@ export default function ChallengeFriendModal({ visible, onClose, questionId, cur
       transparent={false}
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1 bg-slate-50 dark:bg-slate-950"
+      >
         {/* Full Screen Header */}
         <View 
           className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 px-6 pb-6 relative shadow-lg"
-          style={{ paddingTop: 60 }}
+          style={{ paddingTop: Math.max(insets.top, 20) }}
         >
           {/* Header Controls */}
           <View className="flex-row items-center justify-between mb-2">
-            <View className="w-10 h-10" /> 
+            {step === 2 ? (
+              <TouchableOpacity
+                onPress={() => setStep(1)}
+                className="p-2.5 rounded-full bg-white/20 backdrop-blur-md"
+              >
+                <ArrowLeft size={20} color="#fff" />
+              </TouchableOpacity>
+            ) : (
+              <View className="w-10 h-10" /> 
+            )}
             
             <View className="flex-row items-center gap-2">
-              <Users size={22} color="#fff" />
+              {step === 1 ? <Users size={22} color="#fff" /> : <MessageSquare size={22} color="#fff" />}
               <Text className="text-xl font-black text-white tracking-widest uppercase">
-                CO-OP RECOVERY
+                {step === 1 ? 'ASK FOR HELP' : 'COMPOSE MESSAGE'}
               </Text>
             </View>
 
@@ -135,75 +225,222 @@ export default function ChallengeFriendModal({ visible, onClose, questionId, cur
             </TouchableOpacity>
           </View>
           
-          <Text className="text-center text-indigo-100 mt-2 font-medium">Tag a friend to help you solve this and split the points!</Text>
+          <Text className="text-center text-indigo-100 mt-2 font-medium">
+            {step === 1 ? 'Pick a friend to help you solve this' : `Sending to ${selectedFriend?.name?.split(' ')[0]}`}
+          </Text>
         </View>
 
         {/* Content Area */}
-        <View className="flex-1 px-4 pt-4">
-          {/* Search */}
-          <View className="mb-4">
-            <View className="flex-row items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm">
-              <Search size={20} className="text-slate-400 dark:text-slate-500" />
-              <TextInput
-                className="flex-1 ml-3 text-base text-slate-900 dark:text-white"
-                placeholder="Search friends..."
-                placeholderTextColor="#94a3b8"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-          </View>
+        <View className="flex-1 px-6 pt-6">
+          {step === 1 ? (
+            <View className="flex-1">
+              <Text className="text-2xl font-black text-slate-900 dark:text-white mb-2">
+                Choose Partner
+              </Text>
+              <Text className="text-slate-500 dark:text-slate-400 mb-6">
+                Search for a friend to help you. If they get it right, you both split the points!
+              </Text>
 
-          {/* List */}
-          <FlatList
-            data={users}
-            keyExtractor={item => item.id}
-            contentContainerStyle={{ padding: 16 }}
-            ListEmptyComponent={() => (
-              <View className="py-10 items-center justify-center">
-                {loading ? (
-                  <ActivityIndicator color="#4f46e5" />
-                ) : (
-                  <Text className="text-slate-500 dark:text-slate-400">No users found</Text>
-                )}
+              {/* Search Bar */}
+              <View className="flex-row items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm mb-6">
+                <Search size={20} color={isDark ? '#94a3b8' : '#64748b'} className="mr-3" />
+                <TextInput
+                  placeholder="Search by name or @username..."
+                  placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  className="flex-1 text-base text-slate-900 dark:text-slate-50 font-medium"
+                  autoFocus
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {loading && <ActivityIndicator size="small" color="#6366f1" />}
               </View>
-            )}
-            renderItem={({ item }) => (
-              <View className="flex-row items-center justify-between bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl mb-3 border border-slate-100 dark:border-slate-800">
-                <View className="flex-row items-center flex-1">
-                  {item.avatar_url ? (
-                    <Image source={{ uri: item.avatar_url }} className="w-12 h-12 rounded-full mr-3" />
-                  ) : (
-                    <View className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 items-center justify-center mr-3">
-                      <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-lg">
-                        {item.name?.[0]?.toUpperCase() || '?'}
-                      </Text>
-                    </View>
+
+              {/* Results */}
+              {searchQuery.trim().length < 2 ? (
+                <View className="flex-1 items-center justify-center pb-20 opacity-50">
+                  <Users size={48} color={isDark ? '#334155' : '#cbd5e1'} className="mb-4" />
+                  <Text className="text-lg font-bold text-slate-400 dark:text-slate-500 text-center">
+                    Type a name to begin
+                  </Text>
+                </View>
+              ) : results.length === 0 && !loading ? (
+                <View className="flex-1 items-center justify-center pb-20">
+                  <Text className="text-lg font-medium text-slate-400">
+                    No students found for "{searchQuery}"
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={results}
+                  keyExtractor={(item) => item.id}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 20) }}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedFriend(item);
+                        setStep(2);
+                      }}
+                      className="flex-row items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm mb-3 active:scale-95 transition-transform"
+                    >
+                      <View className="flex-row items-center gap-4">
+                        {renderAvatar(item)}
+                        <View>
+                          <Text className="font-bold text-slate-900 dark:text-slate-50 text-lg">
+                            {item.name}
+                          </Text>
+                          <Text className="text-sm font-medium text-slate-400">
+                            @{item.username}
+                          </Text>
+                        </View>
+                      </View>
+                      <View className="px-4 py-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex-row items-center gap-1">
+                        <Users size={16} color="#4f46e5" />
+                        <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-xs">ASK</Text>
+                      </View>
+                    </TouchableOpacity>
                   )}
-                  <View className="flex-1 pr-2">
-                    <Text className="font-bold text-slate-900 dark:text-white text-base" numberOfLines={1}>{item.name}</Text>
-                    <Text className="text-slate-500 dark:text-slate-400 text-xs" numberOfLines={1}>@{item.username}</Text>
+                />
+              )}
+            </View>
+          ) : (
+            // Step 2: Message Screen
+            selectedFriend && (
+              <ScrollView 
+                className="flex-1"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) }}
+              >
+                <Text className="text-2xl font-black text-slate-900 dark:text-white mb-2">
+                  Send a Request
+                </Text>
+                <Text className="text-slate-500 dark:text-slate-400 mb-6">
+                  Add a personal note so they know exactly what you need help with.
+                </Text>
+
+                {/* Selected Friend Card */}
+                <View className="p-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm mb-8 items-center flex-row gap-4">
+                  <View>
+                    {renderAvatar(selectedFriend, 64)}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="font-black text-slate-900 dark:text-white text-xl mb-1">
+                      {selectedFriend.name}
+                    </Text>
+                    <Text className="text-slate-400 font-medium text-base">
+                      @{selectedFriend.username}
+                    </Text>
+                  </View>
+                  <View className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 items-center justify-center">
+                    <Zap size={18} color="#4f46e5" />
                   </View>
                 </View>
 
+                {/* Quick Messages */}
+                <View className="mb-6">
+                  <View className="flex-row items-center gap-2 mb-3">
+                    <Sparkles size={18} color="#8b5cf6" />
+                    <Text className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                      Quick Messages
+                    </Text>
+                  </View>
+                  <View className="flex-row flex-wrap gap-2">
+                    {QUICK_MESSAGES.map((q) => {
+                      const isSelected = message === q;
+                      return (
+                        <TouchableOpacity
+                          key={q}
+                          onPress={() => setMessage(q)}
+                          className={`px-4 py-2.5 rounded-full border-2 ${
+                            isSelected
+                              ? 'bg-indigo-600 border-indigo-600 shadow-md shadow-indigo-600/30'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                          }`}
+                        >
+                          <Text
+                            className={`text-sm font-bold ${
+                              isSelected ? 'text-white' : 'text-slate-600 dark:text-slate-300'
+                            }`}
+                          >
+                            {q}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Message Input Area */}
+                <View className="mb-8">
+                  <View className="flex-row items-center gap-2 mb-3">
+                    <MessageSquare size={18} color={isDark ? '#cbd5e1' : '#64748b'} />
+                    <Text className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                      Or write your own
+                    </Text>
+                  </View>
+                  
+                  <View className="relative">
+                    <TextInput
+                      value={message}
+                      onChangeText={setMessage}
+                      maxLength={160}
+                      multiline
+                      numberOfLines={3}
+                      placeholder="Add a personal note to your help request..."
+                      placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+                      className="w-full bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 focus:border-indigo-500 dark:focus:border-indigo-500 rounded-3xl p-5 text-base text-slate-900 dark:text-slate-50 font-medium min-h-[100px]"
+                      style={{ textAlignVertical: 'top' }}
+                    />
+                    <Text className="absolute bottom-4 right-5 text-xs font-bold text-slate-400">
+                      {message.length}/160
+                    </Text>
+                  </View>
+                </View>
+
+                {error ? (
+                  <Text className="text-sm text-red-500 font-bold text-center mb-4">{error}</Text>
+                ) : null}
+
+                {/* Send Button */}
                 <TouchableOpacity
-                  onPress={() => handleChallenge(item.id)}
-                  disabled={sendingTo === item.id}
-                  className={`px-4 py-2.5 rounded-xl ${
-                    sendingTo === item.id ? 'bg-indigo-400' : 'bg-indigo-600'
+                  onPress={handleSend}
+                  disabled={sending || sent}
+                  className={`w-full py-5 rounded-3xl flex-row items-center justify-center gap-3 shadow-lg ${
+                    sent
+                      ? 'bg-emerald-500 shadow-emerald-500/30'
+                      : 'bg-indigo-600 shadow-indigo-600/30'
                   }`}
                 >
-                  {sendingTo === item.id ? (
-                    <ActivityIndicator size="small" color="white" />
+                  {sending ? (
+                    <>
+                      <ActivityIndicator color="white" size="small" />
+                      <Text className="text-white font-black text-lg uppercase tracking-wider ml-1">
+                        Sending...
+                      </Text>
+                    </>
+                  ) : sent ? (
+                    <>
+                      <CheckCircle2 size={24} color="#fff" />
+                      <Text className="text-white font-black text-lg uppercase tracking-wider ml-1">
+                        Request Sent!
+                      </Text>
+                    </>
                   ) : (
-                    <Text className="text-white font-bold text-sm">Send Request</Text>
+                    <>
+                      <Send size={20} color="#fff" />
+                      <Text className="text-white font-black text-lg uppercase tracking-widest ml-1">
+                        Send Help Request
+                      </Text>
+                    </>
                   )}
                 </TouchableOpacity>
-              </View>
-            )}
-          />
+              </ScrollView>
+            )
+          )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
