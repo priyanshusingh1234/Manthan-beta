@@ -249,31 +249,32 @@ const MessageItem = memo(({
               ) : msg.message_type === 'image' || rawContent.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
                 <TouchableOpacity onPress={() => onImageClick(rawContent, msg.message_type, msg.id, isMe)}>
                   <Image source={{ uri: rawContent }} style={{ width: 200, height: 200 }} resizeMode="cover" />
+                  <View className="absolute bottom-1 right-2 flex-row items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded-full">
+                    <Text className="text-[10px] text-white font-medium">{timeStr}</Text>
+                    {isMe && (
+                      msg.is_read ? <CheckCheck size={12} color="#60a5fa" strokeWidth={2.5} /> : <Check size={12} color="#cbd5e1" strokeWidth={2.5} />
+                    )}
+                  </View>
                 </TouchableOpacity>
               ) : (
-                <View className="px-3.5 py-2">
-                  <Text className={`text-[14.5px] leading-5 ${isMe ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+                <View className="px-3 py-2 flex-row flex-wrap items-end justify-between min-w-[80px]">
+                  <Text className={`text-[15px] leading-5 mr-3 mb-1 ${isMe ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
                     {mainContent}
                     {meta.edited && <Text className={`text-[10px] italic ${isMe ? 'text-white/70' : 'text-slate-500'}`}> (edited)</Text>}
                   </Text>
+                  <View className="flex-row items-center justify-end flex-1 gap-1 min-w-[45px]">
+                    <Text className={`text-[10px] font-medium ${isMe ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'}`}>
+                      {timeStr}
+                    </Text>
+                    {isMe && (
+                      msg.is_read ? (
+                        <CheckCheck size={12} color="#38bdf8" strokeWidth={2.5} />
+                      ) : (
+                        <Check size={12} color="#c7d2fe" strokeWidth={2.5} />
+                      )
+                    )}
+                  </View>
                 </View>
-              )}
-            </View>
-
-            <View className={`flex-row items-center mt-0.5 gap-1 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-              <Text className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{timeStr}</Text>
-              {isMe && (
-                msg.is_read ? (
-                  <View className="flex-row items-center gap-0.5">
-                    <CheckCheck size={12} color="#6366f1" strokeWidth={2.5} />
-                    <Text className="text-[9px] text-indigo-500 font-bold uppercase tracking-widest">Seen</Text>
-                  </View>
-                ) : (
-                  <View className="flex-row items-center gap-0.5">
-                    <Check size={12} color="#94a3b8" strokeWidth={2.5} />
-                    <Text className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Sent</Text>
-                  </View>
-                )
               )}
             </View>
           </View>
