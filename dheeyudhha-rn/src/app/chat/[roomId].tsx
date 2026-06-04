@@ -520,7 +520,13 @@ export default function ChatRoomScreen() {
         const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
         const formData = new FormData();
-        formData.append('', { uri, name: fileName, type: mimeType } as any);
+        if (Platform.OS === 'web') {
+          const response = await fetch(uri);
+          const blob = await response.blob();
+          formData.append('', blob, fileName);
+        } else {
+          formData.append('', { uri, name: fileName, type: mimeType } as any);
+        }
 
         const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${fileName}`, {
           method: 'POST',

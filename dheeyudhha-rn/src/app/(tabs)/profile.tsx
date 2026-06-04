@@ -220,7 +220,15 @@ export default function ProfileScreen() {
   ): Promise<string | null> => {
     const path = `${folder}/${userId}/${info.name}`;
     const formData = new FormData();
-    formData.append('file', { uri: info.uri, type: info.type, name: info.name } as any);
+    
+    if (Platform.OS === 'web') {
+      const response = await fetch(info.uri);
+      const blob = await response.blob();
+      formData.append('file', blob, info.name);
+    } else {
+      formData.append('file', { uri: info.uri, type: info.type, name: info.name } as any);
+    }
+    
     formData.append('bucket', 'public-images');
     formData.append('path', path);
 
