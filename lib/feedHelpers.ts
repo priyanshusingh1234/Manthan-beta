@@ -59,6 +59,7 @@ export function normalizeQuestion(
         createdByName: userInfoMap[String(r.created_by)]?.name || 'Teacher',
         createdByAvatar: userInfoMap[String(r.created_by)]?.avatar || null,
         createdByUsername: userInfoMap[String(r.created_by)]?.username || null,
+        createdByIsTeacher: userInfoMap[String(r.created_by)]?.is_teacher || false,
         title: r.title,
         body: r.body,
         subject: r.subject,

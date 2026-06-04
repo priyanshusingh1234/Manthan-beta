@@ -61,7 +61,7 @@ export async function fetchFeed(options: FeedOptions = {}): Promise<any[]> {
           full_name: q.createdByName || 'Teacher',
           avatar_url: q.createdByAvatar || null,
           username: q.createdByUsername || null,
-          is_teacher: q.isTeacher || false,
+          is_teacher: q.createdByIsTeacher || false,
         },
         
         // Map nested or renamed fields
