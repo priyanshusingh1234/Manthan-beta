@@ -19,7 +19,8 @@
         "EXPO_PUBLIC_API_URL": "https://manthan-beta-c975.vercel.app",
         "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "dtlrwdl1k",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "662029701715-ne3tpvd9ohecmti9joka28mc6dk2uijs.apps.googleusercontent.com",
-        "EXPO_PUBLIC_AGORA_APP_ID": "6fb70de4d7d94df0931007be36c15fb5"
+        "EXPO_PUBLIC_AGORA_APP_ID": "6fb70de4d7d94df0931007be36c15fb5",
+        "EXPO_PUBLIC_GEMINI_API_KEY": "AIzaSyDPJqpIRMVYwaHZkVnGcbYRLiuYS8iprSw"
       }
     },
     "production": {
