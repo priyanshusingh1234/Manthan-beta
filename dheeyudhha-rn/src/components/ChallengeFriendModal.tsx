@@ -46,7 +46,7 @@ export default function ChallengeFriendModal({ visible, onClose, questionId, cur
     setLoading(true);
     try {
       let reqUrl = '';
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
       
       if (query.trim() === '') {
         // If empty, let's just fetch random users or followers. For now, fetch top users from supabase directly as a fallback
@@ -75,7 +75,7 @@ export default function ChallengeFriendModal({ visible, onClose, questionId, cur
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
 
       const res = await fetch(`${API_URL}/api/coop/create`, {
         method: 'POST',

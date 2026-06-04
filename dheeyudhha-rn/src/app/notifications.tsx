@@ -150,7 +150,7 @@ export default function NotificationsScreen() {
         if (!token) return;
         if (!isSilent) setLoading(true);
         try {
-            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
             const res = await fetch(`${API_URL}/api/notifications`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -214,7 +214,7 @@ export default function NotificationsScreen() {
         setNotifications(n => n.map(x => ({ ...x, read: true })));
         setUnreadCount(0);
         
-        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
         await fetch(`${API_URL}/api/notifications`, {
             method: 'PATCH',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -237,7 +237,7 @@ export default function NotificationsScreen() {
                         setNotifications([]);
                         setUnreadCount(0);
                         
-                        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+                        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
                         await fetch(`${API_URL}/api/notifications`, {
                             method: 'DELETE',
                             headers: { Authorization: `Bearer ${token}` }
@@ -253,7 +253,7 @@ export default function NotificationsScreen() {
             setNotifications(n => n.map(x => x.id === notif.id ? { ...x, read: true } : x));
             setUnreadCount(c => Math.max(0, c - 1));
             
-            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
             fetch(`${API_URL}/api/notifications`, {
                 method: 'PATCH',
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -278,7 +278,7 @@ export default function NotificationsScreen() {
         setNotifications(n => n.filter(x => x.id !== notif.id));
         if (!notif.read) setUnreadCount(c => Math.max(0, c - 1));
 
-        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
         
         // Delete notification
         fetch(`${API_URL}/api/notifications`, {

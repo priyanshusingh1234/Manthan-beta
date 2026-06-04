@@ -410,7 +410,7 @@ export async function fetchFeed(options: FeedOptions = {}): Promise<any[]> {
 
   const [profilesRes, attemptsRowsRes] = await Promise.all([
     creatorIds.length > 0
-      ? supabase.from('profiles').select('id, full_name, avatar_url, username').in('id', creatorIds)
+      ? supabase.from('profiles').select('id, full_name, avatar_url, username, is_teacher').in('id', creatorIds)
       : Promise.resolve({ data: [] }),
     qIds.length > 0
       ? supabase.from('question_attempts').select('question_id, is_correct').in('question_id', qIds).limit(2000)
@@ -419,7 +419,7 @@ export async function fetchFeed(options: FeedOptions = {}): Promise<any[]> {
 
   const userInfoMap: Record<string, any> = {};
   (profilesRes.data || []).forEach((p: any) => {
-    userInfoMap[p.id] = { name: p.full_name || 'Teacher', avatar: p.avatar_url || null, username: p.username || null };
+    userInfoMap[p.id] = { name: p.full_name || 'Teacher', avatar: p.avatar_url || null, username: p.username || null, is_teacher: p.is_teacher || false };
   });
 
   const attemptsMap: Record<string, { total: number; solved: number }> = {};

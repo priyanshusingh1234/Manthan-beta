@@ -4,6 +4,7 @@ import { Stack, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import { Award, MapPin, ChevronLeft } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
+import BadgedName from '@/components/BadgedName';
 
 export default function LeaderboardScreen() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function LeaderboardScreen() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, username, full_name, school, total_points, avatar_url')
+        .select('id, username, full_name, school, total_points, avatar_url, is_teacher')
         .order('total_points', { ascending: false })
         .limit(50);
         
@@ -104,9 +105,16 @@ export default function LeaderboardScreen() {
                 </View>
               </View>
               <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-xl w-full py-2 px-1 items-center">
-                <Text className="text-xs font-bold text-slate-800 dark:text-slate-200 text-center" numberOfLines={1}>
-                  {students[1].full_name || students[1].username || "Student"}
-                </Text>
+                <BadgedName 
+                  name={students[1].full_name || students[1].username || "Student"}
+                  userId={students[1].id}
+                  isTeacher={students[1].is_teacher}
+                  isTopper={students[1].total_points >= 1500}
+                  rank={2}
+                  nameClassName="text-xs font-bold text-slate-800 dark:text-slate-200 text-center"
+                  containerClassName="flex-row items-center gap-1 justify-center"
+                  iconSize={12}
+                />
                 <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-[10px] mt-0.5">
                   {(students[1].total_points || 0).toLocaleString()}
                 </Text>
@@ -126,9 +134,16 @@ export default function LeaderboardScreen() {
                 </View>
               </View>
               <View className="bg-white dark:bg-slate-900 border-t-2 border-amber-400 border-x border-b border-x-amber-100 dark:border-x-slate-800 border-b-amber-100 dark:border-b-slate-800 shadow-md rounded-xl w-full py-3 px-1 items-center">
-                <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100 text-center" numberOfLines={1}>
-                  {students[0].full_name || students[0].username || "Student"}
-                </Text>
+                <BadgedName 
+                  name={students[0].full_name || students[0].username || "Student"}
+                  userId={students[0].id}
+                  isTeacher={students[0].is_teacher}
+                  isTopper={students[0].total_points >= 1500}
+                  rank={1}
+                  nameClassName="text-sm font-extrabold text-slate-900 dark:text-slate-100 text-center"
+                  containerClassName="flex-row items-center gap-1 justify-center"
+                  iconSize={14}
+                />
                 <Text className="text-amber-500 font-black text-xs mt-0.5">
                   {(students[0].total_points || 0).toLocaleString()}
                 </Text>
@@ -148,9 +163,16 @@ export default function LeaderboardScreen() {
                 </View>
               </View>
               <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-xl w-full py-2 px-1 items-center">
-                <Text className="text-xs font-bold text-slate-800 dark:text-slate-200 text-center" numberOfLines={1}>
-                  {students[2].full_name || students[2].username || "Student"}
-                </Text>
+                <BadgedName 
+                  name={students[2].full_name || students[2].username || "Student"}
+                  userId={students[2].id}
+                  isTeacher={students[2].is_teacher}
+                  isTopper={students[2].total_points >= 1500}
+                  rank={3}
+                  nameClassName="text-xs font-bold text-slate-800 dark:text-slate-200 text-center"
+                  containerClassName="flex-row items-center gap-1 justify-center"
+                  iconSize={12}
+                />
                 <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-[10px] mt-0.5">
                   {(students[2].total_points || 0).toLocaleString()}
                 </Text>
@@ -203,9 +225,15 @@ export default function LeaderboardScreen() {
                   </View>
 
                   <View className="ml-3 flex-1">
-                    <Text className="font-bold text-[15px] text-slate-900 dark:text-slate-100" numberOfLines={1}>
-                      {student.full_name || student.username || "Student"}
-                    </Text>
+                    <BadgedName 
+                      name={student.full_name || student.username || "Student"}
+                      userId={student.id}
+                      isTeacher={student.is_teacher}
+                      isTopper={student.total_points >= 1500}
+                      nameClassName="font-bold text-[15px] text-slate-900 dark:text-slate-100"
+                      containerClassName="flex-row items-center gap-1 flex-wrap"
+                      iconSize={14}
+                    />
                     <View className="flex-row items-center mt-0.5">
                       <MapPin size={12} color={isDark ? '#64748b' : '#64748b'} />
                       <Text className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1" numberOfLines={1}>

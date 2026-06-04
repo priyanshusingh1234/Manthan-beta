@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ChallengeFriendModal from '@/components/ChallengeFriendModal';
 import { getRandomMessage } from '@/lib/feedbackMessages';
 import MatchArena from '@/components/MatchArena';
+import BadgedName from '@/components/BadgedName';
 
 export default function SolveQuestionScreen() {
   const { id, challenge } = useLocalSearchParams<{ id: string; challenge?: string }>();
@@ -54,6 +55,18 @@ export default function SolveQuestionScreen() {
           .single();
 
         if (qErr || !q) throw new Error('Question not found');
+
+        // Fetch teacher profile manually
+        if (q.created_by) {
+          const { data: tp } = await supabase
+            .from('profiles')
+            .select('id, username, full_name, avatar_url, is_teacher')
+            .eq('id', q.created_by)
+            .maybeSingle();
+          if (tp) {
+            q.profiles = tp;
+          }
+        }
         
         setQuestion(q);
         setTimeLeft(q.time_limit * 60);
@@ -468,6 +481,35 @@ export default function SolveQuestionScreen() {
       </View>
 
       <ScrollView className="flex-1 p-4" contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Render Teacher Info Header */}
+        {question?.profiles && (
+          <View className="flex-row items-center gap-4 p-4 mb-6 bg-white dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-2xl shadow-sm">
+            {/* Avatar */}
+            <View className="w-12 h-12 rounded-full overflow-hidden border-2 border-slate-100 dark:border-slate-800 shadow-sm bg-indigo-100 dark:bg-indigo-900/40 items-center justify-center">
+              {question.profiles.avatar_url && !question.profiles.avatar_url.includes('googleusercontent') ? (
+                <Image source={{ uri: question.profiles.avatar_url }} className="w-full h-full" />
+              ) : (
+                <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-lg">
+                  {String(question.profiles.full_name?.[0] || question.profiles.username?.[0] || 'T').toUpperCase()}
+                </Text>
+              )}
+            </View>
+            <View className="flex-col justify-center">
+              <Text className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                Posted By
+              </Text>
+              <BadgedName 
+                name={question.profiles.full_name || question.profiles.username || "Verified Teacher"}
+                userId={question.profiles.id}
+                isTeacher={question.profiles.is_teacher}
+                nameClassName="font-bold text-base text-slate-800 dark:text-slate-200"
+                containerClassName="flex-row items-center gap-1 flex-wrap"
+                iconSize={16}
+              />
+            </View>
+          </View>
+        )}
+
         <Text className="text-2xl font-black text-slate-900 dark:text-slate-100 mb-4">{question.title}</Text>
         
         {imageUrl && (

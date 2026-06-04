@@ -257,7 +257,7 @@ export default function ChatRoomScreen() {
         const rawContent = editingMsg.content;
         let meta: any = {};
         if (rawContent.includes('|||META|||')) {
-          try { meta = JSON.parse(rawContent.split('|||META|||')[1]); } catch {}
+          try { meta = JSON.parse(rawContent.split('|||META|||')[1]); } catch { }
         }
         meta.edited = true;
         const newContent = `${content}|||META|||${JSON.stringify(meta)}`;
@@ -440,7 +440,7 @@ export default function ChatRoomScreen() {
       if (rawContent.includes('|||META|||')) {
         const parts = rawContent.split('|||META|||');
         rawContent = parts[0];
-        try { meta = JSON.parse(parts[1]); } catch {}
+        try { meta = JSON.parse(parts[1]); } catch { }
       }
 
       if (!meta.reactions) meta.reactions = {};
@@ -548,9 +548,9 @@ export default function ChatRoomScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
     >
       <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
         {/* Header bar */}
@@ -559,7 +559,7 @@ export default function ChatRoomScreen() {
             <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-1 rounded-full active:bg-slate-100 dark:active:bg-slate-800">
               <ArrowLeft size={20} color={isDark ? '#cbd5e1' : '#334155'} />
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               onPress={() => participant?.username && router.push(`/user/${participant.username}` as any)}
               className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden items-center justify-center ml-1"
@@ -666,7 +666,7 @@ export default function ChatRoomScreen() {
               if (rawContent.includes('|||META|||')) {
                 const parts = rawContent.split('|||META|||');
                 rawContent = parts[0];
-                try { meta = JSON.parse(parts[1]); } catch {}
+                try { meta = JSON.parse(parts[1]); } catch { }
               }
 
               let replyAuthor = '', replyPreview = '', mainContent = rawContent;
@@ -723,11 +723,10 @@ export default function ChatRoomScreen() {
                         </View>
                       ) : null}
 
-                      <View className={`rounded-2xl overflow-hidden px-3.5 py-2.5 shadow-sm ${
-                        isMe
+                      <View className={`rounded-2xl overflow-hidden px-3.5 py-2.5 shadow-sm ${isMe
                           ? 'bg-indigo-600 rounded-br-sm'
                           : 'bg-white dark:bg-slate-900 border border-slate-100/50 dark:border-slate-850 rounded-bl-sm'
-                      }`}>
+                        }`}>
                         {msg.message_type === 'image_once' ? (
                           <TouchableOpacity
                             onPress={() => handleImageClick(rawContent, msg.message_type, msg.id, isMe)}
@@ -766,11 +765,10 @@ export default function ChatRoomScreen() {
                               <TouchableOpacity
                                 key={emoji}
                                 onPress={() => handleReaction(msg.id, emoji)}
-                                className={`rounded-full px-2 py-0.5 flex-row items-center gap-1 border ${
-                                  active
+                                className={`rounded-full px-2 py-0.5 flex-row items-center gap-1 border ${active
                                     ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-950 dark:border-indigo-900'
                                     : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800'
-                                }`}
+                                  }`}
                               >
                                 <Text className="text-[10px]">{emoji}</Text>
                                 <Text className={`text-[9px] font-bold ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>
@@ -853,11 +851,10 @@ export default function ChatRoomScreen() {
 
             <TouchableOpacity
               onPress={() => setIsViewOnce(!isViewOnce)}
-              className={`h-10 w-10 items-center justify-center rounded-xl active:scale-95 border ${
-                isViewOnce
+              className={`h-10 w-10 items-center justify-center rounded-xl active:scale-95 border ${isViewOnce
                   ? 'bg-amber-50 border-amber-250 dark:bg-amber-950 dark:border-amber-900'
                   : 'bg-slate-100 border-transparent dark:bg-slate-800'
-              }`}
+                }`}
             >
               {isViewOnce ? (
                 <Lock size={16} color="#f59e0b" />
@@ -880,9 +877,8 @@ export default function ChatRoomScreen() {
             <TouchableOpacity
               onPress={handleSend}
               disabled={!newMessage.trim() || sending}
-              className={`h-10 w-10 items-center justify-center rounded-xl active:scale-95 ${
-                newMessage.trim() ? 'bg-indigo-650' : 'bg-slate-200 dark:bg-slate-800'
-              }`}
+              className={`h-10 w-10 items-center justify-center rounded-xl active:scale-95 ${newMessage.trim() ? 'bg-indigo-650' : 'bg-slate-200 dark:bg-slate-800'
+                }`}
             >
               <Send size={16} color="white" />
             </TouchableOpacity>

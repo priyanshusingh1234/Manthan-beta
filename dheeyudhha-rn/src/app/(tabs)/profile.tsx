@@ -12,21 +12,23 @@ import {
   Modal,
   TextInput,
   Alert,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Trophy, Target, Zap, Star, User, MapPin, GraduationCap, Edit3, LogOut,
-  Award, BookOpen, Shield, MessageSquare, Search, X, Camera, ChevronRight,
+  Award, BookOpen, Shield, MessageSquare, Search, X, Camera, ChevronRight, PlaySquare, Play
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import * as ImagePicker from 'expo-image-picker';
 import PostCard from '@/components/PostCard';
+import BadgedName from '@/components/BadgedName';
 
-type TabKey = 'stats' | 'posts' | 'achievements';
+type TabKey = 'stats' | 'posts' | 'clips' | 'achievements';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
 
 // Extract storage path from a Supabase public URL (for deletion)
 function getStoragePath(url: string, prefix: 'avatars' | 'banners'): string | null {
@@ -196,8 +198,12 @@ export default function ProfileScreen() {
       { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
     );
 
+    const uriToUpload = Platform.OS === 'android' && !manipulated.uri.startsWith('file://') 
+      ? `file://${manipulated.uri}` 
+      : manipulated.uri;
+
     const info = {
-      uri: manipulated.uri,
+      uri: uriToUpload,
       type: 'image/jpeg',
       name: `${type}-${Date.now()}.jpg`,
     };
@@ -379,6 +385,7 @@ export default function ProfileScreen() {
   const TABS: { key: TabKey; label: string; icon: any }[] = [
     { key: 'stats', label: 'Stats', icon: Award },
     { key: 'posts', label: 'Posts', icon: MessageSquare },
+    { key: 'clips', label: 'Clips', icon: PlaySquare },
     { key: 'achievements', label: 'Badges', icon: Shield },
   ];
 
@@ -447,7 +454,14 @@ export default function ProfileScreen() {
 
             {/* Name & Username */}
             <View className="mb-1">
-              <Text className="text-[20px] font-bold text-slate-900 dark:text-slate-100 leading-tight">{profile.name}</Text>
+              <BadgedName 
+                name={profile.name}
+                userId={currentUser?.id}
+                isTeacher={profile.isTeacher || profile.is_teacher}
+                isTopper={profile.totalPoints >= 1500}
+                rank={rank}
+                nameClassName="text-[20px] font-bold text-slate-900 dark:text-slate-100 leading-tight"
+              />
               {profile.username && (
                 <Text className="text-[14px] text-slate-500 dark:text-slate-400">@{profile.username}</Text>
               )}
@@ -552,19 +566,52 @@ export default function ProfileScreen() {
             <View className="items-center py-12">
               <ActivityIndicator color="#4f46e5" />
             </View>
-          ) : myPosts.length === 0 ? (
+          ) : myPosts.filter(p => !p.video_url).length === 0 ? (
             <View className="items-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
               <BookOpen size={36} color={isDark ? '#475569' : '#cbd5e1'} />
               <Text className="text-slate-500 dark:text-slate-400 font-semibold mt-3">No posts yet</Text>
             </View>
           ) : (
-            myPosts.map((post) => (
+            myPosts.filter(p => !p.video_url).map((post) => (
               <PostCard 
                 key={post.id} 
                 post={post} 
                 currentUserId={currentUser?.id || null} 
               />
             ))
+          )}
+        </View>
+
+        {/* ── Clips Tab ── */}
+        <View style={{ display: activeTab === 'clips' ? 'flex' : 'none' }} className="px-4 pb-24">
+          {loadingPosts ? (
+            <View className="items-center py-12">
+              <ActivityIndicator color="#4f46e5" />
+            </View>
+          ) : myPosts.filter(p => !!p.video_url).length === 0 ? (
+            <View className="items-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+              <PlaySquare size={36} color={isDark ? '#475569' : '#cbd5e1'} />
+              <Text className="text-slate-500 dark:text-slate-400 font-semibold mt-3">No clips yet</Text>
+            </View>
+          ) : (
+            <View className="flex-row flex-wrap gap-2">
+              {myPosts.filter(p => !!p.video_url).map((clip) => (
+                <TouchableOpacity
+                  key={clip.id}
+                  activeOpacity={0.8}
+                  onPress={() => router.push({ pathname: '/clips', params: { videoId: clip.id } } as any)}
+                  className="w-[31%] aspect-[9/16] bg-slate-900 rounded-xl overflow-hidden relative"
+                >
+                  <View className="absolute inset-0 items-center justify-center bg-indigo-900/50">
+                    <Play size={24} color="rgba(255,255,255,0.7)" />
+                  </View>
+                  <View className="absolute bottom-2 left-2 flex-row items-center">
+                    <Play size={12} color="white" />
+                    <Text className="text-white text-[10px] font-bold ml-1">{clip.likes_count || 0}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </View>
 

@@ -801,7 +801,7 @@ export default function PublicProfileScreen() {
             <View className="flex-row gap-3">
               {/* Streak Card */}
               {streakCount > 0 && (
-                <View className="flex-1 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-3xl shadow-sm justify-between">
+                <TouchableOpacity onPress={() => router.push('/streaks' as any)} className="flex-1 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-3xl shadow-sm justify-between">
                   <View className="flex-row items-center gap-2">
                     <Flame
                       size={20}
@@ -816,7 +816,7 @@ export default function PublicProfileScreen() {
                       Best {streakLongest} Days
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               )}
 
               {/* League Card */}

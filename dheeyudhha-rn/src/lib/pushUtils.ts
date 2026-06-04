@@ -43,6 +43,20 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       return null;
     }
 
+    // Register Notification Categories for actionable push notifications (Accept/Decline)
+    await Notifications.setNotificationCategoryAsync('duel_challenge', [
+      {
+        identifier: 'accept_duel',
+        buttonTitle: '⚔️ Accept',
+        options: { opensAppToForeground: true },
+      },
+      {
+        identifier: 'decline_duel',
+        buttonTitle: '❌ Decline',
+        options: { opensAppToForeground: false },
+      },
+    ]);
+
     // 2. Get the native device push token (raw FCM token on Android, APNs on iOS)
     // This is the token the web firebase-admin SDK sends to directly.
     const tokenData = await Notifications.getDevicePushTokenAsync();

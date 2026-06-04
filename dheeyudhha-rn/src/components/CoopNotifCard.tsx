@@ -104,7 +104,7 @@ export default function CoopNotifCard({
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
-            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
             const res = await fetch(`${API_URL}/api/coop/${challengeId}`, {
                 headers: { Authorization: `Bearer ${session.access_token}` },
             });
@@ -165,7 +165,7 @@ export default function CoopNotifCard({
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
-            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
             const res = await fetch(`${API_URL}/api/coop/${challengeId}`, {
                 method: 'PATCH',
                 headers: {

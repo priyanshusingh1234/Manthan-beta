@@ -74,7 +74,7 @@ export default function DuelRoomScreen() {
         return;
       }
 
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
       const res = await fetch(`${API_URL}/api/duel/${id}`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -130,7 +130,7 @@ export default function DuelRoomScreen() {
     setActing(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
       
       const res = await fetch(`${API_URL}/api/duel/${id}`, {
         method: 'PATCH',

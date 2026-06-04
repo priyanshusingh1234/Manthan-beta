@@ -159,7 +159,7 @@ export default function PostsScreen() {
     if (!currentUser) return null;
 
     return (
-      <View className="bg-white border-b border-slate-100 p-4 mb-2">
+      <View className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 mb-2">
         <View className="flex-row items-center mb-3">
           <View className="bg-purple-100 rounded-full px-2.5 py-1 flex-row items-center">
             <Sparkles size={12} color="#9333ea" />
@@ -170,7 +170,7 @@ export default function PostsScreen() {
         <View className="flex-row">
           {/* Avatar */}
           <View className="mr-3">
-            <View className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 border border-slate-200 justify-center items-center">
+            <View className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 justify-center items-center">
               {currentUser?.avatar_url ? (
                 <Image source={{ uri: currentUser.avatar_url }} className="w-full h-full" />
               ) : (
@@ -187,7 +187,7 @@ export default function PostsScreen() {
               placeholder="What's happening in the academy?"
               placeholderTextColor="#94a3b8"
               multiline
-              className="text-slate-900 text-[16px] min-h-[40px] pt-2 pb-2"
+              className="text-slate-900 dark:text-slate-100 text-[16px] min-h-[40px] pt-2 pb-2"
               editable={!submitting}
             />
 
@@ -218,7 +218,7 @@ export default function PostsScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-slate-50 justify-center items-center">
+      <View className="flex-1 bg-slate-50 dark:bg-slate-950 justify-center items-center">
         <ActivityIndicator size="large" color="#4f46e5" />
       </View>
     );
@@ -226,7 +226,7 @@ export default function PostsScreen() {
 
   return (
     <KeyboardAvoidingView 
-      className="flex-1 bg-slate-50" 
+      className="flex-1 bg-slate-50 dark:bg-slate-950" 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >

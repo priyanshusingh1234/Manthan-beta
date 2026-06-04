@@ -13,6 +13,7 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "UIBackgroundModes": [
+          "remote-notification",
           "remote-notification"
         ]
       }
@@ -27,7 +28,11 @@
       "package": "com.dheeyudha.app",
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -62,7 +67,8 @@
           "cameraPermission": false
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
@@ -73,6 +79,12 @@
         "projectId": "501fde34-5b88-4997-8960-ac5e2065b9e8"
       }
     },
-    "owner": "kpk22128"
+    "owner": "kpk22128",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/501fde34-5b88-4997-8960-ac5e2065b9e8"
+    }
   }
 }

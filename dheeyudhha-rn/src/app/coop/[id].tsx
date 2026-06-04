@@ -141,7 +141,7 @@ export default function CoopStatusScreen() {
     const fetchStatus = useCallback(async (tok: string, isSilent = false) => {
         if (!isSilent) setLoading(true);
         try {
-            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
             const res = await fetch(`${API_URL}/api/coop/${id}`, {
                 headers: { Authorization: `Bearer ${tok}` }
             });
@@ -222,7 +222,7 @@ export default function CoopStatusScreen() {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+                            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
                             const res = await fetch(`${API_URL}/api/coop/${id}`, {
                                 method: "PATCH",
                                 headers: {

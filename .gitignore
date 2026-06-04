@@ -49,3 +49,7 @@ show_users.js
 scripts/
 # Firebase secrets
 firebase-service-account.json
+
+# Mobile builds
+android/
+ios/

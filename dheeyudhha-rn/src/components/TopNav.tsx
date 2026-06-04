@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { label: 'Search', href: '/search', icon: Search },
   { label: 'Clips', href: '/clips', icon: PlaySquare },
   { label: 'Feed', href: '/feed', icon: Compass },
-  { label: 'Checker', href: '/checker-feed', icon: Shield },
+  { label: 'Checker', href: '/(tabs)/checker-feed', icon: Shield },
   { label: 'Solved', href: '/solved', icon: CheckSquare },
   { label: 'Docs', href: '/docs', icon: HelpCircle },
   { label: 'Support', href: '/contact', icon: Mail },
@@ -87,7 +87,8 @@ export default function TopNav() {
           keyboardShouldPersistTaps="handled"
         >
           {NAV_LINKS.map((nav) => {
-            const isActive = pathname === nav.href;
+            const normalizedHref = nav.href.replace('/(tabs)', '');
+            const isActive = pathname === normalizedHref || pathname === nav.href || pathname.startsWith(`${normalizedHref}/`);
             
             // Replicate web colors
             let bgClass = 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800';

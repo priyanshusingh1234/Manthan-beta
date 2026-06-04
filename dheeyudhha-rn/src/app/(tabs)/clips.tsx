@@ -9,15 +9,16 @@ import { supabase } from '@/lib/supabaseClient';
 import * as ImagePicker from 'expo-image-picker';
 import VideoClipCard from '@/components/VideoClipCard';
 import { useColorScheme } from 'nativewind';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 const { height: SCREEN_H } = Dimensions.get('window');
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
 const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dtlrwdl1k';
 
 export default function ClipsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { videoId } = useLocalSearchParams<{ videoId?: string }>();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -31,6 +32,7 @@ export default function ClipsScreen() {
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Stable refs for FlatList callbacks — prevents "onViewableItemsChanged should be memoized" warning
+  const flatListRef = useRef<FlatList>(null);
   const onViewableItemsChangedRef = useRef(({ viewableItems }: any) => {
     if (viewableItems[0]?.index != null) setActiveIndex(viewableItems[0].index);
   });
@@ -81,8 +83,45 @@ export default function ClipsScreen() {
       const data = await res.json();
       const fetched = data.posts || [];
 
+      if (isInitial && videoId) {
+        try {
+          const { data: specificPost } = await supabase
+            .from('posts')
+            .select('*, author:author_id(username, full_name, avatar_url, is_teacher), post_likes(user_id)')
+            .eq('id', videoId)
+            .single();
+
+          if (specificPost) {
+            const currentUserId = session?.user.id;
+            const formattedPost = {
+              ...specificPost,
+              videoUrl: specificPost.video_url || specificPost.videoUrl,
+              author: Array.isArray(specificPost.author) ? specificPost.author[0] : specificPost.author,
+              likes_count: specificPost.likes_count ?? specificPost.post_likes?.length ?? 0,
+              is_liked_by_me: specificPost.post_likes?.some((l: any) => l.user_id === currentUserId) || false,
+            };
+            
+            // Remove it from fetched if it exists, then unshift to top
+            const existingIdx = fetched.findIndex((p: any) => p.id === videoId);
+            if (existingIdx > -1) fetched.splice(existingIdx, 1);
+            fetched.unshift(formattedPost);
+          }
+        } catch (e) {
+          console.error('Failed to load specific video:', e);
+        }
+      }
+
       setExcludeIds(data.excludeIds || []);
       setPosts(prev => isInitial ? fetched : [...prev, ...fetched.filter((p: any) => !prev.find((e: any) => e.id === p.id))]);
+      
+      // Force scroll to top if we loaded a specific video
+      if (isInitial && videoId && fetched.length > 0) {
+        setTimeout(() => {
+          flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+          setActiveIndex(0);
+        }, 100);
+      }
+
       if (fetched.length < 5) setHasMore(false);
     } catch (err) {
       console.error('Clips feed error:', err);
@@ -90,9 +129,9 @@ export default function ClipsScreen() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [excludeIds]);
+  }, [excludeIds, videoId]);
 
-  useEffect(() => { fetchFeed(true); }, []); // eslint-disable-line
+  useEffect(() => { fetchFeed(true); }, [videoId]); // Re-fetch if videoId changes
 
   // ── Like a post ──────────────────────────────────────────────────────────
   const handleLike = async (postId: string) => {
@@ -273,6 +312,7 @@ export default function ClipsScreen() {
     <View style={{ flex: 1, backgroundColor: '#000' }}>
       {/* Full-screen vertical snap feed */}
       <FlatList
+        ref={flatListRef}
         data={posts}
         keyExtractor={(item) => item.id}
         pagingEnabled

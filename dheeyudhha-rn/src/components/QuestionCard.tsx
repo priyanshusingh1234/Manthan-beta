@@ -4,6 +4,7 @@ import { Play, Clock, Users, Zap, Swords } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import DuelChallengeModal from './DuelChallengeModal';
+import BadgedName from './BadgedName';
 
 interface Props {
   q: any;
@@ -66,7 +67,14 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
             </View>
           )}
           <View className="flex-1">
-            <Text className="font-bold text-slate-900 dark:text-slate-100 text-sm">{teacherName}</Text>
+            <BadgedName 
+              name={teacherName} 
+              userId={q?.created_by} 
+              isTeacher={q?.profiles?.is_teacher}
+              nameClassName="font-bold text-slate-900 dark:text-slate-100 text-sm"
+              containerClassName="flex-row items-center gap-1"
+              iconSize={14}
+            />
             <View className="flex-row items-center gap-2 mt-0.5">
               <Text className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{q?.subject || 'General'}</Text>
               {q?.class_grade && (

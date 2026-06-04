@@ -13,6 +13,10 @@ import { Platform } from 'react-native';
 import { registerForPushNotificationsAsync } from '@/lib/pushUtils';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold, Inter_900Black } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
+import StreakCompletedOverlay from '@/components/StreakCompletedOverlay';
+import StreakLostOverlay from '@/components/StreakLostOverlay';
+import StreakFriendToast from '@/components/StreakFriendToast';
+import CoopDuelToast from '@/components/CoopDuelToast';
 
 // Prevent splash screen from hiding while fonts load
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -76,10 +80,40 @@ export default function RootLayout() {
     });
 
     // Handle notification TAPS (user tapped notification from tray)
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(async response => {
       const data = response.notification.request.content.data as any;
       const href: string = data?.href || data?.url || data?.link || data?.deep_link || '';
+      const actionId = response.actionIdentifier;
       
+      // Extract challenge ID if it's a duel notification
+      let challengeId = null;
+      if (href.includes('challenge=')) {
+        challengeId = href.split('challenge=')[1]?.split('&')[0];
+      }
+
+      // Handle custom action buttons (Accept / Decline)
+      if (actionId === 'accept_duel' || actionId === 'decline_duel') {
+        if (challengeId && session?.access_token) {
+          const action = actionId === 'accept_duel' ? 'accept' : 'reject';
+          try {
+            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
+            await fetch(`${API_URL}/api/coop/${challengeId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({ action }),
+            });
+          } catch (e) {
+            console.error('[Push] Failed to process action button API call', e);
+          }
+        }
+        
+        // If they declined, don't bother routing them to the question
+        if (actionId === 'decline_duel') return;
+      }
+
       if (!href) return;
 
       // Translate web hrefs to mobile routes
@@ -153,6 +187,10 @@ export default function RootLayout() {
           options={{ headerShown: false }} 
         />
       </Stack>
+      <StreakCompletedOverlay />
+      <StreakLostOverlay />
+      <StreakFriendToast />
+      <CoopDuelToast />
     </>
   );
 }

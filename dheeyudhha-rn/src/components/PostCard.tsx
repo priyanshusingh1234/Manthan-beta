@@ -4,6 +4,7 @@ import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles } from 'luci
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import BadgedName from './BadgedName';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -37,7 +38,9 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
     }
   };
 
-  const player = useVideoPlayer(post.video_url, (p) => {
+  const videoUrl = post.video_url || post.videoUrl;
+
+  const player = useVideoPlayer(videoUrl, (p) => {
     p.loop = true;
     p.muted = false;
   });
@@ -98,16 +101,18 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
   };
 
   const handlePress = () => {
-    if (!isSinglePost) {
+    if (isSinglePost) return;
+    if (videoUrl) {
+      // If it's a video post, redirect to the Clips tab
+      router.push({ pathname: '/clips', params: { videoId: post.id } } as any);
+    } else {
       router.push(`/posts/${post.id}` as any);
     }
   };
 
   return (
-    <Pressable 
-      onPress={handlePress}
-      disabled={isSinglePost}
-      className={`bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 ${!isSinglePost ? 'active:bg-slate-50 dark:active:bg-slate-850' : ''}`}
+    <View 
+      className={`bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4`}
     >
       {post._feedLabel ? (
         <View className="flex-row items-center mb-3">
@@ -120,64 +125,74 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
         </View>
       ) : null}
 
-      <View className="flex-row">
-        {/* Avatar */}
+      {/* Header Row (Avatar + Name) */}
+      <View className="flex-row items-center justify-between mb-3">
         <TouchableOpacity 
           onPress={() => router.push(`/user/${username}` as any)}
           activeOpacity={0.7}
-          className="mr-3"
+          className="flex-row items-center flex-1 mr-2"
         >
-          <View className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 justify-center items-center">
+          {/* Avatar */}
+          <View className="w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 justify-center items-center mr-3">
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} className="w-full h-full" />
             ) : (
               <User size={20} color="#94a3b8" />
             )}
           </View>
-        </TouchableOpacity>
 
-        {/* Content Area */}
-        <View className="flex-1">
-          {/* Header Row */}
-          <View className="flex-row items-center justify-between mb-1">
-            <TouchableOpacity 
-              onPress={() => router.push(`/user/${username}` as any)}
-              activeOpacity={0.7}
-              className="flex-row items-center flex-1 mr-2"
-            >
-              <Text className="font-bold text-[15px] text-slate-900 dark:text-slate-100 mr-1" numberOfLines={1}>
-                {name}
-              </Text>
-              <Text className="text-[14px] text-slate-500 dark:text-slate-400" numberOfLines={1}>
-                @{username} · {formatTimeAgo(post.created_at)}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity className="p-1 -mr-2">
-              <MoreVertical size={18} color="#94a3b8" />
-            </TouchableOpacity>
+          {/* Name & Username */}
+          <View className="flex-1 justify-center">
+            <BadgedName 
+              name={name}
+              userId={author.id}
+              isTeacher={post.profiles?.is_teacher || author.is_teacher}
+              textStyle={{ fontWeight: 'bold', fontSize: 15 }}
+              style={{ marginBottom: 2 }}
+            />
+            <Text className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5" numberOfLines={1}>
+              @{username} · {formatTimeAgo(post.created_at)}
+            </Text>
           </View>
+        </TouchableOpacity>
+        
+        {/* More Options */}
+        <TouchableOpacity className="p-2 -mr-2">
+          <MoreVertical size={18} color="#94a3b8" />
+        </TouchableOpacity>
+      </View>
 
+      {/* Content Area */}
+      <View>
           {/* Text Content */}
-          <Text className="text-[15px] text-slate-800 dark:text-slate-200 leading-[22px] mb-3">
-            {renderContent(post.content)}
-          </Text>
+          <Pressable onPress={handlePress} disabled={isSinglePost}>
+            <Text className="text-[15px] text-slate-800 dark:text-slate-200 leading-[22px] mb-3">
+              {renderContent(post.content)}
+            </Text>
+          </Pressable>
 
           {/* Media Support */}
-          {post.video_url ? (
-            <View className="mb-3 w-full h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 relative">
-              <VideoView 
-                player={player}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-                nativeControls={true}
-              />
-            </View>
+          {videoUrl ? (
+            <Pressable onPress={handlePress} disabled={isSinglePost} className="mb-3 w-full h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 relative items-center justify-center">
+              <View pointerEvents="none" style={{ width: '100%', height: '100%', position: 'absolute' }}>
+                <VideoView 
+                  player={player}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                  nativeControls={false}
+                />
+              </View>
+              {/* Play Button Overlay */}
+              <View className="w-14 h-14 bg-black/50 rounded-full items-center justify-center z-10 border border-white/20">
+                <Text className="text-white text-2xl ml-1">▶</Text>
+              </View>
+            </Pressable>
           ) : images.length > 0 && (
             <View className="mb-3">
               {images.length === 1 ? (
-                <View className="w-full h-56 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                <Pressable onPress={handlePress} disabled={isSinglePost} className="w-full h-56 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
                   <Image source={{ uri: images[0] }} className="w-full h-full" resizeMode="cover" />
-                </View>
+                </Pressable>
               ) : (
                 <View>
                   <ScrollView 
@@ -246,6 +261,5 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
           </View>
         </View>
       </View>
-    </Pressable>
   );
 }

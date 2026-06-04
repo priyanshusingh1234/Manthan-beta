@@ -33,7 +33,7 @@ export default function NotificationBell({ isMobile = false }: { isMobile?: bool
         if (!token) return;
         setLoading(true);
         try {
-            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
             const res = await fetch(`${API_URL}/api/notifications`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -94,7 +94,7 @@ export default function NotificationBell({ isMobile = false }: { isMobile?: bool
         if (!token) return;
         setNotifications(n => n.map(x => ({ ...x, read: true })));
         setUnreadCount(0);
-        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
         await fetch(`${API_URL}/api/notifications`, {
             method: 'PATCH',
             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -106,7 +106,7 @@ export default function NotificationBell({ isMobile = false }: { isMobile?: bool
         if (!token) return;
         setNotifications([]);
         setUnreadCount(0);
-        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
         await fetch(`${API_URL}/api/notifications`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` }

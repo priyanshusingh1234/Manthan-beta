@@ -10,6 +10,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, MessageSquare, PlaySquare, MessageCircle, Settings, Flame } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
+import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 
 const TAB_HEIGHT = 62;
@@ -30,6 +31,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const [goalMet, setGoalMet] = useState(false);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -119,12 +121,12 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
               style={styles.tab}
             >
               {isHome && streakCount > 0 && (
-                <View style={[styles.streakBadge, goalMet ? styles.streakOn : styles.streakOff]}>
+                <TouchableOpacity onPress={() => router.push('/streaks' as any)} style={[styles.streakBadge, goalMet ? styles.streakOn : styles.streakOff]} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                   <Flame size={8} color={goalMet ? 'white' : (isDark ? '#cbd5e1' : '#94a3b8')} fill={goalMet ? 'white' : 'none'} />
                   <Text style={[styles.streakNum, goalMet ? styles.streakNumOn : styles.streakNumOff, !goalMet && { color: isDark ? '#cbd5e1' : '#94a3b8' }]}>
                     {streakCount}
                   </Text>
-                </View>
+                </TouchableOpacity>
               )}
 
               {isActive && <View style={[styles.activePill, { backgroundColor: activePillBg, borderColor: activePillBorder }]} />}

@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  StyleSheet,
+  ScrollView,
 } from 'react-native';
 import {
   X,
@@ -98,7 +98,7 @@ export default function DuelChallengeModal({
       setLoading(true);
       setError('');
       try {
-        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
         const res = await fetch(
           `${API_URL}/api/users/search?q=${encodeURIComponent(
             searchQuery.trim()
@@ -129,7 +129,7 @@ export default function DuelChallengeModal({
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
       
       const res = await fetch(`${API_URL}/api/duel/create`, {
         method: 'POST',
@@ -161,14 +161,14 @@ export default function DuelChallengeModal({
     }
   };
 
-  const renderAvatar = (opp: UserType, size = 40) => {
+  const renderAvatar = (opp: UserType, size = 48) => {
     if (opp.avatar) {
       return (
         <Image
           source={{ uri: opp.avatar }}
           alt={opp.name}
           style={{ width: size, height: size, borderRadius: size / 2 }}
-          className="border border-slate-200 dark:border-slate-800"
+          className="border-2 border-white dark:border-slate-800 shadow-sm"
         />
       );
     }
@@ -176,9 +176,9 @@ export default function DuelChallengeModal({
     return (
       <View
         style={{ width: size, height: size, borderRadius: size / 2 }}
-        className="bg-orange-100 dark:bg-orange-950/50 items-center justify-center border border-orange-200 dark:border-orange-900/50"
+        className="bg-gradient-to-br from-orange-400 to-rose-500 items-center justify-center border-2 border-white dark:border-slate-800 shadow-sm"
       >
-        <Text className="text-orange-600 dark:text-orange-400 font-extrabold text-sm">{initials}</Text>
+        <Text className="text-white font-black text-lg">{initials}</Text>
       </View>
     );
   };
@@ -187,263 +187,274 @@ export default function DuelChallengeModal({
     <Modal
       visible={isOpen}
       animationType="slide"
-      transparent={true}
+      transparent={false}
       onRequestClose={onClose}
     >
-      <View className="flex-1 justify-end bg-slate-900/60 dark:bg-slate-950/75">
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          className="w-full bg-white dark:bg-slate-950 rounded-t-[2.5rem] overflow-hidden"
-          style={{ maxHeight: '90%', paddingBottom: Math.max(insets.bottom, 20) }}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1 bg-slate-50 dark:bg-slate-950"
+      >
+        {/* Full Screen Header */}
+        <View 
+          className="bg-gradient-to-r from-orange-500 via-rose-500 to-red-600 px-6 pb-6 relative shadow-lg"
+          style={{ paddingTop: Math.max(insets.top, 20) }}
         >
-          {/* Header Strip with Gradients */}
-          <View className="bg-gradient-to-r from-orange-500 via-rose-500 to-red-600 p-6 relative">
-            {/* Top Indicator */}
-            <View className="w-12 h-1 bg-white/30 rounded-full self-center mb-4" />
-
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                {step === 2 && (
-                  <TouchableOpacity
-                    onPress={() => setStep(1)}
-                    className="p-1.5 rounded-full bg-white/20 mr-1"
-                  >
-                    <ArrowLeft size={16} color="#fff" />
-                  </TouchableOpacity>
-                )}
-                <View className="w-10 h-10 rounded-2xl bg-white/20 items-center justify-center">
-                  {step === 1 ? (
-                    <Swords size={20} color="#fff" />
-                  ) : (
-                    <MessageSquare size={20} color="#fff" />
-                  )}
-                </View>
-                <View>
-                  <Text className="text-base font-black text-white">
-                    {step === 1 ? 'Challenge a Friend' : 'Send your taunt'}
-                  </Text>
-                  <Text className="text-[11px] text-white/80">
-                    {step === 1
-                      ? 'Pick an opponent to duel'
-                      : `Dueling ${selectedOpponent?.name?.split(' ')[0]} — 24h expiry`}
-                  </Text>
-                </View>
-              </View>
+          {/* Header Controls */}
+          <View className="flex-row items-center justify-between mb-6">
+            {step === 2 ? (
               <TouchableOpacity
-                onPress={onClose}
-                className="p-2 bg-white/20 rounded-full"
+                onPress={() => setStep(1)}
+                className="p-2.5 rounded-full bg-white/20 backdrop-blur-md"
               >
-                <X size={16} color="#fff" />
+                <ArrowLeft size={20} color="#fff" />
               </TouchableOpacity>
+            ) : (
+              <View className="w-10 h-10" /> 
+            )}
+            
+            <View className="flex-row items-center gap-2">
+              <Swords size={22} color="#fff" />
+              <Text className="text-xl font-black text-white tracking-widest uppercase">
+                {step === 1 ? 'DUEL ARENA' : 'TAUNT'}
+              </Text>
             </View>
 
-            {questionTitle && (
-              <View className="mt-4 bg-white/10 rounded-xl px-3 py-2 flex-row items-center gap-2">
-                <Flame size={14} color="#ffedd5" />
-                <Text className="text-xs font-semibold text-orange-50 flex-1" numberOfLines={1}>
+            <TouchableOpacity
+              onPress={onClose}
+              className="p-2.5 bg-white/20 rounded-full backdrop-blur-md"
+            >
+              <X size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Question Preview */}
+          {questionTitle && (
+            <View className="bg-black/20 rounded-2xl p-4 flex-row items-center gap-3 border border-white/10">
+              <View className="p-2 bg-orange-500/30 rounded-xl">
+                <Flame size={20} color="#ffedd5" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[11px] font-bold text-orange-200 uppercase tracking-widest mb-0.5">
+                  Target Question
+                </Text>
+                <Text className="text-sm font-semibold text-white" numberOfLines={2}>
                   {questionTitle}
                 </Text>
               </View>
-            )}
-
-            <View className="flex-row gap-2 mt-4">
-              <View className={`flex-1 h-1 rounded-full ${step >= 1 ? 'bg-white' : 'bg-white/30'}`} />
-              <View className={`flex-1 h-1 rounded-full ${step >= 2 ? 'bg-white' : 'bg-white/30'}`} />
             </View>
-          </View>
+          )}
+        </View>
 
-          {/* Modal Content */}
-          <View className="p-5 bg-white dark:bg-slate-950">
-            {step === 1 ? (
-              <View className="space-y-4">
-                {/* Search Input */}
-                <View className="flex-row items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm mb-4">
-                  <Search size={18} color={isDark ? '#94a3b8' : '#64748b'} className="mr-3" />
-                  <TextInput
-                    placeholder="Search by name or @username..."
-                    placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    className="flex-1 text-sm text-slate-950 dark:text-slate-50 font-medium"
-                    autoFocus
-                  />
-                  {loading && <ActivityIndicator size="small" color="#f97316" />}
+        {/* Content Area */}
+        <View className="flex-1 px-6 pt-6">
+          {step === 1 ? (
+            <View className="flex-1">
+              <Text className="text-2xl font-black text-slate-900 dark:text-white mb-2">
+                Choose Opponent
+              </Text>
+              <Text className="text-slate-500 dark:text-slate-400 mb-6">
+                Search for a friend to challenge. They will have 24 hours to respond to your duel.
+              </Text>
+
+              {/* Search Bar */}
+              <View className="flex-row items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm mb-6">
+                <Search size={20} color={isDark ? '#94a3b8' : '#64748b'} className="mr-3" />
+                <TextInput
+                  placeholder="Search by name or @username..."
+                  placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  className="flex-1 text-base text-slate-900 dark:text-slate-50 font-medium"
+                  autoFocus
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {loading && <ActivityIndicator size="small" color="#f97316" />}
+              </View>
+
+              {/* Results */}
+              {searchQuery.trim().length < 2 ? (
+                <View className="flex-1 items-center justify-center pb-20 opacity-50">
+                  <Swords size={48} color={isDark ? '#334155' : '#cbd5e1'} className="mb-4" />
+                  <Text className="text-lg font-bold text-slate-400 dark:text-slate-500 text-center">
+                    Type a name to begin
+                  </Text>
                 </View>
-
-                {/* Results Area */}
-                {searchQuery.trim().length < 2 ? (
-                  <View className="items-center justify-center py-12 gap-3">
-                    <View className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/40 items-center justify-center">
-                      <Swords size={26} color={isDark ? '#ea580c' : '#fdba74'} />
-                    </View>
-                    <Text className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                      Search for an opponent
-                    </Text>
-                    <Text className="text-xs text-slate-400 text-center">
-                      They'll receive a notification and have 24 hours to respond.
-                    </Text>
-                  </View>
-                ) : results.length === 0 && !loading ? (
-                  <View className="items-center justify-center py-12">
-                    <Text className="text-sm font-medium text-slate-400">
-                      No students found for "{searchQuery}"
-                    </Text>
-                  </View>
-                ) : (
-                  <FlatList
-                    data={results}
-                    keyExtractor={(item) => item.id}
-                    className="h-64"
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        onPress={() => {
-                          setSelectedOpponent(item);
-                          setStep(2);
-                        }}
-                        className="flex-row items-center justify-between p-3 rounded-2xl border border-transparent active:border-orange-100 dark:active:border-orange-900/30 active:bg-orange-50/50 dark:active:bg-orange-950/20 mb-2"
-                      >
-                        <View className="flex-row items-center gap-3">
-                          {renderAvatar(item)}
-                          <View>
-                            <Text className="font-bold text-slate-950 dark:text-slate-50 text-sm">
-                              {item.name}
-                            </Text>
-                            <Text className="text-xs text-slate-400">@{item.username}</Text>
-                          </View>
-                        </View>
-                        <View className="flex-row items-center gap-1 bg-orange-50 dark:bg-orange-950/40 px-3 py-1.5 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                          <Swords size={12} color="#ea580c" />
-                          <Text className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-wide">
-                            Duel
+              ) : results.length === 0 && !loading ? (
+                <View className="flex-1 items-center justify-center pb-20">
+                  <Text className="text-lg font-medium text-slate-400">
+                    No students found for "{searchQuery}"
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={results}
+                  keyExtractor={(item) => item.id}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 20) }}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedOpponent(item);
+                        setStep(2);
+                      }}
+                      className="flex-row items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm mb-3 active:scale-95 transition-transform"
+                    >
+                      <View className="flex-row items-center gap-4">
+                        {renderAvatar(item)}
+                        <View>
+                          <Text className="font-bold text-slate-900 dark:text-slate-50 text-lg">
+                            {item.name}
+                          </Text>
+                          <Text className="text-sm font-medium text-slate-400">
+                            @{item.username}
                           </Text>
                         </View>
-                      </TouchableOpacity>
-                    )}
-                  />
-                )}
-              </View>
-            ) : (
-              // Step 2: Taunt Screen
-              selectedOpponent && (
-                <View className="space-y-5">
-                  {/* Selected Card */}
-                  <View className="flex-row items-center gap-3 p-3 bg-orange-50/50 dark:bg-orange-950/20 rounded-2xl border border-orange-100 dark:border-orange-900/30">
-                    {renderAvatar(selectedOpponent)}
-                    <View className="flex-1">
-                      <Text className="font-black text-slate-950 dark:text-slate-50 text-sm">
-                        {selectedOpponent.name}
-                      </Text>
-                      <Text className="text-xs text-slate-400">@{selectedOpponent.username}</Text>
-                    </View>
-                    <View className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-orange-200 dark:border-orange-900/40">
-                      <Text className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
-                        24h challenge
-                      </Text>
-                    </View>
-                  </View>
+                      </View>
+                      <View className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 items-center justify-center">
+                        <Swords size={18} color="#ea580c" />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              )}
+            </View>
+          ) : (
+            // Step 2: Taunt Screen
+            selectedOpponent && (
+              <ScrollView 
+                className="flex-1"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 40) }}
+              >
+                <Text className="text-2xl font-black text-slate-900 dark:text-white mb-2">
+                  Send a Taunt
+                </Text>
+                <Text className="text-slate-500 dark:text-slate-400 mb-6">
+                  Add some flavor to your challenge. Let them know what they're up against!
+                </Text>
 
-                  {/* Quick Taunts */}
-                  <View>
-                    <View className="flex-row items-center gap-1.5 mb-2">
-                      <Sparkles size={14} color="#ea580c" />
-                      <Text className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                        Quick taunts
-                      </Text>
-                    </View>
-                    <View className="flex-row flex-wrap gap-2">
-                      {QUICK_TAUNTS.map((t) => {
-                        const isSelected = taunt === t;
-                        return (
-                          <TouchableOpacity
-                            key={t}
-                            onPress={() => setTaunt(t)}
-                            className={`px-3 py-1.5 rounded-full border ${
-                              isSelected
-                                ? 'bg-orange-500 border-orange-500 text-white shadow-sm'
-                                : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300'
-                            }`}
-                          >
-                            <Text
-                              className={`text-xs font-bold ${
-                                isSelected ? 'text-white' : 'text-slate-600 dark:text-slate-300'
-                              }`}
-                            >
-                              {t}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                {/* Selected Opponent Card */}
+                <View className="p-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm mb-8 items-center">
+                  <View className="mb-4">
+                    {renderAvatar(selectedOpponent, 80)}
                   </View>
-
-                  {/* Write Taunt */}
-                  <View>
-                    <Text className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
-                      Write your own taunt
+                  <Text className="font-black text-slate-900 dark:text-white text-xl mb-1">
+                    {selectedOpponent.name}
+                  </Text>
+                  <Text className="text-slate-400 font-medium text-base mb-3">
+                    @{selectedOpponent.username}
+                  </Text>
+                  <View className="bg-orange-100 dark:bg-orange-900/30 px-4 py-1.5 rounded-full border border-orange-200 dark:border-orange-800/50">
+                    <Text className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                      24 Hour Challenge
                     </Text>
+                  </View>
+                </View>
+
+                {/* Taunt Input Area */}
+                <View className="mb-6">
+                  <View className="flex-row items-center gap-2 mb-3">
+                    <MessageSquare size={18} color={isDark ? '#cbd5e1' : '#64748b'} />
+                    <Text className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                      Your Message
+                    </Text>
+                  </View>
+                  
+                  <View className="relative">
                     <TextInput
                       value={taunt}
                       onChangeText={setTaunt}
                       maxLength={120}
                       multiline
-                      numberOfLines={3}
-                      placeholder="Optional smack talk..."
-                      placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 text-sm text-slate-950 dark:text-slate-50 font-medium"
-                      style={{ textAlignVertical: 'top', height: 80 }}
+                      numberOfLines={4}
+                      placeholder="Type your smack talk here..."
+                      placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+                      className="w-full bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 focus:border-orange-500 dark:focus:border-orange-500 rounded-3xl p-5 text-base text-slate-900 dark:text-slate-50 font-medium min-h-[120px]"
+                      style={{ textAlignVertical: 'top' }}
                     />
-                    <Text className="text-right text-[10px] text-slate-400 mt-1">
+                    <Text className="absolute bottom-4 right-5 text-xs font-bold text-slate-400">
                       {taunt.length}/120
                     </Text>
                   </View>
-
-                  {error ? (
-                    <Text className="text-xs text-red-500 font-semibold text-center">{error}</Text>
-                  ) : null}
-
-                  {/* CTA button */}
-                  <TouchableOpacity
-                    onPress={handleSend}
-                    disabled={sending || sent}
-                    className={`w-full py-4 rounded-2xl flex-row items-center justify-center gap-2 ${
-                      sent
-                        ? 'bg-emerald-500'
-                        : 'bg-gradient-to-r from-orange-500 to-rose-500 bg-orange-600'
-                    }`}
-                  >
-                    {sending ? (
-                      <>
-                        <ActivityIndicator color="white" size="small" />
-                        <Text className="text-white font-black text-base uppercase tracking-wider ml-2">
-                          Sending...
-                        </Text>
-                      </>
-                    ) : sent ? (
-                      <>
-                        <CheckCircle2 size={18} color="#fff" />
-                        <Text className="text-white font-black text-base uppercase tracking-wider ml-1">
-                          Duel Sent! ⚔️
-                        </Text>
-                      </>
-                    ) : (
-                      <>
-                        <Send size={16} color="#fff" />
-                        <Text className="text-white font-black text-base uppercase tracking-wider ml-1">
-                          Send Duel Challenge
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-
-                  <Text className="text-center text-[10px] text-slate-400 mb-4">
-                    Challenges are live for 24h. You will be notified when they accept.
-                  </Text>
                 </View>
-              )
-            )}
-          </View>
-        </KeyboardAvoidingView>
-      </View>
+
+                {/* Quick Taunts */}
+                <View className="mb-8">
+                  <View className="flex-row items-center gap-2 mb-3">
+                    <Sparkles size={18} color="#ea580c" />
+                    <Text className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                      Quick Suggestions
+                    </Text>
+                  </View>
+                  <View className="flex-row flex-wrap gap-2">
+                    {QUICK_TAUNTS.map((t) => {
+                      const isSelected = taunt === t;
+                      return (
+                        <TouchableOpacity
+                          key={t}
+                          onPress={() => setTaunt(t)}
+                          className={`px-4 py-2.5 rounded-full border-2 ${
+                            isSelected
+                              ? 'bg-orange-500 border-orange-500 shadow-md shadow-orange-500/30'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                          }`}
+                        >
+                          <Text
+                            className={`text-sm font-bold ${
+                              isSelected ? 'text-white' : 'text-slate-600 dark:text-slate-300'
+                            }`}
+                          >
+                            {t}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {error ? (
+                  <Text className="text-sm text-red-500 font-bold text-center mb-4">{error}</Text>
+                ) : null}
+
+                {/* Send Button */}
+                <TouchableOpacity
+                  onPress={handleSend}
+                  disabled={sending || sent}
+                  className={`w-full py-5 rounded-3xl flex-row items-center justify-center gap-3 shadow-lg ${
+                    sent
+                      ? 'bg-emerald-500 shadow-emerald-500/30'
+                      : 'bg-gradient-to-r from-orange-500 to-rose-500 bg-orange-500 shadow-orange-500/30'
+                  }`}
+                >
+                  {sending ? (
+                    <>
+                      <ActivityIndicator color="white" size="small" />
+                      <Text className="text-white font-black text-lg uppercase tracking-wider ml-1">
+                        Sending...
+                      </Text>
+                    </>
+                  ) : sent ? (
+                    <>
+                      <CheckCircle2 size={24} color="#fff" />
+                      <Text className="text-white font-black text-lg uppercase tracking-wider ml-1">
+                        Duel Sent!
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={20} color="#fff" />
+                      <Text className="text-white font-black text-lg uppercase tracking-widest ml-1">
+                        Send Challenge
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            )
+          )}
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
