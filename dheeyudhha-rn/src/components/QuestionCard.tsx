@@ -83,6 +83,12 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
                   <Text className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Class {q.class_grade}</Text>
                 </>
               )}
+              {q?.chapter && (
+                <>
+                  <View className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                  <Text className="text-[10px] text-slate-500 dark:text-slate-400 font-medium" numberOfLines={1}>{q.chapter}</Text>
+                </>
+              )}
             </View>
           </View>
         </HeaderWrapper>
