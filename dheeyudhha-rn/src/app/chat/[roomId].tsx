@@ -16,7 +16,8 @@ import {
   Animated,
   PanResponder,
   Keyboard,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  Clipboard
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -40,7 +41,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Clipboard from 'expo-clipboard';
 
 const WEB_URL = 'https://manthan-beta-c975.vercel.app';
 const { width } = Dimensions.get('window');
