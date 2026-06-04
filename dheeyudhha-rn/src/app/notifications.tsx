@@ -460,40 +460,41 @@ export default function NotificationsScreen() {
                                     <TouchableOpacity
                                         onPress={() => handleNotifClick(notif)}
                                         activeOpacity={0.8}
-                                        className={`rounded-3xl overflow-hidden relative border ${
-                                            !notif.read ? 'border-orange-400' : 'border-transparent'
-                                        }`}
+                                        style={{ borderRadius: 24, overflow: 'hidden', borderWidth: !notif.read ? 2 : 0, borderColor: '#fb923c' }}
                                     >
-                                        {/* Gradient Background */}
-                                        <View className="absolute inset-0 bg-gradient-to-br from-orange-500 via-rose-500 to-pink-600" />
-                                        <View className="relative p-4 flex-row gap-3 items-center">
-                                            {/* Avatar Flame */}
-                                            <View className="relative shrink-0">
+                                        {/* Solid orange background - gradients don't render in React Native */}
+                                        <View style={{ position: 'absolute', inset: 0, backgroundColor: '#f97316' }} />
+                                        <View style={{ backgroundColor: '#ea580c', padding: 16, flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                                            {/* Avatar / Flame */}
+                                            <View style={{ position: 'relative', flexShrink: 0 }}>
                                                 {notif.actor_avatar ? (
-                                                    <Image source={{ uri: notif.actor_avatar }} className="w-12 h-12 rounded-2xl object-cover border-2 border-white/30" />
+                                                    <Image
+                                                        source={{ uri: notif.actor_avatar }}
+                                                        style={{ width: 48, height: 48, borderRadius: 14, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }}
+                                                    />
                                                 ) : (
-                                                    <View className="w-12 h-12 rounded-2xl bg-white/20 items-center justify-center">
+                                                    <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
                                                         <Flame size={20} color="white" fill="white" />
                                                     </View>
                                                 )}
-                                                <View className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full items-center justify-center shadow">
+                                                <View style={{ position: 'absolute', bottom: -4, right: -4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center' }}>
                                                     <Flame size={12} color="#f97316" fill="#f97316" />
                                                 </View>
                                             </View>
 
                                             {/* Content */}
-                                            <View className="flex-1 min-w-0">
-                                                <Text className="text-white font-black text-xs leading-tight" numberOfLines={1}>
+                                            <View style={{ flex: 1, minWidth: 0 }}>
+                                                <Text style={{ color: 'white', fontWeight: '900', fontSize: 12, lineHeight: 16 }} numberOfLines={1}>
                                                     {notif.title}
                                                 </Text>
-                                                <Text className="text-white/80 text-[10px] mt-0.5 leading-normal" numberOfLines={2}>
+                                                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 10, marginTop: 2, lineHeight: 14 }} numberOfLines={2}>
                                                     {notif.body}
                                                 </Text>
-                                                <View className="flex-row items-center gap-2 mt-2">
-                                                    <View className="bg-white px-3 py-1 rounded-full shadow-sm">
-                                                        <Text className="text-orange-600 font-black text-[9px]">🔥 SOLVE NOW</Text>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                                                    <View style={{ backgroundColor: 'white', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 99 }}>
+                                                        <Text style={{ color: '#ea580c', fontWeight: '900', fontSize: 9 }}>🔥 SOLVE NOW</Text>
                                                     </View>
-                                                    <Text className="text-[9px] text-white/60 font-bold">{timeAgo(notif.created_at)}</Text>
+                                                    <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', fontWeight: '700' }}>{timeAgo(notif.created_at)}</Text>
                                                 </View>
                                             </View>
                                         </View>
