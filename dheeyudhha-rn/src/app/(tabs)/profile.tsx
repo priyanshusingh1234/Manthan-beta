@@ -69,6 +69,16 @@ export default function ProfileScreen() {
   const [modalUsers, setModalUsers] = useState<any[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [visiblePostsCount, setVisiblePostsCount] = useState(3);
+
+  useEffect(() => {
+    if (activeTab === 'posts' && visiblePostsCount < myPosts.length) {
+      const timer = setTimeout(() => {
+        setVisiblePostsCount(prev => prev + 3);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, visiblePostsCount, myPosts.length]);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -211,7 +221,7 @@ export default function ProfileScreen() {
     else setNewBanner(info);
   };
 
-  // ── Upload a single image to Supabase via web API ────────────────────────
+  // ── Upload a single image to Supabase directly ────────────────────────
   const uploadImage = async (
     info: { uri: string; type: string; name: string },
     userId: string,
@@ -224,22 +234,30 @@ export default function ProfileScreen() {
     if (Platform.OS === 'web') {
       const response = await fetch(info.uri);
       const blob = await response.blob();
-      formData.append('file', blob, info.name);
+      formData.append('', blob, info.name);
     } else {
-      formData.append('file', { uri: info.uri, type: info.type, name: info.name } as any);
+      formData.append('', { uri: info.uri, type: info.type, name: info.name } as any);
     }
     
-    formData.append('bucket', 'public-images');
-    formData.append('path', path);
+    const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+    const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
-    const res = await fetch(`${API_URL}/api/profile/upload`, {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/public-images/${path}`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+        'x-upsert': 'true'
+      },
       body: formData,
     });
-    const data = await res.json();
-    if (!res.ok || !data.publicUrl) { console.error('Upload failed:', data.error); return null; }
-    return data.publicUrl;
+    
+    if (!res.ok) { 
+      console.error('Upload failed:', await res.text()); 
+      return null; 
+    }
+    
+    return `${SUPABASE_URL}/storage/v1/object/public/public-images/${path}`;
   };
 
   // ── Delete old image from Supabase storage ───────────────────────────────
@@ -580,7 +598,7 @@ export default function ProfileScreen() {
               <Text className="text-slate-500 dark:text-slate-400 font-semibold mt-3">No posts yet</Text>
             </View>
           ) : (
-            myPosts.filter(p => !p.video_url).map((post) => (
+            myPosts.filter(p => !p.video_url).slice(0, visiblePostsCount).map((post) => (
               <PostCard 
                 key={post.id} 
                 post={post} 

@@ -167,6 +167,16 @@ export default function PublicProfileScreen() {
   const [modalUsers, setModalUsers] = useState<any[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [visiblePostsCount, setVisiblePostsCount] = useState(3);
+
+  useEffect(() => {
+    if (studentTab === 'posts' && visiblePostsCount < userPosts.length) {
+      const timer = setTimeout(() => {
+        setVisiblePostsCount(prev => prev + 3);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [studentTab, visiblePostsCount, userPosts.length]);
 
   const fetchProfileData = async () => {
     if (!usernameStr) return;
@@ -1193,7 +1203,7 @@ export default function PublicProfileScreen() {
                 </Text>
               </View>
             ) : (
-              userPosts.map((post) => (
+              userPosts.slice(0, visiblePostsCount).map((post) => (
                 <PostCard 
                   key={post.id} 
                   post={post} 

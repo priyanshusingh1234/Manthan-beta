@@ -238,8 +238,8 @@ export default function SinglePostScreen() {
   return (
     <KeyboardAvoidingView 
       className="flex-1 bg-white dark:bg-slate-950" 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 25}
     >
       <FlatList
         data={comments}
