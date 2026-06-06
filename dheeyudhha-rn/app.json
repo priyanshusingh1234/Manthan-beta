@@ -19,12 +19,6 @@
       }
     },
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/manthan-logo.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/manthan-logo.png"
-      },
       "package": "com.dheeyudha.app",
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
@@ -43,11 +37,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "android": {
-            "image": "./assets/images/manthan-logo.png",
-            "imageWidth": 150
-          }
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/manthan-logo.png",
+          "imageWidth": 200
         }
       ],
       [

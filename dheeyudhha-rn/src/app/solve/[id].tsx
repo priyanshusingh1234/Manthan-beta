@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Vibration, Image, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Vibration, Image, ScrollView, StyleSheet, DeviceEventEmitter } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import { Clock, Zap, CheckCircle2, XCircle, ArrowLeft, Trophy, Users, Star, Lightbulb, Send } from 'lucide-react-native';
@@ -149,6 +149,11 @@ export default function SolveQuestionScreen() {
       // Attach funny message locally (same as web SolveQuestionClient.tsx)
       data.funnyMessage = getRandomMessage(data.isCorrect);
       setResult(data);
+
+      // 🔥 Fire global streak toast when daily goal is completed
+      if (data?.streak?.streakEarnedToday) {
+        DeviceEventEmitter.emit('streak_earned', { streak: data.streak.current });
+      }
 
       if (data.isCorrect) {
         Vibration.vibrate([0, 100, 50, 100]); // Happy vibration

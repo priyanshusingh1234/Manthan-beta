@@ -309,6 +309,7 @@ export default function ChatRoomScreen() {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [roomStatus, setRoomStatus] = useState<{status: string, created_by: string} | null>(null);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   
   // Modals
@@ -383,6 +384,24 @@ export default function ChatRoomScreen() {
             syncBlockStatus(currentUser.id, pData.user_id);
           }
         }
+
+        const { data: rRes } = await supabase.from('chat_rooms').select('status, created_by').eq('id', roomId).maybeSingle();
+        if (rRes) {
+          let finalStatus = rRes;
+          if (rRes.status === 'pending' && pData?.user_id) {
+            const { data: followData } = await supabase
+              .from('follows')
+              .select('follower_id')
+              .or(`and(follower_id.eq.${currentUser.id},following_id.eq.${pData.user_id}),and(follower_id.eq.${pData.user_id},following_id.eq.${currentUser.id})`)
+              .limit(1);
+            if (followData && followData.length > 0) {
+              finalStatus.status = 'approved';
+              supabase.from('chat_rooms').update({ status: 'approved' }).eq('id', roomId).then();
+            }
+          }
+          setRoomStatus(finalStatus);
+        }
+
         await fetchMessages();
       } catch (e) {
         console.error('Failed to init room', e);
@@ -779,8 +798,49 @@ export default function ChatRoomScreen() {
         </Modal>
 
         {/* Input Area */}
-        <View className="bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800/60 px-3 py-2 pb-5 z-20">
-          {replyingTo && (
+        {roomStatus?.status === 'pending' ? (
+          <View className="bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800/60 px-4 py-6 pb-8 z-20">
+            {roomStatus.created_by === user?.id ? (
+              <View className="items-center">
+                <Text className="font-bold text-slate-900 dark:text-white mb-1 text-lg">Message Request Sent</Text>
+                <Text className="text-sm text-slate-500 dark:text-slate-400 text-center">
+                  {participant?.full_name} will need to accept your request before you can chat.
+                </Text>
+              </View>
+            ) : (
+              <View>
+                <Text className="font-bold text-slate-900 dark:text-white mb-1 text-center text-lg">Message Request</Text>
+                <Text className="text-sm text-slate-500 dark:text-slate-400 text-center mb-5">
+                  If you accept, they will be able to message you and see when you've read messages.
+                </Text>
+                <View className="flex-row items-center gap-3">
+                  <TouchableOpacity
+                    onPress={async () => {
+                      const { error } = await supabase.from('chat_rooms').update({ status: 'approved' }).eq('id', roomId);
+                      if (!error) {
+                        setRoomStatus({ ...roomStatus, status: 'approved' });
+                      }
+                    }}
+                    className="flex-1 py-3 bg-indigo-600 rounded-xl items-center active:scale-95"
+                  >
+                    <Text className="text-white font-bold">Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      await supabase.from('chat_rooms').delete().eq('id', roomId);
+                      router.back();
+                    }}
+                    className="flex-1 py-3 bg-slate-200 dark:bg-slate-800 rounded-xl items-center active:scale-95"
+                  >
+                    <Text className="text-slate-900 dark:text-white font-bold">Decline</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        ) : (
+          <View className="bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800/60 px-3 py-2 pb-5 z-20">
+            {replyingTo && (
             <View className="mb-2 bg-slate-100 dark:bg-slate-800 rounded-xl p-3 flex-row justify-between items-center border-l-4 border-indigo-500">
               <View className="flex-1">
                 <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-xs mb-0.5">
@@ -833,6 +893,7 @@ export default function ChatRoomScreen() {
             )}
           </View>
         </View>
+        )}
       </View>
     </KeyboardAvoidingView>
   );

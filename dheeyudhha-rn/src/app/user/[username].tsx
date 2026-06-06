@@ -36,6 +36,7 @@ import {
   Clock,
   CheckCircle,
   Layers,
+  Lock,
 } from 'lucide-react-native';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Circle } from 'react-native-svg';
 import { supabase } from '@/lib/supabaseClient';
@@ -141,6 +142,7 @@ export default function PublicProfileScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [isTeacher, setIsTeacher] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isRequested, setIsRequested] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [globalRank, setGlobalRank] = useState<number | null>(null);
@@ -227,8 +229,21 @@ export default function PublicProfileScreen() {
           .eq('following_id', dbProfile.id)
           .maybeSingle();
         setIsFollowing(!!followRecord);
+
+        if (!followRecord) {
+          const { data: requestRecord } = await supabase
+            .from('follow_requests')
+            .select('*')
+            .eq('follower_id', user.id)
+            .eq('following_id', dbProfile.id)
+            .maybeSingle();
+          setIsRequested(!!requestRecord);
+        } else {
+          setIsRequested(false);
+        }
       } else {
         setIsFollowing(false);
+        setIsRequested(false);
       }
 
       // 4. Fetch specific details based on user type
@@ -441,30 +456,68 @@ export default function PublicProfileScreen() {
 
   const handleFollowToggle = async () => {
     if (!currentUser || !profile) return;
-    const previousState = isFollowing;
-    const previousFollowers = followersCount;
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
 
-    setIsFollowing(!previousState);
-    setFollowersCount(previousState ? previousFollowers - 1 : previousFollowers + 1);
+    if (isFollowing || isRequested) {
+      // Optimistic unfollow/unrequest
+      const previousFollowing = isFollowing;
+      const previousRequested = isRequested;
+      const previousFollowers = followersCount;
 
-    try {
-      if (previousState) {
-        const { error } = await supabase
-          .from('follows')
-          .delete()
-          .eq('follower_id', currentUser.id)
-          .eq('following_id', profile.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('follows')
-          .insert({ follower_id: currentUser.id, following_id: profile.id });
-        if (error) throw error;
+      setIsFollowing(false);
+      setIsRequested(false);
+      if (previousFollowing) {
+        setFollowersCount(previousFollowers - 1);
       }
-    } catch (e) {
-      console.error(e);
-      setIsFollowing(previousState);
-      setFollowersCount(previousFollowers);
+
+      try {
+        const res = await fetch(`https://manthan-beta-c975.vercel.app/api/follows`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ followingId: profile.id })
+        });
+        if (!res.ok) throw new Error('Failed to unfollow');
+      } catch (e) {
+        console.error(e);
+        setIsFollowing(previousFollowing);
+        setIsRequested(previousRequested);
+        setFollowersCount(previousFollowers);
+      }
+    } else {
+      // Optimistic follow/request
+      const isPrivate = profile.is_private;
+      const previousFollowing = isFollowing;
+      const previousRequested = isRequested;
+      const previousFollowers = followersCount;
+
+      if (isPrivate) {
+        setIsRequested(true);
+      } else {
+        setIsFollowing(true);
+        setFollowersCount(previousFollowers + 1);
+      }
+
+      try {
+        const res = await fetch(`https://manthan-beta-c975.vercel.app/api/follows`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ followingId: profile.id })
+        });
+        if (!res.ok) throw new Error('Failed to follow');
+      } catch (e) {
+        console.error(e);
+        setIsFollowing(previousFollowing);
+        setIsRequested(previousRequested);
+        setFollowersCount(previousFollowers);
+      }
     }
   };
 
@@ -665,17 +718,17 @@ export default function PublicProfileScreen() {
               <TouchableOpacity
                 onPress={handleFollowToggle}
                 className={`px-6 py-2 rounded-full border ${
-                  isFollowing
+                  isFollowing || isRequested
                     ? 'bg-slate-100 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
                     : 'bg-indigo-650 border-indigo-650'
                 } active:scale-95`}
               >
                 <Text
                   className={`font-black text-xs ${
-                    isFollowing ? 'text-slate-700 dark:text-slate-300' : 'text-white'
+                    isFollowing || isRequested ? 'text-slate-700 dark:text-slate-300' : 'text-white'
                   }`}
                 >
-                  {isFollowing ? 'Following' : 'Follow'}
+                  {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -927,7 +980,19 @@ export default function PublicProfileScreen() {
         )}
 
         {/* Dynamic Tabs Selectors */}
-        {!isTeacher ? (
+        {profile.is_private && !isMyself && !isFollowing ? (
+          <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center mx-4 mb-4 mt-8">
+            <View className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center mb-4">
+              <Lock size={24} color={isDark ? '#cbd5e1' : '#475569'} />
+            </View>
+            <Text className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-center">This Account is Private</Text>
+            <Text className="text-slate-500 dark:text-slate-400 text-sm text-center">
+              Follow this account to see their posts and stats.
+            </Text>
+          </View>
+        ) : (
+          <>
+            {!isTeacher ? (
           <View className="flex-row mx-4 mb-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
             {(['stats', 'badges', 'posts'] as StudentTabKey[]).map((tab) => {
               const isActive = studentTab === tab;
@@ -1209,6 +1274,8 @@ export default function PublicProfileScreen() {
               ))
             )}
           </View>
+        )}
+          </>
         )}
       </ScrollView>
 

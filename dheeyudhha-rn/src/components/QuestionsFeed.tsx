@@ -13,6 +13,8 @@ import QuestionCard from './QuestionCard';
 import PostCard from './PostCard';
 import { ArrowUp } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DeviceEventEmitter } from 'react-native';
 
 const PAGE_SIZE = 10;
 
@@ -32,6 +34,7 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [subjectFilter, setSubjectFilter] = useState('');
+  const [chapterFilter, setChapterFilter] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -47,7 +50,7 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
 
     try {
       // Use higher limit for feed generation to allow local pagination
-      const data = await fetchFeed({ subject: subjectFilter, limit: 40 });
+      const data = await fetchFeed({ subject: subjectFilter, chapter: chapterFilter, limit: 40 });
       
       if (silent && allData.length > 0) {
         // Background refresh: check if new questions arrived
@@ -69,11 +72,37 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
       }
       setLoadingMore(false);
     }
-  }, [subjectFilter, allData]);
+  }, [subjectFilter, chapterFilter, allData]);
+
+  const loadFiltersFromStorage = async () => {
+    try {
+      const storedSubject = await AsyncStorage.getItem('dheeyudhha_feed_subject');
+      const storedChapter = await AsyncStorage.getItem('dheeyudhha_feed_chapter');
+      if (storedSubject !== null) setSubjectFilter(storedSubject);
+      if (storedChapter !== null) setChapterFilter(storedChapter);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
+    loadFiltersFromStorage().then(() => loadFeed());
+
+    const refreshListener = DeviceEventEmitter.addListener('refresh_feed_filters', () => {
+      loadFiltersFromStorage();
+    });
+
+    return () => {
+      refreshListener.remove();
+    };
+  }, []); // Initial load and event setup
+
+  useEffect(() => {
+    // Only fetch if filters actually change and it's not the initial mount
+    // since initial mount is handled above.
+    // For simplicity, we just trigger loadFeed when filters change.
     loadFeed();
-  }, [subjectFilter]); // Re-fetch on filter change
+  }, [subjectFilter, chapterFilter]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -164,8 +193,12 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
                     return (
                       <TouchableOpacity
                         key={sub.label}
-                        onPress={() => {
-                          setSubjectFilter(isActive ? '' : sub.value);
+                        onPress={async () => {
+                          const newSub = isActive ? '' : sub.value;
+                          setSubjectFilter(newSub);
+                          setChapterFilter(''); // Reset chapter when changing subject
+                          await AsyncStorage.setItem('dheeyudhha_feed_subject', newSub);
+                          await AsyncStorage.removeItem('dheeyudhha_feed_chapter');
                           setAllData([]);
                           setVisibleCount(PAGE_SIZE);
                         }}
@@ -214,7 +247,7 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
             <View className="items-center justify-center py-20">
               <Text className="text-4xl mb-4">🔍</Text>
               <Text className="text-slate-500 dark:text-slate-400 font-bold text-center">
-                No questions found{subjectFilter ? ` for ${subjectFilter}` : ''}.
+                No questions found{subjectFilter ? ` for ${subjectFilter}` : ''}{chapterFilter ? ` - ${chapterFilter}` : ''}.
               </Text>
             </View>
           }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Image, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Image, ScrollView, Alert, Platform, DeviceEventEmitter } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Clock, Zap, ArrowLeft, Camera, Image as ImageIcon, CheckCircle2, Shield, Users, Trophy } from 'lucide-react-native';
@@ -190,6 +190,11 @@ export default function WrittenSolveClient({ question, challengeId }: { question
       if (!res.ok) throw new Error(data.error || 'Failed to self mark');
       setSelfMarked(true);
       setSelfMarkResult(data);
+
+      if (data?.streak?.streakEarnedToday) {
+        DeviceEventEmitter.emit('streak_earned', { streak: data.streak.current });
+      }
+
       // Update local status
       setExistingSubmission({ ...existingSubmission, status: 'pending_check' });
     } catch (err: any) {

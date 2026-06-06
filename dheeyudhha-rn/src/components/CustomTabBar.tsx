@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  DeviceEventEmitter,
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,7 +50,16 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
       setGoalMet(data.daily_solve_date === today && (Number(data.daily_solve_count) || 0) >= 2);
     };
     load();
-    return () => { cancelled = true; };
+
+    const sub = DeviceEventEmitter.addListener('streak_earned', (event) => {
+      setStreakCount(event.streak);
+      setGoalMet(true);
+    });
+
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
   }, []);
 
   const navigateTo = (name: string) => {
