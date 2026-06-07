@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { ChevronLeft, Plus, X, Camera, FileText, CheckCircle2, ChevronDown } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 

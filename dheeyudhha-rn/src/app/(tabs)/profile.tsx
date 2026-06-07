@@ -23,7 +23,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import PostCard from '@/components/PostCard';
 import BadgedName from '@/components/BadgedName';
 
