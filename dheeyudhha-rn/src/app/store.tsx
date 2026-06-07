@@ -15,9 +15,9 @@ interface StoreItem {
 
 const getBannerSource = (bannerUrl: string | null) => {
   if (!bannerUrl) return null;
-  if (bannerUrl.includes('cyberpunk')) return require('../../assets/images/banners/cyberpunk.png');
-  if (bannerUrl.includes('library')) return require('../../assets/images/banners/library.png');
-  if (bannerUrl.includes('galactic')) return require('../../assets/images/banners/galactic.png');
+  if (bannerUrl.includes('cyberpunk')) return require('../../assets/images/banners/cyberpunk.jpg');
+  if (bannerUrl.includes('library')) return require('../../assets/images/banners/library.jpg');
+  if (bannerUrl.includes('galactic')) return require('../../assets/images/banners/galactic.jpg');
   if (bannerUrl.startsWith('http')) return { uri: bannerUrl };
   return null;
 };
