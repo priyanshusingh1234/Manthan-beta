@@ -149,6 +149,16 @@ export default function RootLayout() {
   }, [session?.user?.id]);
 
   useEffect(() => {
+    if ((fontsLoaded || error) && initialized) {
+      // Add a tiny delay to allow router.replace to finish its transition
+      // before we drop the splash screen, preventing any flash of the wrong route.
+      setTimeout(() => {
+        SplashScreen.hideAsync().catch(() => {});
+      }, 100);
+    }
+  }, [fontsLoaded, error, initialized]);
+
+  useEffect(() => {
     if (!initialized) return;
 
     // Define routes that do not require authentication
@@ -164,10 +174,6 @@ export default function RootLayout() {
       router.replace('/');
     }
   }, [session, initialized, segments]);
-
-  if (!initialized) {
-    return null;
-  }
 
   return (
     <>
