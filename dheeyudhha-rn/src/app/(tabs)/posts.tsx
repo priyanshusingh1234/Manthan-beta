@@ -18,7 +18,15 @@ import PostCard from '@/components/PostCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { Video } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
+
+function VideoPreviewItem({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, player => {
+    player.loop = true;
+    player.play();
+  });
+  return <VideoView player={player} style={{ width: '100%', height: '100%' }} contentFit="cover" />;
+}
 
 export default function PostsScreen() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -318,14 +326,7 @@ export default function PostsScreen() {
                     {media.type === 'image' ? (
                       <Image source={{ uri: media.uri }} className="w-full h-full object-cover" />
                     ) : (
-                      <Video
-                        source={{ uri: media.uri }}
-                        style={{ width: '100%', height: '100%' }}
-                        resizeMode="cover"
-                        isMuted
-                        shouldPlay
-                        isLooping
-                      />
+                      <VideoPreviewItem uri={media.uri} />
                     )}
                     <TouchableOpacity
                       onPress={() => removeMedia(index)}
