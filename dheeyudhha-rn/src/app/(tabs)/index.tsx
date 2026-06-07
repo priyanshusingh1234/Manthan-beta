@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { Trophy, Target, Zap, Play } from 'lucide-react-native';
+import { Trophy, Target, Zap, Play, ShoppingBag } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import QuestionsFeed from '@/components/QuestionsFeed';
 import RecentDuels from '@/components/RecentDuels';
+import DailyGoalCard from '@/components/DailyGoalCard';
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -17,33 +18,17 @@ export default function FeedScreen() {
             <Text className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Welcome Back</Text>
             <Text className="text-2xl font-black text-slate-900 dark:text-slate-50">Student</Text>
           </View>
-          <View className="bg-indigo-100 dark:bg-indigo-950/40 p-2 rounded-full">
-            <Trophy size={24} color="#4f46e5" />
-          </View>
+          <TouchableOpacity 
+            onPress={() => router.push('/store' as any)}
+            className="bg-indigo-100 dark:bg-indigo-950/40 p-2.5 rounded-full border border-indigo-200/50 dark:border-indigo-900/50 active:scale-95 shadow-sm"
+          >
+            <ShoppingBag size={22} color="#4f46e5" />
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* Daily Goal Card */}
-      <View className="px-6 mb-8">
-        <View className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
-          <View className="flex-row justify-between items-center mb-4">
-            <View className="flex-row items-center gap-2">
-              <Target size={20} color="#f59e0b" />
-              <Text className="text-lg font-black text-slate-900 dark:text-slate-100">Daily Goal</Text>
-            </View>
-            <Text className="text-amber-500 font-bold">0 / 50 XP</Text>
-          </View>
-          
-          <View className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-4">
-            <View className="h-full bg-amber-500" style={{ width: '0%' }} />
-          </View>
-          
-          <TouchableOpacity className="bg-indigo-600 px-4 py-3 rounded-xl flex-row items-center justify-center gap-2 shadow-sm">
-            <Play size={16} color="white" fill="white" />
-            <Text className="text-white font-bold">Start Quick Quiz</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <DailyGoalCard />
 
       {/* Recent Duels */}
       <View className="mb-8">

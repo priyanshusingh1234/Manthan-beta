@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { Clock, Zap, CheckCircle2, XCircle, ArrowLeft, Trophy, Users, Star, Lightbulb, Send } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
+import ConfettiCannon from 'react-native-confetti-cannon';
+import { Audio } from 'expo-av';
 import ChallengeFriendModal from '@/components/ChallengeFriendModal';
 import { getRandomMessage } from '@/lib/feedbackMessages';
 import MatchArena from '@/components/MatchArena';
@@ -157,6 +159,10 @@ export default function SolveQuestionScreen() {
 
       if (data.isCorrect) {
         Vibration.vibrate([0, 100, 50, 100]); // Happy vibration
+        try {
+          const { sound } = await Audio.Sound.createAsync(require('../../../assets/sounds/right.mp3'));
+          await sound.playAsync();
+        } catch (e) { console.log('Sound error', e); }
       } else {
         Vibration.vibrate(300); // Heavy buzz
         // Automatically open the Co-op (Ask for Help) modal instantly on wrong answer
@@ -357,6 +363,9 @@ export default function SolveQuestionScreen() {
   if (result) {
     return (
       <View className="flex-1 bg-slate-50 dark:bg-slate-950 p-6" style={{ paddingTop: insets.top }}>
+        {result.isCorrect && (
+          <ConfettiCannon count={150} origin={{ x: -10, y: 0 }} fallSpeed={2500} fadeOut />
+        )}
         <ScrollView contentContainerStyle={{ paddingBottom: 60, alignItems: 'center' }}>
           {result.isCorrect ? (
             <View className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full items-center justify-center mb-4 mt-6">

@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, MessageSquare, PlaySquare, MessageCircle, Settings, Flame } from 'lucide-react-native';
+import { Home, MessageSquare, Trophy, MessageCircle, Settings, Flame } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
@@ -18,11 +18,11 @@ const TAB_HEIGHT = 62;
 const CENTER_RISE = 24; // px the center button floats above the nav bar
 
 const TAB_CONFIG = [
-  { name: 'index',    icon: Home,          label: 'Home' },
-  { name: 'posts',    icon: MessageSquare, label: 'Community' },
-  { name: 'clips',    icon: PlaySquare,    label: 'Clips', isCenter: true },
-  { name: 'chat',     icon: MessageCircle, label: 'Chat' },
-  { name: 'settings', icon: Settings,      label: 'Settings' },
+  { name: 'index',       icon: Home,          label: 'Home' },
+  { name: 'posts',       icon: MessageSquare, label: 'Community' },
+  { name: 'leaderboard', icon: Trophy,        label: 'League', isCenter: true },
+  { name: 'chat',        icon: MessageCircle, label: 'Chat' },
+  { name: 'settings',    icon: Settings,      label: 'Settings' },
 ];
 
 export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
@@ -80,8 +80,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 
   const activeRouteName = state.routes[state.index]?.name;
 
-  // Hide the tab bar entirely on the Clips screen (fullscreen TikTok-style)
-  if (activeRouteName === 'clips') return null;
+  // Removed clips tab hiding logic
 
   return (
     <View

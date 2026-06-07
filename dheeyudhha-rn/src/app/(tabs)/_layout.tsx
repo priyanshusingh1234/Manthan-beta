@@ -17,11 +17,10 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index"    options={{ title: 'Home' }} />
       <Tabs.Screen name="posts"    options={{ title: 'Community' }} />
-      <Tabs.Screen name="clips"    options={{ title: 'Clips', headerShown: false }} />
+      <Tabs.Screen name="leaderboard" options={{ title: 'League' }} />
       <Tabs.Screen name="chat"     options={{ title: 'Chat' }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
       {/* Hidden tabs so they retain the layout's header and bottom nav */}
-      <Tabs.Screen name="leaderboard" options={{ href: null, title: 'Leaderboard' }} />
       <Tabs.Screen name="profile" options={{ href: null, title: 'Profile' }} />
       <Tabs.Screen name="arena" options={{ href: null, title: 'Arena' }} />
       <Tabs.Screen name="checker-feed" options={{ href: null, title: 'Checker Feed' }} />

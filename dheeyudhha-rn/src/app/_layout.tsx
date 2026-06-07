@@ -43,10 +43,10 @@ export default function RootLayout() {
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
-    if (fontsLoaded || error) {
+    if ((fontsLoaded || error) && initialized) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded, error]);
+  }, [fontsLoaded, error, initialized]);
 
   useEffect(() => {
     // Load theme from AsyncStorage on startup
@@ -153,16 +153,21 @@ export default function RootLayout() {
 
     // Define routes that do not require authentication
     const unprotectedRoutes = ['login', 'signup', 'index'];
-    const isUnprotected = unprotectedRoutes.includes(segments[0] as string);
+    const currentSegment = segments[0] || 'index';
+    const isUnprotected = unprotectedRoutes.includes(currentSegment);
 
-    if (session && isUnprotected && segments[0] !== 'index') {
-      // User is logged in but on login/signup page, redirect them to home
+    if (session && isUnprotected) {
+      // User is logged in but on an unprotected page (login, signup, or landing page), redirect to home
       router.replace('/(tabs)');
     } else if (!session && !isUnprotected) {
-      // User is not logged in but trying to access protected routes, redirect to login
-      router.replace('/login');
+      // User is not logged in but trying to access protected routes, redirect to landing page
+      router.replace('/');
     }
   }, [session, initialized, segments]);
+
+  if (!initialized) {
+    return null;
+  }
 
   return (
     <>

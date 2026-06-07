@@ -34,6 +34,8 @@ import {
   Copy,
   Ban,
   MessageSquare,
+  Phone,
+  Video,
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import BadgedName from '@/components/BadgedName';
@@ -139,6 +141,33 @@ const MessageItem = memo(({
       },
     })
   ).current;
+
+  // Call message
+  if (msg.content.startsWith('__CALL_ENDED__') || msg.content.startsWith('__CALL_STARTED__')) {
+    const isStarted = msg.content.startsWith('__CALL_STARTED__');
+    const type = msg.content.split(':')[1] || 'voice';
+    const text = isStarted ? `${type} call started` : (msg.content.replace('__CALL_ENDED__:', '').trim() || 'Call ended');
+    
+    return (
+      <View className="w-full mb-1">
+        {showDate && (
+          <View className="items-center my-3">
+            <View className="px-3 py-1 bg-slate-200 dark:bg-slate-800 rounded-lg">
+              <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                {formatDateBanner(msgDate)}
+              </Text>
+            </View>
+          </View>
+        )}
+        <View className="items-center my-2 px-4">
+          <View className="bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-1.5 flex-row items-center gap-1.5">
+            {type === 'video' ? <Video size={12} color={isDark ? '#94a3b8' : '#64748b'} /> : <Phone size={12} color={isDark ? '#94a3b8' : '#64748b'} />}
+            <Text className="text-slate-500 dark:text-slate-400 text-xs font-semibold capitalize">{text}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   let rawContent = msg.content;
   let meta: any = {};
@@ -547,7 +576,7 @@ export default function ChatRoomScreen() {
           formData.append('', { uri, name: fileName, type: mimeType } as any);
         }
 
-        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/avatars/${fileName}`, {
+        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/chat-images/${fileName}`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${session.access_token}`, apikey: SUPABASE_ANON_KEY, 'x-upsert': 'true' },
           body: formData,
@@ -555,7 +584,7 @@ export default function ChatRoomScreen() {
 
         if (!uploadRes.ok) throw new Error('Upload failed');
 
-        const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/avatars/${fileName}`;
+        const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/chat-images/${fileName}`;
 
         await supabase.from('chat_messages').insert({
           room_id: roomId,
@@ -799,7 +828,10 @@ export default function ChatRoomScreen() {
 
         {/* Input Area */}
         {roomStatus?.status === 'pending' ? (
-          <View className="bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800/60 px-4 py-6 pb-8 z-20">
+          <View 
+            className="bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800/60 px-4 pt-6 z-20"
+            style={{ paddingBottom: Math.max(insets.bottom, 20) }}
+          >
             {roomStatus.created_by === user?.id ? (
               <View className="items-center">
                 <Text className="font-bold text-slate-900 dark:text-white mb-1 text-lg">Message Request Sent</Text>
@@ -839,7 +871,10 @@ export default function ChatRoomScreen() {
             )}
           </View>
         ) : (
-          <View className="bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800/60 px-3 py-2 pb-5 z-20">
+          <View 
+            className="bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800/60 px-3 pt-2 z-20"
+            style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+          >
             {replyingTo && (
             <View className="mb-2 bg-slate-100 dark:bg-slate-800 rounded-xl p-3 flex-row justify-between items-center border-l-4 border-indigo-500">
               <View className="flex-1">

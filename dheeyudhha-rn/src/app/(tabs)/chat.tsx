@@ -66,8 +66,15 @@ function formatPreview(content: string, type?: string) {
     text = text.split('|||META|||')[0];
   }
   
-  if (type === 'image' || text.match(/\.(jpg|jpeg|png|webp|gif|avif)($|\?)/i)) return '📷 Photo';
-  if (text.startsWith('__CALL_ENDED__')) return '📞 Call ended';
+  if (type === 'image' || type === 'image_once' || text.match(/\.(jpg|jpeg|png|webp|gif|avif)($|\?)/i)) return '📷 Photo';
+  if (text.startsWith('__CALL_ENDED__')) {
+    const isDeclined = text.includes('declined') || text.includes('Declined');
+    return isDeclined ? '📞 Call declined' : '📞 Call ended';
+  }
+  if (text.startsWith('__CALL_STARTED__')) {
+    const callType = text.split(':')[1] || 'voice';
+    return callType === 'video' ? '📹 Video call started' : '📞 Voice call started';
+  }
   if (text.startsWith('> Replying to **')) {
     const parts = text.split('\n\n');
     const replyText = parts.slice(1).join(' ').trim();

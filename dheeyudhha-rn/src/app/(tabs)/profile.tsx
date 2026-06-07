@@ -23,6 +23,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import PostCard from '@/components/PostCard';
 import BadgedName from '@/components/BadgedName';
 
@@ -38,6 +39,16 @@ function getStoragePath(url: string, prefix: 'avatars' | 'banners'): string | nu
   if (idx === -1) return null;
   return url.slice(idx + 1).split('?')[0];
 }
+
+const getBannerSource = (bannerUrl: string | null) => {
+  if (!bannerUrl) return null;
+  if (bannerUrl.includes('cyberpunk')) return require('../../../assets/images/banners/cyberpunk.png');
+  if (bannerUrl.includes('library')) return require('../../../assets/images/banners/library.png');
+  if (bannerUrl.includes('galactic')) return require('../../../assets/images/banners/galactic.png');
+  // Handle custom uploaded full URLs
+  if (bannerUrl.startsWith('http')) return { uri: bannerUrl };
+  return null;
+};
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -170,7 +181,7 @@ export default function ProfileScreen() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.replace('/login' as any);
+    router.replace('/' as any);
   };
 
   // ── Image Picker with native crop + compression ──────────────────────────
@@ -228,36 +239,35 @@ export default function ProfileScreen() {
     folder: 'avatars' | 'banners',
     token: string
   ): Promise<string | null> => {
-    const path = `${folder}/${userId}/${info.name}`;
-    const formData = new FormData();
-    
-    if (Platform.OS === 'web') {
-      const response = await fetch(info.uri);
-      const blob = await response.blob();
-      formData.append('', blob, info.name);
-    } else {
-      formData.append('', { uri: info.uri, type: info.type, name: info.name } as any);
-    }
-    
-    const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-    const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+    try {
+      const path = `${folder}/${userId}/${info.name}`;
+      
+      const res = await FileSystem.uploadAsync(
+        `${API_URL}/api/profile/upload`,
+        info.uri,
+        {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          fieldName: 'file',
+          headers: { Authorization: `Bearer ${token}` },
+          parameters: {
+            bucket: 'public-images',
+            path: path,
+          },
+        }
+      );
 
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/public-images/${path}`, {
-      method: 'POST',
-      headers: { 
-        Authorization: `Bearer ${token}`,
-        apikey: SUPABASE_ANON_KEY,
-        'x-upsert': 'true'
-      },
-      body: formData,
-    });
-    
-    if (!res.ok) { 
-      console.error('Upload failed:', await res.text()); 
-      return null; 
+      const body = JSON.parse(res.body);
+      if (res.status !== 200) { 
+        console.error('Upload failed:', body.error); 
+        return null; 
+      }
+      
+      return body.publicUrl;
+    } catch (e) {
+      console.error('Upload error:', e);
+      return null;
     }
-    
-    return `${SUPABASE_URL}/storage/v1/object/public/public-images/${path}`;
   };
 
   // ── Delete old image from Supabase storage ───────────────────────────────
@@ -437,7 +447,7 @@ export default function ProfileScreen() {
         {/* Banner */}
         <View className="h-36 relative overflow-hidden">
           {profile.banner_url ? (
-            <Image source={{ uri: profile.banner_url }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
+            <Image source={getBannerSource(profile.banner_url)} className="absolute inset-0 w-full h-full" resizeMode="cover" />
           ) : (
             <View className="absolute inset-0" style={{ backgroundColor: '#3730a3' }} />
           )}
@@ -450,7 +460,16 @@ export default function ProfileScreen() {
             {/* Avatar Row */}
             <View className="flex-row items-end justify-between -mt-12 mb-3">
               <View className="relative">
-                <View className="w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-900 shadow-lg justify-center items-center">
+                <View 
+                  className={`w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 ${profile.cosmetics?.includes('avatar_glow') ? 'border-indigo-400' : 'border-white dark:border-slate-900'} justify-center items-center`}
+                  style={profile.cosmetics?.includes('avatar_glow') ? {
+                    shadowColor: '#6366f1',
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.8,
+                    shadowRadius: 15,
+                    elevation: 10,
+                  } : { shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}
+                >
                   {profile.avatar_url ? (
                     <Image source={{ uri: profile.avatar_url }} className="w-full h-full" resizeMode="cover" />
                   ) : (

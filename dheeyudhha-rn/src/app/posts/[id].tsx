@@ -9,7 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  Keyboard
+  Keyboard,
+  Modal
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
@@ -33,6 +34,7 @@ export default function SinglePostScreen() {
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -238,8 +240,8 @@ export default function SinglePostScreen() {
   return (
     <KeyboardAvoidingView 
       className="flex-1 bg-white dark:bg-slate-950" 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 25}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
     >
       <FlatList
         data={comments}
@@ -251,6 +253,7 @@ export default function SinglePostScreen() {
               post={post} 
               currentUserId={currentUser?.id || null} 
               isSinglePost={true} 
+              onImagePress={(uri) => setFullscreenImage(uri)}
             />
             <View className="h-2 bg-slate-50 dark:bg-slate-900" />
             {comments.length === 0 && !loading && (
@@ -321,6 +324,16 @@ export default function SinglePostScreen() {
           </View>
         </View>
       )}
+
+      {/* Fullscreen Image Modal */}
+      <Modal visible={!!fullscreenImage} transparent animationType="fade" onRequestClose={() => setFullscreenImage(null)}>
+        <View className="flex-1 bg-black justify-center items-center">
+          <TouchableOpacity className="absolute top-12 right-6 z-50 p-2 bg-white/20 rounded-full" onPress={() => setFullscreenImage(null)}>
+            <X size={24} color="#fff" />
+          </TouchableOpacity>
+          {fullscreenImage && <Image source={{ uri: fullscreenImage }} style={{ width: '100%', height: '80%' }} resizeMode="contain" />}
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

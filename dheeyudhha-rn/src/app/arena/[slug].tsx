@@ -186,15 +186,10 @@ function GauntletLeaderboard({ slug, isDark }: { slug: string; isDark: boolean }
   useEffect(() => {
     (async () => {
       try {
-        // Direct Supabase query — join test_results with profiles
-        const { data } = await supabase
-          .from('test_results')
-          .select('score, max_score, accuracy, time_taken, user_id, profiles(full_name, username, avatar_url)')
-          .eq('test_id', slug)
-          .order('score', { ascending: false })
-          .order('time_taken', { ascending: true })
-          .limit(20);
-        setEntries(data || []);
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
+        const res = await fetch(`${API_URL}/api/test/leaderboard?testId=${slug}`);
+        const data = await res.json();
+        setEntries(data.leaderboard || []);
       } catch (e) {
         console.error('Leaderboard error', e);
       } finally {
@@ -213,11 +208,10 @@ function GauntletLeaderboard({ slug, isDark }: { slug: string; isDark: boolean }
   return (
     <View className="gap-2">
       {entries.map((e, i) => {
-        const profile = (e.profiles as any) || {};
-        const name = profile.full_name || profile.username || 'Anonymous';
-        const pct = e.max_score > 0 ? Math.round((e.score / e.max_score) * 100) : 0;
-        const mins = Math.floor((e.time_taken || 0) / 60);
-        const secs = (e.time_taken || 0) % 60;
+        const name = e.name || 'Anonymous';
+        const pct = e.accuracy || 0;
+        const mins = Math.floor((e.timeTaken || 0) / 60);
+        const secs = (e.timeTaken || 0) % 60;
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
 
         return (
@@ -228,7 +222,7 @@ function GauntletLeaderboard({ slug, isDark }: { slug: string; isDark: boolean }
             <View className="w-8 h-8 rounded-xl bg-white dark:bg-slate-700 items-center justify-center flex-shrink-0">
               {medal
                 ? <Text style={{ fontSize: 16 }}>{medal}</Text>
-                : <Text className="font-black text-xs text-slate-500">#{i + 1}</Text>
+                : <Text className="font-black text-xs text-slate-500">#{e.rank || (i + 1)}</Text>
               }
             </View>
             <View className="flex-1">
@@ -690,8 +684,8 @@ export default function ArenaGauntletScreen() {
           {submitting
             ? <ActivityIndicator size="small" color="#fff" />
             : <Text className="text-white font-black text-xs uppercase tracking-widest">
-                Submit ({answeredCount}/{questions.length})
-              </Text>
+              Submit ({answeredCount}/{questions.length})
+            </Text>
           }
         </TouchableOpacity>
       </View>

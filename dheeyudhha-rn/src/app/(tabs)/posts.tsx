@@ -12,10 +12,13 @@ import {
   Platform,
   Keyboard
 } from 'react-native';
-import { Sparkles, User, Send } from 'lucide-react-native';
+import { Sparkles, User, Send, Image as ImageIcon, X, Video as VideoIcon } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import { Video } from 'expo-av';
 
 export default function PostsScreen() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -26,8 +29,45 @@ export default function PostsScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [content, setContent] = useState('');
   
+  const [mediaFiles, setMediaFiles] = useState<{ uri: string, type: 'image' | 'video' }[]>([]);
+  const CATEGORIES = ['education', 'lifestyle', 'news', 'funny', 'general'];
+  const [selectedCategory, setSelectedCategory] = useState<string>('general');
+
   const [currentUser, setCurrentUser] = useState<any>(null);
   const insets = useSafeAreaInsets();
+
+  const handlePickMedia = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsEditing: true,
+      quality: 0.5,
+      videoMaxDuration: 30,
+    });
+    if (!result.canceled && result.assets[0].uri) {
+      const asset = result.assets[0];
+      if (asset.type === 'video' && asset.duration && asset.duration > 31000) {
+        alert('Video exceeds 30 seconds limit.');
+        return;
+      }
+      if (asset.type === 'video') {
+         setMediaFiles([{ uri: asset.uri, type: 'video' }]);
+      } else {
+         if (mediaFiles.some(m => m.type === 'video')) {
+            alert('Cannot mix images and videos.');
+            return;
+         }
+         if (mediaFiles.length >= 5) {
+            alert('Maximum 5 images allowed.');
+            return;
+         }
+         setMediaFiles(prev => [...prev, { uri: asset.uri, type: 'image' }]);
+      }
+    }
+  };
+
+  const removeMedia = (index: number) => {
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   const fetchUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -115,20 +155,97 @@ export default function PostsScreen() {
   };
 
   const handlePostSubmit = async () => {
-    if (!content.trim() || !currentUser || submitting) return;
+    if (!content.trim() && mediaFiles.length === 0) return;
+    if (!currentUser || submitting) return;
     
     setSubmitting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+      if (!session) throw new Error('Not authenticated');
+
+      let imageUrl = null;
+      let imageUrls: string[] = [];
+      let videoUrl = null;
+      let videoThumbnail = null;
+
+      // Upload media
+      for (const media of mediaFiles) {
+        if (media.type === 'image') {
+          const res = await FileSystem.uploadAsync(
+            `${process.env.EXPO_PUBLIC_API_URL}/api/posts/upload`,
+            media.uri,
+            {
+              httpMethod: 'POST',
+              uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+              fieldName: 'file',
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            }
+          );
+          if (res.status >= 200 && res.status < 300) {
+            const data = JSON.parse(res.body);
+            if (data.url) imageUrls.push(data.url);
+          } else {
+            throw new Error('Failed to upload image');
+          }
+        } else if (media.type === 'video') {
+          const signRes = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/clips/sign`, {
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          });
+          if (!signRes.ok) throw new Error('Failed to get video upload signature');
+          const signData = await signRes.json();
+
+          const res = await FileSystem.uploadAsync(
+            `https://api.cloudinary.com/v1_1/${signData.cloudName}/video/upload`,
+            media.uri,
+            {
+              httpMethod: 'POST',
+              uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+              fieldName: 'file',
+              parameters: {
+                api_key: signData.apiKey,
+                timestamp: String(signData.timestamp),
+                signature: signData.signature,
+                folder: signData.folder,
+                eager: signData.eager,
+                eager_async: signData.eagerAsync ? 'true' : 'false'
+              }
+            }
+          );
+          
+          if (res.status >= 200 && res.status < 300) {
+            const data = JSON.parse(res.body);
+            let finalVideoUrl = data.secure_url;
+            if (data.eager && data.eager.length > 0) {
+                finalVideoUrl = data.eager[0].secure_url;
+            }
+            videoUrl = finalVideoUrl;
+            videoThumbnail = finalVideoUrl
+                .replace(/\.[^.]+$/, '.jpg')
+                .replace('/video/upload/', '/video/upload/so_0/');
+          } else {
+            throw new Error('Failed to upload video');
+          }
+        }
+      }
+
+      if (imageUrls.length > 0) {
+        imageUrl = imageUrls[0];
+      }
+
+      const finalContent = (content.trim() + (videoUrl && selectedCategory !== 'general' ? ` #${selectedCategory}` : '')).trim();
+
       const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/posts`, {
         method: 'POST',
         headers: {
-          'Authorization': session ? `Bearer ${session.access_token}` : '',
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          content: content.trim()
+          content: finalContent,
+          imageUrl,
+          imageUrls,
+          videoUrl,
+          videoThumbnail
         })
       });
 
@@ -146,10 +263,12 @@ export default function PostsScreen() {
 
       setPosts(prev => [formattedPost, ...prev]);
       setContent('');
+      setMediaFiles([]);
+      setSelectedCategory('general');
       Keyboard.dismiss();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error posting:', e);
-      alert('Failed to post. Please try again.');
+      alert(e.message || 'Failed to post. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -191,13 +310,75 @@ export default function PostsScreen() {
               editable={!submitting}
             />
 
+            {/* Media Previews */}
+            {mediaFiles.length > 0 && (
+              <View className="flex-row flex-wrap mt-2 gap-2">
+                {mediaFiles.map((media, index) => (
+                  <View key={index} className="relative rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800" style={{ width: 100, height: 100 }}>
+                    {media.type === 'image' ? (
+                      <Image source={{ uri: media.uri }} className="w-full h-full object-cover" />
+                    ) : (
+                      <Video
+                        source={{ uri: media.uri }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                        isMuted
+                        shouldPlay
+                        isLooping
+                      />
+                    )}
+                    <TouchableOpacity
+                      onPress={() => removeMedia(index)}
+                      className="absolute top-1 right-1 bg-black/60 rounded-full p-1"
+                    >
+                      <X size={12} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Video Categories */}
+            {mediaFiles.some(m => m.type === 'video') && !submitting && (
+              <View className="mt-3">
+                <Text className="text-xs font-bold text-slate-500 mb-2">Category for this clip:</Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {CATEGORIES.map(cat => (
+                    <TouchableOpacity
+                      key={cat}
+                      onPress={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1.5 rounded-full ${
+                        selectedCategory === cat ? 'bg-indigo-600' : 'bg-slate-100 dark:bg-slate-800'
+                      }`}
+                    >
+                      <Text className={`text-[11px] font-bold ${
+                        selectedCategory === cat ? 'text-white' : 'text-slate-600 dark:text-slate-400'
+                      }`}>
+                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
             {/* Post Button Area */}
-            <View className="flex-row justify-end mt-2 pt-2 border-t border-slate-50">
+            <View className="flex-row justify-between items-center mt-2 pt-2 border-t border-slate-50 dark:border-slate-800">
+              {/* Media Picker Button */}
+              <TouchableOpacity
+                onPress={handlePickMedia}
+                disabled={submitting}
+                className="flex-row items-center gap-4 px-2 py-1"
+              >
+                <ImageIcon size={20} color="#6366f1" />
+                <VideoIcon size={20} color="#a855f7" />
+              </TouchableOpacity>
+
               <TouchableOpacity
                 onPress={handlePostSubmit}
-                disabled={!content.trim() || submitting}
+                disabled={(!content.trim() && mediaFiles.length === 0) || submitting}
                 className={`flex-row items-center px-4 py-2 rounded-full ${
-                  content.trim() && !submitting ? 'bg-indigo-600' : 'bg-indigo-200'
+                  (content.trim() || mediaFiles.length > 0) && !submitting ? 'bg-indigo-600' : 'bg-indigo-200'
                 }`}
               >
                 {submitting ? (

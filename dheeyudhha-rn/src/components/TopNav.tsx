@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, Platform, Image } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Flame, Trophy, BookOpen, Swords, Zap, Search, PlaySquare, Compass, Shield, CheckSquare, HelpCircle, Mail, User, Lock } from 'lucide-react-native';
+import { Flame, Trophy, BookOpen, Swords, Zap, Search, PlaySquare, Compass, Shield, CheckSquare, HelpCircle, Mail, User, Lock, PlusCircle } from 'lucide-react-native';
 import NotificationBell from '@/components/ui/NotificationBell';
 import { supabase } from '@/lib/supabaseClient';
 import { useColorScheme } from 'nativewind';
@@ -28,6 +28,7 @@ export default function TopNav() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isTeacher, setIsTeacher] = useState<boolean>(false);
   const { colorScheme } = useColorScheme();
   
   // Safe area padding for the status bar
@@ -40,13 +41,14 @@ export default function TopNav() {
       if (!session?.user) return;
       const { data: profile } = await supabase
         .from('profiles')
-        .select('avatar_url')
+        .select('avatar_url, is_teacher')
         .eq('id', session.user.id)
         .single();
       const url = profile?.avatar_url || session.user.user_metadata?.avatar_url;
       if (url && !url.includes('googleusercontent.com')) {
         setAvatarUrl(url);
       }
+      setIsTeacher(profile?.is_teacher || session.user.user_metadata?.isTeacher || false);
     };
     load();
   }, []);
@@ -63,6 +65,14 @@ export default function TopNav() {
         </View>
 
         <View className="flex-row items-center gap-3">
+          {isTeacher && (
+            <TouchableOpacity 
+              onPress={() => router.push('/create-question' as any)}
+              className="bg-indigo-100 dark:bg-indigo-950/40 p-1.5 rounded-full border border-indigo-200/50 dark:border-indigo-900/50 active:scale-95 shadow-sm"
+            >
+              <PlusCircle size={20} color="#4f46e5" />
+            </TouchableOpacity>
+          )}
           <NotificationBell isMobile={true} />
           {/* Profile Avatar Button */}
           <TouchableOpacity
