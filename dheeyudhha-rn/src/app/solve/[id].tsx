@@ -6,11 +6,11 @@ import { Clock, Zap, CheckCircle2, XCircle, ArrowLeft, Trophy, Users, Star, Ligh
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import ConfettiCannon from 'react-native-confetti-cannon';
-import { Audio } from 'expo-av';
 import ChallengeFriendModal from '@/components/ChallengeFriendModal';
 import { getRandomMessage } from '@/lib/feedbackMessages';
 import MatchArena from '@/components/MatchArena';
 import BadgedName from '@/components/BadgedName';
+import { useCorrectSound } from '@/hooks/useCorrectSound';
 
 export default function SolveQuestionScreen() {
   const { id, challenge } = useLocalSearchParams<{ id: string; challenge?: string }>();
@@ -29,6 +29,7 @@ export default function SolveQuestionScreen() {
   const [recoveredViaCoop, setRecoveredViaCoop] = useState(false);
   const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const playCorrectSound = useCorrectSound();
   
   // Rich features
   const [purchasedHint, setPurchasedHint] = useState<string | null>(null);
@@ -160,8 +161,7 @@ export default function SolveQuestionScreen() {
       if (data.isCorrect) {
         Vibration.vibrate([0, 100, 50, 100]); // Happy vibration
         try {
-          const { sound } = await Audio.Sound.createAsync(require('../../../assets/sounds/right.mp3'));
-          await sound.playAsync();
+          playCorrectSound();
         } catch (e) { console.log('Sound error', e); }
       } else {
         Vibration.vibrate(300); // Heavy buzz

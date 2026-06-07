@@ -1,27 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Audio } from 'expo-av';
+import { useAudioPlayer } from 'expo-audio';
 
 export function useCorrectSound() {
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const player = useAudioPlayer(require('../../assets/sounds/right.mp3'));
 
-  useEffect(() => {
-    return sound
-      ? () => {
-          sound.unloadAsync();
-        }
-      : undefined;
-  }, [sound]);
-
-  const play = async () => {
-    try {
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        require('../../assets/sounds/right.mp3')
-      );
-      setSound(newSound);
-      await newSound.playAsync();
-    } catch (e) {
-      console.warn('[useCorrectSound] play error:', e);
-    }
+  const play = () => {
+    player.play();
   };
 
   return play;
