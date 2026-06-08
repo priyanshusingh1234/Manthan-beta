@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import ChallengeFriendModal from '@/components/ChallengeFriendModal';
+import WrittenSolveClient from '@/components/WrittenSolveClient';
 import { getRandomMessage } from '@/lib/feedbackMessages';
 import MatchArena from '@/components/MatchArena';
 import BadgedName from '@/components/BadgedName';
@@ -41,7 +42,9 @@ export default function SolveQuestionScreen() {
 
   // Helper to get image public URL
   const imageUrl = question?.image_url 
-    ? `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${question.image_url}`
+    ? question.image_url.startsWith('/') 
+      ? `${process.env.EXPO_PUBLIC_API_URL}${question.image_url}`
+      : `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${question.image_url}`
     : null;
 
   useEffect(() => {
@@ -124,7 +127,7 @@ export default function SolveQuestionScreen() {
       const token = session?.access_token;
       
       // Update this URL to point to your live Next.js backend!
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
 
       const res = await fetch(`${API_URL}/api/solve`, {
         method: "POST",
@@ -152,6 +155,9 @@ export default function SolveQuestionScreen() {
       // Attach funny message locally (same as web SolveQuestionClient.tsx)
       data.funnyMessage = getRandomMessage(data.isCorrect);
       setResult(data);
+
+      // Emit question solved event (used to update the feed immediately)
+      DeviceEventEmitter.emit('question_solved', { questionId: question.id });
 
       // 🔥 Fire global streak toast when daily goal is completed
       if (data?.streak?.streakEarnedToday) {
@@ -213,7 +219,7 @@ export default function SolveQuestionScreen() {
     setIsPurchasingHint(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
       const res = await fetch(`${API_URL}/api/solve/hint`, {
         method: "POST",
         headers: {
@@ -239,7 +245,7 @@ export default function SolveQuestionScreen() {
     if (rating === 0 || reviewSubmitted) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta.vercel.app';
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
       const res = await fetch(`${API_URL}/api/reviews`, {
         method: "POST",
         headers: {
@@ -277,6 +283,10 @@ export default function SolveQuestionScreen() {
         <Text className="text-slate-500 font-bold">Question not found</Text>
       </View>
     );
+  }
+
+  if (question && (!question.options || question.options.length === 0) && question.question_type !== 'match') {
+    return <WrittenSolveClient question={question} challengeId={challenge as string | undefined} />;
   }
 
   // Already Attempted UI

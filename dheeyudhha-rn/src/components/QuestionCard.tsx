@@ -30,7 +30,9 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
   const teacherUsername = q?.profiles?.username;
 
   const imageUrl = q?.image_url 
-    ? `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${q.image_url}`
+    ? q.image_url.startsWith('/') 
+      ? `${process.env.EXPO_PUBLIC_API_URL}${q.image_url}`
+      : `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${q.image_url}`
     : null;
 
   const HeaderWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -53,12 +55,21 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
   };
 
   const showDuelButton = currentUserId && !isTeacher && Array.isArray(q.options) && q.options.length > 0 && !q.hasAttempted;
+  const isVip = q?.is_vip;
 
   return (
     <>
       <View 
-        className="mx-3 mb-4 bg-white dark:bg-slate-900 rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800/80 p-4"
-        style={{ shadowColor: '#6366f1', shadowOpacity: 0.04, shadowRadius: 15, shadowOffset: { width: 0, height: 4 }, elevation: 2 }}
+        className={
+          isVip
+            ? "mx-3 mb-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/20 rounded-[24px] shadow-sm border border-amber-300/60 dark:border-amber-700/50 p-4"
+            : "mx-3 mb-4 bg-white dark:bg-slate-900 rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800/80 p-4"
+        }
+        style={
+          isVip 
+            ? { shadowColor: '#f59e0b', shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 6 }, elevation: 5 }
+            : { shadowColor: '#6366f1', shadowOpacity: 0.04, shadowRadius: 15, shadowOffset: { width: 0, height: 4 }, elevation: 2 }
+        }
       >
         {/* Header */}
         <HeaderWrapper>
@@ -91,8 +102,8 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
           {/* Subtle Metadata Row */}
           <View className="flex-row items-center flex-wrap gap-2 mb-2.5 mt-1">
             {q?._feedLabel && (
-              <View className="bg-indigo-50 dark:bg-indigo-900/40 rounded-md px-1.5 py-0.5 flex-row items-center">
-                <Text className="text-indigo-600 dark:text-indigo-400 text-[9px] font-bold tracking-widest uppercase">
+              <View className={`${isVip ? 'bg-amber-100 dark:bg-amber-500/20 border border-amber-300 dark:border-amber-500/50' : 'bg-indigo-50 dark:bg-indigo-900/40'} rounded-md px-1.5 py-0.5 flex-row items-center`}>
+                <Text className={`${isVip ? 'text-amber-700 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'} text-[9px] font-bold tracking-widest uppercase`}>
                   {q._feedLabel}
                 </Text>
               </View>

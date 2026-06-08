@@ -15,6 +15,7 @@ import { ArrowUp } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DeviceEventEmitter } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 
 const PAGE_SIZE = 10;
 
@@ -40,11 +41,15 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [freshItems, setFreshItems] = useState<any[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  
+  const allDataRef = useRef<any[]>([]);
+  allDataRef.current = allData;
+  const isMountedRef = useRef(false);
 
   const loadFeed = useCallback(async (isRefresh = false, silent = false) => {
     if (isRefresh && !silent) {
       setRefreshing(true);
-    } else if (!silent && allData.length === 0) {
+    } else if (!silent && allDataRef.current.length === 0) {
       setLoading(true);
     }
 
@@ -52,9 +57,10 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
       // Use higher limit for feed generation to allow local pagination
       const data = await fetchFeed({ subject: subjectFilter, chapter: chapterFilter, limit: 40 });
       
-      if (silent && allData.length > 0) {
+      const currentAllData = allDataRef.current;
+      if (silent && currentAllData.length > 0) {
         // Background refresh: check if new questions arrived
-        const existingIds = new Set(allData.map(q => q.id));
+        const existingIds = new Set(currentAllData.map(q => q.id));
         const newItems = data.filter(q => !existingIds.has(q.id));
         if (newItems.length > 0) {
           setFreshItems(data); // store the full new feed to apply later
@@ -72,7 +78,7 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
       }
       setLoadingMore(false);
     }
-  }, [subjectFilter, chapterFilter, allData]);
+  }, [subjectFilter, chapterFilter]);
 
   const loadFiltersFromStorage = async () => {
     try {
@@ -92,8 +98,13 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
       loadFiltersFromStorage();
     });
 
+    const solvedListener = DeviceEventEmitter.addListener('question_solved', ({ questionId }) => {
+      setAllData((prev) => prev.filter((q) => String(q.id) !== String(questionId)));
+    });
+
     return () => {
       refreshListener.remove();
+      solvedListener.remove();
     };
   }, []); // Initial load and event setup
 
@@ -103,6 +114,16 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
     // For simplicity, we just trigger loadFeed when filters change.
     loadFeed();
   }, [subjectFilter, chapterFilter]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isMountedRef.current) {
+        loadFeed(false, false);
+      } else {
+        isMountedRef.current = true;
+      }
+    }, [loadFeed])
+  );
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {

@@ -38,13 +38,13 @@ export async function POST(req: Request) {
 
         // Try to delete the file from storage
         // Content is the public URL, we need to extract the path
-        // e.g. https://.../storage/v1/object/public/avatars/avatars/chat_...
-        // The bucket is 'avatars'
+        // e.g. https://.../storage/v1/object/public/chat-images/chat_...
+        // The bucket is 'chat-images'
         try {
-            const urlParts = msg.content.split('/public/avatars/');
+            const urlParts = msg.content.split('/public/chat-images/');
             if (urlParts.length > 1) {
                 const path = urlParts[1];
-                await supabaseAdmin.storage.from('avatars').remove([path]);
+                await supabaseAdmin.storage.from('chat-images').remove([path]);
             }
         } catch (storageErr) {
             console.error('Failed to delete storage file:', storageErr);

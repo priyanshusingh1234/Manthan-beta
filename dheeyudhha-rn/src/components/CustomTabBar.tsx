@@ -20,7 +20,7 @@ const CENTER_RISE = 24; // px the center button floats above the nav bar
 const TAB_CONFIG = [
   { name: 'index',       icon: Home,          label: 'Home' },
   { name: 'posts',       icon: MessageSquare, label: 'Community' },
-  { name: 'leaderboard', icon: Trophy,        label: 'League', isCenter: true },
+  { name: 'league',      icon: Trophy,        label: 'League', isCenter: true },
   { name: 'chat',        icon: MessageCircle, label: 'Chat' },
   { name: 'settings',    icon: Settings,      label: 'Settings' },
 ];
@@ -63,6 +63,10 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   }, []);
 
   const navigateTo = (name: string) => {
+    if (name === 'league') {
+      router.push('/league');
+      return;
+    }
     const routeIdx = state.routes.findIndex(r => r.name === name);
     if (routeIdx === -1) return;
     const event = navigation.emit({ type: 'tabPress', target: state.routes[routeIdx].key, canPreventDefault: true });

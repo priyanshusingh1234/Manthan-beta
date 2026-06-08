@@ -250,7 +250,7 @@ export default function ProfileScreen() {
           fieldName: 'file',
           headers: { Authorization: `Bearer ${token}` },
           parameters: {
-            bucket: 'public-images',
+            bucket: folder,
             path: path,
           },
         }
@@ -274,7 +274,7 @@ export default function ProfileScreen() {
     const path = getStoragePath(url, folder);
     if (!path || path.includes('googleusercontent')) return;
     try {
-      await supabase.storage.from('public-images').remove([path]);
+      await supabase.storage.from(folder).remove([path]);
     } catch (e) { console.warn('Could not delete old image:', e); }
   };
 

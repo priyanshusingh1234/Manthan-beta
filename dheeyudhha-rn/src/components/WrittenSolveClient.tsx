@@ -240,7 +240,10 @@ export default function WrittenSolveClient({ question, challengeId }: { question
           {question.body && <Text className="text-slate-600 dark:text-slate-300 mb-4">{question.body}</Text>}
           {question.image_url && (
             <Image
-              source={{ uri: `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${question.image_url}` }}
+              source={{ uri: question.image_url.startsWith('/') 
+                ? `${process.env.EXPO_PUBLIC_API_URL}${question.image_url}` 
+                : `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${question.image_url}` 
+              }}
               className="w-full h-48 rounded-xl bg-slate-100"
               resizeMode="contain"
             />

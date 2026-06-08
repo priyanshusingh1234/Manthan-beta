@@ -64,11 +64,11 @@ function playNotifSound() {
     if (typeof window !== 'undefined' && (window as any).playGlobalNotifSound) {
       (window as any).playGlobalNotifSound();
     } else {
-        const fallback = new Audio('/universfield-new-notification-040-493469.mp3');
-        fallback.volume = 1.0;
-        fallback.play().catch(() => {});
+      const fallback = new Audio('/universfield-new-notification-040-493469.mp3');
+      fallback.volume = 1.0;
+      fallback.play().catch(() => { });
     }
-  } catch {}
+  } catch { }
 }
 
 // ─── Message item (memoized) ─────────────────────────────────────────────────
@@ -107,7 +107,7 @@ const MessageItem = memo(function MessageItem({
   };
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!swiping.current) return;
-    
+
     const dx = e.touches[0].clientX - touchStartX.current;
     const dy = e.touches[0].clientY - touchStartY.current;
 
@@ -158,7 +158,7 @@ const MessageItem = memo(function MessageItem({
     const isStarted = msg.content.startsWith('__CALL_STARTED__');
     const type = msg.content.split(':')[1] || 'voice';
     const text = isStarted ? `${type} call started` : (msg.content.replace('__CALL_ENDED__:', '').trim() || 'Call ended');
-    
+
     return (
       <div className="flex justify-center my-2 px-4">
         <div className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-semibold px-4 py-1.5 rounded-full flex items-center gap-1.5">
@@ -174,7 +174,7 @@ const MessageItem = memo(function MessageItem({
   if (rawContent.includes('|||META|||')) {
     const parts = rawContent.split('|||META|||');
     rawContent = parts[0];
-    try { meta = JSON.parse(parts[1]); } catch {}
+    try { meta = JSON.parse(parts[1]); } catch { }
   }
 
   let replyAuthor = '', replyPreview = '', mainContent = rawContent;
@@ -254,14 +254,13 @@ const MessageItem = memo(function MessageItem({
             </div>
           )}
           <div
-            className={`rounded-2xl overflow-hidden shadow-sm ${isSelected ? 'ring-2 ring-indigo-500' : ''} ${
-              isMe
+            className={`rounded-2xl overflow-hidden shadow-sm ${isSelected ? 'ring-2 ring-indigo-500' : ''} ${isMe
                 ? 'bg-indigo-600 text-white rounded-br-sm'
                 : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-bl-sm border border-slate-100 dark:border-slate-700/50'
-            }`}
+              }`}
           >
             {msg.message_type === 'image_once' ? (
-              <div 
+              <div
                 className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none active:bg-black/5 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -277,7 +276,7 @@ const MessageItem = memo(function MessageItem({
                 </div>
               </div>
             ) : msg.message_type === 'image' || rawContent.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
-              <div 
+              <div
                 className="relative w-[200px] h-[200px] cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -355,15 +354,15 @@ function ChatRoomContent() {
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [roomStatus, setRoomStatus] = useState<{status: string, created_by: string} | null>(null);
+  const [roomStatus, setRoomStatus] = useState<{ status: string, created_by: string } | null>(null);
   const [showMultiDeleteSheet, setShowMultiDeleteSheet] = useState(false);
   const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   // Incoming call banner — shown when the OTHER party starts a call while we are
   // already on this chat page (GlobalCallListener skips this room in that case)
-  const [incomingCallBanner, setIncomingCallBanner] = useState<{type:'voice'|'video', callerId: string} | null>(null);
-  const incomingCallBannerRef = useRef<{type:'voice'|'video', callerId: string} | null>(null);
+  const [incomingCallBanner, setIncomingCallBanner] = useState<{ type: 'voice' | 'video', callerId: string } | null>(null);
+  const incomingCallBannerRef = useRef<{ type: 'voice' | 'video', callerId: string } | null>(null);
   const isBlockedRef = useRef(isBlocked);
 
   const [isTyping, setIsTyping] = useState(false);
@@ -371,7 +370,7 @@ function ChatRoomContent() {
 
   useEffect(() => { isBlockedRef.current = isBlocked; }, [isBlocked]);
 
-  
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -421,8 +420,8 @@ function ChatRoomContent() {
         }
       }
       if (newestMsg.content.startsWith('__CALL_ENDED__') && processedCallIdRef.current) {
-         setIncomingCallBanner(null);
-         incomingCallBannerRef.current = null;
+        setIncomingCallBanner(null);
+        incomingCallBannerRef.current = null;
       }
     }
 
@@ -453,7 +452,7 @@ function ChatRoomContent() {
     localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filteredWithRead.slice(-80)));
 
     if (unreadIds.size) {
-      fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [...unreadIds] }) }).catch(() => {});
+      fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [...unreadIds] }) }).catch(() => { });
       try {
         const cacheKey = `chat_rooms_cache_${activeUserId}`;
         const cached = localStorage.getItem(cacheKey);
@@ -469,7 +468,7 @@ function ChatRoomContent() {
           });
           if (didUpdate) localStorage.setItem(cacheKey, JSON.stringify(newCache));
         }
-      } catch {}
+      } catch { }
     }
     // Note: autoAccept / startCall is intentionally NOT done here.
     // syncMessages runs every 1 second and has a stale closure — doing startCall
@@ -497,10 +496,10 @@ function ChatRoomContent() {
         const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
         const filtered = olderMessages.slice().reverse().filter(m => !deletedIds.includes(m.id));
         setMessages(prev => {
-           const dbIds = new Set(filtered.map(m => m.id));
-           const merged = [...filtered, ...prev.filter(m => !dbIds.has(m.id))];
-           merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-           return merged;
+          const dbIds = new Set(filtered.map(m => m.id));
+          const merged = [...filtered, ...prev.filter(m => !dbIds.has(m.id))];
+          merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          return merged;
         });
       }
     } catch (e) {
@@ -541,100 +540,112 @@ function ChatRoomContent() {
         const cp = localStorage.getItem(PARTICIPANT_CACHE_KEY(roomId));
         if (cm) { setMessages(JSON.parse(cm)); setLoading(false); setTimeout(() => scrollToBottom('auto'), 50); }
         if (cp) setParticipant(JSON.parse(cp));
-      } catch {}
+      } catch { }
 
       try {
-          const [pRes, mRes, rRes] = await Promise.all([
-            supabase.from('chat_participants').select('user_id').eq('room_id', roomId).neq('user_id', u.id),
-            supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: false }).limit(80),
-            supabase.from('chat_rooms').select('status, created_by').eq('id', roomId).single(),
-          ]);
-          
-          if (rRes.data) {
-              setRoomStatus(rRes.data);
-          }
+        const [pRes, mRes, rRes] = await Promise.all([
+          supabase.from('chat_participants').select('user_id').eq('room_id', roomId).neq('user_id', u.id),
+          supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: false }).limit(80),
+          supabase.from('chat_rooms').select('status, created_by').eq('id', roomId).single(),
+        ]);
 
-          let profData: any = null;
-          if (pRes.data?.[0]?.user_id) {
-            const { data: prof } = await supabase.from('profiles').select('full_name, avatar_url, username, is_teacher').eq('id', pRes.data[0].user_id).single();
-            if (prof) {
-              profData = prof;
-              const p = { user_id: pRes.data[0].user_id, ...prof } as Participant;
-              setParticipant(p);
-              localStorage.setItem(PARTICIPANT_CACHE_KEY(roomId), JSON.stringify(p));
+        if (rRes.data) {
+          let finalStatus = rRes.data;
+          if (rRes.data.status === 'pending' && pRes.data?.[0]?.user_id) {
+            const { data: followData } = await supabase
+              .from('follows')
+              .select('follower_id')
+              .or(`and(follower_id.eq.${u.id},following_id.eq.${pRes.data[0].user_id}),and(follower_id.eq.${pRes.data[0].user_id},following_id.eq.${u.id})`)
+              .limit(1);
+            if (followData && followData.length > 0) {
+              finalStatus.status = 'approved';
+              supabase.from('chat_rooms').update({ status: 'approved' }).eq('id', roomId).then();
             }
           }
+          setRoomStatus(finalStatus);
+        }
 
-          if (mRes.data) {
-            if (mRes.data.length < 80) setHasMore(false);
-            const roomDeletedKey = `deleted_for_me_${roomId}`;
-            const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
-            const filtered = mRes.data.slice().reverse().filter(m => !deletedIds.includes(m.id));
+        let profData: any = null;
+        if (pRes.data?.[0]?.user_id) {
+          const { data: prof } = await supabase.from('profiles').select('full_name, avatar_url, username, is_teacher').eq('id', pRes.data[0].user_id).single();
+          if (prof) {
+            profData = prof;
+            const p = { user_id: pRes.data[0].user_id, ...prof } as Participant;
+            setParticipant(p);
+            localStorage.setItem(PARTICIPANT_CACHE_KEY(roomId), JSON.stringify(p));
+          }
+        }
 
-            const unreadIds = new Set(filtered.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id));
-            // Optimistically flip is_read so UI is immediately correct
-            const filteredWithRead = unreadIds.size
-              ? filtered.map(m => unreadIds.has(m.id) ? { ...m, is_read: true } : m)
-              : filtered;
+        if (mRes.data) {
+          if (mRes.data.length < 80) setHasMore(false);
+          const roomDeletedKey = `deleted_for_me_${roomId}`;
+          const deletedIds = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
+          const filtered = mRes.data.slice().reverse().filter(m => !deletedIds.includes(m.id));
 
-            setMessages(filteredWithRead);
-            localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filteredWithRead.slice(-80)));
-            if (unreadIds.size) {
-                fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [...unreadIds] }) }).catch(() => {});
-                try {
-                  const cacheKey = `chat_rooms_cache_${u.id}`;
-                  const cached = localStorage.getItem(cacheKey);
-                  if (cached) {
-                    const parsed = JSON.parse(cached);
-                    let didUpdate = false;
-                    const newCache = parsed.map((r: any) => {
-                      if (r.id === roomId && r.last_message && !r.last_message.is_read) {
-                        didUpdate = true;
-                        return { ...r, last_message: { ...r.last_message, is_read: true } };
-                      }
-                      return r;
-                    });
-                    if (didUpdate) localStorage.setItem(cacheKey, JSON.stringify(newCache));
+          const unreadIds = new Set(filtered.filter(m => !m.is_read && m.sender_id !== u.id).map(m => m.id));
+          // Optimistically flip is_read so UI is immediately correct
+          const filteredWithRead = unreadIds.size
+            ? filtered.map(m => unreadIds.has(m.id) ? { ...m, is_read: true } : m)
+            : filtered;
+
+          setMessages(filteredWithRead);
+          localStorage.setItem(MESSAGES_CACHE_KEY(roomId), JSON.stringify(filteredWithRead.slice(-80)));
+          if (unreadIds.size) {
+            fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [...unreadIds] }) }).catch(() => { });
+            try {
+              const cacheKey = `chat_rooms_cache_${u.id}`;
+              const cached = localStorage.getItem(cacheKey);
+              if (cached) {
+                const parsed = JSON.parse(cached);
+                let didUpdate = false;
+                const newCache = parsed.map((r: any) => {
+                  if (r.id === roomId && r.last_message && !r.last_message.is_read) {
+                    didUpdate = true;
+                    return { ...r, last_message: { ...r.last_message, is_read: true } };
                   }
-                } catch {}
-            }
-
-            if (
-              searchParams.get('autoAccept') === '1' &&
-              !callCtx.callActive.current 
-            ) {
-              const callMsg = [...filtered].reverse().find(
-                m => m.content.startsWith('__CALL_STARTED__') &&
-                     m.sender_id !== u.id &&
-                     (Date.now() - new Date(m.created_at).getTime() < 60000)
-              );
-
-              const type = (searchParams.get('callType') as 'voice' | 'video')
-                || (callMsg?.content.split(':')[1] as 'voice' | 'video')
-                || 'voice';
-              const callerId = searchParams.get('callerId') || pRes.data?.[0]?.user_id;
-              const callerName = searchParams.get('callerName')
-                ? decodeURIComponent(searchParams.get('callerName')!)
-                : (profData?.full_name || 'Scholar');
-
-              if (callMsg) {
-                processedCallIdRef.current = callMsg.id;
+                  return r;
+                });
+                if (didUpdate) localStorage.setItem(cacheKey, JSON.stringify(newCache));
               }
+            } catch { }
+          }
 
-              callCtx.startCall(roomId, type, callerId, callerName, true);
+          if (
+            searchParams.get('autoAccept') === '1' &&
+            !callCtx.callActive.current
+          ) {
+            const callMsg = [...filtered].reverse().find(
+              m => m.content.startsWith('__CALL_STARTED__') &&
+                m.sender_id !== u.id &&
+                (Date.now() - new Date(m.created_at).getTime() < 60000)
+            );
+
+            const type = (searchParams.get('callType') as 'voice' | 'video')
+              || (callMsg?.content.split(':')[1] as 'voice' | 'video')
+              || 'voice';
+            const callerId = searchParams.get('callerId') || pRes.data?.[0]?.user_id;
+            const callerName = searchParams.get('callerName')
+              ? decodeURIComponent(searchParams.get('callerName')!)
+              : (profData?.full_name || 'Scholar');
+
+            if (callMsg) {
+              processedCallIdRef.current = callMsg.id;
             }
+
+            callCtx.startCall(roomId, type, callerId, callerName, true);
           }
-          
-          if (searchParams.get('reply') === '1') {
-            setTimeout(() => inputRef.current?.focus(), 300);
-          }
-          
-          await syncBlockStatus();
-          setTimeout(() => scrollToBottom('auto'), 120);
+        }
+
+        if (searchParams.get('reply') === '1') {
+          setTimeout(() => inputRef.current?.focus(), 300);
+        }
+
+        await syncBlockStatus();
+        setTimeout(() => scrollToBottom('auto'), 120);
       } catch (err) {
-          console.error("Failed to load chat data", err);
+        console.error("Failed to load chat data", err);
       } finally {
-          setLoading(false);
+        setLoading(false);
       }
     };
     init();
@@ -672,16 +683,16 @@ function ChatRoomContent() {
   useEffect(() => {
     if (!user?.id) return;
     const channel = supabaseRealtime
-      .channel(`room-${roomId}`, { 
-        config: { 
+      .channel(`room-${roomId}`, {
+        config: {
           presence: { key: user.id },
           broadcast: { self: false, ack: false }
-        } 
+        }
       })
       .on('presence', { event: 'sync' }, () => setIsOnline(Object.keys(channel.presenceState()).length > 1))
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
         const msg = payload.new as Message;
-        
+
         // Handle Call Signals
         if (isBlockedRef.current) return;
         if (msg.content.startsWith('__CALL_STARTED__')) {
@@ -715,7 +726,7 @@ function ChatRoomContent() {
         if (msg.sender_id !== user.id) {
           playNotifSound();
           vibrate('light');
-          fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [msg.id] }) }).catch(() => {});
+          fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [msg.id] }) }).catch(() => { });
         }
         setTimeout(() => scrollToBottom(), 60);
       })
@@ -738,7 +749,7 @@ function ChatRoomContent() {
           });
           playNotifSound();
           vibrate('light');
-          fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [msg.id] }) }).catch(() => {});
+          fetch('/api/chat/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messageIds: [msg.id] }) }).catch(() => { });
           setTimeout(() => scrollToBottom(), 60);
         }
       })
@@ -750,8 +761,8 @@ function ChatRoomContent() {
         const delId = (payload.old as any)?.id;
         if (delId) setMessages(prev => prev.filter(m => m.id !== delId));
       })
-      
-      
+
+
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           console.log('[Realtime] Subscribed to room:', roomId);
@@ -797,7 +808,7 @@ function ChatRoomContent() {
         body: JSON.stringify({ messageId, action: 'react', emoji })
       });
       // realtime handles the update
-    } catch {}
+    } catch { }
   }, [user]);
 
   const handleSend = useCallback(async () => {
@@ -809,13 +820,13 @@ function ChatRoomContent() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) throw new Error('Session expired');
-        
+
         // Optimistic update
         const tempMeta = editingMsg.content.includes('|||META|||') ? editingMsg.content.split('|||META|||')[1] : '{}';
         const parsedMeta = JSON.parse(tempMeta || '{}');
         parsedMeta.edited = true;
         setMessages(p => p.map(m => m.id === editingMsg.id ? { ...m, content: `${content}|||META|||${JSON.stringify(parsedMeta)}` } : m));
-        
+
         setNewMessage('');
         setEditingMsg(null);
         if (inputRef.current) { inputRef.current.style.height = 'auto'; }
@@ -825,7 +836,7 @@ function ChatRoomContent() {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ messageId: editingMsg.id, action: 'edit', newText: content })
         });
-      } catch {}
+      } catch { }
       setSending(false);
       return;
     }
@@ -872,7 +883,7 @@ function ChatRoomContent() {
       if (!res.ok) throw new Error(json.error || `Send failed (${res.status})`);
 
       setMessages(p => p.map(m => m.id === tempId ? json.message : m));
-      
+
       // Broadcast for instant delivery before Postgres sync
       channelRef.current?.send({
         type: 'broadcast',
@@ -885,7 +896,7 @@ function ChatRoomContent() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ receiverId: participant.user_id, senderId: user.id, roomId, content: content.substring(0, 50) }),
-        }).catch(() => {});
+        }).catch(() => { });
       }
     } catch (e: any) {
       setMessages(p => p.filter(m => m.id !== tempId));
@@ -916,8 +927,8 @@ function ChatRoomContent() {
   // ─── Clear Chat ───────────────────────────────────────────────────────────
   const clearChat = async () => {
     if (!user) return;
-    const myMsgIds  = messages.filter(m => m.sender_id === user.id).map(m => m.id);
-    const theirIds  = messages.filter(m => m.sender_id !== user.id).map(m => m.id);
+    const myMsgIds = messages.filter(m => m.sender_id === user.id).map(m => m.id);
+    const theirIds = messages.filter(m => m.sender_id !== user.id).map(m => m.id);
 
     // Hard-delete MY messages from DB
     if (myMsgIds.length) {
@@ -963,16 +974,16 @@ function ChatRoomContent() {
         throw new Error(body.error || 'Upload failed');
       }
       const uploadData = await res.json();
-      
-      const { data, error } = await supabase.from('chat_messages').insert({ 
-        room_id: roomId, 
-        sender_id: user.id, 
-        content: uploadData.publicUrl, 
-        message_type: isViewOnce ? 'image_once' : 'image' 
+
+      const { data, error } = await supabase.from('chat_messages').insert({
+        room_id: roomId,
+        sender_id: user.id,
+        content: uploadData.publicUrl,
+        message_type: isViewOnce ? 'image_once' : 'image'
       }).select('*').single();
-      
+
       if (error) throw error;
-      
+
       if (participant?.user_id) {
         fetch('/api/chat/notify', {
           method: 'POST',
@@ -983,36 +994,36 @@ function ChatRoomContent() {
             roomId: roomId,
             content: '📸 Image'
           })
-        }).catch(() => {});
+        }).catch(() => { });
       }
     } catch (err: any) { alert(err.message); }
-    finally { 
-        setUploadingImage(false); 
-        setIsViewOnce(false); // reset after upload
-        if (fileInputRef.current) fileInputRef.current.value = ''; 
+    finally {
+      setUploadingImage(false);
+      setIsViewOnce(false); // reset after upload
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const handleImageClick = async (url: string, msgType: string, msgId: string, isSender: boolean) => {
-      setFullscreenImage(url);
-      
-      // If it's a view once image and NOT the sender viewing it, delete it from the server immediately
-      if (msgType === 'image_once' && !isSender) {
-          try {
-              const { data: { session } } = await supabase.auth.getSession();
-              await fetch('/api/chat/delete-once', {
-                  method: 'POST',
-                  headers: { 
-                      'Content-Type': 'application/json',
-                      Authorization: `Bearer ${session?.access_token}` 
-                  },
-                  body: JSON.stringify({ messageId: msgId })
-              });
-              // Note: the message will be removed from state via realtime DELETE event broadcasted by the server.
-          } catch (e) {
-              console.error("Failed to delete view-once image", e);
-          }
+    setFullscreenImage(url);
+
+    // If it's a view once image and NOT the sender viewing it, delete it from the server immediately
+    if (msgType === 'image_once' && !isSender) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await fetch('/api/chat/delete-once', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({ messageId: msgId })
+        });
+        // Note: the message will be removed from state via realtime DELETE event broadcasted by the server.
+      } catch (e) {
+        console.error("Failed to delete view-once image", e);
       }
+    }
   };
 
   // ─── Long press handler ───────────────────────────────────────────────────
@@ -1057,7 +1068,7 @@ function ChatRoomContent() {
             <button
               onClick={() => {
                 const texts = selectedIds.map(id => messages.find(m => m.id === id)?.content || '').join('\n');
-                navigator.clipboard.writeText(texts).catch(() => {});
+                navigator.clipboard.writeText(texts).catch(() => { });
               }}
               className="p-2 rounded-full active:bg-slate-100 dark:active:bg-slate-800 text-slate-600 dark:text-slate-300"
             >
@@ -1161,7 +1172,7 @@ function ChatRoomContent() {
           </div>
         )}
       </header>
-      
+
       {isBlocked && (
         <div className="bg-rose-50 dark:bg-rose-950/30 px-4 py-2 flex items-center justify-center gap-2 border-b border-rose-100 dark:border-rose-900/50">
           <Ban className="w-3.5 h-3.5 text-rose-500" />
@@ -1191,7 +1202,7 @@ function ChatRoomContent() {
                   supabase.from('chat_messages').insert({
                     room_id: roomId, sender_id: user.id,
                     content: '__CALL_ENDED__: Call declined', message_type: 'text'
-                  }).then(null, () => {});
+                  }).then(null, () => { });
                 }
               }}
               className="h-10 w-10 rounded-full bg-red-500 flex items-center justify-center active:scale-95 transition-transform"
@@ -1298,10 +1309,10 @@ function ChatRoomContent() {
       {/* ── Context sheet (long press) ────────────────────────────────────── */}
       {showContextSheet && contextMsg && (
         <>
-          <div className="fixed inset-0 bg-black/20 dark:bg-black/50 z-40 backdrop-blur-sm" onClick={() => setShowContextSheet(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-200 overflow-hidden flex flex-col">
-            <div className="w-10 h-1 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mt-3 mb-3 shrink-0" />
-            
+          <div className="fixed inset-0 bg-black/20 dark:bg-black/50 z-40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowContextSheet(false)}>
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 overflow-hidden flex flex-col w-full max-w-sm" onClick={e => e.stopPropagation()}>
+              <div className="w-10 h-1 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mt-3 mb-3 shrink-0" />
+
             {/* Reaction picker */}
             <div className="px-5 pb-3 pt-1 flex justify-between items-center shrink-0 border-b border-slate-100 dark:border-slate-800">
               {['❤️', '😂', '🔥', '👍', '😢', '😮'].map(emoji => (
@@ -1317,7 +1328,7 @@ function ChatRoomContent() {
                 </button>
               ))}
             </div>
-            
+
             {/* Message preview */}
             <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <p className="text-[13px] text-slate-500 dark:text-slate-400 truncate">
@@ -1325,58 +1336,59 @@ function ChatRoomContent() {
               </p>
             </div>
             <div className="overflow-y-auto max-h-[50vh] shrink-0">
-            {[
-              { icon: Reply, label: 'Reply', color: 'text-indigo-600', action: () => { setReplyingTo(contextMsg); setShowContextSheet(false); setTimeout(() => inputRef.current?.focus(), 100); } },
-              ...(contextMsg.sender_id === user?.id && contextMsg.message_type === 'text' && !contextMsg.content.startsWith('__CALL_') ? [{
-                icon: Edit2, label: 'Edit', color: 'text-indigo-600', action: () => {
-                  setEditingMsg(contextMsg);
-                  setNewMessage(contextMsg.content.includes('|||META|||') ? contextMsg.content.split('|||META|||')[0] : contextMsg.content);
-                  setShowContextSheet(false);
-                  setTimeout(() => inputRef.current?.focus(), 100);
-                }
-              }] : []),
-              {
-                icon: Copy, label: 'Copy', color: 'text-slate-700 dark:text-slate-200', action: () => {
-                  const raw = contextMsg.content.includes('|||META|||') ? contextMsg.content.split('|||META|||')[0] : contextMsg.content;
-                  navigator.clipboard.writeText(raw).catch(() => {});
-                  setShowContextSheet(false);
-                }
-              },
-              {
-                icon: Check, label: 'Select', color: 'text-slate-700 dark:text-slate-200', action: () => {
-                  setIsSelectionMode(true);
-                  setSelectedIds([contextMsg.id]);
-                  setShowContextSheet(false);
-                }
-              },
-              {
-                icon: Trash2, label: 'Delete for Me', color: 'text-rose-500', action: () => {
-                  setShowContextSheet(false);
-                  if (confirm('Delete this message for you?')) {
-                    const roomDeletedKey = `deleted_for_me_${roomId}`;
-                    const existing = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
-                    const updated = [...new Set([...existing, contextMsg.id])];
-                    localStorage.setItem(roomDeletedKey, JSON.stringify(updated));
-                    setMessages(p => p.filter(m => m.id !== contextMsg.id));
+              {[
+                { icon: Reply, label: 'Reply', color: 'text-indigo-600', action: () => { setReplyingTo(contextMsg); setShowContextSheet(false); setTimeout(() => inputRef.current?.focus(), 100); } },
+                ...(contextMsg.sender_id === user?.id && contextMsg.message_type === 'text' && !contextMsg.content.startsWith('__CALL_') ? [{
+                  icon: Edit2, label: 'Edit', color: 'text-indigo-600', action: () => {
+                    setEditingMsg(contextMsg);
+                    setNewMessage(contextMsg.content.includes('|||META|||') ? contextMsg.content.split('|||META|||')[0] : contextMsg.content);
+                    setShowContextSheet(false);
+                    setTimeout(() => inputRef.current?.focus(), 100);
                   }
-                }
-              },
-              ...(contextMsg.sender_id === user?.id ? [{
-                icon: Trash2, label: 'Delete for Everyone', color: 'text-rose-600', action: () => {
-                  setShowContextSheet(false);
-                  if (confirm('Delete this message for everyone?')) deleteMessages([contextMsg.id]);
-                }
-              }] : []),
-            ].map(({ icon: Icon, label, color, action }) => (
-              <button key={label} onClick={action} className={`w-full flex items-center gap-4 px-5 py-4 active:bg-slate-50 dark:active:bg-slate-800 ${label === 'Delete' ? 'border-t border-slate-100 dark:border-slate-800' : ''}`}>
-                <div className={`w-10 h-10 rounded-full ${label === 'Delete' ? 'bg-rose-50 dark:bg-rose-900/20' : label === 'Reply' ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'bg-slate-100 dark:bg-slate-800'} flex items-center justify-center`}>
-                  <Icon className={`w-5 h-5 ${color}`} />
-                </div>
-                <span className={`font-semibold ${color}`}>{label}</span>
-              </button>
-            ))}
-            <div style={{ height: 'env(safe-area-inset-bottom)' }} />
+                }] : []),
+                {
+                  icon: Copy, label: 'Copy', color: 'text-slate-700 dark:text-slate-200', action: () => {
+                    const raw = contextMsg.content.includes('|||META|||') ? contextMsg.content.split('|||META|||')[0] : contextMsg.content;
+                    navigator.clipboard.writeText(raw).catch(() => { });
+                    setShowContextSheet(false);
+                  }
+                },
+                {
+                  icon: Check, label: 'Select', color: 'text-slate-700 dark:text-slate-200', action: () => {
+                    setIsSelectionMode(true);
+                    setSelectedIds([contextMsg.id]);
+                    setShowContextSheet(false);
+                  }
+                },
+                {
+                  icon: Trash2, label: 'Delete for Me', color: 'text-rose-500', action: () => {
+                    setShowContextSheet(false);
+                    if (confirm('Delete this message for you?')) {
+                      const roomDeletedKey = `deleted_for_me_${roomId}`;
+                      const existing = JSON.parse(localStorage.getItem(roomDeletedKey) || '[]');
+                      const updated = [...new Set([...existing, contextMsg.id])];
+                      localStorage.setItem(roomDeletedKey, JSON.stringify(updated));
+                      setMessages(p => p.filter(m => m.id !== contextMsg.id));
+                    }
+                  }
+                },
+                ...(contextMsg.sender_id === user?.id ? [{
+                  icon: Trash2, label: 'Delete for Everyone', color: 'text-rose-600', action: () => {
+                    setShowContextSheet(false);
+                    if (confirm('Delete this message for everyone?')) deleteMessages([contextMsg.id]);
+                  }
+                }] : []),
+              ].map(({ icon: Icon, label, color, action }) => (
+                <button key={label} onClick={action} className={`w-full flex items-center gap-4 px-5 py-4 active:bg-slate-50 dark:active:bg-slate-800 ${label === 'Delete' ? 'border-t border-slate-100 dark:border-slate-800' : ''}`}>
+                  <div className={`w-10 h-10 rounded-full ${label === 'Delete' ? 'bg-rose-50 dark:bg-rose-900/20' : label === 'Reply' ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'bg-slate-100 dark:bg-slate-800'} flex items-center justify-center`}>
+                    <Icon className={`w-5 h-5 ${color}`} />
+                  </div>
+                  <span className={`font-semibold ${color}`}>{label}</span>
+                </button>
+              ))}
+              <div style={{ height: 'env(safe-area-inset-bottom)' }} />
             </div>
+          </div>
           </div>
         </>
       )}
@@ -1390,12 +1402,12 @@ function ChatRoomContent() {
             <div className="px-5 pb-3 border-b border-slate-100 dark:border-slate-800">
               <p className="text-[13px] font-bold text-slate-700 dark:text-slate-300 text-center">Delete {selectedIds.length} Option{selectedIds.length > 1 ? 's' : ''}</p>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => {
                 setShowMultiDeleteSheet(false);
                 deleteForMe(selectedIds);
-              }} 
+              }}
               className="w-full flex items-center gap-4 px-5 py-4 active:bg-slate-50 dark:active:bg-slate-800"
             >
               <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
@@ -1405,11 +1417,11 @@ function ChatRoomContent() {
             </button>
 
             {selectedIds.filter(id => messages.find(m => m.id === id)?.sender_id === user?.id).length === selectedIds.length && (
-              <button 
+              <button
                 onClick={() => {
                   setShowMultiDeleteSheet(false);
                   deleteMessages(selectedIds);
-                }} 
+                }}
                 className="w-full flex items-center gap-4 px-5 py-4 active:bg-slate-50 dark:active:bg-slate-800 border-t border-slate-100 dark:border-slate-800"
               >
                 <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
@@ -1418,7 +1430,7 @@ function ChatRoomContent() {
                 <span className="font-semibold text-rose-500">Delete for Everyone</span>
               </button>
             )}
-            
+
             <div style={{ height: 'env(safe-area-inset-bottom)' }} />
           </div>
         </>
@@ -1429,7 +1441,7 @@ function ChatRoomContent() {
         className="shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/60 dark:border-slate-800/60"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 4px)' }}
       >
-      {/* ── Send error banner ───────────────────────────────────────── */}
+        {/* ── Send error banner ───────────────────────────────────────── */}
         {sendError && (
           <div className="flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-950/30 border-b border-rose-100 dark:border-rose-900/30">
             <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex-1">{sendError}</span>
@@ -1469,20 +1481,20 @@ function ChatRoomContent() {
         <div className="flex items-end gap-2 px-3 py-2">
           {/* Image button */}
           <div className="flex flex-col gap-1 items-center mb-0.5">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingImage}
-                className="w-9 h-9 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-100 dark:active:bg-slate-800 shrink-0"
-              >
-                {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> : <ImageIcon className="w-5 h-5" />}
-              </button>
-              <button
-                onClick={() => setIsViewOnce(v => !v)}
-                className={`w-6 h-6 flex items-center justify-center rounded-full text-[9px] font-bold transition-colors ${isViewOnce ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}
-                title="View Once"
-              >
-                1
-              </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingImage}
+              className="w-9 h-9 flex items-center justify-center rounded-full text-slate-500 dark:text-slate-400 active:bg-slate-100 dark:active:bg-slate-800 shrink-0"
+            >
+              {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> : <ImageIcon className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={() => setIsViewOnce(v => !v)}
+              className={`w-6 h-6 flex items-center justify-center rounded-full text-[9px] font-bold transition-colors ${isViewOnce ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}`}
+              title="View Once"
+            >
+              1
+            </button>
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
 
@@ -1496,7 +1508,7 @@ function ChatRoomContent() {
                 setNewMessage(e.target.value);
                 e.target.style.height = 'auto';
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-                
+
                 // Throttle typing broadcast
                 const now = Date.now();
                 if (!(window as any).lastTypingBroadcast || now - (window as any).lastTypingBroadcast > 1500) {
@@ -1528,50 +1540,50 @@ function ChatRoomContent() {
           </button>
         </div>
       </div>
-      
+
       {/* ── Message Request Banner ─────────────────────────────────────────── */}
       {roomStatus?.status === 'pending' && (
-          <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 pb-8 z-50 animate-in slide-in-from-bottom">
-              {roomStatus.created_by === user?.id ? (
-                  <div className="text-center">
-                      <p className="font-bold text-slate-900 dark:text-white mb-1">Message Request Sent</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                          {participant?.full_name} will need to accept your request before you can chat.
-                      </p>
-                  </div>
-              ) : (
-                  <div>
-                      <p className="font-bold text-slate-900 dark:text-white mb-1 text-center">Message Request</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-4">
-                          If you accept, they will be able to message you and see when you've read messages.
-                      </p>
-                      <div className="flex items-center gap-3">
-                          <button
-                              onClick={async () => {
-                                  // Update status to approved
-                                  const { error } = await supabase.from('chat_rooms').update({ status: 'approved' }).eq('id', roomId);
-                                  if (!error) {
-                                      setRoomStatus({ ...roomStatus, status: 'approved' });
-                                  }
-                              }}
-                              className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold active:scale-95 transition-transform"
-                          >
-                              Accept
-                          </button>
-                          <button
-                              onClick={async () => {
-                                  // Delete room
-                                  await supabase.from('chat_rooms').delete().eq('id', roomId);
-                                  router.push('/chat');
-                              }}
-                              className="flex-1 py-3 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-bold active:scale-95 transition-transform"
-                          >
-                              Decline
-                          </button>
-                      </div>
-                  </div>
-              )}
-          </div>
+        <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 pb-8 z-50 animate-in slide-in-from-bottom">
+          {roomStatus.created_by === user?.id ? (
+            <div className="text-center">
+              <p className="font-bold text-slate-900 dark:text-white mb-1">Message Request Sent</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {participant?.full_name} will need to accept your request before you can chat.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="font-bold text-slate-900 dark:text-white mb-1 text-center">Message Request</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-4">
+                If you accept, they will be able to message you and see when you've read messages.
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={async () => {
+                    // Update status to approved
+                    const { error } = await supabase.from('chat_rooms').update({ status: 'approved' }).eq('id', roomId);
+                    if (!error) {
+                      setRoomStatus({ ...roomStatus, status: 'approved' });
+                    }
+                  }}
+                  className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold active:scale-95 transition-transform"
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={async () => {
+                    // Delete room
+                    await supabase.from('chat_rooms').delete().eq('id', roomId);
+                    router.push('/chat');
+                  }}
+                  className="flex-1 py-3 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-bold active:scale-95 transition-transform"
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
       <audio id="chat-notif-audio" src="/universfield-new-notification-040-493469.mp3" preload="auto" />
 
@@ -1613,20 +1625,20 @@ function ChatRoomContent() {
 
       {/* ── Fullscreen Image ────────────────────────────────────────────── */}
       {fullscreenImage && (
-        <div 
+        <div
           className="fixed inset-0 z-[10000] bg-black flex items-center justify-center animate-in fade-in zoom-in-95 duration-200"
           onClick={() => setFullscreenImage(null)}
         >
-          <button 
+          <button
             className="absolute top-12 left-4 p-2 rounded-full bg-black/50 text-white z-[10001]"
             onClick={(e) => { e.stopPropagation(); setFullscreenImage(null); }}
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <Image 
-            src={fullscreenImage} 
-            alt="Fullscreen" 
-            fill 
+          <Image
+            src={fullscreenImage}
+            alt="Fullscreen"
+            fill
             className="object-contain"
             unoptimized
           />

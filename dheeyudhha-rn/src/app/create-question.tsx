@@ -508,7 +508,7 @@ export default function CreateQuestionScreen() {
           {Number(points) > 15 && (
             <View className="p-4 rounded-2xl border-2 border-violet-200 dark:border-violet-900/50 bg-violet-50 dark:bg-violet-900/20">
               <Text className="text-sm font-bold text-violet-800 dark:text-violet-400 mb-1">📝 Model Answer Required</Text>
-              <Text className="text-xs text-violet-600/80 dark:text-violet-400/80 mb-3">Questions worth > 15 points need a solution image.</Text>
+              <Text className="text-xs text-violet-600/80 dark:text-violet-400/80 mb-3">Questions worth &gt; 15 points need a solution image.</Text>
               
               {modelAnswerPreview ? (
                 <View className="relative w-full h-40 rounded-xl overflow-hidden bg-black mb-3">

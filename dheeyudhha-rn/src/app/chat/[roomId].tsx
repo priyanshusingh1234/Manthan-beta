@@ -111,7 +111,7 @@ const MessageItem = memo(({
       onPanResponderMove: (evt, gestureState) => {
         let dx = gestureState.dx;
         const resistance = (x: number) => (x < 30 ? x : 30 + (x - 30) * 0.4);
-        
+
         if (!isMe && dx > 0) {
           pan.setValue({ x: Math.min(resistance(dx), 80), y: 0 });
         } else if (isMe && dx < 0) {
@@ -126,7 +126,7 @@ const MessageItem = memo(({
           Vibration.vibrate(30);
           onReply(msg);
         }
-        
+
         Animated.spring(pan, {
           toValue: { x: 0, y: 0 },
           useNativeDriver: true,
@@ -147,7 +147,7 @@ const MessageItem = memo(({
     const isStarted = msg.content.startsWith('__CALL_STARTED__');
     const type = msg.content.split(':')[1] || 'voice';
     const text = isStarted ? `${type} call started` : (msg.content.replace('__CALL_ENDED__:', '').trim() || 'Call ended');
-    
+
     return (
       <View className="w-full mb-1">
         {showDate && (
@@ -174,7 +174,7 @@ const MessageItem = memo(({
   if (rawContent.includes('|||META|||')) {
     const parts = rawContent.split('|||META|||');
     rawContent = parts[0];
-    try { meta = JSON.parse(parts[1]); } catch {}
+    try { meta = JSON.parse(parts[1]); } catch { }
   }
 
   let replyAuthor = '', replyPreview = '', mainContent = rawContent;
@@ -211,11 +211,11 @@ const MessageItem = memo(({
       >
         {/* Reply Icons that reveal on swipe */}
         {!isMe && (
-          <Animated.View 
-            style={{ 
-              position: 'absolute', 
-              left: 10, 
-              opacity: pan.x.interpolate({ inputRange: [0, 40], outputRange: [0, 1] }) 
+          <Animated.View
+            style={{
+              position: 'absolute',
+              left: 10,
+              opacity: pan.x.interpolate({ inputRange: [0, 40], outputRange: [0, 1] })
             }}
           >
             <Reply size={20} color="#6366f1" />
@@ -223,11 +223,11 @@ const MessageItem = memo(({
         )}
 
         {isMe && (
-          <Animated.View 
-            style={{ 
-              position: 'absolute', 
-              right: 10, 
-              opacity: pan.x.interpolate({ inputRange: [-40, 0], outputRange: [1, 0] }) 
+          <Animated.View
+            style={{
+              position: 'absolute',
+              right: 10,
+              opacity: pan.x.interpolate({ inputRange: [-40, 0], outputRange: [1, 0] })
             }}
           >
             <Reply size={20} color="#6366f1" />
@@ -259,11 +259,10 @@ const MessageItem = memo(({
               </View>
             ) : null}
 
-            <View className={`rounded-2xl overflow-hidden shadow-sm ${
-              isMe ? 'bg-indigo-600 rounded-br-sm' : 'bg-white dark:bg-slate-800 rounded-bl-sm border border-slate-100 dark:border-slate-700/50'
-            }`}>
+            <View className={`rounded-2xl overflow-hidden shadow-sm ${isMe ? 'bg-indigo-600 rounded-br-sm' : 'bg-white dark:bg-slate-800 rounded-bl-sm border border-slate-100 dark:border-slate-700/50'
+              }`}>
               {msg.message_type === 'image_once' ? (
-                <TouchableOpacity 
+                <TouchableOpacity
                   className="flex-row items-center gap-2 px-4 py-3"
                   onPress={() => onImageClick(rawContent, msg.message_type, msg.id, isMe)}
                 >
@@ -286,12 +285,12 @@ const MessageItem = memo(({
                   </View>
                 </TouchableOpacity>
               ) : (
-                <View className="px-3 py-1.5 min-w-[75px] justify-between">
+                <View className="px-3.5 py-2.5 min-w-[75px] justify-between">
                   <Text className={`text-[15px] leading-5 ${isMe ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
                     {mainContent}
                     {meta.edited && <Text className={`text-[10px] italic ${isMe ? 'text-white/70' : 'text-slate-500'}`}> (edited)</Text>}
                   </Text>
-                  <View className="flex-row items-center justify-end gap-1 mt-0.5">
+                  <View className="flex-row items-center justify-end gap-1 mt-1">
                     <Text className={`text-[9px] font-semibold ${isMe ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'}`}>
                       {timeStr}
                     </Text>
@@ -323,7 +322,7 @@ export default function ChatRoomScreen() {
   const { roomId: paramRoomId, name: paramName, avatar: paramAvatar } = useLocalSearchParams();
   const roomId = typeof paramRoomId === 'string' ? paramRoomId : '';
   const initialName = typeof paramName === 'string' ? paramName : 'Chat';
-  
+
   const [user, setUser] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -331,16 +330,16 @@ export default function ChatRoomScreen() {
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [sending, setSending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  
+
   // States
   const [isOnline, setIsOnline] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [roomStatus, setRoomStatus] = useState<{status: string, created_by: string} | null>(null);
+  const [roomStatus, setRoomStatus] = useState<{ status: string, created_by: string } | null>(null);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-  
+
   // Modals
   const [contextMsg, setContextMsg] = useState<Message | null>(null);
   const [showContextModal, setShowContextModal] = useState(false);
@@ -379,7 +378,7 @@ export default function ChatRoomScreen() {
       const roomDeletedKey = `deleted_for_me_${roomId}`;
       const deletedIdsStr = await AsyncStorage.getItem(roomDeletedKey);
       const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
-      
+
       const filtered = (list || []).filter(m => !deletedIds.includes(m.id));
       setMessages(filtered);
       setLoading(false);
@@ -389,7 +388,11 @@ export default function ChatRoomScreen() {
       if (user?.id && list) {
         const unreadIds = list.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id);
         if (unreadIds.length > 0) {
-          await supabase.from('chat_messages').update({ is_read: true }).in('id', unreadIds);
+          fetch(`${WEB_URL}/api/chat/read`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messageIds: unreadIds })
+          }).catch(null);
         }
       }
     } catch (e) {
@@ -444,7 +447,7 @@ export default function ChatRoomScreen() {
       const channel = supabase.channel(`room-${roomId}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, async (payload) => {
           const msg = payload.new as Message;
-          
+
           const roomDeletedKey = `deleted_for_me_${roomId}`;
           const deletedIdsStr = await AsyncStorage.getItem(roomDeletedKey);
           const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
@@ -456,7 +459,11 @@ export default function ChatRoomScreen() {
           });
 
           if (msg.sender_id !== user.id) {
-            supabase.from('chat_messages').update({ is_read: true }).eq('id', msg.id).then(null);
+            fetch(`${WEB_URL}/api/chat/read`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messageIds: [msg.id] })
+            }).catch(null);
             Vibration.vibrate(40);
           }
           setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
@@ -563,7 +570,7 @@ export default function ChatRoomScreen() {
         const fileExtension = uri.split('.').pop()?.toLowerCase() || 'jpg';
         const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
         const fileName = `chat_${roomId}_${user.id}_${Date.now()}.${fileExtension}`;
-        
+
         const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
         const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
@@ -614,12 +621,12 @@ export default function ChatRoomScreen() {
             if (myMsgIds.length > 0) {
               await supabase.from('chat_messages').delete().in('id', myMsgIds);
             }
-            
+
             const roomDeletedKey = `deleted_for_me_${roomId}`;
             const deletedIdsStr = await AsyncStorage.getItem(roomDeletedKey);
             const existingDeletes = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
             const theirIds = messages.filter(m => m.sender_id !== user.id).map(m => m.id);
-            
+
             await AsyncStorage.setItem(roomDeletedKey, JSON.stringify([...existingDeletes, ...theirIds]));
             setMessages([]);
             setShowHeaderMenu(false);
@@ -760,16 +767,16 @@ export default function ChatRoomScreen() {
         )}
 
         {/* Context Menu Modal */}
-        <Modal visible={showContextModal} transparent animationType="slide" onRequestClose={() => setShowContextModal(false)}>
+        <Modal visible={showContextModal} transparent animationType="fade" onRequestClose={() => setShowContextModal(false)}>
           <TouchableWithoutFeedback onPress={() => setShowContextModal(false)}>
-            <View className="flex-1 justify-end bg-black/40">
+            <View className="flex-1 justify-center items-center bg-black/50 px-6">
               <TouchableWithoutFeedback>
-                <View className="bg-white dark:bg-slate-900 rounded-t-3xl pb-8 pt-4 px-6 border-t border-slate-200 dark:border-slate-800">
-                  <View className="w-12 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full self-center mb-6" />
-                  
-                  <TouchableOpacity onPress={() => handleReply(contextMsg!)} className="flex-row items-center gap-4 py-4 border-b border-slate-100 dark:border-slate-800">
-                    <Reply size={22} color={isDark ? '#e2e8f0' : '#1e293b'} />
-                    <Text className="text-lg font-semibold text-slate-900 dark:text-slate-100">Reply</Text>
+                <View className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 w-full max-w-[280px] shadow-2xl">
+                  <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 px-1">Options</Text>
+
+                  <TouchableOpacity onPress={() => handleReply(contextMsg!)} className="flex-row items-center gap-3 py-3 border-b border-slate-100 dark:border-slate-800/80 active:opacity-70">
+                    <Reply size={20} color={isDark ? '#cbd5e1' : '#334155'} />
+                    <Text className="text-[16px] font-bold text-slate-800 dark:text-slate-200">Reply</Text>
                   </TouchableOpacity>
 
                   {contextMsg?.message_type === 'text' && (
@@ -779,9 +786,9 @@ export default function ChatRoomScreen() {
                       if (text.startsWith('> Replying to **')) text = text.split('\n\n').slice(1).join('\n\n');
                       await Clipboard.setStringAsync(text);
                       setShowContextModal(false);
-                    }} className="flex-row items-center gap-4 py-4 border-b border-slate-100 dark:border-slate-800">
-                      <Copy size={22} color={isDark ? '#e2e8f0' : '#1e293b'} />
-                      <Text className="text-lg font-semibold text-slate-900 dark:text-slate-100">Copy Text</Text>
+                    }} className="flex-row items-center gap-3 py-3 border-b border-slate-100 dark:border-slate-800/80 active:opacity-70">
+                      <Copy size={20} color={isDark ? '#cbd5e1' : '#334155'} />
+                      <Text className="text-[16px] font-bold text-slate-800 dark:text-slate-200">Copy Text</Text>
                     </TouchableOpacity>
                   )}
 
@@ -794,9 +801,9 @@ export default function ChatRoomScreen() {
                       setNewMessage(text);
                       setShowContextModal(false);
                       setTimeout(() => inputRef.current?.focus(), 100);
-                    }} className="flex-row items-center gap-4 py-4 border-b border-slate-100 dark:border-slate-800">
-                      <Edit2 size={22} color={isDark ? '#e2e8f0' : '#1e293b'} />
-                      <Text className="text-lg font-semibold text-slate-900 dark:text-slate-100">Edit</Text>
+                    }} className="flex-row items-center gap-3 py-3 border-b border-slate-100 dark:border-slate-800/80 active:opacity-70">
+                      <Edit2 size={20} color={isDark ? '#cbd5e1' : '#334155'} />
+                      <Text className="text-[16px] font-bold text-slate-800 dark:text-slate-200">Edit</Text>
                     </TouchableOpacity>
                   )}
 
@@ -805,9 +812,9 @@ export default function ChatRoomScreen() {
                       await supabase.from('chat_messages').delete().eq('id', contextMsg.id);
                       setMessages(prev => prev.filter(m => m.id !== contextMsg.id));
                       setShowContextModal(false);
-                    }} className="flex-row items-center gap-4 py-4">
-                      <Trash2 size={22} color="#ef4444" />
-                      <Text className="text-lg font-semibold text-red-500">Delete</Text>
+                    }} className="flex-row items-center gap-3 py-3 active:opacity-70">
+                      <Trash2 size={20} color="#ef4444" />
+                      <Text className="text-[16px] font-bold text-red-500">Delete</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -828,7 +835,7 @@ export default function ChatRoomScreen() {
 
         {/* Input Area */}
         {roomStatus?.status === 'pending' ? (
-          <View 
+          <View
             className="bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800/60 px-4 pt-6 z-20"
             style={{ paddingBottom: Math.max(insets.bottom, 20) }}
           >
@@ -871,63 +878,63 @@ export default function ChatRoomScreen() {
             )}
           </View>
         ) : (
-          <View 
+          <View
             className="bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800/60 px-3 pt-2 z-20"
             style={{ paddingBottom: Math.max(insets.bottom, 12) }}
           >
             {replyingTo && (
-            <View className="mb-2 bg-slate-100 dark:bg-slate-800 rounded-xl p-3 flex-row justify-between items-center border-l-4 border-indigo-500">
-              <View className="flex-1">
-                <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-xs mb-0.5">
-                  Replying to {replyingTo.sender_id === user?.id ? 'Yourself' : participant?.full_name}
-                </Text>
-                <Text className="text-slate-600 dark:text-slate-300 text-xs" numberOfLines={1}>
-                  {replyingTo.content.includes('|||META|||') ? replyingTo.content.split('|||META|||')[0] : replyingTo.content}
-                </Text>
+              <View className="mb-2 bg-slate-100 dark:bg-slate-800 rounded-xl p-3 flex-row justify-between items-center border-l-4 border-indigo-500">
+                <View className="flex-1">
+                  <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-xs mb-0.5">
+                    Replying to {replyingTo.sender_id === user?.id ? 'Yourself' : participant?.full_name}
+                  </Text>
+                  <Text className="text-slate-600 dark:text-slate-300 text-xs" numberOfLines={1}>
+                    {replyingTo.content.includes('|||META|||') ? replyingTo.content.split('|||META|||')[0] : replyingTo.content}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setReplyingTo(null)} className="p-1 rounded-full bg-slate-200 dark:bg-slate-700">
+                  <X size={14} color={isDark ? '#cbd5e1' : '#475569'} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => setReplyingTo(null)} className="p-1 rounded-full bg-slate-200 dark:bg-slate-700">
-                <X size={14} color={isDark ? '#cbd5e1' : '#475569'} />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {editingMsg && (
-            <View className="mb-2 bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 flex-row justify-between items-center border-l-4 border-orange-500">
-              <View className="flex-1">
-                <Text className="text-orange-600 dark:text-orange-400 font-bold text-xs mb-0.5">Editing Message</Text>
-              </View>
-              <TouchableOpacity onPress={() => { setEditingMsg(null); setNewMessage(''); }} className="p-1 rounded-full bg-orange-200 dark:bg-orange-800/50">
-                <X size={14} color={isDark ? '#fdba74' : '#c2410c'} />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View className="flex-row items-end gap-2">
-            <TouchableOpacity onPress={handleImagePick} disabled={uploadingImage} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center mb-0.5">
-              {uploadingImage ? <ActivityIndicator size="small" color="#6366f1" /> : <ImageIcon size={20} color={isDark ? '#cbd5e1' : '#64748b'} />}
-            </TouchableOpacity>
-
-            <View className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-3xl flex-row items-end px-4 py-1.5 border border-slate-200 dark:border-slate-700">
-              <TextInput
-                ref={inputRef}
-                value={newMessage}
-                onChangeText={setNewMessage}
-                placeholder={isBlocked ? "You blocked this user" : "Type a message..."}
-                placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
-                multiline
-                maxLength={500}
-                editable={!isBlocked}
-                className="flex-1 max-h-32 text-base text-slate-900 dark:text-slate-50 pt-2 pb-2 min-h-[38px]"
-              />
-            </View>
-
-            {newMessage.trim().length > 0 && (
-              <TouchableOpacity onPress={handleSend} disabled={sending} className="w-10 h-10 rounded-full bg-indigo-600 items-center justify-center mb-0.5 active:scale-95 shadow-sm shadow-indigo-200 dark:shadow-none">
-                {sending ? <ActivityIndicator size="small" color="white" /> : <Send size={18} color="white" style={{ marginLeft: 2 }} />}
-              </TouchableOpacity>
             )}
+
+            {editingMsg && (
+              <View className="mb-2 bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 flex-row justify-between items-center border-l-4 border-orange-500">
+                <View className="flex-1">
+                  <Text className="text-orange-600 dark:text-orange-400 font-bold text-xs mb-0.5">Editing Message</Text>
+                </View>
+                <TouchableOpacity onPress={() => { setEditingMsg(null); setNewMessage(''); }} className="p-1 rounded-full bg-orange-200 dark:bg-orange-800/50">
+                  <X size={14} color={isDark ? '#fdba74' : '#c2410c'} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View className="flex-row items-end gap-2">
+              <TouchableOpacity onPress={handleImagePick} disabled={uploadingImage} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center mb-0.5">
+                {uploadingImage ? <ActivityIndicator size="small" color="#6366f1" /> : <ImageIcon size={20} color={isDark ? '#cbd5e1' : '#64748b'} />}
+              </TouchableOpacity>
+
+              <View className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-3xl flex-row items-end px-4 py-1.5 border border-slate-200 dark:border-slate-700">
+                <TextInput
+                  ref={inputRef}
+                  value={newMessage}
+                  onChangeText={setNewMessage}
+                  placeholder={isBlocked ? "You blocked this user" : "Type a message..."}
+                  placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+                  multiline
+                  maxLength={500}
+                  editable={!isBlocked}
+                  className="flex-1 max-h-32 text-base text-slate-900 dark:text-slate-50 pt-2 pb-2 min-h-[38px]"
+                />
+              </View>
+
+              {newMessage.trim().length > 0 && (
+                <TouchableOpacity onPress={handleSend} disabled={sending} className="w-10 h-10 rounded-full bg-indigo-600 items-center justify-center mb-0.5 active:scale-95 shadow-sm shadow-indigo-200 dark:shadow-none">
+                  {sending ? <ActivityIndicator size="small" color="white" /> : <Send size={18} color="white" style={{ marginLeft: 2 }} />}
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        </View>
         )}
       </View>
     </KeyboardAvoidingView>

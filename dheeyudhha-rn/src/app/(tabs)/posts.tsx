@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useVideoPlayer, VideoView } from 'expo-video';
 
@@ -48,8 +49,9 @@ export default function PostsScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
-      quality: 0.5,
+      quality: 0.8,
       videoMaxDuration: 30,
+      videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
     });
     if (!result.canceled && result.assets[0].uri) {
       const asset = result.assets[0];
@@ -68,7 +70,19 @@ export default function PostsScreen() {
             alert('Maximum 5 images allowed.');
             return;
          }
-         setMediaFiles(prev => [...prev, { uri: asset.uri, type: 'image' }]);
+         
+         const needsResize = (asset.width || 0) > 1200 || (asset.height || 0) > 1200;
+         const manipulated = await ImageManipulator.manipulateAsync(
+           asset.uri,
+           needsResize ? [{ resize: { width: 1200 } }] : [],
+           { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+         );
+         
+         const uriToUpload = Platform.OS === 'android' && !manipulated.uri.startsWith('file://') 
+           ? `file://${manipulated.uri}` 
+           : manipulated.uri;
+           
+         setMediaFiles(prev => [...prev, { uri: uriToUpload, type: 'image' }]);
       }
     }
   };
@@ -421,7 +435,7 @@ export default function PostsScreen() {
             currentUserId={currentUser?.id || null} 
           />
         )}
-        ListHeaderComponent={renderComposer}
+        ListHeaderComponent={renderComposer()}
         contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4f46e5']} />

@@ -52,6 +52,34 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Failed to accept follow' }, { status: 500 });
         }
 
+        // Approve any pending chat rooms between these two users
+        try {
+            const { data: myParticipants } = await supabaseAdmin
+                .from('chat_participants')
+                .select('room_id')
+                .eq('user_id', user.id);
+                
+            if (myParticipants && myParticipants.length > 0) {
+                const roomIds = myParticipants.map((p: any) => p.room_id);
+                const { data: commonRooms } = await supabaseAdmin
+                    .from('chat_participants')
+                    .select('room_id')
+                    .in('room_id', roomIds)
+                    .eq('user_id', followerId);
+                    
+                if (commonRooms && commonRooms.length > 0) {
+                    const commonRoomIds = commonRooms.map((p: any) => p.room_id);
+                    await supabaseAdmin
+                        .from('chat_rooms')
+                        .update({ status: 'approved' })
+                        .in('id', commonRoomIds)
+                        .eq('status', 'pending');
+                }
+            }
+        } catch (e) {
+            console.error('Failed to update chat room status:', e);
+        }
+
         // Notify the follower that their request was accepted
         const myName = user.user_metadata?.fullName || user.user_metadata?.username || 'Someone';
         const myUsername = user.user_metadata?.username || null;

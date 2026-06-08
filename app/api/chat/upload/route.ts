@@ -55,12 +55,10 @@ export async function POST(req: Request) {
             );
         }
         const fileExtension = file.name ? file.name.split('.').pop() : 'webp';
-        // Put in public bucket "chat_images". If that doesn't exist, we will use "avatars".
-        // Often projects use a generic 'public' bucket or similar. "avatars" is guaranteed.
-        // Let's use `avatars/chat_${roomId}_${Date.now()}.${fileExtension}`
-        const path = `avatars/chat_${roomId}_${userId}_${Date.now()}.${fileExtension}`;
+        // Use the dedicated chat-images bucket
+        const path = `chat_${roomId}_${userId}_${Date.now()}.${fileExtension}`;
 
-        const { data, error } = await supabaseAdmin.storage.from('avatars').upload(path, buffer, {
+        const { data, error } = await supabaseAdmin.storage.from('chat-images').upload(path, buffer, {
             upsert: true,
             contentType: (file as any).type || 'image/webp'
         });
@@ -70,7 +68,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: error.message || String(error) }, { status: 500 });
         }
 
-        const { data: publicData } = supabaseAdmin.storage.from('avatars').getPublicUrl(data.path);
+        const { data: publicData } = supabaseAdmin.storage.from('chat-images').getPublicUrl(data.path);
 
         return NextResponse.json({ success: true, path: data.path, publicUrl: publicData.publicUrl });
     } catch (err) {

@@ -74,11 +74,13 @@ export async function GET(req: NextRequest) {
             const profile = profilesMap.get(q.created_by);
             return {
                 ...q,
-                createdByName: profile?.full_name || 'Teacher',
-                createdByAvatar: profile?.avatar_url || null,
-                createdByUsername: profile?.username || null,
-                // Ensure other keys expected by QuestionCard are at least mapped or consistent
-                classGrade: q.class_grade // QuestionCard might expect classGrade or class_grade
+                profiles: profile || {
+                    full_name: 'Teacher',
+                    avatar_url: null,
+                    username: null,
+                    is_teacher: true
+                },
+                class_grade: q.class_grade // QuestionCard might expect classGrade or class_grade
             };
         });
 
