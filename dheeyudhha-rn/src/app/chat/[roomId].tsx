@@ -286,20 +286,20 @@ const MessageItem = memo(({
                   </View>
                 </TouchableOpacity>
               ) : (
-                <View className="px-3 py-2 flex-row flex-wrap items-end justify-between min-w-[80px]">
-                  <Text className={`text-[15px] leading-5 mr-3 mb-1 ${isMe ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+                <View className="px-3 py-1.5 min-w-[75px] justify-between">
+                  <Text className={`text-[15px] leading-5 ${isMe ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
                     {mainContent}
                     {meta.edited && <Text className={`text-[10px] italic ${isMe ? 'text-white/70' : 'text-slate-500'}`}> (edited)</Text>}
                   </Text>
-                  <View className="flex-row items-center justify-end flex-1 gap-1 min-w-[45px]">
-                    <Text className={`text-[10px] font-medium ${isMe ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <View className="flex-row items-center justify-end gap-1 mt-0.5">
+                    <Text className={`text-[9px] font-semibold ${isMe ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'}`}>
                       {timeStr}
                     </Text>
                     {isMe && (
                       msg.is_read ? (
-                        <CheckCheck size={12} color="#38bdf8" strokeWidth={2.5} />
+                        <CheckCheck size={11} color="#38bdf8" strokeWidth={2.5} />
                       ) : (
-                        <Check size={12} color="#c7d2fe" strokeWidth={2.5} />
+                        <Check size={11} color="#c7d2fe" strokeWidth={2.5} />
                       )
                     )}
                   </View>

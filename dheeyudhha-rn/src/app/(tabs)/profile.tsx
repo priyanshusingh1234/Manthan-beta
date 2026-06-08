@@ -181,7 +181,6 @@ export default function ProfileScreen() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.replace('/' as any);
   };
 
   // ── Image Picker with native crop + compression ──────────────────────────

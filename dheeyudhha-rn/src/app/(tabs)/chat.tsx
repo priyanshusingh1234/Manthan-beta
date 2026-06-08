@@ -11,7 +11,7 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Search, X, MessageSquare, Loader2, Check, CheckCheck, MessageCirclePlus } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import BadgedName from '@/components/BadgedName';
@@ -198,6 +198,14 @@ export default function ChatListPage() {
   useEffect(() => {
     init();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        fetchRooms(user.id);
+      }
+    }, [user?.id, fetchRooms])
+  );
 
   useEffect(() => {
     if (user?.id) {
