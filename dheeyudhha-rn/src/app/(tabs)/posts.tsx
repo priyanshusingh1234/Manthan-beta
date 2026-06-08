@@ -420,6 +420,13 @@ export default function PostsScreen() {
     );
   }
 
+  const renderPostItem = useCallback(({ item }: { item: any }) => (
+    <PostCard 
+      post={item} 
+      currentUserId={currentUser?.id || null} 
+    />
+  ), [currentUser?.id]);
+
   return (
     <KeyboardAvoidingView 
       className="flex-1 bg-slate-50 dark:bg-slate-950" 
@@ -429,12 +436,12 @@ export default function PostsScreen() {
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <PostCard 
-            post={item} 
-            currentUserId={currentUser?.id || null} 
-          />
-        )}
+        renderItem={renderPostItem}
+        initialNumToRender={10}
+        maxToRenderPerBatch={5}
+        windowSize={10}
+        removeClippedSubviews={Platform.OS === 'android' || Platform.OS === 'ios'}
+        updateCellsBatchingPeriod={50}
         ListHeaderComponent={renderComposer()}
         contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={

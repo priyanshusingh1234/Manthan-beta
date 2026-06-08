@@ -40,12 +40,14 @@ export default function SolveQuestionScreen() {
 
   const [startedAt] = useState(() => new Date().toISOString());
 
-  // Helper to get image public URL
-  const imageUrl = question?.image_url 
-    ? question.image_url.startsWith('/') 
-      ? `${process.env.EXPO_PUBLIC_API_URL}${question.image_url}`
-      : `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${question.image_url}`
-    : null;
+  // Resolve image URL: handles public folder (/images/...), full http URLs, and bare storage paths
+  const resolveImageUrl = (raw?: string | null) => {
+    if (!raw) return null;
+    if (raw.startsWith('http')) return raw;                           // Full URL (Cloudinary, Supabase CDN)
+    if (raw.startsWith('/')) return `${process.env.EXPO_PUBLIC_API_URL}${raw}`;   // Public folder
+    return `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${raw}`; // Legacy bare path
+  };
+  const imageUrl = resolveImageUrl(question?.image_url);
 
   useEffect(() => {
     const fetchQuestionAndAuth = async () => {

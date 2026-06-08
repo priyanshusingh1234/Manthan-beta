@@ -104,20 +104,23 @@ export default function BadgedName({
   rank?: number | null;
   nameClassName?: string;
   containerClassName?: string;
+  cosmetics?: string[];
 }) {
   const { isAdmin } = useAdmins();
   const isUserAdmin = isAdmin(userId);
+
+  const equippedBadgeId = cosmetics?.find(c => c.startsWith('equipped_badge_'))?.replace('equipped_badge_', '');
 
   return (
     <View className={containerClassName}>
       <Text className={nameClassName}>{name}</Text>
       <View className="flex-row items-center gap-1 shrink-0">
-        {isUserAdmin && <AdminVerifiedBadge />}
-        {isTeacher && <TeacherVerifiedBadge />}
-        {rank === 1 && <GoldBadge />}
-        {rank === 2 && <SilverBadge />}
-        {rank === 3 && <BronzeBadge />}
-        {isTopper && <TopperBadge />}
+        {(!equippedBadgeId || equippedBadgeId === 'admin') && isUserAdmin && <AdminVerifiedBadge />}
+        {(!equippedBadgeId || equippedBadgeId === 'teacher') && isTeacher && <TeacherVerifiedBadge />}
+        {(!equippedBadgeId || equippedBadgeId === 'gold') && rank === 1 && <GoldBadge />}
+        {(!equippedBadgeId || equippedBadgeId === 'silver') && rank === 2 && <SilverBadge />}
+        {(!equippedBadgeId || equippedBadgeId === 'bronze') && rank === 3 && <BronzeBadge />}
+        {(!equippedBadgeId || equippedBadgeId === 'topper') && isTopper && <TopperBadge />}
       </View>
     </View>
   );

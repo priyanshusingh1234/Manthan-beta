@@ -1,11 +1,47 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Image, ScrollView, Alert, Platform, DeviceEventEmitter } from 'react-native';
+import {
+  View, Text, TouchableOpacity, ActivityIndicator, Image,
+  ScrollView, Alert, Platform, DeviceEventEmitter
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Clock, Zap, ArrowLeft, Camera, Image as ImageIcon, CheckCircle2, Shield, Users, Trophy } from 'lucide-react-native';
+import {
+  Clock, Zap, ArrowLeft, Camera, Image as ImageIcon,
+  CheckCircle2, XCircle, Shield, Users, ThumbsUp,
+  AlertTriangle, Info, Trash2,
+} from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from '@/lib/supabaseClient';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+
+/** Resolves a question image_url to a full URL — matches web logic exactly */
+function resolveImageUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  if (raw.startsWith('http')) return raw;           // full URL (Cloudinary, Supabase, etc.)
+  if (raw.startsWith('/')) return `${API_URL}${raw}`; // public folder e.g. /images/foo.jpg
+  // Legacy: bare storage path
+  return `${SUPABASE_URL}/storage/v1/object/public/question-images/${raw}`;
+}
+
+function StatusBanner({ status }: { status: string }) {
+  const cfg: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    pending_check: { label: 'In Checker Queue', color: 'bg-amber-50 border-amber-200', icon: <Shield size={16} color="#d97706" /> },
+    points_given:  { label: 'Points Awarded ✓ — Peer review open', color: 'bg-emerald-50 border-emerald-200', icon: <CheckCircle2 size={16} color="#059669" /> },
+    auto_approved: { label: 'Auto-Approved ✓', color: 'bg-emerald-50 border-emerald-200', icon: <CheckCircle2 size={16} color="#059669" /> },
+    ai_confirmed_correct: { label: 'AI Verified Correct ✓', color: 'bg-emerald-50 border-emerald-200', icon: <CheckCircle2 size={16} color="#059669" /> },
+    ai_confirmed_wrong:   { label: 'AI Confirmed Incorrect ✗', color: 'bg-red-50 border-red-200', icon: <XCircle size={16} color="#dc2626" /> },
+  };
+  const info = cfg[status] || { label: 'Uploaded — Not Yet Marked', color: 'bg-slate-50 border-slate-200', icon: <Clock size={16} color="#64748b" /> };
+  return (
+    <View className={`flex-row items-center gap-2 px-4 py-3 rounded-2xl border ${info.color} mb-2`}>
+      {info.icon}
+      <Text className="font-semibold text-slate-700 dark:text-slate-300 text-sm flex-1">{info.label}</Text>
+    </View>
+  );
+}
 
 export default function WrittenSolveClient({ question, challengeId }: { question: any; challengeId?: string }) {
   const router = useRouter();
@@ -18,19 +54,24 @@ export default function WrittenSolveClient({ question, challengeId }: { question
   const [timerStarted, setTimerStarted] = useState(false);
 
   const [existingSubmission, setExistingSubmission] = useState<any>(null);
+  const [uploadedSubmission, setUploadedSubmission] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
 
   const [teacherSolutionUrl, setTeacherSolutionUrl] = useState<string | null>(null);
   const [showTeacherAnswer, setShowTeacherAnswer] = useState(false);
+  const [loadingTeacherAnswer, setLoadingTeacherAnswer] = useState(false);
 
   const [selfMarked, setSelfMarked] = useState(false);
   const [selfMarkResult, setSelfMarkResult] = useState<any>(null);
 
-  const activeSubmission = existingSubmission;
+  const activeSubmission = existingSubmission || uploadedSubmission;
+  const questionImageUrl = resolveImageUrl(question.image_url || question.imageUrl);
 
+  // ── Auth + existing submission ──
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -40,134 +81,122 @@ export default function WrittenSolveClient({ question, challengeId }: { question
 
       const { data } = await supabase
         .from('written_submissions')
-        .select('*')
+        .select('id, submission_url, self_marked_correct, status, points_awarded, challenge_id')
         .eq('student_id', session.user.id)
         .eq('question_id', question.id)
         .limit(1)
         .maybeSingle();
 
-      if (data) {
-        setExistingSubmission(data);
-      }
+      if (data) setExistingSubmission(data);
       setTimerStarted(true);
     };
     init();
   }, [question.id]);
 
+  // ── Timer ──
   useEffect(() => {
     if (!timerStarted || activeSubmission || solveTimeLeft <= 0) return;
     const t = setInterval(() => setSolveTimeLeft(prev => Math.max(0, prev - 1)), 1000);
     return () => clearInterval(t);
   }, [timerStarted, solveTimeLeft, activeSubmission]);
 
-  useEffect(() => {
-    const fetchTeacherSolution = async () => {
-      if (!token || !activeSubmission) return;
-      try {
-        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
-        const res = await fetch(`${API_URL}/api/teacher-solution?questionId=${question.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (data.hasModelAnswer) setTeacherSolutionUrl(data.solutionUrl);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    fetchTeacherSolution();
-  }, [activeSubmission, token, question.id]);
+  // ── Fetch teacher solution ──
+  const fetchTeacherSolution = useCallback(async () => {
+    if (!token) return;
+    setLoadingTeacherAnswer(true);
+    try {
+      const res = await fetch(`${API_URL}/api/teacher-solution?questionId=${question.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.hasModelAnswer) setTeacherSolutionUrl(data.solutionUrl);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingTeacherAnswer(false);
+    }
+  }, [question.id, token]);
 
-  // Polling for checker-feed updates
   useEffect(() => {
-    if (!existingSubmission) return;
-    if (existingSubmission.status !== 'pending_check' && existingSubmission.status !== 'flagged_for_ai') return;
+    if (activeSubmission && token) fetchTeacherSolution();
+  }, [activeSubmission, token, fetchTeacherSolution]);
+
+  // ── Poll for status ──
+  useEffect(() => {
+    const sub = existingSubmission || uploadedSubmission;
+    if (!sub) return;
+    if (!['pending_check', 'flagged_for_ai'].includes(sub.status)) return;
 
     const poll = setInterval(async () => {
       const { data } = await supabase
         .from('written_submissions')
-        .select('*')
-        .eq('id', existingSubmission.id)
+        .select('id, submission_url, self_marked_correct, status, points_awarded')
+        .eq('id', sub.id)
         .maybeSingle();
-      if (data && data.status !== existingSubmission.status) {
-        setExistingSubmission(data);
-        if (data.status === 'points_given' || data.status === 'auto_approved') clearInterval(poll);
+      if (data && !['pending_check', 'flagged_for_ai'].includes(data.status)) {
+        if (existingSubmission) setExistingSubmission(data);
+        else setUploadedSubmission(data);
+        clearInterval(poll);
       }
     }, 8000);
     return () => clearInterval(poll);
-  }, [existingSubmission]);
+  }, [existingSubmission, uploadedSubmission]);
 
+  // ── Pick image ──
   const handlePickImage = async (useCamera: boolean) => {
     try {
-      if (useCamera) {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission needed', 'Camera permission is required to take photos.');
-          return;
-        }
-      } else {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission needed', 'Gallery permission is required to upload photos.');
-          return;
-        }
+      const { status } = useCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', useCamera ? 'Camera access is required.' : 'Gallery access is required.');
+        return;
       }
 
       const result = useCamera
-        ? await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 })
-        : await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.8 });
+        ? await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.85 })
+        : await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.85 });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const manipResult = await ImageManipulator.manipulateAsync(
+      if (!result.canceled && result.assets?.length > 0) {
+        const compressed = await ImageManipulator.manipulateAsync(
           result.assets[0].uri,
-          [{ resize: { width: 1000 } }],
-          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+          [{ resize: { width: 1200 } }],
+          { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG }
         );
-        setSelectedImageUri(manipResult.uri);
+        setSelectedImageUri(compressed.uri);
       }
     } catch (error) {
       console.error('Image picking error', error);
     }
   };
 
+  // ── Upload ──
   const handleUpload = async () => {
     if (!selectedImageUri || !token) return;
     setUploading(true);
-
     try {
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
       const formData = new FormData();
-
       const filename = selectedImageUri.split('/').pop() || 'upload.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image/jpeg`;
-
-      formData.append('file', {
-        uri: selectedImageUri,
-        name: filename,
-        type,
-      } as any);
-
+      const ext = /\.(\w+)$/.exec(filename)?.[1] || 'jpg';
+      formData.append('file', { uri: selectedImageUri, name: filename, type: `image/${ext}` } as any);
       formData.append('questionId', question.id);
       if (challengeId) formData.append('challengeId', challengeId);
 
       const res = await fetch(`${API_URL}/api/written-submit`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // React Native FormData sets Content-Type automatically with boundary
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
 
-      setExistingSubmission({
+      setUploadedSubmission({
         id: data.submissionId,
         submission_url: data.submissionUrl || selectedImageUri,
         self_marked_correct: false,
         status: 'pending',
         points_awarded: 0,
+        challenge_id: challengeId || null,
       });
     } catch (err: any) {
       Alert.alert('Error', err.message);
@@ -176,27 +205,25 @@ export default function WrittenSolveClient({ question, challengeId }: { question
     }
   };
 
-  const handleSelfMark = async () => {
-    if (!existingSubmission || !token) return;
+  // ── Self-Mark: I Got It RIGHT ──
+  const handleSelfMarkCorrect = async () => {
+    if (!activeSubmission || !token) return;
     setSubmitting(true);
     try {
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
       const res = await fetch(`${API_URL}/api/written-submit`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ submissionId: existingSubmission.id }),
+        body: JSON.stringify({ submissionId: activeSubmission.id }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to self mark');
       setSelfMarked(true);
       setSelfMarkResult(data);
-
       if (data?.streak?.streakEarnedToday) {
         DeviceEventEmitter.emit('streak_earned', { streak: data.streak.current });
       }
-
-      // Update local status
-      setExistingSubmission({ ...existingSubmission, status: 'pending_check' });
+      setExistingSubmission((prev: any) => prev ? { ...prev, status: 'pending_check' } : prev);
+      setUploadedSubmission((prev: any) => prev ? { ...prev, status: 'pending_check' } : prev);
     } catch (err: any) {
       Alert.alert('Error', err.message);
     } finally {
@@ -204,63 +231,146 @@ export default function WrittenSolveClient({ question, challengeId }: { question
     }
   };
 
-  const formatTime = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${mins}:${s.toString().padStart(2, "0")}`;
+  // ── Delete / Discard ──
+  const handleDelete = async () => {
+    if (!activeSubmission || !token) return;
+    Alert.alert(
+      'Discard Answer?',
+      'This will delete your uploaded answer so you can try again alone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Discard', style: 'destructive', onPress: async () => {
+            setDeleting(true);
+            try {
+              const res = await fetch(`${API_URL}/api/written-submit?submissionId=${activeSubmission.id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || 'Failed to delete');
+              setExistingSubmission(null);
+              setUploadedSubmission(null);
+              setSelectedImageUri(null);
+              setShowTeacherAnswer(false);
+              setSelfMarkResult(null);
+              setSelfMarked(false);
+            } catch (err: any) {
+              Alert.alert('Error', err.message);
+            } finally {
+              setDeleting(false);
+            }
+          }
+        },
+      ]
+    );
   };
+
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const currentStatus = activeSubmission?.status || 'none';
+  const isTimeLow = solveTimeLeft <= 120 && !activeSubmission;
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <TouchableOpacity onPress={() => router.back()} className="p-2">
-          <ArrowLeft size={24} className="text-slate-900 dark:text-white" />
+        <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
+          <ArrowLeft size={22} color="#64748b" />
         </TouchableOpacity>
 
-        {!activeSubmission && (
-          <View className="bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full flex-row items-center gap-2">
-            <Clock size={16} color={solveTimeLeft <= 60 ? "#dc2626" : "#64748b"} />
-            <Text className={`font-bold ${solveTimeLeft <= 60 ? "text-red-600" : "text-slate-700 dark:text-slate-300"}`}>
-              {formatTime(solveTimeLeft)}
-            </Text>
+        <View className="flex-row items-center gap-2">
+          {!activeSubmission && (
+            <View className={`flex-row items-center gap-1.5 px-3 py-1.5 rounded-full border ${isTimeLow ? 'bg-red-50 border-red-200' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+              <Clock size={14} color={isTimeLow ? '#dc2626' : '#64748b'} />
+              <Text className={`font-bold text-sm ${isTimeLow ? 'text-red-600' : 'text-slate-600 dark:text-slate-300'}`}>
+                {formatTime(solveTimeLeft)}
+              </Text>
+            </View>
+          )}
+          <View className="flex-row items-center gap-1 bg-violet-600 px-3 py-1.5 rounded-full">
+            <Zap size={12} color="#fff" fill="#fff" />
+            <Text className="text-white font-bold text-xs">{question.points || 0} pts · Written</Text>
           </View>
-        )}
-
-        <View className="bg-violet-600 px-3 py-1.5 rounded-full flex-row items-center gap-1 shadow-sm">
-          <Zap size={14} color="#fff" fill="#fff" />
-          <Text className="text-white font-bold text-xs">{question.points || 0} pts - Written</Text>
         </View>
       </View>
 
-      <ScrollView className="flex-1 p-4" contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Question Details */}
-        <View className="bg-white dark:bg-slate-900 rounded-2xl p-5 mb-6 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <Text className="text-xl font-black text-slate-900 dark:text-slate-100 mb-2">{question.title}</Text>
-          {question.body && <Text className="text-slate-600 dark:text-slate-300 mb-4">{question.body}</Text>}
-          {question.image_url && (
-            <Image
-              source={{ uri: question.image_url.startsWith('/') 
-                ? `${process.env.EXPO_PUBLIC_API_URL}${question.image_url}` 
-                : `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${question.image_url}` 
-              }}
-              className="w-full h-48 rounded-xl bg-slate-100"
-              resizeMode="contain"
-            />
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+
+        {/* ── Question Card ── */}
+        <View className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 mb-4 border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+          <View className="absolute top-0 right-0 w-40 h-40 bg-violet-500/5 rounded-full -mr-10 -mt-10" />
+
+          {/* Meta tags */}
+          <View className="flex-row flex-wrap gap-2 mb-4">
+            {question.class_grade && (
+              <View className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded-full">
+                <Text className="text-xs font-medium text-slate-600 dark:text-slate-300">Class {question.class_grade}</Text>
+              </View>
+            )}
+            {question.subject && (
+              <View className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded-full">
+                <Text className="text-xs font-medium text-slate-600 dark:text-slate-300">{question.subject}</Text>
+              </View>
+            )}
+            {question.difficulty && (
+              <View className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded-full">
+                <Text className="text-xs font-medium text-slate-600 dark:text-slate-300 capitalize">{question.difficulty}</Text>
+              </View>
+            )}
+          </View>
+
+          <Text className="text-xl font-black text-slate-900 dark:text-slate-100 mb-3 leading-snug">{question.title}</Text>
+          {question.body && (
+            <Text className="text-slate-600 dark:text-slate-300 text-base leading-relaxed mb-4">{question.body}</Text>
           )}
+
+          {/* Question image */}
+          {questionImageUrl && (
+            <View className="mb-4 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 items-center justify-center">
+              <Image
+                source={{ uri: questionImageUrl }}
+                style={{ width: '100%', height: 200 }}
+                resizeMode="contain"
+                onError={(e) => console.warn('[WrittenSolveClient] Question image load error:', e.nativeEvent.error, questionImageUrl)}
+              />
+            </View>
+          )}
+
+          {/* Rules */}
+          <View className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800/50 rounded-2xl p-4 flex-row gap-3">
+            <Info size={18} color="#7c3aed" style={{ marginTop: 2 }} />
+            <View className="flex-1">
+              <Text className="font-bold text-violet-800 dark:text-violet-300 mb-2">How written answers work:</Text>
+              {[
+                'Solve on paper, take a clear photo',
+                'Upload within the time limit',
+                'Compare with teacher\'s model answer',
+                'Tap "I Got It Right" to earn points instantly',
+                'Community members will verify your answer',
+                'False claims = point loss + 3 extra penalty points',
+              ].map((step, i) => (
+                <Text key={i} className="text-violet-700 dark:text-violet-400 text-sm mb-0.5">{i + 1}. {step}</Text>
+              ))}
+            </View>
+          </View>
         </View>
 
-        {!activeSubmission ? (
-          /* Upload Section */
+        {/* ── Upload Section (before submission) ── */}
+        {!activeSubmission && (
           <View className="space-y-4">
-            <Text className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2 text-center">
+            <Text className="text-lg font-bold text-slate-800 dark:text-slate-200 text-center mb-3">
               Write your answer on paper, then snap a photo!
             </Text>
 
             {selectedImageUri ? (
               <View className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
-                <Image source={{ uri: selectedImageUri }} className="w-full h-64 bg-slate-100" resizeMode="contain" />
-                <View className="p-4 flex-row justify-between gap-3">
+                <Image source={{ uri: selectedImageUri }} style={{ width: '100%', height: 260 }} resizeMode="contain" />
+                <View className="p-4 flex-row gap-3">
                   <TouchableOpacity
                     onPress={() => setSelectedImageUri(null)}
                     className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl items-center"
@@ -270,9 +380,9 @@ export default function WrittenSolveClient({ question, challengeId }: { question
                   <TouchableOpacity
                     onPress={handleUpload}
                     disabled={uploading}
-                    className="flex-1 py-3 bg-indigo-600 rounded-xl items-center flex-row justify-center"
+                    className="flex-1 py-3 bg-indigo-600 rounded-xl items-center flex-row justify-center gap-2"
                   >
-                    {uploading ? <ActivityIndicator color="#fff" /> : <Text className="font-bold text-white">Upload Answer</Text>}
+                    {uploading ? <ActivityIndicator color="#fff" size="small" /> : <Text className="font-bold text-white">Upload Answer</Text>}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -286,6 +396,7 @@ export default function WrittenSolveClient({ question, challengeId }: { question
                     <Camera size={24} color="#4f46e5" />
                   </View>
                   <Text className="font-bold text-slate-700 dark:text-slate-300">Take Photo</Text>
+                  <Text className="text-xs text-slate-400 mt-1">Camera</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -296,35 +407,54 @@ export default function WrittenSolveClient({ question, challengeId }: { question
                     <ImageIcon size={24} color="#4f46e5" />
                   </View>
                   <Text className="font-bold text-slate-700 dark:text-slate-300">Upload Gallery</Text>
+                  <Text className="text-xs text-slate-400 mt-1">Photo Library</Text>
                 </TouchableOpacity>
               </View>
             )}
           </View>
-        ) : (
-          /* Submission / Self-Mark Section */
-          <View className="space-y-6">
-            <View className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 p-4 rounded-xl flex-row items-center gap-3">
-              <Shield size={20} color="#d97706" />
-              <Text className="flex-1 font-bold text-amber-800 dark:text-amber-400">
-                {activeSubmission.status === 'pending_check' ? 'In Checker Queue' :
-                  activeSubmission.status === 'points_given' ? 'Points Awarded ✓' :
-                    'Uploaded - Please Self Mark'}
-              </Text>
-            </View>
+        )}
 
+        {/* ── After submission ── */}
+        {activeSubmission && (
+          <View className="space-y-4">
+            <StatusBanner status={currentStatus} />
+
+            {/* Your answer */}
             <View className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800">
-              <Text className="font-bold text-slate-500 mb-2 uppercase text-xs">Your Uploaded Answer</Text>
-              <Image source={{ uri: activeSubmission.submission_url }} className="w-full h-48 rounded-xl bg-slate-100" resizeMode="contain" />
+              <Text className="font-bold text-slate-400 mb-2 uppercase text-xs tracking-widest">Your Uploaded Answer</Text>
+              {activeSubmission.submission_url ? (
+                <Image
+                  source={{ uri: activeSubmission.submission_url }}
+                  style={{ width: '100%', height: 220 }}
+                  className="rounded-xl bg-slate-100"
+                  resizeMode="contain"
+                />
+              ) : (
+                <View className="h-32 items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-xl">
+                  <Text className="text-slate-400">Image not available</Text>
+                </View>
+              )}
             </View>
 
+            {/* Teacher's model answer */}
             {showTeacherAnswer ? (
               <View className="bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl p-4 border border-indigo-200 dark:border-indigo-800/30">
-                <Text className="font-bold text-indigo-500 mb-2 uppercase text-xs">Teacher's Model Answer</Text>
-                {teacherSolutionUrl ? (
-                  <Image source={{ uri: teacherSolutionUrl }} className="w-full h-48 rounded-xl bg-white" resizeMode="contain" />
+                <Text className="font-bold text-indigo-500 mb-2 uppercase text-xs tracking-widest">Teacher's Model Answer</Text>
+                {loadingTeacherAnswer ? (
+                  <View className="h-32 items-center justify-center">
+                    <ActivityIndicator color="#6366f1" />
+                    <Text className="text-slate-400 mt-2 text-sm">Loading model answer...</Text>
+                  </View>
+                ) : teacherSolutionUrl ? (
+                  <Image
+                    source={{ uri: teacherSolutionUrl }}
+                    style={{ width: '100%', height: 220 }}
+                    className="rounded-xl bg-white"
+                    resizeMode="contain"
+                  />
                 ) : (
-                  <View className="h-32 items-center justify-center bg-white/50 rounded-xl">
-                    <Text className="text-slate-500 italic text-center px-4">No model answer provided by teacher.</Text>
+                  <View className="h-24 items-center justify-center bg-white/50 dark:bg-slate-800/50 rounded-xl">
+                    <Text className="text-slate-500 italic text-center px-4">No model answer provided by teacher yet.</Text>
                   </View>
                 )}
               </View>
@@ -333,47 +463,141 @@ export default function WrittenSolveClient({ question, challengeId }: { question
                 onPress={() => setShowTeacherAnswer(true)}
                 className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 items-center shadow-sm"
               >
-                <Text className="font-bold text-indigo-600 dark:text-indigo-400">Reveal Teacher's Answer</Text>
+                <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-base">👁 Reveal Teacher's Model Answer</Text>
+                <Text className="text-slate-400 text-xs mt-1">Tap to compare with your answer</Text>
               </TouchableOpacity>
             )}
 
-            {!selfMarked && activeSubmission.status === 'pending' && showTeacherAnswer && (
-              <View className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm mt-4">
-                <Text className="text-lg font-bold text-slate-900 dark:text-slate-100 text-center mb-2">Be Honest!</Text>
-                <Text className="text-slate-600 dark:text-slate-400 text-center mb-6">
-                  Compare your answer to the teacher's model above. Does your answer cover all the key points?
+            {/* ── Self-mark form (status=pending, not yet marked) ── */}
+            {currentStatus === 'pending' && !selfMarked && (
+              <View className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 border border-slate-100 dark:border-slate-800 shadow-sm">
+                <Text className="text-xl font-black text-slate-900 dark:text-slate-100 mb-1">Did you get it right?</Text>
+                <Text className="text-slate-500 dark:text-slate-400 text-sm mb-4">
+                  Compare honestly with the model answer above. Claim your{' '}
+                  <Text className="font-black text-violet-600 dark:text-violet-400">{question.points} points</Text>{' '}
+                  if you're correct.
                 </Text>
 
+                <View className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 flex-row gap-3 mb-5">
+                  <AlertTriangle size={16} color="#d97706" style={{ marginTop: 2 }} />
+                  <Text className="flex-1 text-sm text-amber-800 dark:text-amber-300">
+                    <Text className="font-bold">Warning: </Text>
+                    The community will review your claim. If 2 peers flag it as wrong, an AI Verifier checks it.
+                    False claims = {question.points} pts lost + 3 extra penalty points.
+                  </Text>
+                </View>
+
+                {/* ✅ I Got It RIGHT */}
                 <TouchableOpacity
-                  onPress={handleSelfMark}
-                  disabled={submitting}
-                  className="bg-emerald-600 flex-row justify-center items-center py-4 rounded-xl"
+                  onPress={handleSelfMarkCorrect}
+                  disabled={submitting || deleting}
+                  className="w-full bg-emerald-600 flex-row justify-center items-center py-4 rounded-2xl mb-3 gap-2"
+                  style={{ opacity: (submitting || deleting) ? 0.6 : 1 }}
                 >
-                  {submitting ? <ActivityIndicator color="#fff" /> : (
+                  {submitting ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
                     <>
-                      <CheckCircle2 size={20} color="#fff" className="mr-2" />
-                      <Text className="text-white font-bold text-lg">Yes, My Answer is Correct</Text>
+                      <ThumbsUp size={18} color="#fff" />
+                      <Text className="text-white font-bold text-base">I Got It Right — Claim {question.points} Points</Text>
                     </>
                   )}
                 </TouchableOpacity>
-                <Text className="text-xs text-center text-slate-400 mt-3 px-4">
-                  (Note: Peer checkers will verify this. False claims will result in a penalty!)
+
+                {/* ❌ I Got It WRONG */}
+                <TouchableOpacity
+                  onPress={handleDelete}
+                  disabled={submitting || deleting}
+                  className="w-full bg-slate-100 dark:bg-slate-800 flex-row justify-center items-center py-4 rounded-2xl mb-3 gap-2"
+                  style={{ opacity: (submitting || deleting) ? 0.6 : 1 }}
+                >
+                  {deleting ? (
+                    <ActivityIndicator color="#64748b" size="small" />
+                  ) : (
+                    <>
+                      <XCircle size={18} color="#64748b" />
+                      <Text className="text-slate-700 dark:text-slate-300 font-bold text-base">I Got It Wrong — Try Again</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <Text className="text-xs text-center text-slate-400 px-4">
+                  "I Got It Wrong" discards this upload so you can try again alone.
                 </Text>
               </View>
             )}
 
-            {selfMarked && selfMarkResult && (
-              <View className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 rounded-2xl p-6 items-center">
-                <View className="w-16 h-16 bg-emerald-100 dark:bg-emerald-800/50 rounded-full items-center justify-center mb-4">
-                  <CheckCircle2 size={32} color="#10b981" />
+            {/* ── Points awarded confirmation ── */}
+            {(selfMarked || (activeSubmission.self_marked_correct && currentStatus === 'pending_check')) && (
+              <View className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 border border-emerald-100 dark:border-emerald-800/50 shadow-sm">
+                <View className="flex-row items-center gap-4 mb-4">
+                  <View className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/40 rounded-2xl items-center justify-center">
+                    <CheckCircle2 size={28} color="#059669" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-lg font-black text-slate-900 dark:text-slate-100">Points Awarded!</Text>
+                    <Text className="text-slate-500 text-sm">
+                      +{selfMarkResult?.pointsAwarded ?? activeSubmission.points_awarded} pts added provisionally
+                    </Text>
+                  </View>
                 </View>
-                <Text className="text-xl font-black text-emerald-900 dark:text-emerald-400 mb-2">Self-Marked!</Text>
-                <Text className="text-emerald-800 dark:text-emerald-300 font-bold mb-4 text-center">
-                  +{selfMarkResult.pointsAwarded} Points awarded provisionally.
+
+                <View className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 mb-4">
+                  <View className="flex-row items-center gap-2 mb-1">
+                    <Shield size={14} color="#7c3aed" />
+                    <Text className="font-semibold text-slate-700 dark:text-slate-200 text-sm">Community Verification Active</Text>
+                  </View>
+                  <Text className="text-slate-500 text-xs">Your peers are verifying your answer right now.</Text>
+                </View>
+
+                {selfMarkResult?.newTotal !== undefined && (
+                  <View className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 rounded-xl p-4 flex-row items-center justify-between mb-4">
+                    <Text className="text-sm text-emerald-700 dark:text-emerald-400 font-semibold">Your total points</Text>
+                    <Text className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{selfMarkResult.newTotal}</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  onPress={() => router.replace('/')}
+                  className="w-full bg-slate-900 dark:bg-slate-100 py-4 rounded-2xl items-center"
+                >
+                  <Text className="text-white dark:text-slate-900 font-bold">Back to Dashboard</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* ── AI confirmed wrong ── */}
+            {currentStatus === 'ai_confirmed_wrong' && (
+              <View className="bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-800/50 p-6 items-center">
+                <XCircle size={48} color="#dc2626" />
+                <Text className="text-xl font-black text-red-700 dark:text-red-300 mt-3 mb-2">Answer Confirmed Incorrect</Text>
+                <Text className="text-red-600 dark:text-red-400 text-sm text-center mb-4">
+                  Points + {question.points >= 15 ? '3-point penalty' : 'penalty'} have been deducted.
                 </Text>
                 <TouchableOpacity
                   onPress={() => router.replace('/')}
-                  className="bg-emerald-600 px-6 py-3 rounded-xl w-full items-center"
+                  className="bg-slate-900 dark:bg-slate-100 px-8 py-3 rounded-xl"
+                >
+                  <Text className="text-white dark:text-slate-900 font-bold">Back to Dashboard</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* ── Auto approved / AI confirmed correct ── */}
+            {(currentStatus === 'auto_approved' || currentStatus === 'ai_confirmed_correct') && (
+              <View className="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800/50 p-6 items-center">
+                <CheckCircle2 size={48} color="#059669" />
+                <Text className="text-xl font-black text-emerald-700 dark:text-emerald-300 mt-3 mb-2">
+                  {currentStatus === 'auto_approved' ? 'Auto-Approved! ✓' : 'Verified by AI! ✓'}
+                </Text>
+                <Text className="text-emerald-600 dark:text-emerald-400 text-sm text-center mb-4">
+                  {currentStatus === 'auto_approved'
+                    ? 'Two peers marked your answer correct. Points permanently secured!'
+                    : 'AI verified your answer is absolutely correct. Well done!'}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => router.replace('/')}
+                  className="bg-emerald-600 px-8 py-3 rounded-xl"
                 >
                   <Text className="text-white font-bold">Back to Dashboard</Text>
                 </TouchableOpacity>

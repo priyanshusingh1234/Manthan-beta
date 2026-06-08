@@ -29,11 +29,13 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
   const teacherAvatar = q?.profiles?.avatar_url;
   const teacherUsername = q?.profiles?.username;
 
-  const imageUrl = q?.image_url 
-    ? q.image_url.startsWith('/') 
-      ? `${process.env.EXPO_PUBLIC_API_URL}${q.image_url}`
-      : `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${q.image_url}`
-    : null;
+  const resolveImageUrl = (raw?: string | null) => {
+    if (!raw) return null;
+    if (raw.startsWith('http')) return raw;                                          // Full URL (Cloudinary, Supabase CDN)
+    if (raw.startsWith('/')) return `${process.env.EXPO_PUBLIC_API_URL}${raw}`;      // Public folder: /images/foo.jpg
+    return `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${raw}`; // Legacy bare path
+  };
+  const imageUrl = resolveImageUrl(q?.image_url);
 
   const HeaderWrapper = ({ children }: { children: React.ReactNode }) => {
     if (teacherUsername) {
@@ -73,21 +75,26 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
       >
         {/* Header */}
         <HeaderWrapper>
-          <View className="w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-800 shadow-sm items-center justify-center mr-1">
-            {teacherAvatar && !teacherAvatar.includes('googleusercontent') ? (
-              <Image source={{ uri: teacherAvatar }} alt={teacherName} className="w-full h-full" />
-            ) : (
-              <Text className="text-blue-600 dark:text-blue-400 font-bold text-sm">{teacherName.substring(0, 2).toUpperCase()}</Text>
+          <View className="relative w-11 h-11 mr-1">
+            {q?.profiles?.cosmetics?.includes('avatar_glow') && (
+              <View className="absolute -inset-1 bg-indigo-500/50 rounded-full blur-md" style={{ elevation: 5, shadowColor: '#6366f1', shadowOpacity: 0.8, shadowRadius: 10 }} />
             )}
+            <View className={`w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 ${q?.profiles?.cosmetics?.includes('avatar_glow') ? 'border-indigo-400 dark:border-indigo-500' : 'border-white dark:border-slate-800'} shadow-sm items-center justify-center`}>
+              {teacherAvatar && !teacherAvatar.includes('googleusercontent') ? (
+                <Image source={{ uri: teacherAvatar }} alt={teacherName} className="w-full h-full" />
+              ) : (
+                <Text className="text-blue-600 dark:text-blue-400 font-bold text-sm">{teacherName.substring(0, 2).toUpperCase()}</Text>
+              )}
+            </View>
           </View>
           <View className="flex-1 justify-center">
             <BadgedName 
               name={teacherName} 
               userId={q?.created_by} 
               isTeacher={q?.profiles?.is_teacher}
+              cosmetics={q?.profiles?.cosmetics || []}
               nameClassName="font-extrabold text-slate-900 dark:text-slate-100 text-[15px] tracking-tight"
               containerClassName="flex-row items-center gap-1 mb-0.5"
-              iconSize={14}
             />
             <Text className="text-[12px] text-slate-500 dark:text-slate-400 font-medium" numberOfLines={1}>
               {q?.subject || 'General'}

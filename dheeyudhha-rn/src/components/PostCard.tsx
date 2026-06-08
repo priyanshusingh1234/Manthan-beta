@@ -16,7 +16,7 @@ interface PostCardProps {
   onImagePress?: (uri: string) => void;
 }
 
-export default function PostCard({ post, currentUserId, onUpdate, isSinglePost = false, onImagePress }: PostCardProps) {
+export default React.memo(function PostCard({ post, currentUserId, onUpdate, isSinglePost = false, onImagePress }: PostCardProps) {
   const router = useRouter();
   const [isLiked, setIsLiked] = useState(post.is_liked_by_me || false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
@@ -131,12 +131,17 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
           className="flex-row items-center flex-1 mr-2"
         >
           {/* Avatar */}
-          <View className={`w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 ${isSinglePost ? 'border-transparent' : 'border-white dark:border-slate-800'} justify-center items-center mr-3 shadow-sm`}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} className="w-full h-full" />
-            ) : (
-              <User size={20} color="#94a3b8" />
+          <View className="relative w-11 h-11 mr-3">
+            {author.cosmetics?.includes('avatar_glow') && (
+              <View className="absolute -inset-1 bg-indigo-500/50 rounded-full blur-md" style={{ elevation: 5, shadowColor: '#6366f1', shadowOpacity: 0.8, shadowRadius: 10 }} />
             )}
+            <View className={`w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 ${author.cosmetics?.includes('avatar_glow') ? 'border-indigo-400 dark:border-indigo-500' : (isSinglePost ? 'border-transparent' : 'border-white dark:border-slate-800')} justify-center items-center shadow-sm`}>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} className="w-full h-full" />
+              ) : (
+                <User size={20} color="#94a3b8" />
+              )}
+            </View>
           </View>
 
           {/* Name & Handle */}
@@ -146,8 +151,9 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
                 name={name}
                 userId={author.id}
                 isTeacher={post.profiles?.is_teacher || author.is_teacher}
-                textStyle={{ fontWeight: '900', fontSize: 16, letterSpacing: -0.2 }}
-                style={{ marginRight: 6 }}
+                cosmetics={author.cosmetics || post.profiles?.cosmetics || []}
+                nameClassName="font-black text-[15px] tracking-tight text-slate-900 dark:text-slate-100"
+                containerClassName="flex-row items-center gap-1 mr-1.5"
               />
               {post._feedLabel && (
                 <View className="bg-indigo-50 dark:bg-indigo-900/40 rounded-md px-1.5 py-0.5 flex-row items-center mt-0.5">
@@ -284,4 +290,4 @@ export default function PostCard({ post, currentUserId, onUpdate, isSinglePost =
         </View>
     </View>
   );
-}
+});

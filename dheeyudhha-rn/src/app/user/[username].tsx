@@ -706,7 +706,10 @@ export default function PublicProfileScreen() {
           {/* Avatar and Follow Row */}
           <View className="flex-row items-end justify-between -mt-16 mb-4">
             <View className="relative">
-              <View className="w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-900 shadow-md justify-center items-center">
+              {profile.cosmetics?.includes('avatar_glow') && (
+                <View className="absolute -inset-2 bg-indigo-500/50 rounded-full blur-xl" style={{ elevation: 10, shadowColor: '#6366f1', shadowOpacity: 0.8, shadowRadius: 20 }} />
+              )}
+              <View className={`w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 ${profile.cosmetics?.includes('avatar_glow') ? 'border-indigo-400 dark:border-indigo-500' : 'border-white dark:border-slate-900'} shadow-md justify-center items-center`}>
                 {profile.avatar_url ? (
                   <Image source={{ uri: profile.avatar_url }} className="w-full h-full" resizeMode="cover" />
                 ) : (
@@ -748,9 +751,11 @@ export default function PublicProfileScreen() {
           <View className="mb-2">
             <BadgedName
               name={profile.full_name || `@${profile.username}`}
+              userId={profile.id}
               isTeacher={isTeacher}
               isTopper={isProfileTopper}
               rank={globalRank}
+              cosmetics={profile.cosmetics || []}
             />
             <Text className="text-sm font-semibold text-indigo-500 dark:text-indigo-400 mt-0.5">@{profile.username}</Text>
           </View>
