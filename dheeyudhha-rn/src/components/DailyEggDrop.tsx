@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Dimensions, Animated, Easing, Modal, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { X, Zap } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 import { useColorScheme } from 'nativewind';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -48,7 +47,6 @@ export default function DailyEggDrop() {
     // Wait 3s then start the fly-in
     const t = setTimeout(() => {
       setPhase('flying');
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       
       Animated.timing(heroX, {
         toValue: SCREEN_WIDTH + 100,
@@ -97,7 +95,6 @@ export default function DailyEggDrop() {
   const handleEggTap = async () => {
     if (phase !== 'landed') return;
     setPhase('cracking');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
 
     Animated.sequence([
       Animated.timing(flashOpacity, { toValue: 0.85, duration: 250, useNativeDriver: true }),
@@ -150,7 +147,6 @@ export default function DailyEggDrop() {
       if (res.ok) {
         const json = await res.json();
         setResult(json.isCorrect ? 'won' : 'lost');
-        Haptics.impactAsync(json.isCorrect ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         
         setTimeout(() => {
           dismiss();

@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, BarChart3, Eye, Heart, MessageCircle, TrendingUp } from 'lucide-react';
-import ClientLayout from '@/components/ClientLayout';
 
 export default function ProfessionalDashboardPage() {
     const router = useRouter();
@@ -40,8 +39,7 @@ export default function ProfessionalDashboardPage() {
     }, []);
 
     return (
-        <ClientLayout>
-            <div className="max-w-3xl mx-auto p-4 sm:p-6 pb-20 pt-8 sm:pt-12">
+        <div className="max-w-3xl mx-auto p-4 sm:p-6 pb-20 pt-8 sm:pt-12">
                 <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:hover:text-white mb-6 transition-colors">
                     <ArrowLeft className="w-5 h-5" />
                     <span className="font-bold">Back to Profile</span>
@@ -123,6 +121,5 @@ export default function ProfessionalDashboardPage() {
                     </div>
                 )}
             </div>
-        </ClientLayout>
     );
 }
