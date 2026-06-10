@@ -34,14 +34,14 @@ type CoopData = {
 
 function statusLabel(status: string | undefined) {
     switch (status) {
-        case "pending": return { label: "Uploaded — Pending Mark", color: "text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800", icon: <Clock size={14} color="#64748b" /> };
-        case "pending_check": return { label: "In Checker Queue", color: "text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/40", icon: <Shield size={14} color="#d97706" /> };
-        case "points_given": return { label: "Points Awarded ✓", color: "text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40", icon: <CheckCircle2 size={14} color="#10b981" /> };
-        case "auto_approved": return { label: "Verified Correct ✓", color: "text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40", icon: <CheckCircle2 size={14} color="#10b981" /> };
-        case "ai_confirmed_correct": return { label: "AI Verified Correct ✓", color: "text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40", icon: <CheckCircle2 size={14} color="#10b981" /> };
-        case "ai_confirmed_wrong": return { label: "Confirmed Wrong ✗", color: "text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-950/40", icon: <XCircle size={14} color="#ef4444" /> };
-        case "flagged_for_ai": return { label: "AI is checking...", color: "text-orange-700 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/40", icon: <ActivityIndicator size="small" color="#f97316" /> };
-        default: return { label: "Not submitted yet", color: "text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900/50", icon: <Clock size={14} color="#94a3b8" /> };
+        case "pending": return { label: "Uploaded — Pending Mark", bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-600 dark:text-slate-300", icon: <Clock size={14} color="#64748b" /> };
+        case "pending_check": return { label: "In Checker Queue", bg: "bg-amber-100 dark:bg-amber-950/40", text: "text-amber-700 dark:text-amber-400", icon: <Shield size={14} color="#d97706" /> };
+        case "points_given": return { label: "Points Awarded ✓", bg: "bg-emerald-100 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-400", icon: <CheckCircle2 size={14} color="#10b981" /> };
+        case "auto_approved": return { label: "Verified Correct ✓", bg: "bg-emerald-100 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-400", icon: <CheckCircle2 size={14} color="#10b981" /> };
+        case "ai_confirmed_correct": return { label: "AI Verified Correct ✓", bg: "bg-emerald-100 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-400", icon: <CheckCircle2 size={14} color="#10b981" /> };
+        case "ai_confirmed_wrong": return { label: "Confirmed Wrong ✗", bg: "bg-red-100 dark:bg-red-950/40", text: "text-red-700 dark:text-red-400", icon: <XCircle size={14} color="#ef4444" /> };
+        case "flagged_for_ai": return { label: "AI is checking...", bg: "bg-orange-100 dark:bg-orange-950/40", text: "text-orange-700 dark:text-orange-400", icon: <ActivityIndicator size="small" color="#f97316" /> };
+        default: return { label: "Not submitted yet", bg: "bg-slate-50 dark:bg-slate-900/50", text: "text-slate-500 dark:text-slate-400", icon: <Clock size={14} color="#94a3b8" /> };
     }
 }
 
@@ -56,9 +56,9 @@ function PlayerCard({ player, splitPoints, challengeMeta }: { player: PlayerStat
     const isExpired = Date.now() > expiresAt;
     
     const info = won 
-        ? { label: "Win ✓", color: "text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40", icon: <CheckCircle2 size={14} color="#10b981" /> }
+        ? { label: "Win ✓", bg: "bg-emerald-100 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-400", icon: <CheckCircle2 size={14} color="#10b981" /> }
         : isExpired && !sub
-            ? { label: "Expired ✗", color: "text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-950/40", icon: <XCircle size={14} color="#ef4444" /> }
+            ? { label: "Expired ✗", bg: "bg-red-100 dark:bg-red-950/40", text: "text-red-700 dark:text-red-400", icon: <XCircle size={14} color="#ef4444" /> }
             : statusLabel(sub?.status);
 
     return (
@@ -98,9 +98,9 @@ function PlayerCard({ player, splitPoints, challengeMeta }: { player: PlayerStat
             </View>
 
             {/* Status pill */}
-            <View className={`flex-row items-center gap-2 px-3 py-2.5 rounded-xl border border-transparent ${info.color}`}>
+            <View className={`flex-row items-center gap-2 px-3 py-2.5 rounded-xl border border-transparent ${info.bg}`}>
                 {info.icon}
-                <Text className={`text-xs font-bold ${info.color.split(' ')[0]}`}>{info.label}</Text>
+                <Text className={`text-xs font-bold ${info.text}`}>{info.label}</Text>
             </View>
 
             {/* Submission preview if image is attached */}

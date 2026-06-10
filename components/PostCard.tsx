@@ -684,6 +684,16 @@ export default function PostCard({
                                 <Share2 className="w-[18px] h-[18px]" />
                             </div>
                         </button>
+
+                        {/* View Insights (Author Only) */}
+                        {isOwner && (
+                            <Link href={`/insights/${post.id}`} onClick={(e) => e.stopPropagation()} className="group flex items-center transition-colors hover:text-indigo-500 ml-auto mr-2">
+                                <div className="p-2 rounded-full group-hover:bg-indigo-500/10 transition-all flex items-center gap-1.5">
+                                    <span className="text-[12px] font-bold text-indigo-500 hidden sm:inline-block">View Insights</span>
+                                    <span className="text-[12px] font-bold text-indigo-500 sm:hidden">Insights</span>
+                                </div>
+                            </Link>
+                        )}
                     </div>
                 </div>
             </div>

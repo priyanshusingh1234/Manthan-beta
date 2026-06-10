@@ -11,6 +11,7 @@ import {
 import { fetchFeed } from '@/lib/feedService';
 import QuestionCard from './QuestionCard';
 import PostCard from './PostCard';
+import FeedSkeleton from './FeedSkeleton';
 import { ArrowUp } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,6 +19,7 @@ import { DeviceEventEmitter } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
 const PAGE_SIZE = 10;
+const CACHE_KEY = 'dheeyudhha_feed_cache';
 
 const SUBJECTS = [
   { label: 'All', value: '', emoji: '⚡' },
@@ -54,9 +56,13 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
     }
 
     try {
-      // Use higher limit for feed generation to allow local pagination
       const data = await fetchFeed({ subject: subjectFilter, chapter: chapterFilter, limit: 40 });
       
+      // Cache the feed for the default view to enable instant launch next time
+      if (!subjectFilter && !chapterFilter) {
+        AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
+      }
+
       const currentAllData = allDataRef.current;
       if (silent && currentAllData.length > 0) {
         // Background refresh: check if new questions arrived
@@ -92,7 +98,23 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
   };
 
   useEffect(() => {
-    loadFiltersFromStorage().then(() => loadFeed());
+    const initCache = async () => {
+      try {
+        const cached = await AsyncStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setAllData(parsed);
+            setLoading(false); // Instantly dismiss loader since we have cached data
+          }
+        }
+      } catch (e) {
+        // ignore cache read errors
+      }
+    };
+    initCache().then(() => {
+      loadFiltersFromStorage().then(() => loadFeed());
+    });
 
     const refreshListener = DeviceEventEmitter.addListener('refresh_feed_filters', () => {
       loadFiltersFromStorage();
@@ -191,10 +213,23 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
       )}
 
       {loading ? (
-        <View className="flex-1 items-center justify-center py-20">
-          <ActivityIndicator size="large" color="#4f46e5" />
-          <Text className="text-slate-500 dark:text-slate-400 mt-3 font-medium">Building your feed...</Text>
-        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {ListHeaderComponent}
+          <View className="mb-4">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, paddingHorizontal: 24 }}
+            >
+              {SUBJECTS.map((sub) => (
+                <View key={sub.label} className="px-4 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 opacity-50 border border-slate-200 dark:border-slate-800">
+                  <Text className="text-transparent font-bold">{sub.emoji} {sub.label}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+          <FeedSkeleton />
+        </ScrollView>
       ) : (
         <FlatList
           data={visibleData}

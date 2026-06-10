@@ -17,7 +17,8 @@ import {
   PanResponder,
   Keyboard,
   TouchableWithoutFeedback,
-  Clipboard
+  Clipboard,
+  FlatList
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -345,7 +346,7 @@ export default function ChatRoomScreen() {
   const [showContextModal, setShowContextModal] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
-  const scrollViewRef = useRef<ScrollView>(null);
+  const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<any>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -383,7 +384,7 @@ export default function ChatRoomScreen() {
       setMessages(filtered);
       setLoading(false);
 
-      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: false }), 150);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 150);
 
       if (user?.id && list) {
         const unreadIds = list.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id);
@@ -455,7 +456,9 @@ export default function ChatRoomScreen() {
 
           setMessages(prev => {
             if (prev.some(m => m.id === msg.id)) return prev;
-            return [...prev, msg];
+            // Optimistic UI Reconciliation: Remove any temporary message with the same content
+            const filtered = prev.filter(m => !(m.id.startsWith('temp-') && m.sender_id === msg.sender_id && m.content === msg.content));
+            return [...filtered, msg];
           });
 
           if (msg.sender_id !== user.id) {
@@ -466,7 +469,7 @@ export default function ChatRoomScreen() {
             }).catch(null);
             Vibration.vibrate(40);
           }
-          setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+          setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
           const upd = payload.new as Message;
@@ -520,6 +523,20 @@ export default function ChatRoomScreen() {
     }
 
     try {
+      const optimisticMsg: Message = {
+        id: `temp-${Date.now()}`,
+        room_id: roomId,
+        sender_id: user.id,
+        content,
+        message_type: 'text',
+        created_at: new Date().toISOString(),
+        is_read: false
+      };
+
+      setMessages(prev => [...prev, optimisticMsg]);
+      setNewMessage('');
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+
       const { error } = await supabase.from('chat_messages').insert({
         room_id: roomId,
         sender_id: user.id,
@@ -527,10 +544,12 @@ export default function ChatRoomScreen() {
         message_type: 'text'
       });
 
-      if (error) throw error;
-
-      setNewMessage('');
-      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+      if (error) {
+        // Revert optimistic insert on failure
+        setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+        setNewMessage(content); // restore input
+        throw error;
+      }
 
       if (participant?.user_id) {
         fetch(`${WEB_URL}/api/chat/notify`, {
@@ -600,7 +619,7 @@ export default function ChatRoomScreen() {
           message_type: 'image'
         });
 
-        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to upload image');
@@ -689,11 +708,11 @@ export default function ChatRoomScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
+      behavior="padding"
+      className="flex-1 bg-slate-50 dark:bg-slate-950"
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
     >
-      <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
+      <View className="flex-1" style={{ paddingTop: insets.top }}>
         {/* Header bar */}
         <View className="flex-row items-center justify-between px-3 h-14 bg-white dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800/60 z-30">
           <View className="flex-row items-center flex-1 pr-2">
@@ -740,19 +759,23 @@ export default function ChatRoomScreen() {
           </TouchableWithoutFeedback>
         </Modal>
 
-        {/* Message List */}
         {loading ? (
           <View className="flex-1 items-center justify-center"><ActivityIndicator color="#6366f1" size="large" /></View>
         ) : (
-          <ScrollView
-            ref={scrollViewRef}
-            className="flex-1"
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={item => item.id}
             contentContainerStyle={{ paddingVertical: 16 }}
             keyboardShouldPersistTaps="handled"
-          >
-            {messages.map((msg, index) => (
+            initialNumToRender={20}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={true}
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+            onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+            renderItem={({ item: msg, index }) => (
               <MessageItem
-                key={msg.id}
                 msg={msg}
                 user={user}
                 participant={participant}
@@ -762,8 +785,8 @@ export default function ChatRoomScreen() {
                 onImageClick={(url: string) => setFullscreenImage(url)}
                 isDark={isDark}
               />
-            ))}
-          </ScrollView>
+            )}
+          />
         )}
 
         {/* Context Menu Modal */}
@@ -922,7 +945,7 @@ export default function ChatRoomScreen() {
                   placeholder={isBlocked ? "You blocked this user" : "Type a message..."}
                   placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
                   multiline
-                  maxLength={500}
+                  maxLength={3000}
                   editable={!isBlocked}
                   className="flex-1 max-h-32 text-base text-slate-900 dark:text-slate-50 pt-2 pb-2 min-h-[38px]"
                 />

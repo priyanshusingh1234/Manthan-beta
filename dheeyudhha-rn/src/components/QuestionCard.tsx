@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { Play, Clock, Users, Zap, Swords } from 'lucide-react-native';
+import { Play, Clock, Users, Zap, Swords, Award } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import DuelChallengeModal from './DuelChallengeModal';
@@ -75,17 +75,12 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
       >
         {/* Header */}
         <HeaderWrapper>
-          <View className="relative w-11 h-11 mr-1">
-            {q?.profiles?.cosmetics?.includes('avatar_glow') && (
-              <View className="absolute -inset-1 bg-indigo-500/50 rounded-full blur-md" style={{ elevation: 5, shadowColor: '#6366f1', shadowOpacity: 0.8, shadowRadius: 10 }} />
+          <View className={`w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 ${Array.isArray(q?.profiles?.cosmetics) && q.profiles.cosmetics.includes('avatar_glow') ? 'border-indigo-400' : 'border-white dark:border-slate-800'} shadow-sm items-center justify-center mr-1`}>
+            {teacherAvatar && !teacherAvatar.includes('googleusercontent') ? (
+              <Image source={{ uri: teacherAvatar }} alt={teacherName} className="w-full h-full" />
+            ) : (
+              <Text className="text-blue-600 dark:text-blue-400 font-bold text-sm">{teacherName.substring(0, 2).toUpperCase()}</Text>
             )}
-            <View className={`w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 ${q?.profiles?.cosmetics?.includes('avatar_glow') ? 'border-indigo-400 dark:border-indigo-500' : 'border-white dark:border-slate-800'} shadow-sm items-center justify-center`}>
-              {teacherAvatar && !teacherAvatar.includes('googleusercontent') ? (
-                <Image source={{ uri: teacherAvatar }} alt={teacherName} className="w-full h-full" />
-              ) : (
-                <Text className="text-blue-600 dark:text-blue-400 font-bold text-sm">{teacherName.substring(0, 2).toUpperCase()}</Text>
-              )}
-            </View>
           </View>
           <View className="flex-1 justify-center">
             <BadgedName 
@@ -108,13 +103,19 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
         <View className="px-1">
           {/* Subtle Metadata Row */}
           <View className="flex-row items-center flex-wrap gap-2 mb-2.5 mt-1">
-            {q?._feedLabel && (
+            {q?._feedLabel ? (
               <View className={`${isVip ? 'bg-amber-100 dark:bg-amber-500/20 border border-amber-300 dark:border-amber-500/50' : 'bg-indigo-50 dark:bg-indigo-900/40'} rounded-md px-1.5 py-0.5 flex-row items-center`}>
                 <Text className={`${isVip ? 'text-amber-700 dark:text-amber-400' : 'text-indigo-600 dark:text-indigo-400'} text-[9px] font-bold tracking-widest uppercase`}>
                   {q._feedLabel}
                 </Text>
               </View>
-            )}
+            ) : null}
+            {q.points ? (
+          <View className="flex-row items-center bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded ml-2">
+            <Award size={12} color="#d97706" />
+            <Text className="text-amber-600 dark:text-amber-500 text-[10px] font-bold ml-1">{q.points} XP</Text>
+          </View>
+        ) : null}
             {q?.question_type === 'match' && (
               <View className="bg-amber-50 dark:bg-amber-900/40 rounded-md px-1.5 py-0.5 flex-row items-center">
                 <Text className="text-amber-600 dark:text-amber-400 text-[9px] font-bold tracking-widest uppercase">Match</Text>

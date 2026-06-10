@@ -460,8 +460,8 @@ export default function ProfileScreen() {
             <View className="flex-row items-end justify-between -mt-12 mb-3">
               <View className="relative">
                 <View 
-                  className={`w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 ${profile.cosmetics?.includes('avatar_glow') ? 'border-indigo-400' : 'border-white dark:border-slate-900'} justify-center items-center`}
-                  style={profile.cosmetics?.includes('avatar_glow') ? {
+                  className={`w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 ${Array.isArray(profile.cosmetics) && profile.cosmetics.includes('avatar_glow') ? 'border-indigo-400' : 'border-white dark:border-slate-900'} justify-center items-center`}
+                  style={Array.isArray(profile.cosmetics) && profile.cosmetics.includes('avatar_glow') ? {
                     shadowColor: '#6366f1',
                     shadowOffset: { width: 0, height: 0 },
                     shadowOpacity: 0.8,

@@ -79,6 +79,15 @@ export default function SinglePostScreen() {
 
       setPost(postData);
       setComments(commentsData || []);
+
+      // Increment views count silently
+      supabase.rpc('increment_post_views', { p_post_id: id }).catch(() => {
+        // Fallback if RPC doesn't exist yet, attempt direct update (might fail due to RLS, but safe to try)
+        if (postData) {
+          const currentViews = Number(postData.views_count) || 0;
+          supabase.from('posts').update({ views_count: currentViews + 1 }).eq('id', id).then().catch();
+        }
+      });
     } catch (error) {
       console.error('Error fetching single post:', error);
     } finally {
@@ -112,6 +121,25 @@ export default function SinglePostScreen() {
     if (!newComment.trim() || !currentUser || submitting) return;
     
     setSubmitting(true);
+    const tempId = `temp-${Date.now()}`;
+    const optimisticComment = {
+      id: tempId,
+      content: newComment.trim(),
+      created_at: new Date().toISOString(),
+      author: {
+        id: currentUser.id,
+        name: currentUser.name,
+        username: currentUser.username,
+        avatar_url: currentUser.avatar_url
+      }
+    };
+
+    setComments(prev => [optimisticComment, ...prev]);
+    setPost((prev: any) => ({ ...prev, comments_count: (prev?.comments_count || 0) + 1 }));
+    setNewComment('');
+    setReplyingTo(null);
+    Keyboard.dismiss();
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -122,7 +150,7 @@ export default function SinglePostScreen() {
           'Authorization': session ? `Bearer ${session.access_token}` : ''
         },
         body: JSON.stringify({
-          content: newComment.trim(),
+          content: optimisticComment.content,
           replying_to_user_id: replyingTo?.userId || null,
         })
       });
@@ -134,13 +162,14 @@ export default function SinglePostScreen() {
 
       const commentData = await response.json();
 
-      setComments(prev => [commentData, ...prev]);
-      setPost((prev: any) => ({ ...prev, comments_count: (prev?.comments_count || 0) + 1 }));
-      setNewComment('');
-      setReplyingTo(null);
-      Keyboard.dismiss();
+      // Replace optimistic comment with the real one
+      setComments(prev => prev.map(c => c.id === tempId ? commentData : c));
     } catch (e) {
       console.error('Error posting comment:', e);
+      // Revert optimistic update
+      setComments(prev => prev.filter(c => c.id !== tempId));
+      setPost((prev: any) => ({ ...prev, comments_count: Math.max((prev?.comments_count || 1) - 1, 0) }));
+      setNewComment(optimisticComment.content);
       alert('Failed to post comment.');
     } finally {
       setSubmitting(false);

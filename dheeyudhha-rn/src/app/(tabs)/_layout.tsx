@@ -6,13 +6,16 @@ import NotificationBell from '@/components/ui/NotificationBell';
 import CustomTabBar from '@/components/CustomTabBar';
 
 import TopNav from '@/components/TopNav';
+import DailyEggDrop from '@/components/DailyEggDrop';
 
 export default function TabsLayout() {
   return (
-    <Tabs
+    <>
+      <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         header: () => <TopNav />,
+        sceneStyle: { paddingBottom: 85 },
       }}
     >
       <Tabs.Screen name="index"    options={{ title: 'Home' }} />
@@ -25,5 +28,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="arena" options={{ href: null, title: 'Arena' }} />
       <Tabs.Screen name="checker-feed" options={{ href: null, title: 'Checker Feed' }} />
     </Tabs>
+      <DailyEggDrop />
+    </>
   );
 }

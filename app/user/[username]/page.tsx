@@ -8,6 +8,7 @@ import { GoldBadge, SilverBadge, BronzeBadge } from '@/ticks/RankBadges';
 import BadgedName from '@/components/BadgedName';
 import PublicProfileTabs from '@/components/PublicProfileTabs';
 import FollowButton from '@/components/FollowButton';
+import DashboardButton from '@/components/DashboardButton';
 import { getLevel } from '@/lib/xp';
 import { getLeague } from '@/lib/leagues';
 
@@ -465,8 +466,9 @@ export default async function StudentProfilePage({ params }: Props) {
                                 </div>
                             </Link>
 
-                            <div className="mt-6">
+                            <div className="mt-6 flex flex-col sm:flex-row gap-3">
                                 <FollowButton profileUserId={fetchedUser.id} initialFollowers={initialFollowers} initialFollowing={initialFollowing} isPrivate={isPrivate} />
+                                <DashboardButton profileUserId={fetchedUser.id} />
                             </div>
                         </div>
                         {/* Rank Badge & Analysis - Native layout on mobile */}

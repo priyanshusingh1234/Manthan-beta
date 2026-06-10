@@ -20,6 +20,7 @@ import LeagueUpModal from '@/components/LeagueUpModal';
 import StreakLostOverlay from '@/components/StreakLostOverlay';
 import StreakFriendToast from '@/components/StreakFriendToast';
 import CoopDuelToast from '@/components/CoopDuelToast';
+import LoginBonusModal from '@/components/LoginBonusModal';
 
 // Prevent splash screen from hiding while fonts load
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -41,6 +42,8 @@ export default function RootLayout() {
   const { colorScheme, setColorScheme } = useColorScheme();
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+  const lastNotificationResponse = Notifications.useLastNotificationResponse();
+  const [processedNotificationId, setProcessedNotificationId] = useState<string | null>(null);
 
   useEffect(() => {
     if ((fontsLoaded || error) && initialized) {
@@ -82,8 +85,7 @@ export default function RootLayout() {
       console.log('[Push] Received in foreground:', notification.request.content.title);
     });
 
-    // Handle notification TAPS (user tapped notification from tray)
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(async response => {
+    const handleNotificationResponse = async (response: Notifications.NotificationResponse) => {
       const data = response.notification.request.content.data as any;
       const href: string = data?.href || data?.url || data?.link || data?.deep_link || '';
       const actionId = response.actionIdentifier;
@@ -136,17 +138,29 @@ export default function RootLayout() {
       } catch (e) {
         console.warn('[Push] Could not navigate to:', targetRoute);
       }
-    });
+    };
+
+    // Handle notification TAPS (user tapped notification from tray while app running)
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
+
+    // Handle cold-start taps (from lockscreen or killed state)
+    if (
+      lastNotificationResponse && 
+      lastNotificationResponse.notification.request.identifier !== processedNotificationId
+    ) {
+      setProcessedNotificationId(lastNotificationResponse.notification.request.identifier);
+      handleNotificationResponse(lastNotificationResponse);
+    }
 
     return () => {
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+        notificationListener.current.remove();
       }
       if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+        responseListener.current.remove();
       }
     };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, lastNotificationResponse]);
 
   useEffect(() => {
     if ((fontsLoaded || error) && initialized) {
@@ -208,6 +222,7 @@ export default function RootLayout() {
       <DailyPlannerModal />
       <LevelUpModal />
       <LeagueUpModal />
+      <LoginBonusModal />
     </>
   );
 }

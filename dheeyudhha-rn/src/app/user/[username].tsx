@@ -28,6 +28,7 @@ import {
   ChevronRight,
   Flame,
   Award,
+  BarChart3,
   Shield,
   X,
   Search,
@@ -168,6 +169,7 @@ export default function PublicProfileScreen() {
   const [modalLoading, setModalLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [visiblePostsCount, setVisiblePostsCount] = useState(3);
+  const [visibleQuestionsCount, setVisibleQuestionsCount] = useState(10);
 
   useEffect(() => {
     if (studentTab === 'posts' && visiblePostsCount < userPosts.length) {
@@ -314,9 +316,6 @@ export default function PublicProfileScreen() {
             .in('id', solvedQids)
             .order('created_at', { ascending: false });
           allSolved = solvedMeta || [];
-          setSolvedQuestions(allSolved);
-        } else {
-          setSolvedQuestions([]);
         }
 
         // C. Calculate favorites
@@ -706,10 +705,7 @@ export default function PublicProfileScreen() {
           {/* Avatar and Follow Row */}
           <View className="flex-row items-end justify-between -mt-16 mb-4">
             <View className="relative">
-              {profile.cosmetics?.includes('avatar_glow') && (
-                <View className="absolute -inset-2 bg-indigo-500/50 rounded-full blur-xl" style={{ elevation: 10, shadowColor: '#6366f1', shadowOpacity: 0.8, shadowRadius: 20 }} />
-              )}
-              <View className={`w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 ${profile.cosmetics?.includes('avatar_glow') ? 'border-indigo-400 dark:border-indigo-500' : 'border-white dark:border-slate-900'} shadow-md justify-center items-center`}>
+              <View className={`w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 ${Array.isArray(profile.cosmetics) && profile.cosmetics.includes('avatar_glow') ? 'border-indigo-400' : 'border-white dark:border-slate-900'} shadow-md justify-center items-center`}>
                 {profile.avatar_url ? (
                   <Image source={{ uri: profile.avatar_url }} className="w-full h-full" resizeMode="cover" />
                 ) : (
@@ -725,6 +721,7 @@ export default function PublicProfileScreen() {
                 <View className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-slate-900" />
               )}
             </View>
+
 
             {/* Follow/Unfollow Button */}
             {!isMyself && (
@@ -860,6 +857,27 @@ export default function PublicProfileScreen() {
             </View>
           </View>
         </View>
+
+        {/* Professional Dashboard Button */}
+        {isMyself && (
+          <View className="px-4 mb-4">
+            <TouchableOpacity 
+              onPress={() => router.push('/insights/dashboard')}
+              className="bg-indigo-600 dark:bg-indigo-500 rounded-3xl p-5 flex-row justify-between items-center shadow-md shadow-indigo-500/20"
+            >
+              <View className="flex-row items-center gap-4">
+                <View className="w-12 h-12 bg-white/20 rounded-2xl items-center justify-center">
+                  <BarChart3 size={24} color="#fff" />
+                </View>
+                <View>
+                  <Text className="text-white font-black text-lg leading-tight">Professional Dashboard</Text>
+                  <Text className="text-indigo-100 font-bold text-xs mt-0.5">View insights for your posts</Text>
+                </View>
+              </View>
+              <Text className="text-white font-black text-2xl opacity-70">→</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Student Specific Streaks and Insights */}
         {!isTeacher && (
@@ -1231,62 +1249,72 @@ export default function PublicProfileScreen() {
                 </Text>
               </View>
             ) : (
-              createdQuestions.map((q) => (
-                <View
-                  key={q.id}
-                  className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-3xl shadow-sm"
-                >
-                  <View className="flex-row items-start justify-between mb-2">
-                    <View className="flex-1 mr-3">
-                      <Text className="text-sm font-black text-slate-900 dark:text-white" numberOfLines={1}>
-                        {q.title || 'Untitled Question'}
-                      </Text>
-                      <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal mt-1" numberOfLines={2}>
-                        {q.body}
-                      </Text>
-                    </View>
-                    <View className="bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-900/30 flex-row items-center gap-1">
-                      <Zap size={10} color="#eab308" fill="#eab308" />
-                      <Text className="text-[10px] font-black text-amber-700 dark:text-amber-400">
-                        {q.points || 0} PTS
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/50">
-                    <View className="flex-row items-center gap-1.5 flex-wrap">
-                      <View className="bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/40">
-                        <Text className="text-[9px] font-black text-indigo-750 dark:text-indigo-300 uppercase">
-                          {q.subject || 'General'}
+              <View className="gap-3">
+                {createdQuestions.slice(0, visibleQuestionsCount).map((q) => (
+                  <View
+                    key={q.id}
+                    className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-3xl shadow-sm"
+                  >
+                    <View className="flex-row items-start justify-between mb-2">
+                      <View className="flex-1 mr-3">
+                        <Text className="text-sm font-black text-slate-900 dark:text-white" numberOfLines={1}>
+                          {q.title || 'Untitled Question'}
+                        </Text>
+                        <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal mt-1" numberOfLines={2}>
+                          {q.body}
                         </Text>
                       </View>
-                      {q.difficulty && (
-                        <View className="bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40">
-                          <Text className="text-[9px] font-black text-emerald-700 dark:text-emerald-400 uppercase">
-                            {q.difficulty}
-                          </Text>
-                        </View>
-                      )}
-                      {q.time_limit && (
-                        <View className="flex-row items-center gap-1 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded">
-                          <Clock size={8} color="#64748b" />
-                          <Text className="text-[9px] font-bold text-slate-500 dark:text-slate-400">
-                            {q.time_limit}m
-                          </Text>
-                        </View>
-                      )}
+                      <View className="bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-900/30 flex-row items-center gap-1">
+                        <Zap size={10} color="#eab308" fill="#eab308" />
+                        <Text className="text-[10px] font-black text-amber-700 dark:text-amber-400">
+                          {q.points || 0} PTS
+                        </Text>
+                      </View>
                     </View>
 
-                    <TouchableOpacity
-                      onPress={() => router.push({ pathname: '/explore', params: { search: q.title } } as any)}
-                      className="bg-indigo-650 flex-row items-center gap-1 px-3 py-1.5 rounded-xl"
-                    >
-                      <Play size={10} color="white" fill="white" />
-                      <Text className="text-[10px] font-black text-white">Attempt</Text>
-                    </TouchableOpacity>
+                    <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/50">
+                      <View className="flex-row items-center gap-1.5 flex-wrap">
+                        <View className="bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/40">
+                          <Text className="text-[9px] font-black text-indigo-750 dark:text-indigo-300 uppercase">
+                            {q.subject || 'General'}
+                          </Text>
+                        </View>
+                        {q.difficulty && (
+                          <View className="bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40">
+                            <Text className="text-[9px] font-black text-emerald-700 dark:text-emerald-400 uppercase">
+                              {q.difficulty}
+                            </Text>
+                          </View>
+                        )}
+                        {q.time_limit && (
+                          <View className="flex-row items-center gap-1 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded">
+                            <Clock size={8} color="#64748b" />
+                            <Text className="text-[9px] font-bold text-slate-500 dark:text-slate-400">
+                              {q.time_limit}m
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => router.push({ pathname: '/explore', params: { search: q.title } } as any)}
+                        className="bg-indigo-650 flex-row items-center gap-1 px-3 py-1.5 rounded-xl"
+                      >
+                        <Play size={10} color="white" fill="white" />
+                        <Text className="text-[10px] font-black text-white">Attempt</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-              ))
+                ))}
+                {visibleQuestionsCount < createdQuestions.length && (
+                  <TouchableOpacity
+                    onPress={() => setVisibleQuestionsCount(prev => prev + 10)}
+                    className="bg-slate-200/50 dark:bg-slate-800/50 py-3 rounded-2xl items-center mt-2 border border-slate-200 dark:border-slate-700 active:bg-slate-300/50 dark:active:bg-slate-700/50"
+                  >
+                    <Text className="font-bold text-[13px] text-indigo-600 dark:text-indigo-400">Show More ({createdQuestions.length - visibleQuestionsCount} hidden)</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
           </View>
         )}

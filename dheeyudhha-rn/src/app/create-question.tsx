@@ -279,7 +279,7 @@ export default function CreateQuestionScreen() {
   if (!isTeacher) {
     return (
       <View className="flex-1 bg-slate-50 dark:bg-slate-950 items-center justify-center p-6">
-        <Alert.alert title="Access Denied" />
+        <X size={64} color="#ef4444" />
         <Text className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-4">Not Authorized</Text>
         <Text className="text-slate-500 text-center mt-2">Only verified teachers can create questions.</Text>
         <TouchableOpacity onPress={() => router.back()} className="mt-6 bg-indigo-600 px-6 py-3 rounded-xl">
