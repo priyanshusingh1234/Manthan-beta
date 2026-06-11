@@ -110,7 +110,7 @@ export default function LoginScreen() {
             } else {
               try {
                 GoogleSignin.configure({
-                  webClientId: 'YOUR_WEB_CLIENT_ID_HERE', // Needed for Firebase/Supabase
+                  webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID, // Needed for Firebase/Supabase
                 });
                 await GoogleSignin.hasPlayServices();
                 const userInfo = await GoogleSignin.signIn();

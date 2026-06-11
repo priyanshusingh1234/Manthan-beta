@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "dheeyudhha-rn",
+    "name": "dheeyudha",
     "slug": "dheeyudhha-rn",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "orientation": "portrait",
     "icon": "./assets/images/manthan-logo.png",
     "scheme": "dheeyudhharn",
@@ -20,13 +20,37 @@
     },
     "android": {
       "package": "com.dheeyudha.app",
-      "versionCode": 114,
+      "versionCode": 115,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/manthan-logo.png",
+        "backgroundColor": "#FFFFFF"
+      },
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.USE_FULL_SCREEN_INTENT"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "manthan-beta-c975.vercel.app",
+              "pathPrefix": "/"
+            },
+            {
+              "scheme": "dheeyudhharn"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
       ]
     },
     "web": {
@@ -64,7 +88,18 @@
       "expo-font",
       "expo-audio",
       "expo-asset",
-      "expo-image"
+      "expo-image",
+      "@react-native-google-signin/google-signin",
+      "expo-build-properties",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "dheeyudha",
+          "project": "react-native",
+          "url": "https://sentry.io/"
+        }
+      ],
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true

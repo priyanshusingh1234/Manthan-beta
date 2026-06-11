@@ -3,12 +3,15 @@ import { View, Text, TouchableOpacity, Dimensions, Animated, Easing, Modal, Scro
 import { supabase } from '@/lib/supabaseClient';
 import { X, Zap } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
+import { useAudioPlayer } from 'expo-audio';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function DailyEggDrop() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  const player = useAudioPlayer(require('../../assets/sounds/chime.mp3'));
 
   const [isEligible, setIsEligible] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'flying' | 'landed' | 'cracking' | 'question' | 'done'>('idle');
@@ -95,6 +98,9 @@ export default function DailyEggDrop() {
   const handleEggTap = async () => {
     if (phase !== 'landed') return;
     setPhase('cracking');
+    
+    // Play the chime/boom sound effect!
+    player.play();
 
     Animated.sequence([
       Animated.timing(flashOpacity, { toValue: 0.85, duration: 250, useNativeDriver: true }),

@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import '../global.css';
+import * as Sentry from '@sentry/react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
@@ -25,7 +26,12 @@ import LoginBonusModal from '@/components/LoginBonusModal';
 // Prevent splash screen from hiding while fonts load
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-export default function RootLayout() {
+Sentry.init({
+  dsn: 'https://346970e695a67d691e625f0c43b7a077@o4511544803393536.ingest.us.sentry.io/4511544829673472',
+  debug: __DEV__, // Will print useful logs in dev, quiet in prod
+});
+
+function RootLayout() {
   const [fontsLoaded, error] = useFonts({
     Inter: Inter_400Regular,
     'Inter-Medium': Inter_500Medium,
@@ -226,3 +232,5 @@ export default function RootLayout() {
     </>
   );
 }
+
+export default Sentry.wrap(RootLayout);

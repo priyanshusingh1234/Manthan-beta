@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Link, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabaseClient';
@@ -137,7 +138,43 @@ export default function SignupScreen() {
           )}
         </TouchableOpacity>
 
-        <View className="flex-row justify-center mt-6 mb-12">
+        <View className="flex-row items-center my-6">
+          <View className="flex-1 h-px bg-slate-200" />
+          <Text className="px-4 text-slate-400 text-sm">Or sign up with</Text>
+          <View className="flex-1 h-px bg-slate-200" />
+        </View>
+
+        <TouchableOpacity 
+          className="flex-row items-center justify-center py-3.5 border border-slate-300 rounded-xl bg-white mb-6"
+          onPress={async () => {
+            if (Platform.OS === 'web') {
+              supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+            } else {
+              try {
+                GoogleSignin.configure({
+                  webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID, // Needed for Firebase/Supabase
+                });
+                await GoogleSignin.hasPlayServices();
+                const userInfo = await GoogleSignin.signIn();
+                
+                if (userInfo.data?.idToken) {
+                  const { error } = await supabase.auth.signInWithIdToken({
+                    provider: 'google',
+                    token: userInfo.data.idToken,
+                  });
+                  if (error) throw error;
+                  router.replace('/(tabs)');
+                }
+              } catch (error: any) {
+                setError(error.message);
+              }
+            }
+          }}
+        >
+          <Text className="text-slate-700 font-bold">Continue with Google</Text>
+        </TouchableOpacity>
+
+        <View className="flex-row justify-center mt-2 mb-12">
           <Text className="text-slate-500 font-medium">Already a challenger? </Text>
           <Link href="/login">
             <Text className="text-indigo-600 font-bold">Sign in</Text>

@@ -109,7 +109,7 @@ export default function ProfileScreen() {
         name: dbProfile?.full_name || meta.fullName || meta.full_name || user.email?.split('@')[0] || 'Scholar',
         username: dbProfile?.username || meta.username || null,
         email: user.email,
-        avatar_url: dbProfile?.avatar_url || meta.avatar_url || null,
+        avatar_url: (dbProfile?.avatar_url && !dbProfile.avatar_url.includes('googleusercontent.com')) ? dbProfile.avatar_url : ((meta.avatar_url && !meta.avatar_url.includes('googleusercontent.com')) ? meta.avatar_url : null),
         banner_url: dbProfile?.banner_url || meta.banner_url || null,
         school: dbProfile?.school || meta.school || null,
         grade: dbProfile?.class_grade || meta.classGrade || null,

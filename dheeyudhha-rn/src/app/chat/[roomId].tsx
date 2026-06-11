@@ -340,6 +340,10 @@ export default function ChatRoomScreen() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [roomStatus, setRoomStatus] = useState<{ status: string, created_by: string } | null>(null);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const MESSAGES_PER_PAGE = 100;
 
   // Modals
   const [contextMsg, setContextMsg] = useState<Message | null>(null);
@@ -366,13 +370,16 @@ export default function ChatRoomScreen() {
     }
   }, []);
 
-  const fetchMessages = useCallback(async () => {
+  const fetchMessages = useCallback(async (loadMore = false) => {
+    if (loadMore) setLoadingMore(true);
     try {
+      const currentLength = loadMore ? messages.length : 0;
       const { data: list, error } = await supabase
         .from('chat_messages')
         .select('*')
         .eq('room_id', roomId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false })
+        .range(currentLength, currentLength + MESSAGES_PER_PAGE - 1);
 
       if (error) throw error;
 
@@ -381,12 +388,17 @@ export default function ChatRoomScreen() {
       const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
 
       const filtered = (list || []).filter(m => !deletedIds.includes(m.id));
-      setMessages(filtered);
-      setLoading(false);
+      
+      if (list.length < MESSAGES_PER_PAGE) setHasMore(false);
 
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 150);
+      if (loadMore) {
+        setMessages(prev => [...prev, ...filtered]);
+      } else {
+        setMessages(filtered);
+        setLoading(false);
+      }
 
-      if (user?.id && list) {
+      if (user?.id && list && !loadMore) {
         const unreadIds = list.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id);
         if (unreadIds.length > 0) {
           fetch(`${WEB_URL}/api/chat/read`, {
@@ -398,8 +410,10 @@ export default function ChatRoomScreen() {
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      if (loadMore) setLoadingMore(false);
     }
-  }, [roomId, user?.id]);
+  }, [roomId, user?.id, messages.length]);
 
   useEffect(() => {
     const initRoom = async () => {
@@ -456,9 +470,9 @@ export default function ChatRoomScreen() {
 
           setMessages(prev => {
             if (prev.some(m => m.id === msg.id)) return prev;
-            // Optimistic UI Reconciliation: Remove any temporary message with the same content
+            // Optimistic UI Reconciliation
             const filtered = prev.filter(m => !(m.id.startsWith('temp-') && m.sender_id === msg.sender_id && m.content === msg.content));
-            return [...filtered, msg];
+            return [msg, ...filtered];
           });
 
           if (msg.sender_id !== user.id) {
@@ -469,7 +483,6 @@ export default function ChatRoomScreen() {
             }).catch(null);
             Vibration.vibrate(40);
           }
-          setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
           const upd = payload.new as Message;
@@ -533,9 +546,8 @@ export default function ChatRoomScreen() {
         is_read: false
       };
 
-      setMessages(prev => [...prev, optimisticMsg]);
+      setMessages(prev => [optimisticMsg, ...prev]);
       setNewMessage('');
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
 
       const { error } = await supabase.from('chat_messages').insert({
         room_id: roomId,
@@ -765,6 +777,7 @@ export default function ChatRoomScreen() {
           <FlatList
             ref={flatListRef}
             data={messages}
+            inverted={true}
             keyExtractor={item => item.id}
             contentContainerStyle={{ paddingVertical: 16 }}
             keyboardShouldPersistTaps="handled"
@@ -772,19 +785,32 @@ export default function ChatRoomScreen() {
             maxToRenderPerBatch={10}
             windowSize={5}
             removeClippedSubviews={true}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
-            onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
             renderItem={({ item: msg, index }) => (
               <MessageItem
                 msg={msg}
                 user={user}
                 participant={participant}
-                prevMsg={index > 0 ? messages[index - 1] : null}
+                prevMsg={index < messages.length - 1 ? messages[index + 1] : null}
                 onLongPress={handleLongPress}
                 onReply={handleReply}
                 onImageClick={(url: string) => setFullscreenImage(url)}
                 isDark={isDark}
               />
+            )}
+            ListFooterComponent={() => (
+              hasMore ? (
+                <TouchableOpacity 
+                  onPress={() => fetchMessages(true)} 
+                  disabled={loadingMore}
+                  className="py-6 items-center justify-center"
+                >
+                  {loadingMore ? <ActivityIndicator color="#6366f1" /> : (
+                    <View className="bg-slate-200 dark:bg-slate-800 px-4 py-2 rounded-full">
+                      <Text className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Load Older Messages</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ) : null
             )}
           />
         )}

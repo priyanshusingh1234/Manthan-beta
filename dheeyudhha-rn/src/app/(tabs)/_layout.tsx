@@ -7,6 +7,7 @@ import CustomTabBar from '@/components/CustomTabBar';
 
 import TopNav from '@/components/TopNav';
 import DailyEggDrop from '@/components/DailyEggDrop';
+import CompleteProfileModal from '@/components/CompleteProfileModal';
 
 export default function TabsLayout() {
   return (
@@ -29,6 +30,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="checker-feed" options={{ href: null, title: 'Checker Feed' }} />
     </Tabs>
       <DailyEggDrop />
+      <CompleteProfileModal />
     </>
   );
 }

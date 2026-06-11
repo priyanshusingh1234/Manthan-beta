@@ -61,7 +61,7 @@ export default React.memo(function PostCard({
   const author = post?.author || {};
   const name = author.name || author.full_name || 'Scholar';
   const username = author.username || 'scholar';
-  const avatarUrl = author.avatar_url || null;
+  const avatarUrl = (author.avatar_url && !author.avatar_url.includes('googleusercontent.com')) ? author.avatar_url : null;
   const isTeacher = !!(author.isTeacher || author.is_teacher);
   
   const content = post?.content || '';
