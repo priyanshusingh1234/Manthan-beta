@@ -38,6 +38,7 @@ jobs:
         run: eas build --platform android --profile production --non-interactive --local --output ./dheeyudha-production.aab
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
