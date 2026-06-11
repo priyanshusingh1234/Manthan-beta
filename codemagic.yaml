@@ -1,0 +1,22 @@
+workflows:
+  expo-android:
+    name: Expo Android Build
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    environment:
+      node: 20.x
+      groups:
+        - expo_credentials
+    scripts:
+      - name: Install EAS CLI
+        script: npm install -g eas-cli
+      - name: Install dependencies
+        script: |
+          cd dheeyudhha-rn
+          npm install
+      - name: Build Android App (AAB)
+        script: |
+          cd dheeyudhha-rn
+          eas build --platform android --profile production --non-interactive --local --output ./dheeyudha-production.aab
+    artifacts:
+      - dheeyudhha-rn/dheeyudha-production.aab
