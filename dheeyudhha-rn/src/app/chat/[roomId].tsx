@@ -598,31 +598,22 @@ export default function ChatRoomScreen() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error('Not signed in');
 
-        const fileExtension = uri.split('.').pop()?.toLowerCase() || 'jpg';
-        const mimeType = fileExtension === 'png' ? 'image/png' : 'image/jpeg';
-        const fileName = `chat_${roomId}_${user.id}_${Date.now()}.${fileExtension}`;
+        const uploadRes = await FileSystem.uploadAsync(
+          `${process.env.EXPO_PUBLIC_API_URL}/api/chat/upload`,
+          uri,
+          {
+            httpMethod: 'POST',
+            uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+            fieldName: 'file',
+            parameters: { roomId },
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }
+        );
 
-        const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-        const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-
-        const formData = new FormData();
-        if (Platform.OS === 'web') {
-          const response = await fetch(uri);
-          const blob = await response.blob();
-          formData.append('', blob, fileName);
-        } else {
-          formData.append('', { uri, name: fileName, type: mimeType } as any);
-        }
-
-        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/chat-images/${fileName}`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${session.access_token}`, apikey: SUPABASE_ANON_KEY, 'x-upsert': 'true' },
-          body: formData,
-        });
-
-        if (!uploadRes.ok) throw new Error('Upload failed');
-
-        const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/chat-images/${fileName}`;
+        if (uploadRes.status < 200 || uploadRes.status >= 300) throw new Error('Upload failed');
+        
+        const data = JSON.parse(uploadRes.body);
+        const publicUrl = data.publicUrl;
 
         await supabase.from('chat_messages').insert({
           room_id: roomId,

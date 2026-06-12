@@ -17,6 +17,8 @@ workflows:
       - name: Build Android App (APK)
         script: |
           cd dheeyudhha-rn
-          eas build --platform android --profile preview --non-interactive --local --output ./dheeyudha-production.apk
+          rm -rf android
+          npx expo prebuild --clean
+          eas build --platform android --profile production --non-interactive --local --output ./dheeyudha-production.aab
     artifacts:
-      - dheeyudhha-rn/dheeyudha-production.apk
+      - dheeyudhha-rn/dheeyudha-production.aab

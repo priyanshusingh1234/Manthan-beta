@@ -47,6 +47,7 @@ export default function PostsScreen() {
   // Composer state
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [mediaFiles, setMediaFiles] = useState<{ uri: string, type: 'image' | 'video' }[]>([]);
   const CATEGORIES = ['education', 'lifestyle', 'news', 'funny', 'general'];
   const [selectedCategory, setSelectedCategory] = useState<string>('general');
@@ -169,6 +170,7 @@ export default function PostsScreen() {
   const handlePostSubmit = async () => {
     if ((!content.trim() && mediaFiles.length === 0) || submitting || !currentUser) return;
     setSubmitting(true);
+    setUploadProgress(0);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
@@ -203,7 +205,7 @@ export default function PostsScreen() {
           if (!signRes.ok) throw new Error('Failed to get video signature');
           const signData = await signRes.json();
 
-          const res = await FileSystem.uploadAsync(
+          const uploadTask = FileSystem.createUploadTask(
             `https://api.cloudinary.com/v1_1/${signData.cloudName}/video/upload`,
             media.uri,
             {
@@ -218,10 +220,16 @@ export default function PostsScreen() {
                 eager: signData.eager,
                 eager_async: signData.eagerAsync ? 'true' : 'false'
               }
+            },
+            (data) => {
+              const progress = data.totalBytesSent / data.totalBytesExpectedToSend;
+              setUploadProgress(progress);
             }
           );
           
-          if (res.status >= 200 && res.status < 300) {
+          const res = await uploadTask.uploadAsync();
+          
+          if (res && res.status >= 200 && res.status < 300) {
             const data = JSON.parse(res.body);
             videoUrl = data.eager && data.eager.length > 0 ? data.eager[0].secure_url : data.secure_url;
             videoThumbnail = videoUrl.replace(/\.[^.]+$/, '.jpg').replace('/video/upload/', '/video/upload/so_0/');
@@ -268,6 +276,7 @@ export default function PostsScreen() {
       alert(e.message || 'Failed to post. Please try again.');
     } finally {
       setSubmitting(false);
+      setUploadProgress(0);
     }
   };
 
@@ -345,6 +354,22 @@ export default function PostsScreen() {
                       </Text>
                     </TouchableOpacity>
                   ))}
+                </View>
+              </View>
+            )}
+            
+            {/* Upload Progress Bar (Composer) */}
+            {submitting && uploadProgress > 0 && (
+              <View className="mt-3">
+                <View className="flex-row justify-between items-center mb-1">
+                  <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Uploading media...</Text>
+                  <Text className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">{Math.round(uploadProgress * 100)}%</Text>
+                </View>
+                <View className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <View 
+                    className="h-full bg-indigo-600 dark:bg-indigo-500 rounded-full" 
+                    style={{ width: `${Math.max(5, uploadProgress * 100)}%` }} 
+                  />
                 </View>
               </View>
             )}
@@ -428,6 +453,25 @@ export default function PostsScreen() {
           ) : null
         }
       />
+
+      {/* Floating YouTube-style Upload Notification */}
+      {submitting && uploadProgress > 0 && (
+        <View className="absolute bottom-6 left-4 right-4 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-4 flex-row items-center z-50">
+          <ActivityIndicator size="small" color="#4f46e5" />
+          <View className="ml-3 flex-1">
+            <View className="flex-row justify-between mb-1.5">
+              <Text className="text-[13px] font-bold text-slate-800 dark:text-slate-200">Uploading Video...</Text>
+              <Text className="text-[12px] font-bold text-indigo-600 dark:text-indigo-400">{Math.round(uploadProgress * 100)}%</Text>
+            </View>
+            <View className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+              <View 
+                className="h-full bg-indigo-600 rounded-full" 
+                style={{ width: `${Math.max(5, uploadProgress * 100)}%` }} 
+              />
+            </View>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

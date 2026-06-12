@@ -27,7 +27,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import PostCard from '@/components/PostCard';
 import BadgedName from '@/components/BadgedName';
 
-type TabKey = 'stats' | 'posts' | 'clips' | 'achievements';
+type TabKey = 'stats' | 'posts' | 'achievements';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
 
@@ -420,7 +420,6 @@ export default function ProfileScreen() {
   const TABS: { key: TabKey; label: string; icon: any }[] = [
     { key: 'stats', label: 'Stats', icon: Award },
     { key: 'posts', label: 'Posts', icon: MessageSquare },
-    { key: 'clips', label: 'Clips', icon: PlaySquare },
     { key: 'achievements', label: 'Badges', icon: Shield },
   ];
 
@@ -596,10 +595,10 @@ export default function ProfileScreen() {
               <Text className="text-[12px] text-indigo-600 dark:text-indigo-400 font-bold">{profile.xp} XP</Text>
             </View>
             <View className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <View className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min((profile.xp % 1000) / 10, 100)}%` }} />
+              <View className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min((profile.xp % 50) * 2, 100)}%` }} />
             </View>
             <Text className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">
-              Level {Math.floor(profile.xp / 1000) + 1} · {profile.xp % 1000}/1000 XP to next level
+              Level {Math.floor(profile.xp / 50) + 1} · {profile.xp % 50}/50 XP to next level
             </Text>
           </View>
         </View>
@@ -623,39 +622,6 @@ export default function ProfileScreen() {
                 currentUserId={currentUser?.id || null} 
               />
             ))
-          )}
-        </View>
-
-        {/* ── Clips Tab ── */}
-        <View style={{ display: activeTab === 'clips' ? 'flex' : 'none' }} className="px-4 pb-24">
-          {loadingPosts ? (
-            <View className="items-center py-12">
-              <ActivityIndicator color="#4f46e5" />
-            </View>
-          ) : myPosts.filter(p => !!p.video_url).length === 0 ? (
-            <View className="items-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              <PlaySquare size={36} color={isDark ? '#475569' : '#cbd5e1'} />
-              <Text className="text-slate-500 dark:text-slate-400 font-semibold mt-3">No clips yet</Text>
-            </View>
-          ) : (
-            <View className="flex-row flex-wrap gap-2">
-              {myPosts.filter(p => !!p.video_url).map((clip) => (
-                <TouchableOpacity
-                  key={clip.id}
-                  activeOpacity={0.8}
-                  onPress={() => router.push({ pathname: '/clips', params: { videoId: clip.id } } as any)}
-                  className="w-[31%] aspect-[9/16] bg-slate-900 rounded-xl overflow-hidden relative"
-                >
-                  <View className="absolute inset-0 items-center justify-center bg-indigo-900/50">
-                    <Play size={24} color="rgba(255,255,255,0.7)" />
-                  </View>
-                  <View className="absolute bottom-2 left-2 flex-row items-center">
-                    <Play size={12} color="white" />
-                    <Text className="text-white text-[10px] font-bold ml-1">{clip.likes_count || 0}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
           )}
         </View>
 

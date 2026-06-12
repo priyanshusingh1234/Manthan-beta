@@ -115,6 +115,7 @@ export default function BadgedName({
   nameClassName?: string;
   containerClassName?: string;
   cosmetics?: string[];
+  iconSize?: number;
 }) {
   const { isAdmin } = useAdmins();
   const isUserAdmin = isAdmin(userId);

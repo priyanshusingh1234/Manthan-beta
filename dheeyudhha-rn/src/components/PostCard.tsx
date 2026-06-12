@@ -51,7 +51,9 @@ export default React.memo(function PostCard({
   post: any, 
   currentUserId: string | null, 
   isSinglePost?: boolean, 
-  onImagePress?: (uri: string) => void 
+  onImagePress?: (uri: string) => void,
+  onUpdate?: () => void,
+  isFeed?: boolean
 }) {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
