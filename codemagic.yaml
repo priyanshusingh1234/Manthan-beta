@@ -14,7 +14,7 @@ workflows:
         script: |
           cd dheeyudhha-rn
           npm install
-      - name: Build Android App (APK)
+      - name: Build Android App (AAB)
         script: |
           cd dheeyudhha-rn
           rm -rf android
