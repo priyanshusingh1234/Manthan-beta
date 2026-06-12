@@ -14,9 +14,9 @@ workflows:
         script: |
           cd dheeyudhha-rn
           npm install
-      - name: Build Android App (AAB)
+      - name: Build Android App (APK)
         script: |
           cd dheeyudhha-rn
-          eas build --platform android --profile production --non-interactive --local --output ./dheeyudha-production.aab
+          eas build --platform android --profile preview --non-interactive --local --output ./dheeyudha-production.apk
     artifacts:
-      - dheeyudhha-rn/dheeyudha-production.aab
+      - dheeyudhha-rn/dheeyudha-production.apk
