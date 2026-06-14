@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import * as ImageManipulator from 'expo-image-manipulator';
 import {
   View,
   Text,
@@ -589,18 +590,34 @@ export default function ChatRoomScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
-        quality: 0.5,
+        quality: 1, // keep high quality before manipulation
       });
 
       if (!result.canceled && result.assets[0].uri) {
         setUploadingImage(true);
-        const uri = result.assets[0].uri;
+        const asset = result.assets[0];
+
+        // Compress and resize image like in profile.tsx
+        const maxW = 1200;
+        const maxH = 1200;
+        const needsResize = (asset.width || 0) > maxW || (asset.height || 0) > maxH;
+
+        const manipulated = await ImageManipulator.manipulateAsync(
+          asset.uri,
+          needsResize ? [{ resize: { width: maxW, height: maxH } }] : [],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+
+        const uriToUpload = Platform.OS === 'android' && !manipulated.uri.startsWith('file://') 
+          ? `file://${manipulated.uri}` 
+          : manipulated.uri;
+
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error('Not signed in');
 
         const uploadRes = await FileSystem.uploadAsync(
-          `${process.env.EXPO_PUBLIC_API_URL}/api/chat/upload`,
-          uri,
+          `${WEB_URL}/api/chat/upload`,
+          uriToUpload,
           {
             httpMethod: 'POST',
             uploadType: FileSystem.FileSystemUploadType.MULTIPART,

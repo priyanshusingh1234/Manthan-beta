@@ -12,7 +12,7 @@ import {
   Keyboard,
   Modal
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
 import { User, Send, X, CornerDownRight } from 'lucide-react-native';
@@ -27,6 +27,7 @@ type ReplyingTo = {
 
 export default function SinglePostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -283,6 +284,7 @@ export default function SinglePostScreen() {
               currentUserId={currentUser?.id || null} 
               isSinglePost={true} 
               onImagePress={(uri) => setFullscreenImage(uri)}
+              onUpdate={() => router.back()}
             />
             <View className="h-2 bg-slate-50 dark:bg-slate-900" />
             {comments.length === 0 && !loading && (

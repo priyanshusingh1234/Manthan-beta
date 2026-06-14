@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Pressable,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Search, X, MessageSquare, Loader2, Check, CheckCheck, MessageCirclePlus } from 'lucide-react-native';
@@ -258,16 +259,38 @@ export default function ChatListPage() {
     if (!user) return;
     try {
       setLoading(true);
-      const { data: roomId, error } = await supabase.rpc('create_chat_room', {
-        target_user_id: targetUserId,
-        current_user_id: user.id
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/chat/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': session ? `Bearer ${session.access_token}` : ''
+        },
+        body: JSON.stringify({
+          targetUserId,
+          currentUserId: user.id
+        })
       });
-      if (error) throw error;
+
+      const d = await response.json();
+
+      if (!response.ok) {
+        if (d.error === 'mutual_follow_required') {
+          Alert.alert(
+            "Mutual Follow Required", 
+            "You can only message scholars who follow you back. This keeps our community safe from spam.",
+            [{ text: "Got it", style: "default" }]
+          );
+          return;
+        }
+        throw new Error(d.error || 'Failed to start chat');
+      }
 
       setSearchQuery('');
       router.push({
         pathname: '/chat/[roomId]',
-        params: { roomId, name: targetName, avatar: targetAvatar || '' }
+        params: { roomId: d.roomId, name: targetName, avatar: targetAvatar || '' }
       } as any);
     } catch (err: any) {
       alert('Failed to start chat: ' + err.message);
@@ -292,9 +315,6 @@ export default function ChatListPage() {
       r.participant.username?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [rooms, searchQuery]);
-
-  const pendingRooms = useMemo(() => filteredRooms.filter(r => r.status === 'pending'), [filteredRooms]);
-  const approvedRooms = useMemo(() => filteredRooms.filter(r => r.status !== 'pending'), [filteredRooms]);
 
   if (loading && !refreshing) {
     return (
@@ -386,7 +406,7 @@ export default function ChatListPage() {
         ) : (
           /* Normal Chats List */
           <View>
-            {rooms.length === 0 ? (
+            {filteredRooms.length === 0 ? (
               <View className="flex-1 items-center justify-center py-24 px-8">
                 <View className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 items-center justify-center mb-5">
                   <MessageSquare size={32} color="#4f46e5" />
@@ -396,35 +416,15 @@ export default function ChatListPage() {
               </View>
             ) : (
               <View>
-                {/* Message Requests tab */}
-                {pendingRooms.length > 0 && (
-                  <View className="mb-4">
-                    <View className="px-4 py-2 bg-indigo-50/50 dark:bg-indigo-950/20">
-                      <Text className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Message Requests</Text>
-                    </View>
-                    {pendingRooms.map(room => (
-                      <ChatCard key={room.id} room={room} user={user} onPress={() => router.push({
-                        pathname: '/chat/[roomId]',
-                        params: { roomId: room.id, name: room.participant.full_name, avatar: room.participant.avatar_url || '' }
-                      } as any)} />
-                    ))}
-                  </View>
-                )}
-
-                {/* Recent Chats tab */}
-                {approvedRooms.length > 0 && (
-                  <View>
-                    <View className="px-4 py-2 bg-slate-100/50 dark:bg-slate-900/30">
-                      <Text className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Recent Chats</Text>
-                    </View>
-                    {approvedRooms.map(room => (
-                      <ChatCard key={room.id} room={room} user={user} onPress={() => router.push({
-                        pathname: '/chat/[roomId]',
-                        params: { roomId: room.id, name: room.participant.full_name, avatar: room.participant.avatar_url || '' }
-                      } as any)} />
-                    ))}
-                  </View>
-                )}
+                <View className="px-4 py-2 bg-slate-100/50 dark:bg-slate-900/30">
+                  <Text className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Recent Chats</Text>
+                </View>
+                {filteredRooms.map(room => (
+                  <ChatCard key={room.id} room={room} user={user} onPress={() => router.push({
+                    pathname: '/chat/[roomId]',
+                    params: { roomId: room.id, name: room.participant.full_name, avatar: room.participant.avatar_url || '' }
+                  } as any)} />
+                ))}
               </View>
             )}
           </View>

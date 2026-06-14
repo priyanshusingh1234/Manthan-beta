@@ -42,27 +42,29 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // 2. Room doesn't exist, check privacy
-        const { data: targetProfile } = await supabaseAdmin
-            .from('profiles')
-            .select('is_private')
-            .eq('id', targetUserId)
-            .single();
+        // 2. Room doesn't exist, check mutual follow
+        // Check if current user follows target
+        const { data: followsTarget } = await supabaseAdmin
+            .from('follows')
+            .select('follower_id')
+            .eq('follower_id', currentUserId)
+            .eq('following_id', targetUserId)
+            .maybeSingle();
+            
+        // Check if target follows current user
+        const { data: targetFollowsMe } = await supabaseAdmin
+            .from('follows')
+            .select('follower_id')
+            .eq('follower_id', targetUserId)
+            .eq('following_id', currentUserId)
+            .maybeSingle();
+
+        // Enforce mutual follow to chat
+        if (!followsTarget || !targetFollowsMe) {
+            return NextResponse.json({ error: 'mutual_follow_required' }, { status: 403 });
+        }
 
         let initialStatus = 'approved';
-        if (targetProfile?.is_private) {
-            // Check if current user follows target
-            const { data: followData } = await supabaseAdmin
-                .from('follows')
-                .select('follower_id')
-                .eq('follower_id', currentUserId)
-                .eq('following_id', targetUserId)
-                .single();
-                
-            if (!followData) {
-                initialStatus = 'pending';
-            }
-        }
 
         const roomId = crypto.randomUUID();
         const { data: newRoom, error: roomError } = await supabaseAdmin

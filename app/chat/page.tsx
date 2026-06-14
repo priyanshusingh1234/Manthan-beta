@@ -45,6 +45,7 @@ export default function ChatListPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showMutualFollowError, setShowMutualFollowError] = useState(false);
 
   const fetchRooms = useCallback(async (userId: string) => {
     try {
@@ -169,7 +170,13 @@ export default function ChatListPage() {
     try {
       const r = await fetch('/api/chat/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUserId, currentUserId: user.id }) });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
+      if (!r.ok) {
+        if (d.error === 'mutual_follow_required') {
+          setShowMutualFollowError(true);
+          return;
+        }
+        throw new Error(d.error);
+      }
       if (d.roomId) router.push(`/chat/${d.roomId}?name=${encodeURIComponent(targetName || '')}`);
     } catch (err: any) { alert('Chat error: ' + err.message); }
   };
@@ -248,28 +255,36 @@ export default function ChatListPage() {
               </div>
             ) : (
               <div className="animate-in fade-in duration-300">
-                {filteredRooms.filter(r => r.status === 'pending').length > 0 && (
-                  <div className="mb-4">
-                     <div className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10">Message Requests</div>
-                     {filteredRooms.filter(r => r.status === 'pending').map((room, idx) => (
-                       <ChatCard key={room.id} room={room} onClick={() => router.push(`/chat/${room.id}`)} user={user} index={idx} />
-                     ))}
-                  </div>
-                )}
-                
-                {filteredRooms.filter(r => r.status !== 'pending').length > 0 && (
-                   <>
-                    <div className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Recent Chats</div>
-                    {filteredRooms.filter(r => r.status !== 'pending').map((room, idx) => (
-                      <ChatCard key={room.id} room={room} onClick={() => router.push(`/chat/${room.id}`)} user={user} index={idx} />
-                    ))}
-                  </>
-                )}
+                <div className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Recent Chats</div>
+                {filteredRooms.map((room, idx) => (
+                  <ChatCard key={room.id} room={room} onClick={() => router.push(`/chat/${room.id}`)} user={user} index={idx} />
+                ))}
               </div>
             )}
           </div>
         ) : null}
       </div>
+
+      {/* Mutual Follow Required Modal */}
+      {showMutualFollowError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-100 dark:border-slate-800">
+            <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4 mx-auto">
+              <MessageCirclePlus className="w-6 h-6 text-indigo-500" />
+            </div>
+            <h3 className="text-xl font-black text-center text-slate-900 dark:text-white mb-2">Mutual Follow Required</h3>
+            <p className="text-[15px] text-center text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+              You can only message scholars who follow you back. This keeps our community safe from spam.
+            </p>
+            <button
+              onClick={() => setShowMutualFollowError(false)}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors active:scale-95"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

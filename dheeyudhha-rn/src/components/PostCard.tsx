@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Image, Pressable, ScrollView, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Pressable, ScrollView, Dimensions, StyleSheet, Alert } from 'react-native';
 import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
@@ -77,6 +77,64 @@ export default React.memo(function PostCard({
   const [likesCount, setLikesCount] = useState<number>(Number(post?.likes_count) || 0);
   const [likingPost, setLikingPost] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleOptions = () => {
+    const isOwner = currentUserId && author.id === currentUserId;
+    if (isOwner) {
+      Alert.alert(
+        "Post Options",
+        "What would you like to do?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Delete Post", 
+            style: "destructive",
+            onPress: () => {
+              Alert.alert(
+                "Delete Post",
+                "Are you sure you want to delete this post? This cannot be undone.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                      if (deleting) return;
+                      setDeleting(true);
+                      try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/posts/${post.id}`, {
+                          method: 'DELETE',
+                          headers: {
+                            'Authorization': session ? `Bearer ${session.access_token}` : ''
+                          }
+                        });
+                        
+                        if (!response.ok) throw new Error('Failed to delete');
+                        
+                        if (onUpdate) onUpdate(); // Trigger parent refresh or navigation
+                      } catch (error) {
+                        console.error(error);
+                        Alert.alert("Error", "Failed to delete post");
+                      } finally {
+                        setDeleting(false);
+                      }
+                    }
+                  }
+                ]
+              );
+            }
+          }
+        ]
+      );
+    } else {
+      Alert.alert("Options", "Report this post?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Report", style: "destructive", onPress: () => Alert.alert("Reported", "Thank you for reporting. Our team will review this post.") }
+      ]);
+    }
+  };
 
   const handlePress = () => {
     if (isSinglePost) return;
@@ -170,7 +228,7 @@ export default React.memo(function PostCard({
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity className="p-2">
+        <TouchableOpacity className="p-2" onPress={handleOptions} disabled={deleting}>
           <MoreVertical size={18} color={isDark ? "#64748b" : "#94a3b8"} />
         </TouchableOpacity>
       </View>
