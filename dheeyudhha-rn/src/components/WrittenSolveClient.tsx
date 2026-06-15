@@ -12,18 +12,25 @@ import {
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '@/lib/supabaseClient';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 
 /** Resolves a question image_url to a full URL — matches web logic exactly */
-function resolveImageUrl(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  if (raw.startsWith('http')) return raw;           // full URL (Cloudinary, Supabase, etc.)
-  if (raw.startsWith('/')) return `${API_URL}${raw}`; // public folder e.g. /images/foo.jpg
-  // Legacy: bare storage path
-  return `${SUPABASE_URL}/storage/v1/object/public/question-images/${raw}`;
+function resolveImageUrl(question: any): string | null {
+  if (!question) return null;
+  const rawUrl = question.imageUrl || question.image_url;
+  if (rawUrl) {
+    if (rawUrl.startsWith('http')) return rawUrl;
+    if (rawUrl.startsWith('/')) return `${API_URL}${rawUrl}`;
+  }
+  const rawPath = question.imagePath || question.image_path;
+  if (rawPath) {
+    return `${SUPABASE_URL}/storage/v1/object/public/question-images/${rawPath}`;
+  }
+  return null;
 }
 
 function StatusBanner({ status }: { status: string }) {
@@ -69,7 +76,7 @@ export default function WrittenSolveClient({ question, challengeId }: { question
   const [selfMarkResult, setSelfMarkResult] = useState<any>(null);
 
   const activeSubmission = existingSubmission || uploadedSubmission;
-  const questionImageUrl = resolveImageUrl(question.image_url || question.imageUrl);
+  const questionImageUrl = resolveImageUrl(question);
 
   // ── Auth + existing submission ──
   useEffect(() => {
@@ -175,20 +182,32 @@ export default function WrittenSolveClient({ question, challengeId }: { question
     if (!selectedImageUri || !token) return;
     setUploading(true);
     try {
-      const formData = new FormData();
-      const filename = selectedImageUri.split('/').pop() || 'upload.jpg';
-      const ext = /\.(\w+)$/.exec(filename)?.[1] || 'jpg';
-      formData.append('file', { uri: selectedImageUri, name: filename, type: `image/${ext}` } as any);
-      formData.append('questionId', question.id);
-      if (challengeId) formData.append('challengeId', challengeId);
+      const uriToUpload = Platform.OS === 'android' && !selectedImageUri.startsWith('file://') 
+        ? `file://${selectedImageUri}` 
+        : selectedImageUri;
 
-      const res = await fetch(`${API_URL}/api/written-submit`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      const uploadRes = await FileSystem.uploadAsync(
+        `${API_URL}/api/written-submit`,
+        uriToUpload,
+        {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          fieldName: 'file',
+          parameters: challengeId ? { questionId: question.id, challengeId } : { questionId: question.id },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      let data;
+      try {
+        data = JSON.parse(uploadRes.body);
+      } catch {
+        throw new Error('Invalid response from server');
+      }
+
+      if (uploadRes.status < 200 || uploadRes.status >= 300) {
+        throw new Error(data.error || 'Upload failed');
+      }
 
       setUploadedSubmission({
         id: data.submissionId,

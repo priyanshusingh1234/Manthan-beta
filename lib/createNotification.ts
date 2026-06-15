@@ -207,7 +207,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         // Actor info — used by the app to show avatar in notification
                                         actor_name: params.actorName || '',
                                         actor_avatar: params.actorAvatar || '',
-                                        click_action: isDuel ? 'duel_challenge' : (isIncomingCall ? 'incoming_call' : 'OPEN_APP'),
+                                        click_action: isDuel ? 'duel_challenge' : (isIncomingCall ? 'incoming_call' : (params.type === 'chat_message' ? 'chat_message' : 'OPEN_APP')),
                                         // Action buttons (handled by Capacitor PushNotifications listener)
                                         ...actionsData,
                                     },
@@ -228,7 +228,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             ...(params.actorAvatar ? { imageUrl: params.actorAvatar } : {}),
                                             body: params.body,
                                             title: params.title,
-                                            clickAction: isDuel ? 'duel_challenge' : 'OPEN_APP',
+                                            clickAction: isDuel ? 'duel_challenge' : (params.type === 'chat_message' ? 'chat_message' : 'OPEN_APP'),
                                             sound: channelId === 'duels' ? 'default' : 'default',
                                             defaultSound: true,
                                             defaultVibrateTimings: true,
@@ -245,7 +245,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                                 alert: { title: params.title, body: params.body },
                                                 sound: isDuel ? 'battle.caf' : 'default',
                                                 badge: 1,
-                                                category: isIncomingCall ? 'incoming_call' : (isDuel ? 'duel_challenge' : undefined),
+                                                category: isIncomingCall ? 'incoming_call' : (isDuel ? 'duel_challenge' : (params.type === 'chat_message' ? 'chat_message' : undefined)),
                                                 'mutable-content': 1,
                                             }
                                         },

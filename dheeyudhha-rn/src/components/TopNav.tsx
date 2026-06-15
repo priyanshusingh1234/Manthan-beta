@@ -14,8 +14,6 @@ const NAV_LINKS = [
   { label: 'Duels ⚔️', href: '/duels', icon: Swords },
   { label: 'Arena', href: '/(tabs)/arena', icon: Zap },
   { label: 'Search', href: '/search', icon: Search },
-  { label: 'Clips', href: '/clips', icon: PlaySquare },
-  { label: 'Checker', href: '/(tabs)/checker-feed', icon: Shield },
   { label: 'Docs', href: '/docs', icon: HelpCircle },
   { label: 'Support', href: '/contact', icon: Mail },
   { label: 'Privacy', href: '/privacy', icon: Lock },
@@ -28,7 +26,7 @@ export default function TopNav() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isTeacher, setIsTeacher] = useState<boolean>(false);
   const { colorScheme } = useColorScheme();
-  
+
   // Safe area padding for the status bar
   const paddingTop = Platform.OS === 'android' ? Math.max(insets.top, 16) : insets.top;
 
@@ -52,8 +50,8 @@ export default function TopNav() {
   }, []);
 
   return (
-    <View 
-      className="bg-white/95 dark:bg-slate-950/95 border-b border-slate-100 dark:border-slate-800 z-50 pb-3" 
+    <View
+      className="bg-white/95 dark:bg-slate-950/95 border-b border-slate-100 dark:border-slate-800 z-50 pb-3"
       style={{ paddingTop }}
     >
       {/* Top Row: Title & Actions */}
@@ -64,7 +62,7 @@ export default function TopNav() {
 
         <View className="flex-row items-center gap-3">
           {isTeacher && (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => router.push('/create-question' as any)}
               className="bg-indigo-100 dark:bg-indigo-950/40 p-1.5 rounded-full border border-indigo-200/50 dark:border-indigo-900/50 active:scale-95 shadow-sm"
             >
@@ -88,9 +86,9 @@ export default function TopNav() {
 
       {/* Bottom Row: Sliding Horizontal Links */}
       <View className="mt-3">
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
           className="px-4"
           contentContainerStyle={{ paddingRight: 32, alignItems: 'center' }}
           keyboardShouldPersistTaps="handled"
@@ -98,7 +96,7 @@ export default function TopNav() {
           {NAV_LINKS.map((nav) => {
             const normalizedHref = nav.href.replace('/(tabs)', '');
             const isActive = pathname === normalizedHref || pathname === nav.href || pathname.startsWith(`${normalizedHref}/`);
-            
+
             // Replicate web colors
             let bgClass = 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800';
             let textClass = 'text-slate-600 dark:text-slate-300';
@@ -123,7 +121,7 @@ export default function TopNav() {
             }
 
             return (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={nav.label}
                 activeOpacity={0.7}
                 onPress={() => router.push(nav.href as any)}

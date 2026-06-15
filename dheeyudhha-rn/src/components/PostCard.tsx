@@ -1,10 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Image, Pressable, ScrollView, Dimensions, StyleSheet, Alert } from 'react-native';
-import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, Image, Pressable, ScrollView, Dimensions, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
+import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles, Trash2 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import ShareModal from './ShareModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -78,56 +79,14 @@ export default React.memo(function PostCard({
   const [likingPost, setLikingPost] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeletedLocally, setIsDeletedLocally] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const handleOptions = () => {
-    const isOwner = currentUserId && author.id === currentUserId;
+    const isOwner = currentUserId && (author.id === currentUserId || post?.author_id === currentUserId);
     if (isOwner) {
-      Alert.alert(
-        "Post Options",
-        "What would you like to do?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { 
-            text: "Delete Post", 
-            style: "destructive",
-            onPress: () => {
-              Alert.alert(
-                "Delete Post",
-                "Are you sure you want to delete this post? This cannot be undone.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: async () => {
-                      if (deleting) return;
-                      setDeleting(true);
-                      try {
-                        const { data: { session } } = await supabase.auth.getSession();
-                        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/posts/${post.id}`, {
-                          method: 'DELETE',
-                          headers: {
-                            'Authorization': session ? `Bearer ${session.access_token}` : ''
-                          }
-                        });
-                        
-                        if (!response.ok) throw new Error('Failed to delete');
-                        
-                        if (onUpdate) onUpdate(); // Trigger parent refresh or navigation
-                      } catch (error) {
-                        console.error(error);
-                        Alert.alert("Error", "Failed to delete post");
-                      } finally {
-                        setDeleting(false);
-                      }
-                    }
-                  }
-                ]
-              );
-            }
-          }
-        ]
-      );
+      setShowDeleteModal(true);
     } else {
       Alert.alert("Options", "Report this post?", [
         { text: "Cancel", style: "cancel" },
@@ -135,6 +94,8 @@ export default React.memo(function PostCard({
       ]);
     }
   };
+
+  if (isDeletedLocally) return null;
 
   const handlePress = () => {
     if (isSinglePost) return;
@@ -325,7 +286,7 @@ export default React.memo(function PostCard({
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity activeOpacity={0.7} className="px-3 py-1.5">
+        <TouchableOpacity activeOpacity={0.7} className="px-3 py-1.5" onPress={() => setShowShareModal(true)}>
           <Share2 size={18} color={isDark ? '#94a3b8' : '#64748b'} />
         </TouchableOpacity>
       </View>
@@ -339,6 +300,67 @@ export default React.memo(function PostCard({
           <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-[13px]">View Insights</Text>
         </TouchableOpacity>
       )}
+
+      {/* Custom Delete Modal */}
+      <Modal visible={showDeleteModal} transparent animationType="fade">
+        <View className="flex-1 bg-black/50 justify-center items-center px-4">
+          <View className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-2xl items-center">
+            <View className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full items-center justify-center mb-4">
+              <Trash2 size={32} color="#ef4444" />
+            </View>
+            <Text className="text-xl font-black text-slate-900 dark:text-white mb-2 text-center">Delete Post?</Text>
+            <Text className="text-sm text-slate-500 dark:text-slate-400 text-center mb-6 leading-relaxed">
+              Are you sure you want to delete this post? This action cannot be undone.
+            </Text>
+            <View className="flex-row gap-3 w-full">
+              <TouchableOpacity
+                onPress={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 rounded-2xl items-center"
+              >
+                <Text className="font-bold text-slate-700 dark:text-slate-300">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (deleting) return;
+                  setDeleting(true);
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
+                    const response = await fetch(`${API_URL}/api/posts/${post.id}`, {
+                      method: 'DELETE',
+                      headers: {
+                        'Authorization': session ? `Bearer ${session.access_token}` : ''
+                      }
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to delete');
+                    
+                    setShowDeleteModal(false);
+                    setIsDeletedLocally(true);
+                    if (onUpdate) onUpdate();
+                  } catch (error) {
+                    console.error(error);
+                    Alert.alert("Error", "Failed to delete post. Please check your connection.");
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting}
+                className="flex-1 py-3.5 bg-red-500 rounded-2xl items-center flex-row justify-center"
+              >
+                {deleting ? <ActivityIndicator color="#fff" size="small" /> : <Text className="font-bold text-white">Delete</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <ShareModal 
+        url={`https://manthan-beta-c975.vercel.app/posts/${post.id}`}
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+      />
     </View>
   );
 });

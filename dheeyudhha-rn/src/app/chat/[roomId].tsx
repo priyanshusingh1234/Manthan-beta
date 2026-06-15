@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system/legacy';
 import {
   View,
   Text,
@@ -19,7 +20,8 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Clipboard,
-  FlatList
+  FlatList,
+  Linking
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -41,6 +43,8 @@ import {
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import BadgedName from '@/components/BadgedName';
+import ShareModal from '../../components/ShareModal';
+import LinkPreview from '../../components/LinkPreview';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
@@ -101,6 +105,35 @@ const MessageItem = memo(({
   const prevDate = prevMsg ? new Date(prevMsg.created_at) : null;
   const showDate = !prevDate || msgDate.toDateString() !== prevDate.toDateString();
   const timeStr = msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  let rawContent = msg.content;
+  let meta: any = {};
+  if (rawContent.includes('|||META|||')) {
+    const parts = rawContent.split('|||META|||');
+    rawContent = parts[0];
+    try { meta = JSON.parse(parts[1]); } catch { }
+  }
+
+  let replyAuthor = '', replyPreview = '', mainContent = rawContent;
+  if (mainContent.startsWith('> Replying to **')) {
+    const splitIndex = mainContent.indexOf('\n\n');
+    if (splitIndex !== -1) {
+      const firstLine = mainContent.substring(0, splitIndex);
+      const rest = mainContent.substring(splitIndex + 2);
+      const match = firstLine.match(/> Replying to \*\*(.+?)\*\*:\s*"?(.*?)"?$/);
+      if (match) {
+        replyAuthor = match[1];
+        replyPreview = match[2];
+        mainContent = rest;
+      }
+    }
+  }
+
+  // Resolve image URI if it's a bare path
+  let imageUri = rawContent;
+  if ((msg.message_type === 'image' || msg.message_type === 'image_once' || rawContent.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i)) && !imageUri.startsWith('http') && !imageUri.startsWith('file://') && !imageUri.startsWith('data:')) {
+    imageUri = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/chat-images/${imageUri}`;
+  }
 
   const pan = useRef(new Animated.ValueXY()).current;
   const swipeThreshold = 65;
@@ -171,28 +204,7 @@ const MessageItem = memo(({
     );
   }
 
-  let rawContent = msg.content;
-  let meta: any = {};
-  if (rawContent.includes('|||META|||')) {
-    const parts = rawContent.split('|||META|||');
-    rawContent = parts[0];
-    try { meta = JSON.parse(parts[1]); } catch { }
-  }
 
-  let replyAuthor = '', replyPreview = '', mainContent = rawContent;
-  if (mainContent.startsWith('> Replying to **')) {
-    const splitIndex = mainContent.indexOf('\n\n');
-    if (splitIndex !== -1) {
-      const firstLine = mainContent.substring(0, splitIndex);
-      const rest = mainContent.substring(splitIndex + 2);
-      const match = firstLine.match(/> Replying to \*\*(.+?)\*\*:\s*"?(.*?)"?$/);
-      if (match) {
-        replyAuthor = match[1];
-        replyPreview = match[2];
-        mainContent = rest;
-      }
-    }
-  }
 
   return (
     <View className="w-full mb-1">
@@ -277,8 +289,8 @@ const MessageItem = memo(({
                   </View>
                 </TouchableOpacity>
               ) : msg.message_type === 'image' || rawContent.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
-                <TouchableOpacity onPress={() => onImageClick(rawContent, msg.message_type, msg.id, isMe)}>
-                  <Image source={{ uri: rawContent }} style={{ width: 200, height: 200 }} resizeMode="cover" />
+                <TouchableOpacity onPress={() => onImageClick(imageUri, msg.message_type, msg.id, isMe)}>
+                  <Image source={{ uri: imageUri }} style={{ width: 200, height: 200 }} resizeMode="cover" />
                   <View className="absolute bottom-1 right-2 flex-row items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded-full">
                     <Text className="text-[10px] text-white font-medium">{timeStr}</Text>
                     {isMe && (
@@ -292,6 +304,15 @@ const MessageItem = memo(({
                     {mainContent}
                     {meta.edited && <Text className={`text-[10px] italic ${isMe ? 'text-white/70' : 'text-slate-500'}`}> (edited)</Text>}
                   </Text>
+                  
+                  {(() => {
+                    const match = mainContent.match(/https?:\/\/[^\s]+/);
+                    const previewUrl = match ? match[0] : null;
+                    return previewUrl ? (
+                      <LinkPreview url={previewUrl} />
+                    ) : null;
+                  })()}
+
                   <View className="flex-row items-center justify-end gap-1 mt-1">
                     <Text className={`text-[9px] font-semibold ${isMe ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'}`}>
                       {timeStr}

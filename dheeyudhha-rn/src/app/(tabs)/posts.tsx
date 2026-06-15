@@ -428,7 +428,7 @@ export default function PostsScreen() {
         data={posts}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderPostItem}
-        ListHeaderComponent={renderComposer}
+        ListHeaderComponent={renderComposer()}
         contentContainerStyle={{ paddingBottom: 100, paddingTop: 0 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4f46e5']} tintColor={isDark ? '#4f46e5' : undefined} />

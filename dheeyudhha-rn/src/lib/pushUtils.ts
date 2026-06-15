@@ -57,6 +57,18 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       },
     ]);
 
+    await Notifications.setNotificationCategoryAsync('chat_message', [
+      {
+        identifier: 'reply',
+        buttonTitle: 'Reply',
+        options: { opensAppToForeground: false },
+        textInput: {
+          submitButtonTitle: 'Send',
+          placeholder: 'Type a message...',
+        },
+      },
+    ]);
+
     // 2. Get the native device push token (raw FCM token on Android, APNs on iOS)
     // This is the token the web firebase-admin SDK sends to directly.
     const tokenData = await Notifications.getDevicePushTokenAsync();

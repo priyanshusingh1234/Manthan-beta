@@ -557,7 +557,7 @@ export default function SolveQuestionScreen() {
           <Text className="text-base text-slate-700 dark:text-slate-300 leading-relaxed mb-6">{question.body}</Text>
         )}
 
-        {question.hasHint && (
+        {question.hint && (
           <View className="mb-6">
             {!purchasedHint ? (
               <TouchableOpacity

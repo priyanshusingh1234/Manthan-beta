@@ -29,13 +29,19 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
   const teacherAvatar = q?.profiles?.avatar_url;
   const teacherUsername = q?.profiles?.username;
 
-  const resolveImageUrl = (raw?: string | null) => {
-    if (!raw) return null;
-    if (raw.startsWith('http')) return raw;                                          // Full URL (Cloudinary, Supabase CDN)
-    if (raw.startsWith('/')) return `${process.env.EXPO_PUBLIC_API_URL}${raw}`;      // Public folder: /images/foo.jpg
-    return `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${raw}`; // Legacy bare path
+  const resolveImageUrl = () => {
+    const rawUrl = q?.imageUrl || q?.image_url;
+    if (rawUrl) {
+      if (rawUrl.startsWith('http')) return rawUrl;
+      if (rawUrl.startsWith('/')) return `${process.env.EXPO_PUBLIC_API_URL}${rawUrl}`;
+    }
+    const rawPath = q?.imagePath || q?.image_path;
+    if (rawPath) {
+      return `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${rawPath}`;
+    }
+    return null;
   };
-  const imageUrl = resolveImageUrl(q?.image_url);
+  const imageUrl = resolveImageUrl();
 
   const HeaderWrapper = ({ children }: { children: React.ReactNode }) => {
     if (teacherUsername) {
