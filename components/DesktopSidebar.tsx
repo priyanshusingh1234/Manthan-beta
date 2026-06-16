@@ -26,6 +26,7 @@ import {
   Zap,
   PlaySquare,
   BookOpen,
+  Skull,
 } from 'lucide-react';
 import { Share } from '@capacitor/share';
 import TeacherBadge from '@/ticks/teacher';
@@ -175,6 +176,7 @@ export default function DesktopSidebar() {
     { label: 'Top Schools', href: '/top-schools', icon: Swords },
     { label: 'Search', href: '/search', icon: Search },
     { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
+    { label: 'BOSS 💀', href: '/boss', icon: Skull },
     { label: 'Arena', href: '/tests', icon: Zap },
     { label: 'Gauntlet', href: '/gauntlet', icon: BookOpen },
     { label: 'Checker Feed', href: '/checker-feed', icon: Shield },

@@ -27,7 +27,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Authentication required" }, { status: 401 });
         }
 
-        const { questionId, selectedOption, startedAt, timeTaken, challengeId, warId, isCorrect: clientIsCorrect } = await req.json();
+        const { questionId, selectedOption, startedAt, timeTaken, challengeId, warId, isCorrect: clientIsCorrect, isBoss } = await req.json();
 
         if (!questionId) {
             return NextResponse.json({ error: "Missing questionId" }, { status: 400 });
@@ -221,13 +221,22 @@ export async function POST(req: Request) {
         } else {
             // Normal solve logic
             if (isCorrect) {
-                userPointsChange = questionPoints;
-                pointsChangeDisplay = questionPoints;
+                if (isBoss) {
+                    userPointsChange = 5;
+                    pointsChangeDisplay = 5;
+                } else {
+                    userPointsChange = questionPoints;
+                    pointsChangeDisplay = questionPoints;
+                }
             } else {
                 if (warId) {
                     // War mode: no wrong-answer penalty
                     userPointsChange = 0;
                     pointsChangeDisplay = 0;
+                } else if (isBoss && currentPoints > 0) {
+                    // Boss mode: -2 penalty
+                    userPointsChange = -2;
+                    pointsChangeDisplay = -2;
                 } else if (hasNegativeMarking && currentPoints > 0) {
                     // Regular feed MCQ: fixed -1 penalty
                     const calculatedPenalty = WRONG_ANSWER_PENALTY;

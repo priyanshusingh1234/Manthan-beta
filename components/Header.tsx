@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search, MessageSquare, Compass, Zap, Flame, PlaySquare, Gift } from 'lucide-react';
+import { Menu, X, LogOut, User, PlusCircle, Trophy, Mail, Info, FileQuestion, BookOpen, GraduationCap, Sparkles, HelpCircle, Shield, Bell, LucideIcon, Moon, Sun, CheckSquare, Swords, Search, MessageSquare, Compass, Zap, Flame, PlaySquare, Gift, Skull } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import LoginBonusModal from './LoginBonusModal';
 
@@ -352,6 +352,7 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
             {[
               { label: 'Streak 🔥', href: '/streaks', icon: Flame },
               { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
+              { label: 'BOSS 💀', href: '/boss', icon: Skull },
               { label: 'Gauntlet 📖', href: '/gauntlet', icon: BookOpen },
               { label: 'Duels ⚔️', href: '/duels', icon: Swords },
               { label: 'Arena', href: '/tests', icon: Zap },

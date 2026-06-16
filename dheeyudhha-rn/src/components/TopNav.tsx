@@ -2,14 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, Platform, Image } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Flame, Trophy, BookOpen, Swords, Zap, Search, PlaySquare, Compass, Shield, CheckSquare, HelpCircle, Mail, User, Lock, PlusCircle } from 'lucide-react-native';
+import { Flame, Trophy, BookOpen, Swords, Zap, Search, PlaySquare, Compass, Shield, CheckSquare, HelpCircle, Mail, User, Lock, PlusCircle, Skull } from 'lucide-react-native';
 import NotificationBell from '@/components/ui/NotificationBell';
 import { supabase } from '@/lib/supabaseClient';
 import { useColorScheme } from 'nativewind';
 
 const NAV_LINKS = [
-  { label: 'Streak 🔥', href: '/streaks', icon: Flame },
   { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
+  { label: 'Streak 🔥', href: '/streaks', icon: Flame },
+  { label: 'Checker', href: '/(tabs)/checker-feed', icon: CheckSquare },
+  { label: 'BOSS 💀', href: '/(tabs)/boss', icon: Skull },
   { label: 'Gauntlet 📖', href: '/gauntlet', icon: BookOpen },
   { label: 'Duels ⚔️', href: '/duels', icon: Swords },
   { label: 'Arena', href: '/(tabs)/arena', icon: Zap },
