@@ -75,6 +75,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Failed to load boss question" }, { status: 500 });
     }
 
+    if (question && typeof question.options === 'string') {
+      try {
+        question.options = JSON.parse(question.options);
+      } catch (e) {
+        question.options = [];
+      }
+    }
+
     // Optionally strip 'hint' from response if we want to secure it, but the current client reads `q.hint` directly.
     return NextResponse.json({ question, bossDate: bossDateSeed });
 

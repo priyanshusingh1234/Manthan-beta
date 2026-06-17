@@ -51,20 +51,16 @@ export default function BossLobby() {
 
       const diff = target.getTime() - istTime.getTime();
       
-      if (diff <= 0) {
-        setTimeRemaining('00:00:00');
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+      setTimeRemaining(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+      
+      if (istTime.getUTCHours() === 19) {
+        // Between 7:00 PM and 8:00 PM IST
         setCanFight(true);
       } else {
-        const h = Math.floor(diff / (1000 * 60 * 60));
-        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const s = Math.floor((diff % (1000 * 60)) / 1000);
-        setTimeRemaining(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
-        // For testing purposes, we can just let them fight anytime if they want, 
-        // but the prompt says "every day at 7 o clock". We'll enable the button anyway for demonstration,
-        // or just let the countdown run but still allow entry. 
-        // Actually, the prompt says "every day at 7 o clock AND MAKE DEDICATED PAGE".
-        // Let's enable the button always so the user can test it right now.
-        setCanFight(true); 
+        setCanFight(false); 
       }
     }, 1000);
 
