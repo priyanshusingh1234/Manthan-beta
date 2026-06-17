@@ -24,7 +24,16 @@ export async function POST(req: Request) {
     let title = `New message from ${realSenderName}`;
 
     // Strip internal metadata tokens before creating notification body
-    const cleanContent = content ? content.replace(/\|\|\|META\|\|\|.*?\|\|\|/g, '').trim() : '';
+    let cleanContent = content ? content.replace(/\|\|\|META\|\|\|.*?\|\|\|/g, '').trim() : '';
+    
+    // Strip any markdown blockquote at the start (e.g., "Replying to", forwarded messages)
+    if (cleanContent.startsWith('> ')) {
+      const parts = cleanContent.split('\n\n');
+      if (parts.length > 1) {
+        cleanContent = parts.slice(1).join('\n\n').trim();
+      }
+    }
+
     let body = cleanContent.substring(0, 50) || 'New message';
     // Extract call type from content like "📞 Incoming video call"
     let callType: 'voice' | 'video' = 'voice';

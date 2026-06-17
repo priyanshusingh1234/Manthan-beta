@@ -7,7 +7,6 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   Modal,
   KeyboardAvoidingView,
@@ -48,6 +47,7 @@ import LinkPreview from '../../components/LinkPreview';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
+import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const WEB_URL = 'https://manthan-beta-c975.vercel.app';
@@ -290,7 +290,7 @@ const MessageItem = memo(({
                 </TouchableOpacity>
               ) : msg.message_type === 'image' || rawContent.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
                 <TouchableOpacity onPress={() => onImageClick(imageUri, msg.message_type, msg.id, isMe)}>
-                  <Image source={{ uri: imageUri }} style={{ width: 200, height: 200 }} resizeMode="cover" />
+                  <Image source={{ uri: imageUri }} style={{ width: 200, height: 200 }} contentFit="cover" />
                   <View className="absolute bottom-1 right-2 flex-row items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded-full">
                     <Text className="text-[10px] text-white font-medium">{timeStr}</Text>
                     {isMe && (
@@ -763,7 +763,7 @@ export default function ChatRoomScreen() {
 
             <TouchableOpacity className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden items-center justify-center ml-1">
               {participant?.avatar_url ? (
-                <Image source={{ uri: participant.avatar_url }} className="w-full h-full" resizeMode="cover" />
+                <Image source={{ uri: participant.avatar_url }} className="w-full h-full" contentFit="cover" />
               ) : (
                 <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-base">{displayName[0]?.toUpperCase()}</Text>
               )}
@@ -907,7 +907,7 @@ export default function ChatRoomScreen() {
             <TouchableOpacity className="absolute top-12 right-6 z-50 p-2 bg-white/20 rounded-full" onPress={() => setFullscreenImage(null)}>
               <X size={24} color="#fff" />
             </TouchableOpacity>
-            {fullscreenImage && <Image source={{ uri: fullscreenImage }} style={{ width: '100%', height: '80%' }} resizeMode="contain" />}
+            {fullscreenImage && <Image source={{ uri: fullscreenImage }} style={{ width: '100%', height: '80%' }} contentFit="contain" />}
           </View>
         </Modal>
 
