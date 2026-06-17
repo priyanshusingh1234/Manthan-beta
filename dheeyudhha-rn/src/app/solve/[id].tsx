@@ -83,6 +83,19 @@ export default function SolveQuestionScreen() {
         setTimeLeft(q.time_limit * 60);
         setCurrentUserId(user.id);
 
+        // Check if user is the coop partner
+        let isCoopPartner = false;
+        if (challenge) {
+            const { data: challengeInfo } = await supabase
+                .from("coop_challenges")
+                .select("partner_id, status")
+                .eq("id", challenge)
+                .maybeSingle();
+            if (challengeInfo && challengeInfo.partner_id === user.id && (challengeInfo.status === 'pending' || challengeInfo.status === 'active')) {
+                isCoopPartner = true;
+            }
+        }
+
         // Check if already attempted
         const { data: attempt } = await supabase
           .from('question_attempts')
@@ -91,7 +104,7 @@ export default function SolveQuestionScreen() {
           .eq('question_id', id)
           .maybeSingle();
 
-        if (attempt) {
+        if (attempt && !isCoopPartner) {
           setAlreadyAttempted(attempt);
         }
 
