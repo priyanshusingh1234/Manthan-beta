@@ -28,7 +28,8 @@ export const CACHE_TAGS = {
 // points change. Previously queried Supabase on EVERY request.
 export const getCachedLeaderboard = unstable_cache(
   async () => {
-    const { data, error } = await supabaseAdmin
+    // Top 100 by Total Points
+    const { data: totalData, error: totalError } = await supabaseAdmin
       .from('profiles')
       .select('id, full_name, username, school, avatar_url, total_points, is_teacher, cosmetics')
       .eq('is_teacher', false)
@@ -36,24 +37,42 @@ export const getCachedLeaderboard = unstable_cache(
       .neq('username', '')
       .order('total_points', { ascending: false })
       .order('id', { ascending: true })
-      .limit(10);
+      .limit(100);
 
-    if (error) throw new Error(error.message);
+    if (totalError) throw new Error(totalError.message);
 
-    return (data || []).map((p: any, i: number) => ({
+    // Top 100 by Monthly Points (League Points)
+    const { data: leagueData, error: leagueError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, full_name, username, school, avatar_url, monthly_points, is_teacher, cosmetics')
+      .eq('is_teacher', false)
+      .not('username', 'is', null)
+      .neq('username', '')
+      .order('monthly_points', { ascending: false })
+      .order('id', { ascending: true })
+      .limit(100);
+
+    if (leagueError) throw new Error(leagueError.message);
+
+    const mapProfile = (p: any, i: number, isLeague: boolean) => ({
       id: p.id,
       rank: i + 1,
       name: p.full_name || p.username || 'Student',
       username: p.username,
       school: p.school || 'Unknown School',
       avatar: p.avatar_url || null,
-      points: Number(p.total_points) || 0,
+      points: isLeague ? (Number(p.monthly_points) || 0) : (Number(p.total_points) || 0),
       streak: 0,
       schoolColor: 'bg-blue-500',
       cosmetics: p.cosmetics || [],
-    }));
+    });
+
+    return {
+      topByTotal: (totalData || []).map((p: any, i: number) => mapProfile(p, i, false)),
+      topByLeague: (leagueData || []).map((p: any, i: number) => mapProfile(p, i, true)),
+    };
   },
-  ['leaderboard-top10'],
+  ['leaderboard-top100-v2'],
   { revalidate: 60, tags: [CACHE_TAGS.leaderboard] }  // 1 minute
 );
 

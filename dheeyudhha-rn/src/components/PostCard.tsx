@@ -334,14 +334,17 @@ export default React.memo(function PostCard({
                       }
                     });
                     
-                    if (!response.ok) throw new Error('Failed to delete');
+                    if (!response.ok) {
+                      const errData = await response.json();
+                      throw new Error(errData.error || 'Failed to delete');
+                    }
                     
                     setShowDeleteModal(false);
                     setIsDeletedLocally(true);
                     if (onUpdate) onUpdate();
-                  } catch (error) {
+                  } catch (error: any) {
                     console.error(error);
-                    Alert.alert("Error", "Failed to delete post. Please check your connection.");
+                    Alert.alert("Delete Failed", error.message || "Failed to delete post. Please check your connection.");
                   } finally {
                     setDeleting(false);
                   }

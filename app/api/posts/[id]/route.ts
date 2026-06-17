@@ -141,8 +141,23 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        await supabaseAdmin.from('post_comments').delete().eq('post_id', postId);
-        await supabaseAdmin.from('post_likes').delete().eq('post_id', postId);
+        // Find all comments to delete their likes first to prevent FK constraint violations
+        const { data: comments } = await supabaseAdmin.from('post_comments').select('id').eq('post_id', postId);
+        if (comments && comments.length > 0) {
+            const commentIds = comments.map((c: any) => c.id);
+            // Delete comment likes
+            await supabaseAdmin.from('comment_likes').delete().in('comment_id', commentIds).catch(() => {});
+        }
+
+        // Delete other referencing tables
+        const { error: pcErr } = await supabaseAdmin.from('post_comments').delete().eq('post_id', postId);
+        if (pcErr) console.error("post_comments delete error:", pcErr);
+
+        const { error: plErr } = await supabaseAdmin.from('post_likes').delete().eq('post_id', postId);
+        if (plErr) console.error("post_likes delete error:", plErr);
+
+        await supabaseAdmin.from('post_saves').delete().eq('post_id', postId).catch(() => {});
+        await supabaseAdmin.from('reports').delete().eq('post_id', postId).catch(() => {});
 
         // Delete Image(s) from Supabase Db
         let parsedImageUrls: string[] = [];
@@ -156,9 +171,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
             }
         }
 
-        const urlsToDelete = parsedImageUrls.length > 0 
-            ? parsedImageUrls 
-            : (post.image_url ? [post.image_url] : []);
+        const urlsToDelete = [...parsedImageUrls];
+        if (post.image_url && !urlsToDelete.includes(post.image_url)) {
+            urlsToDelete.push(post.image_url);
+        }
             
         if (urlsToDelete.length > 0) {
             const pathsToRemove = urlsToDelete
