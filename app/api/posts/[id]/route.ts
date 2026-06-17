@@ -145,8 +145,19 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
         await supabaseAdmin.from('post_likes').delete().eq('post_id', postId);
 
         // Delete Image(s) from Supabase Db
-        const urlsToDelete = post.image_urls && post.image_urls.length > 0 
-            ? post.image_urls 
+        let parsedImageUrls: string[] = [];
+        if (post.image_urls) {
+            try {
+                parsedImageUrls = Array.isArray(post.image_urls)
+                    ? post.image_urls
+                    : JSON.parse(post.image_urls);
+            } catch (e) {
+                parsedImageUrls = [];
+            }
+        }
+
+        const urlsToDelete = parsedImageUrls.length > 0 
+            ? parsedImageUrls 
             : (post.image_url ? [post.image_url] : []);
             
         if (urlsToDelete.length > 0) {
