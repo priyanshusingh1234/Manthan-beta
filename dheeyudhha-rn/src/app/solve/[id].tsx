@@ -301,7 +301,7 @@ export default function SolveQuestionScreen() {
     );
   }
 
-  if (question && (!question.options || question.options.length === 0) && question.question_type !== 'match') {
+  if (question && (!question.options || question.options.length === 0) && question.question_type !== 'match' && question.question_type !== 'hotspot') {
     return <WrittenSolveClient question={question} challengeId={challenge as string | undefined} />;
   }
 

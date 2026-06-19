@@ -24,8 +24,8 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 async function main() {
-    const email = 'poojasingh12758@gmail.com';
-    const newPassword = 'dheeyudhha_password_123';
+    const email = 'kpk22128@gmail.com';
+    const newPassword = '123456789';
     
     console.log(`Searching for user with email: ${email}`);
     
