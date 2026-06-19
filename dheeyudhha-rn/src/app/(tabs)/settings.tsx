@@ -42,7 +42,7 @@ import { useColorScheme } from 'nativewind';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type ScreenKey = 'main' | 'profile' | 'notifications' | 'child-safety' | 'privacy' | 'terms' | 'help' | 'delete-confirm';
+type ScreenKey = 'main' | 'profile' | 'notifications' | 'child-safety' | 'privacy' | 'terms' | 'help' | 'delete-confirm' | 'security';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -73,6 +73,10 @@ export default function SettingsScreen() {
   // Delete Account States
   const [deleteInput, setDeleteInput] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Security States
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -185,6 +189,25 @@ export default function SettingsScreen() {
       Alert.alert('Error', 'Failed to request deletion. Please email support at kpk22128@gmail.com');
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long.');
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      Alert.alert('Success', 'Your password has been updated.');
+      setNewPassword('');
+      setCurrentScreen('main');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to update password.');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -713,6 +736,55 @@ export default function SettingsScreen() {
     );
   }
 
+  // 8. Security Sub-screen
+  if (currentScreen === 'security') {
+    return (
+      <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+        <Stack.Screen options={{ headerShown: false }} />
+        <View className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center gap-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
+          <TouchableOpacity onPress={() => setCurrentScreen('main')} className="p-2 -ml-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800">
+            <ArrowLeft size={24} color={isDarkMode ? '#cbd5e1' : '#334155'} />
+          </TouchableOpacity>
+          <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">Password & Security</Text>
+        </View>
+
+        <ScrollView className="flex-1 p-5">
+          <View className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm mb-6">
+            <Text className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-2">
+              Set or Change Password
+            </Text>
+            <Text className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
+              If you haven't set a password yet, you can create one now. Otherwise, enter a new password to change your existing one.
+            </Text>
+            
+            <TextInput
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              placeholder="New Password (min 6 chars)"
+              placeholderTextColor="#94a3b8"
+              className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-slate-100 font-bold text-base mb-4"
+            />
+
+            <TouchableOpacity
+              onPress={handleUpdatePassword}
+              disabled={passwordLoading || newPassword.length < 6}
+              className={`w-full py-4 rounded-2xl items-center justify-center ${newPassword.length >= 6 ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-800'}`}
+            >
+              {passwordLoading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text className={`font-bold text-base ${newPassword.length >= 6 ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                  Update Password
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   // ----------------------------------------------------
   // MAIN SETTINGS RENDER
   // ----------------------------------------------------
@@ -757,6 +829,23 @@ export default function SettingsScreen() {
                 <View>
                   <Text className="text-slate-800 dark:text-slate-200 font-bold text-[14px]">Profile Settings</Text>
                   <Text className="text-slate-500 dark:text-slate-400 text-[10px] mt-0.5">Manage your profile privacy and details</Text>
+                </View>
+              </View>
+              <ChevronRight size={18} color={isDarkMode ? '#475569' : '#94a3b8'} />
+            </TouchableOpacity>
+
+            {/* Security Settings */}
+            <TouchableOpacity
+              onPress={() => setCurrentScreen('security')}
+              className="flex-row items-center px-4 py-4 active:bg-slate-50 dark:active:bg-slate-800 justify-between"
+            >
+              <View className="flex-row items-center">
+                <View className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl mr-4">
+                  <Lock size={18} color={isDarkMode ? '#94a3b8' : '#64748b'} />
+                </View>
+                <View>
+                  <Text className="text-slate-800 dark:text-slate-200 font-bold text-[14px]">Password & Security</Text>
+                  <Text className="text-slate-500 dark:text-slate-400 text-[10px] mt-0.5">Change or set your password</Text>
                 </View>
               </View>
               <ChevronRight size={18} color={isDarkMode ? '#475569' : '#94a3b8'} />

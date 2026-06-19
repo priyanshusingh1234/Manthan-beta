@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { Play, Clock, Users, Zap, Swords, Award } from 'lucide-react-native';
+import { Play, Clock, Users, Zap, Swords, Award, CheckCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import DuelChallengeModal from './DuelChallengeModal';
@@ -235,10 +235,16 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
 
               <TouchableOpacity 
                 onPress={() => router.push(`/solve/${q.id}` as any)}
-                className="bg-slate-900 dark:bg-indigo-500 flex-row items-center gap-1.5 px-4 py-1.5 rounded-xl active:opacity-70 shadow-sm"
+                className={`${q.hasAttempted ? 'bg-emerald-500 dark:bg-emerald-600' : 'bg-slate-900 dark:bg-indigo-500'} flex-row items-center gap-1.5 px-4 py-1.5 rounded-xl active:opacity-70 shadow-sm`}
               >
-                <Play size={10} color="white" fill="white" />
-                <Text className="text-white font-extrabold text-[11px] uppercase tracking-wider">Attempt</Text>
+                {q.hasAttempted ? (
+                  <CheckCircle size={12} color="white" />
+                ) : (
+                  <Play size={10} color="white" fill="white" />
+                )}
+                <Text className="text-white font-extrabold text-[11px] uppercase tracking-wider">
+                  {q.hasAttempted ? 'Solved' : 'Attempt'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

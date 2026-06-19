@@ -206,13 +206,13 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    padding: 20,
   },
   container: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    maxHeight: height * 0.9,
+    borderRadius: 32,
+    maxHeight: height * 0.85,
     overflow: 'hidden',
   },
   header: {

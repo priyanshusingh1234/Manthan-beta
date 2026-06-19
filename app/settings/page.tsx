@@ -50,6 +50,7 @@ export default function SettingsPage() {
             title: "Account",
             items: [
                 { icon: User, label: "Profile Settings", href: "/settings/profile", description: "Manage your profile privacy and details" },
+                { icon: Shield, label: "Password & Security", href: "/settings/security", description: "Change or set your password" },
                 { icon: Bell, label: "Notifications", href: "/settings/notifications", description: "Manage notification preferences" },
                 { icon: Moon, label: "Appearance", href: "#", description: "Dark mode and theme settings" },
             ]

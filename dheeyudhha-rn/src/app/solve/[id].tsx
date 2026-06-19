@@ -10,6 +10,7 @@ import ChallengeFriendModal from '@/components/ChallengeFriendModal';
 import WrittenSolveClient from '@/components/WrittenSolveClient';
 import { getRandomMessage } from '@/lib/feedbackMessages';
 import MatchArena from '@/components/MatchArena';
+import HotspotArena from '@/components/HotspotArena';
 import BadgedName from '@/components/BadgedName';
 import { useCorrectSound } from '@/hooks/useCorrectSound';
 
@@ -611,6 +612,15 @@ export default function SolveQuestionScreen() {
               isSubmitting={isSubmitting}
             />
           </View>
+        ) : question.question_type === 'hotspot' ? (
+          <View className="mt-4">
+            <HotspotArena
+              question={question}
+              onAttempt={(isCorrect) => handleSubmit(-1, isCorrect)}
+              disabled={isSubmitting || !!result}
+              isSubmitting={isSubmitting}
+            />
+          </View>
         ) : (
           <View className="space-y-3">
             {question.options?.map((option: string, index: number) => {
@@ -642,7 +652,7 @@ export default function SolveQuestionScreen() {
       </ScrollView>
 
       {/* Footer Submit */}
-      {question.question_type !== 'match' && (
+      {question.question_type !== 'match' && question.question_type !== 'hotspot' && (
         <View className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
           <TouchableOpacity
             onPress={() => handleSubmit()}

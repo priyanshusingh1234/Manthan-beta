@@ -30,7 +30,8 @@ export default function CreateQuestionForm() {
   const [correctOption, setCorrectOption] = useState<number | null>(null);
   
   // Match the Following states
-  const [questionType, setQuestionType] = useState<'mcq' | 'match'>('mcq');
+  const [questionType, setQuestionType] = useState<'mcq' | 'match' | 'hotspot'>('mcq');
+  const [hotspots, setHotspots] = useState<{ id: string; x: number; y: number; radius: number; label: string }[]>([]);
   const [matchPairs, setMatchPairs] = useState<{ left: string; right: string }[]>([
     { left: '', right: '' },
     { left: '', right: '' },
@@ -109,6 +110,9 @@ export default function CreateQuestionForm() {
       if (matchPairs.some(p => (p.left.trim() && !p.right.trim()) || (!p.left.trim() && p.right.trim()))) {
         e.matchPairs = 'All active pairs must have both left and right sides filled.';
       }
+    } else if (questionType === 'hotspot') {
+      if (hotspots.length === 0) e.hotspots = 'Provide at least one hotspot.';
+      if (!imagePath && !imageFile) e.image = 'An image is required for hotspot questions.';
     }
     
     setErrors(e);
@@ -158,6 +162,7 @@ export default function CreateQuestionForm() {
     setOptions([]);
     setCorrectOption(null);
     setQuestionType('mcq');
+    setHotspots([]);
     setMatchPairs([
       { left: '', right: '' },
       { left: '', right: '' },
@@ -330,7 +335,7 @@ export default function CreateQuestionForm() {
         chapter: chapter.trim() || null,
         isVip,
         questionType,
-        matchPairs: questionType === 'match' ? matchPairs.filter(p => p.left.trim() && p.right.trim()) : null,
+        matchPairs: questionType === 'match' ? matchPairs.filter(p => p.left.trim() && p.right.trim()) : questionType === 'hotspot' ? hotspots : null,
         options: questionType === 'mcq' ? options.filter((o) => o.trim() !== '') : null,
         correctOption: questionType === 'mcq' && correctOption !== null ? correctOption : null,
         imageUrl: null,
@@ -412,6 +417,13 @@ export default function CreateQuestionForm() {
           className={`flex-1 sm:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-all ${questionType === 'match' ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
         >
           Match the Following
+        </button>
+        <button
+          type="button"
+          onClick={() => setQuestionType('hotspot')}
+          className={`flex-1 sm:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-all ${questionType === 'hotspot' ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+        >
+          Image Hotspot
         </button>
       </div>
 
@@ -548,7 +560,63 @@ export default function CreateQuestionForm() {
         </div>
 
         <div className="pt-2">
-          {questionType === 'mcq' ? (
+          {questionType === 'hotspot' ? (
+            <>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Hotspots <span className="text-red-500">*</span></label>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-3 font-medium">Click on the image preview below to add a hotspot. These areas will be the correct answers.</p>
+              
+              {imagePreview ? (
+                <div className="relative inline-block border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden mt-2 max-w-full">
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    className="max-w-full max-h-[400px] object-contain cursor-crosshair block" 
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = (e.clientX - rect.left) / rect.width;
+                      const y = (e.clientY - rect.top) / rect.height;
+                      setHotspots([...hotspots, { id: Math.random().toString(), x, y, radius: 0.08, label: `Hotspot ${hotspots.length + 1}` }]);
+                    }}
+                  />
+                  {hotspots.map((h, i) => (
+                    <div 
+                      key={h.id}
+                      className="absolute rounded-full border-2 border-emerald-500 bg-emerald-500/30 flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group hover:bg-red-500/30 hover:border-red-500 transition-colors"
+                      style={{ left: `${h.x * 100}%`, top: `${h.y * 100}%`, width: `${h.radius * 2 * 100}%`, height: `${h.radius * 2 * 100}%` }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setHotspots(hotspots.filter(hItem => hItem.id !== h.id));
+                      }}
+                      title="Click to remove"
+                    >
+                      <span className="text-white text-xs font-bold drop-shadow-md">{i + 1}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200 font-medium">
+                  Please upload an image first (in the section below) to add hotspots.
+                </div>
+              )}
+              
+              {hotspots.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {hotspots.map((h, i) => (
+                    <div key={h.id} className="flex items-center gap-2">
+                      <span className="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</span>
+                      <input
+                        value={h.label}
+                        onChange={(e) => setHotspots(hotspots.map(item => item.id === h.id ? { ...item, label: e.target.value } : item))}
+                        className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
+                        placeholder="Label (e.g. Correct Region)"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {errors.hotspots && <div className="text-xs text-red-600 mt-2 font-medium">{errors.hotspots}</div>}
+            </>
+          ) : questionType === 'mcq' ? (
             <>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Options (optional)</label>
               <p className="text-xs text-slate-400 dark:text-slate-500 mb-3 font-medium">If you add options, provide at least two. Leave empty for open-ended questions.</p>
