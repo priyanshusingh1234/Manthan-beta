@@ -34,7 +34,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             .from('posts')
             .select(`
                 *,
-                post_likes ( user_id )
+                post_likes ( user_id ),
+                repost:posts!repost_id ( id, author_id, content, image_url, image_urls, video_url, video_thumbnail, created_at )
             `)
             .eq('id', params.id)
             .maybeSingle();
@@ -58,6 +59,29 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
         const likesCount = Array.isArray(post.post_likes) ? post.post_likes.length : (post.likes_count || 0);
 
+        let formattedRepost = null;
+        const rpData = Array.isArray(post.repost) ? post.repost[0] : post.repost;
+        if (rpData && rpData.id) {
+            const { data: rpProfile } = await supabaseAdmin
+                .from('profiles')
+                .select('*')
+                .eq('id', rpData.author_id)
+                .maybeSingle();
+
+            formattedRepost = {
+                ...rpData,
+                author: {
+                    id: rpData.author_id,
+                    name: rpProfile?.full_name || 'Scholar',
+                    username: rpProfile?.username || 'scholar',
+                    avatar_url: rpProfile?.avatar_url || null,
+                    school: rpProfile?.school || null,
+                    isTeacher: rpProfile?.is_teacher || false,
+                    totalPoints: Number(rpProfile?.total_points) || 0,
+                }
+            };
+        }
+
         const enriched = {
             id: post.id,
             content: finalContent,
@@ -70,6 +94,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             comments_count: post.comments_count || 0,
             created_at: post.created_at,
             is_liked_by_me: currentUserId ? (post.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
+            repost: formattedRepost,
             author: {
                 id: post.author_id,
                 name: profile?.full_name || 'Unknown',

@@ -433,10 +433,11 @@ export default function PostsScreen() {
         showsVerticalScrollIndicator={false}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        removeClippedSubviews={true}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={11}
+        removeClippedSubviews={Platform.OS === 'android'}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        updateCellsBatchingPeriod={50}
         ListEmptyComponent={
           <View className="p-8 items-center justify-center">
             <Text className="text-slate-500 dark:text-slate-400 font-medium">No posts found.</Text>

@@ -321,13 +321,29 @@ export default React.memo(function PostCard({
                {renderContent(repostData.content)}
              </Text>
           ) : null}
-          {repostData?.image_urls?.[0] || repostData?.image_url ? (
-            <Image source={{ uri: repostData.image_urls?.[0] || repostData.image_url }} className="w-full h-32 rounded-xl mt-2" resizeMode="cover" />
-          ) : repostData?.video_url ? (
-            <View className="w-full h-32 bg-slate-900 rounded-xl mt-2 items-center justify-center">
-              <Text className="text-white font-bold text-xs">▶ Video Clip</Text>
-            </View>
-          ) : null}
+          {(() => {
+            const rpImages = Array.isArray(repostData?.image_urls) && repostData.image_urls.length > 0 
+              ? repostData.image_urls 
+              : (repostData?.image_url ? [repostData.image_url] : []);
+              
+            if (rpImages.length > 0) {
+              return (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2">
+                  {rpImages.map((uri: string, idx: number) => (
+                    <Image key={idx} source={{ uri }} style={{ height: 128, width: rpImages.length > 1 ? 192 : 300, marginRight: rpImages.length > 1 ? 8 : 0, borderRadius: 12 }} resizeMode="cover" />
+                  ))}
+                </ScrollView>
+              );
+            }
+            if (repostData?.video_url) {
+              return (
+                <View className="w-full h-32 bg-slate-900 rounded-xl mt-2 items-center justify-center">
+                  <Text className="text-white font-bold text-xs">▶ Video Clip</Text>
+                </View>
+              );
+            }
+            return null;
+          })()}
         </Pressable>
       )}
 
@@ -406,8 +422,22 @@ export default React.memo(function PostCard({
                     });
                     
                     if (!response.ok) {
-                      const errData = await response.json();
-                      throw new Error(errData.error || 'Failed to delete');
+                      const text = await response.text();
+                      if (response.status === 404) {
+                        setShowDeleteModal(false);
+                        setIsDeletedLocally(true);
+                        if (onUpdate) onUpdate();
+                        return;
+                      }
+                      
+                      let errorMsg = 'Failed to delete';
+                      try {
+                        const errData = JSON.parse(text);
+                        errorMsg = errData.error || errorMsg;
+                      } catch {
+                        errorMsg = text || errorMsg;
+                      }
+                      throw new Error(errorMsg);
                     }
                     
                     setShowDeleteModal(false);
