@@ -460,17 +460,6 @@ export default React.memo(function PostCard({
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
       />
-
-      <RepostModal
-        post={post}
-        visible={showRepostModal}
-        onClose={() => setShowRepostModal(false)}
-        onSuccess={() => {
-            Alert.alert("Success", "Post reposted successfully!");
-            if (onUpdate) onUpdate();
-        }}
-        isDark={isDark}
-      />
     </View>
   );
 });
