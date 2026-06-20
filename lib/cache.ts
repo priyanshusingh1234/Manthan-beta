@@ -83,14 +83,14 @@ export const getCachedPublicPosts = unstable_cache(
   async (limit = 30) => {
     const { data, error } = await supabaseAdmin
       .from('posts')
-      .select('id, author_id, content, image_url, image_urls, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes(user_id)')
+      .select('id, author_id, content, image_url, image_urls, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes(user_id), repost_id, repost:posts!repost_id ( id, author_id, content, image_url, image_urls, video_url, video_thumbnail, created_at )')
       .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) throw new Error(error.message);
 
     // Fetch author profiles in one shot
-    const authorIds = [...new Set((data || []).map((p: any) => p.author_id))] as string[];
+    const authorIds = [...new Set((data || []).flatMap((p: any) => p.repost ? [p.author_id, p.repost.author_id] : [p.author_id]))] as string[];
     const { data: profilesRaw } = authorIds.length
       ? await supabaseAdmin
         .from('profiles')
@@ -126,6 +126,37 @@ export const getCachedPublicPosts = unstable_cache(
       const meta = authUser?.user_metadata || {};
       const authName = authUser?.full_name || meta?.fullName || meta?.full_name || meta?.name || meta?.username || (authUser?.email ? authUser.email.split('@')[0] : null);
 
+      let formattedRepost = null;
+      if (p.repost) {
+        const rpProfile = profilesMap.get(p.repost.author_id);
+        const rpAuthUser = authUsersMap.get(p.repost.author_id);
+        const rpMeta = rpAuthUser?.user_metadata || {};
+        const rpAuthName = rpAuthUser?.full_name || rpMeta?.fullName || rpMeta?.full_name || rpMeta?.name || rpMeta?.username || (rpAuthUser?.email ? rpAuthUser.email.split('@')[0] : null);
+        const rpIsGhost = rpProfile?.is_ghost === true;
+
+        formattedRepost = {
+          id: p.repost.id,
+          author_id: p.repost.author_id,
+          content: p.repost.content,
+          image_url: p.repost.image_url,
+          image_urls: p.repost.image_urls || [],
+          video_url: p.repost.video_url || null,
+          video_thumbnail: p.repost.video_thumbnail || null,
+          created_at: p.repost.created_at,
+          author: {
+            id: p.repost.author_id,
+            name: rpProfile?.full_name || rpAuthName || rpProfile?.username || 'Student',
+            username: rpProfile?.username || rpMeta?.username || null,
+            avatar_url: rpIsGhost ? null : (rpProfile?.avatar_url || rpMeta?.avatar_url || rpMeta?.picture || null),
+            isTeacher: rpProfile?.is_teacher || rpMeta?.isTeacher || rpMeta?.is_teacher || false,
+            school: rpProfile?.school || rpMeta?.school || null,
+            totalPoints: Number(rpProfile?.total_points) || Number(rpMeta?.totalPoints) || 0,
+            isGhost: rpIsGhost,
+            cosmetics: rpProfile?.cosmetics || rpMeta?.cosmetics || [],
+          }
+        };
+      }
+
       return {
         id: p.id,
         author_id: p.author_id,
@@ -140,6 +171,7 @@ export const getCachedPublicPosts = unstable_cache(
         is_pinned: isPinned,
         // post_likes kept so callers can compute is_liked_by_me per user
         _likeUserIds: (p.post_likes || []).map((l: any) => l.user_id) as string[],
+        repost: formattedRepost,
         author: {
           id: p.author_id,
           name: profile?.full_name || authName || profile?.username || 'Student',

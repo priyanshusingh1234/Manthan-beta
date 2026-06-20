@@ -45,6 +45,7 @@ import { useColorScheme } from 'nativewind';
 import { getLevel } from '@/lib/xp';
 import { getLeague } from '@/lib/leagues';
 import PostCard from '@/components/PostCard';
+import QuestionCard from '@/components/QuestionCard';
 
 const { width } = Dimensions.get('window');
 
@@ -125,7 +126,7 @@ const TeacherVerifiedBadge = () => (
 );
 
 type StudentTabKey = 'stats' | 'badges' | 'posts';
-type TeacherTabKey = 'questions';
+type TeacherTabKey = 'questions' | 'posts';
 
 export default function PublicProfileScreen() {
   const router = useRouter();
@@ -259,6 +260,30 @@ export default function PublicProfileScreen() {
       }
 
       // 4. Fetch specific details based on user type
+      // Fetch user's posts (applies to both students and teachers)
+      const { data: postsData } = await supabase
+        .from('posts')
+        .select('*, post_likes(user_id)')
+        .eq('author_id', dbProfile.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (postsData) {
+        const formattedPosts = postsData.map(post => ({
+          ...post,
+          is_liked_by_me: post.post_likes?.some((like: any) => like.user_id === user?.id) || false,
+          likes_count: post.likes_count ?? post.post_likes?.length ?? 0,
+          author: {
+            avatar_url: dbProfile.avatar_url,
+            name: dbProfile.name || dbProfile.full_name,
+            username: dbProfile.username,
+          }
+        }));
+        setUserPosts(formattedPosts);
+      } else {
+        setUserPosts([]);
+      }
+
       if (!isTeacherUser) {
         // STUDENT PROFILE LOGIC
         // A. Calculate global rank
@@ -268,30 +293,6 @@ export default function PublicProfileScreen() {
           .eq('is_teacher', false)
           .gt('total_points', dbProfile.total_points || 0);
         setGlobalRank((higherRanked || 0) + 1);
-
-        // B. Fetch user's posts
-        const { data: postsData } = await supabase
-          .from('posts')
-          .select('*, post_likes(user_id)')
-          .eq('author_id', dbProfile.id)
-          .order('created_at', { ascending: false })
-          .limit(20);
-
-        if (postsData) {
-          const formattedPosts = postsData.map(post => ({
-            ...post,
-            is_liked_by_me: post.post_likes?.some((like: any) => like.user_id === user?.id) || false,
-            likes_count: post.likes_count ?? post.post_likes?.length ?? 0,
-            author: {
-              avatar_url: dbProfile.avatar_url,
-              name: dbProfile.name || dbProfile.full_name,
-              username: dbProfile.username,
-            }
-          }));
-          setUserPosts(formattedPosts);
-        } else {
-          setUserPosts([]);
-        }
 
         // Fetch question attempts safely using RPC (bypasses RLS)
         const { data: qAttempts } = await supabase.rpc('get_public_solved_questions', { target_user_id: dbProfile.id });
@@ -431,7 +432,17 @@ export default function PublicProfileScreen() {
           .order('created_at', { ascending: false });
 
         if (qData) {
-          setCreatedQuestions(qData);
+          const questionsWithProfile = qData.map(q => ({
+            ...q,
+            profiles: {
+              full_name: dbProfile.full_name || dbProfile.name,
+              username: dbProfile.username,
+              avatar_url: dbProfile.avatar_url,
+              cosmetics: dbProfile.cosmetics,
+              is_teacher: dbProfile.is_teacher || true
+            }
+          }));
+          setCreatedQuestions(questionsWithProfile);
           
           // C. Calculate impact analysis
           const qIds = qData.map((q) => q.id);
@@ -615,7 +626,7 @@ export default function PublicProfileScreen() {
         {/* Floating Back Button */}
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{ top: 10 }}
+          style={{ top: Math.max(insets.top, 10) + 10 }}
           className="absolute left-4 z-50 w-10 h-10 bg-black/45 rounded-full justify-center items-center shadow-md active:scale-95"
         >
           <ChevronLeft size={24} color="white" />
@@ -660,7 +671,7 @@ export default function PublicProfileScreen() {
   const userLeague = getLeague(monthlyPoints);
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
       <Stack.Screen
         options={{
           headerShown: false,
@@ -670,7 +681,7 @@ export default function PublicProfileScreen() {
       {/* Floating Back Button */}
       <TouchableOpacity
         onPress={() => router.back()}
-        style={{ top: 10 }}
+        style={{ top: Math.max(insets.top, 10) + 10 }}
         className="absolute left-4 z-50 w-10 h-10 bg-black/45 rounded-full justify-center items-center shadow-md active:scale-95"
       >
         <ChevronLeft size={24} color="white" />
@@ -1054,9 +1065,11 @@ export default function PublicProfileScreen() {
           </View>
         ) : (
           <View className="flex-row mx-4 mb-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-            {(['questions'] as TeacherTabKey[]).map((tab) => {
+            {(['questions', 'posts'] as TeacherTabKey[]).map((tab) => {
               const isActive = teacherTab === tab;
-              const labels = { questions: 'Created Questions' };
+              const labels = { questions: 'Questions', posts: 'Posts' };
+              const icons = { questions: BookOpen, posts: Layers };
+              const TabIcon = icons[tab];
               return (
                 <TouchableOpacity
                   key={tab}
@@ -1065,7 +1078,7 @@ export default function PublicProfileScreen() {
                     isActive ? 'bg-indigo-600' : 'bg-transparent'
                   }`}
                 >
-                  <BookOpen size={14} color={isActive ? 'white' : (isDark ? '#cbd5e1' : '#64748b')} />
+                  <TabIcon size={14} color={isActive ? 'white' : (isDark ? '#cbd5e1' : '#64748b')} />
                   <Text
                     className={`text-[12px] font-bold ${
                       isActive ? 'text-white' : 'text-slate-650 dark:text-slate-300'
@@ -1251,60 +1264,7 @@ export default function PublicProfileScreen() {
             ) : (
               <View className="gap-3">
                 {createdQuestions.slice(0, visibleQuestionsCount).map((q) => (
-                  <View
-                    key={q.id}
-                    className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-3xl shadow-sm"
-                  >
-                    <View className="flex-row items-start justify-between mb-2">
-                      <View className="flex-1 mr-3">
-                        <Text className="text-sm font-black text-slate-900 dark:text-white" numberOfLines={1}>
-                          {q.title || 'Untitled Question'}
-                        </Text>
-                        <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal mt-1" numberOfLines={2}>
-                          {q.body}
-                        </Text>
-                      </View>
-                      <View className="bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded-lg border border-amber-100 dark:border-amber-900/30 flex-row items-center gap-1">
-                        <Zap size={10} color="#eab308" fill="#eab308" />
-                        <Text className="text-[10px] font-black text-amber-700 dark:text-amber-400">
-                          {q.points || 0} PTS
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-slate-50 dark:border-slate-800/50">
-                      <View className="flex-row items-center gap-1.5 flex-wrap">
-                        <View className="bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/40">
-                          <Text className="text-[9px] font-black text-indigo-750 dark:text-indigo-300 uppercase">
-                            {q.subject || 'General'}
-                          </Text>
-                        </View>
-                        {q.difficulty && (
-                          <View className="bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40">
-                            <Text className="text-[9px] font-black text-emerald-700 dark:text-emerald-400 uppercase">
-                              {q.difficulty}
-                            </Text>
-                          </View>
-                        )}
-                        {q.time_limit && (
-                          <View className="flex-row items-center gap-1 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded">
-                            <Clock size={8} color="#64748b" />
-                            <Text className="text-[9px] font-bold text-slate-500 dark:text-slate-400">
-                              {q.time_limit}m
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-
-                      <TouchableOpacity
-                        onPress={() => router.push({ pathname: '/explore', params: { search: q.title } } as any)}
-                        className="bg-indigo-650 flex-row items-center gap-1 px-3 py-1.5 rounded-xl"
-                      >
-                        <Play size={10} color="white" fill="white" />
-                        <Text className="text-[10px] font-black text-white">Attempt</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                  <QuestionCard key={q.id} q={q} />
                 ))}
                 {visibleQuestionsCount < createdQuestions.length && (
                   <TouchableOpacity
@@ -1315,6 +1275,27 @@ export default function PublicProfileScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+            )}
+          </View>
+        )}
+        {isTeacher && teacherTab === 'posts' && (
+          <View className="px-4 pb-24 gap-3">
+            {userPosts.length === 0 ? (
+              <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center">
+                <BookOpen size={36} color={isDark ? '#475569' : '#cbd5e1'} />
+                <Text className="text-slate-500 dark:text-slate-400 font-bold mt-2 text-sm">No posts found</Text>
+                <Text className="text-[11px] text-slate-450 dark:text-slate-500 text-center mt-1">
+                  Posts shared by @{profile.username} will appear here.
+                </Text>
+              </View>
+            ) : (
+              userPosts.slice(0, visiblePostsCount).map((post) => (
+                <PostCard 
+                  key={post.id} 
+                  post={post} 
+                  currentUserId={currentUser?.id || null} 
+                />
+              ))
             )}
           </View>
         )}

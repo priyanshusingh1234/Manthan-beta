@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Image, Pressable, ScrollView, Dimensions, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
-import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles, Trash2 } from 'lucide-react-native';
+import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles, Trash2, Repeat } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import ShareModal from './ShareModal';
+import RepostModal from './RepostModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -47,7 +48,9 @@ export default React.memo(function PostCard({
   post, 
   currentUserId, 
   isSinglePost = false, 
-  onImagePress 
+  onImagePress,
+  onUpdate,
+  isFeed
 }: { 
   post: any, 
   currentUserId: string | null, 
@@ -82,6 +85,7 @@ export default React.memo(function PostCard({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeletedLocally, setIsDeletedLocally] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showRepostModal, setShowRepostModal] = useState(false);
 
   const handleOptions = () => {
     const isOwner = currentUserId && (author.id === currentUserId || post?.author_id === currentUserId);
@@ -264,6 +268,46 @@ export default React.memo(function PostCard({
         </View>
       ) : null}
 
+      {/* Render Reposted Content */}
+      {post?.repost && (
+        <Pressable 
+          className="border border-slate-200 dark:border-slate-700 rounded-2xl p-3 mb-3 bg-slate-50 dark:bg-slate-800/50"
+          onPress={() => {
+            if (!isSinglePost) {
+              router.push(`/posts/${post.repost.id}` as any);
+            }
+          }}
+        >
+          <View className="flex-row items-center mb-2">
+            {post.repost.author?.avatar_url ? (
+              <Image source={{ uri: post.repost.author.avatar_url }} className="w-5 h-5 rounded-full mr-2" />
+            ) : (
+              <View className="w-5 h-5 rounded-full mr-2 bg-slate-200 dark:bg-slate-700 items-center justify-center">
+                <User size={12} color={isDark ? "#94a3b8" : "#64748b"} />
+              </View>
+            )}
+            <Text className="font-bold text-xs text-slate-900 dark:text-slate-100">
+              {post.repost.author?.name || post.repost.author?.full_name || 'Scholar'}
+            </Text>
+            <Text className="text-[10px] text-slate-500 dark:text-slate-400 ml-1">
+              @{post.repost.author?.username || 'scholar'}
+            </Text>
+          </View>
+          {post.repost.content ? (
+             <Text className="text-sm text-slate-800 dark:text-slate-200" numberOfLines={3}>
+               {renderContent(post.repost.content)}
+             </Text>
+          ) : null}
+          {post.repost.image_urls?.[0] || post.repost.image_url ? (
+            <Image source={{ uri: post.repost.image_urls?.[0] || post.repost.image_url }} className="w-full h-32 rounded-xl mt-2" resizeMode="cover" />
+          ) : post.repost.video_url ? (
+            <View className="w-full h-32 bg-slate-900 rounded-xl mt-2 items-center justify-center">
+              <Text className="text-white font-bold text-xs">▶ Video Clip</Text>
+            </View>
+          ) : null}
+        </Pressable>
+      )}
+
       {/* Action Bar */}
       <View className="flex-row items-center justify-between bg-slate-50 dark:bg-slate-800/50 rounded-2xl px-2 py-1.5 border border-slate-200/50 dark:border-slate-700/50 mt-1">
         <View className="flex-row items-center">
@@ -283,6 +327,10 @@ export default React.memo(function PostCard({
                 {post.comments_count}
               </Text>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity activeOpacity={0.7} className="px-3 py-1.5 rounded-xl ml-1" onPress={() => setShowRepostModal(true)}>
+            <Repeat size={18} color={isDark ? '#94a3b8' : '#64748b'} />
           </TouchableOpacity>
         </View>
 
@@ -363,6 +411,17 @@ export default React.memo(function PostCard({
         url={`https://manthan-beta-c975.vercel.app/posts/${post.id}`}
         visible={showShareModal}
         onClose={() => setShowShareModal(false)}
+      />
+
+      <RepostModal
+        post={post}
+        visible={showRepostModal}
+        onClose={() => setShowRepostModal(false)}
+        onSuccess={() => {
+            Alert.alert("Success", "Post reposted successfully!");
+            if (onUpdate) onUpdate();
+        }}
+        isDark={isDark}
       />
     </View>
   );

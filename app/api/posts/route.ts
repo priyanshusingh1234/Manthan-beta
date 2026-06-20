@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
                     // Slow path: paginated or filtered
                     let query = supabaseAdmin
                         .from('posts')
-                        .select('id, author_id, content, image_url, image_urls, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id )')
+                        .select('id, author_id, content, image_url, image_urls, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id ), repost_id, repost:posts!repost_id ( id, author_id, content, image_url, image_urls, video_url, video_thumbnail, created_at )')
                         .order('created_at', { ascending: false })
                         .limit(limit);
 
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
                     const { data: posts, error } = await query;
                     if (error) throw error;
 
-                    const authorIds = [...new Set((posts || []).map((p: any) => p.author_id))] as string[];
+                    const authorIds = [...new Set((posts || []).flatMap((p: any) => p.repost ? [p.author_id, p.repost.author_id] : [p.author_id]))] as string[];
                     const { data: profilesRaw } = authorIds.length
                         ? await supabaseAdmin
                             .from('profiles')
@@ -100,6 +100,35 @@ export async function GET(req: NextRequest) {
                         const meta = authUser?.user_metadata || {};
                         const authName = authUser?.full_name || meta?.fullName || meta?.full_name || meta?.name || meta?.username || (authUser?.email ? authUser.email.split('@')[0] : null);
 
+                        let formattedRepost = null;
+                        if (p.repost) {
+                            const rpProfile = profilesMap.get(p.repost.author_id);
+                            const rpAuthUser = authUsersMap.get(p.repost.author_id);
+                            const rpMeta = rpAuthUser?.user_metadata || {};
+                            const rpAuthName = rpAuthUser?.full_name || rpMeta?.fullName || rpMeta?.full_name || rpMeta?.name || rpMeta?.username || (rpAuthUser?.email ? rpAuthUser.email.split('@')[0] : null);
+                            
+                            formattedRepost = {
+                                id: p.repost.id,
+                                author_id: p.repost.author_id,
+                                content: p.repost.content,
+                                image_url: p.repost.image_url,
+                                image_urls: p.repost.image_urls || [],
+                                video_url: p.repost.video_url || null,
+                                video_thumbnail: p.repost.video_thumbnail || null,
+                                created_at: p.repost.created_at,
+                                author: {
+                                    id: p.repost.author_id,
+                                    name: rpProfile?.full_name || rpAuthName || rpProfile?.username || 'Student',
+                                    username: rpProfile?.username || rpMeta?.username || null,
+                                    avatar_url: rpProfile?.avatar_url || rpMeta?.avatar_url || rpMeta?.picture || null,
+                                    isTeacher: rpProfile?.is_teacher || rpMeta?.isTeacher || rpMeta?.is_teacher || false,
+                                    school: rpProfile?.school || rpMeta?.school || null,
+                                    isGhost: rpProfile?.is_ghost === true,
+                                    cosmetics: rpProfile?.cosmetics || rpMeta?.cosmetics || [],
+                                }
+                            };
+                        }
+
                         return {
                             id: p.id,
                             author_id: p.author_id,
@@ -113,6 +142,7 @@ export async function GET(req: NextRequest) {
                             created_at: p.created_at,
                             is_pinned: isPinned,
                             _likeUserIds: (p.post_likes || []).map((l: any) => l.user_id) as string[],
+                            repost: formattedRepost,
                             author: {
                                 id: p.author_id,
                                 name: profile?.full_name || authName || profile?.username || 'Student',
@@ -151,6 +181,7 @@ export async function GET(req: NextRequest) {
                 is_pinned: p.is_pinned,
                 is_liked_by_me: currentUserId ? p._likeUserIds.includes(currentUserId) : false,
                 author: p.author,
+                repost: p.repost,
                 _feedLabel: '',
                 _feedScore: 0,
             };
@@ -209,10 +240,10 @@ export async function POST(req: NextRequest) {
         const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
         if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { content, imageUrl, imageUrls, videoUrl, videoThumbnail } = await req.json();
+        const { content, imageUrl, imageUrls, videoUrl, videoThumbnail, repost_id } = await req.json();
 
-        if (!content?.trim() && !videoUrl) {
-            return NextResponse.json({ error: 'Post must contain text or a video.' }, { status: 400 });
+        if (!content?.trim() && !videoUrl && !repost_id) {
+            return NextResponse.json({ error: 'Post must contain text, a video, or be a repost.' }, { status: 400 });
         }
 
         const { data: post, error } = await supabaseAdmin
@@ -224,11 +255,19 @@ export async function POST(req: NextRequest) {
                 image_urls: imageUrls || [],
                 video_url: videoUrl || null,
                 video_thumbnail: videoThumbnail || null,
+                repost_id: repost_id || null,
             })
             .select()
             .single();
 
         if (error) throw error;
+
+        // --- Fetch original post author if repost ---
+        let originalAuthorId: string | null = null;
+        if (repost_id) {
+            const { data: origPost } = await supabaseAdmin.from('posts').select('author_id').eq('id', repost_id).single();
+            if (origPost) originalAuthorId = origPost.author_id;
+        }
 
 
         // --- Tagging / Mentions Logic ---
@@ -279,13 +318,27 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // 2. Send Follower Notifications (excluding those already tagged)
+        // 2. Send Repost Notification
+        if (originalAuthorId && originalAuthorId !== user.id) {
+            await createNotification({
+                userId: originalAuthorId,
+                type: 'following_post',
+                title: `${authorName} reposted your post`,
+                body: excerpt ? `"${excerpt}"` : `${authorName} shared your post.`,
+                href: `/posts/${post.id}`,
+                actorId: user.id,
+                actorName: authorName,
+                actorAvatar: authorAvatar ?? undefined,
+            });
+        }
+
+        // 3. Send Follower Notifications (excluding those already tagged or notified)
         const { data: followers } = await supabaseAdmin
             .from('follows')
             .select('follower_id')
             .eq('following_id', user.id);
 
-        let followerIds = Array.from(new Set((followers || []).map((f: any) => String(f.follower_id)).filter(id => id && id !== user.id && !taggedUserIds.includes(id))));
+        let followerIds = Array.from(new Set((followers || []).map((f: any) => String(f.follower_id)).filter(id => id && id !== user.id && !taggedUserIds.includes(id) && id !== originalAuthorId)));
 
         // 3. Handle @community for Admins
         const envAdmins = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());

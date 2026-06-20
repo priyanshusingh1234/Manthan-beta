@@ -17,7 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Trophy, Target, Zap, Star, User, MapPin, GraduationCap, Edit3, LogOut,
-  Award, BookOpen, Shield, MessageSquare, Search, X, Camera, ChevronRight, PlaySquare, Play
+  Award, BookOpen, Shield, MessageSquare, Search, X, Camera, ChevronRight, PlaySquare, Play, ChevronLeft
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
@@ -436,7 +436,16 @@ export default function ProfileScreen() {
   const bannerPreview = newBanner?.uri || profile.banner_url;
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+      {/* Floating Back Button */}
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={{ top: Math.max(insets.top, 10) + 10 }}
+        className="absolute left-4 z-50 w-10 h-10 bg-black/45 rounded-full justify-center items-center shadow-md active:scale-95"
+      >
+        <ChevronLeft size={24} color="white" />
+      </TouchableOpacity>
+
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}

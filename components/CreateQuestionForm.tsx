@@ -575,7 +575,7 @@ export default function CreateQuestionForm() {
                       const rect = e.currentTarget.getBoundingClientRect();
                       const x = (e.clientX - rect.left) / rect.width;
                       const y = (e.clientY - rect.top) / rect.height;
-                      setHotspots([...hotspots, { id: Math.random().toString(), x, y, radius: 0.08, label: `Hotspot ${hotspots.length + 1}` }]);
+                      setHotspots([...hotspots, { id: Math.random().toString(), x, y, radius: 0.12, label: `Hotspot ${hotspots.length + 1}` }]);
                     }}
                   />
                   {hotspots.map((h, i) => (

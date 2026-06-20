@@ -263,10 +263,7 @@ export default function PostsScreen() {
         throw new Error(errorData.error || 'Failed to post');
       }
       
-      const newPost = await response.json();
-      const formattedPost = { ...newPost, is_liked_by_me: false, likes_count: 0 };
-      
-      setPosts(prev => [formattedPost, ...prev]);
+      onRefresh();
       setContent('');
       setMediaFiles([]);
       setSelectedCategory('general');
@@ -408,8 +405,8 @@ export default function PostsScreen() {
   };
 
   const renderPostItem = useCallback(({ item }: { item: any }) => (
-    <PostCard post={item} currentUserId={currentUser?.id || null} />
-  ), [currentUser?.id]);
+    <PostCard post={item} currentUserId={currentUser?.id || null} onUpdate={onRefresh} isFeed={true} />
+  ), [currentUser?.id, onRefresh]);
 
   if (loading) {
     return (
