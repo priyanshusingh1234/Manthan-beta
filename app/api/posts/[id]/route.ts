@@ -171,7 +171,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
         if (comments && comments.length > 0) {
             const commentIds = comments.map((c: any) => c.id);
             // Delete comment likes
-            await supabaseAdmin.from('comment_likes').delete().in('comment_id', commentIds).catch(() => {});
+            await supabaseAdmin.from('comment_likes').delete().in('comment_id', commentIds);
         }
 
         // Delete other referencing tables
@@ -181,8 +181,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
         const { error: plErr } = await supabaseAdmin.from('post_likes').delete().eq('post_id', postId);
         if (plErr) console.error("post_likes delete error:", plErr);
 
-        await supabaseAdmin.from('post_saves').delete().eq('post_id', postId).catch(() => {});
-        await supabaseAdmin.from('reports').delete().eq('post_id', postId).catch(() => {});
+        await supabaseAdmin.from('post_saves').delete().eq('post_id', postId);
+        await supabaseAdmin.from('reports').delete().eq('post_id', postId);
 
         // Delete Image(s) from Supabase Db
         let parsedImageUrls: string[] = [];

@@ -81,46 +81,16 @@ export default function RepostModal({ post, visible, onClose, onSuccess, isDark 
         />
 
         {/* Repost Preview */}
-        <View className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50 dark:bg-slate-900 flex-1 mb-6">
+        <View className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50 dark:bg-slate-900">
           <View className="flex-row items-center mb-2">
             {post.author?.avatar_url && (
               <Image source={{ uri: post.author.avatar_url }} className="w-6 h-6 rounded-full mr-2" />
             )}
             <Text className="font-bold text-sm text-slate-900 dark:text-slate-100">{authorName}</Text>
           </View>
-          <Text className="text-sm text-slate-600 dark:text-slate-400 mb-2" numberOfLines={3}>
+          <Text className="text-sm text-slate-600 dark:text-slate-400" numberOfLines={3}>
             {post.content || 'Media Post'}
           </Text>
-          {(() => {
-            const previewImages = Array.isArray(post.image_urls) && post.image_urls.length > 0 
-              ? post.image_urls 
-              : (post.image_url ? [post.image_url] : []);
-              
-            if (previewImages.length > 0) {
-              return (
-                <View className="flex-row overflow-hidden mt-1 rounded-xl">
-                  {previewImages.slice(0, 3).map((uri: string, idx: number) => (
-                    <View key={idx} className={`flex-1 ${idx > 0 ? 'ml-1' : ''}`}>
-                      <Image source={{ uri }} style={{ height: 100, width: '100%' }} resizeMode="cover" />
-                      {idx === 2 && previewImages.length > 3 && (
-                        <View className="absolute inset-0 bg-black/50 justify-center items-center">
-                          <Text className="text-white font-bold text-lg">+{previewImages.length - 3}</Text>
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                </View>
-              );
-            }
-            if (post.video_url) {
-              return (
-                <View className="w-full h-24 bg-slate-800 rounded-xl mt-1 items-center justify-center">
-                  <Text className="text-white font-bold text-xs">▶ Video Clip</Text>
-                </View>
-              );
-            }
-            return null;
-          })()}
         </View>
       </View>
     </Modal>
