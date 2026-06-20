@@ -1,12 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Image, Pressable, ScrollView, Dimensions, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
-import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles, Trash2, Repeat } from 'lucide-react-native';
+import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles, Trash2 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import ShareModal from './ShareModal';
-import RepostModal from './RepostModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
