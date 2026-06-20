@@ -367,10 +367,6 @@ export default React.memo(function PostCard({
               </Text>
             )}
           </TouchableOpacity>
-
-          <TouchableOpacity activeOpacity={0.7} className="px-3 py-1.5 rounded-xl ml-1" onPress={() => setShowRepostModal(true)}>
-            <Repeat size={18} color={isDark ? '#94a3b8' : '#64748b'} />
-          </TouchableOpacity>
         </View>
 
         <TouchableOpacity activeOpacity={0.7} className="px-3 py-1.5" onPress={() => setShowShareModal(true)}>
