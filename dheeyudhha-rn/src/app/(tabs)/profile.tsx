@@ -149,7 +149,7 @@ export default function ProfileScreen() {
     setLoadingPosts(true);
     try {
       const { data } = await supabase
-        .from('posts').select('*, post_likes(user_id)')
+        .from('posts').select('*, post_likes(user_id), repost:posts!repost_id(*)')
         .eq('author_id', currentUser.id)
         .order('created_at', { ascending: false }).limit(20);
       
@@ -158,6 +158,7 @@ export default function ProfileScreen() {
         is_liked_by_me: post.post_likes?.some((like: any) => like.user_id === currentUser.id) || false,
         likes_count: post.likes_count ?? post.post_likes?.length ?? 0,
         author: {
+          id: currentUser.id,
           avatar_url: profile.avatar_url,
           name: profile.name,
           username: profile.username,

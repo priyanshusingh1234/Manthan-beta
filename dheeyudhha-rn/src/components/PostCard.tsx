@@ -87,6 +87,29 @@ export default React.memo(function PostCard({
   const [showShareModal, setShowShareModal] = useState(false);
   const [showRepostModal, setShowRepostModal] = useState(false);
 
+  // Safely extract repost data. Handle cases where it might be an empty array or empty object.
+  const repostData = Array.isArray(post?.repost) ? post.repost[0] : post?.repost;
+  const hasValidRepost = !!(repostData && (repostData.id || repostData.content || repostData.author_id));
+
+  const [repostAuthor, setRepostAuthor] = useState<any>(repostData?.author || null);
+
+  React.useEffect(() => {
+    if (hasValidRepost && !repostData.author && repostData.author_id) {
+      supabase.from('profiles').select('full_name, name, username, avatar_url').eq('id', repostData.author_id).single()
+        .then(({ data }) => {
+          if (data) {
+            setRepostAuthor({
+              name: data.full_name || data.name || 'Scholar',
+              username: data.username || 'scholar',
+              avatar_url: data.avatar_url
+            });
+          }
+        });
+    } else if (repostData?.author) {
+      setRepostAuthor(repostData.author);
+    }
+  }, [repostData]);
+
   const handleOptions = () => {
     const isOwner = currentUserId && (author.id === currentUserId || post?.author_id === currentUserId);
     if (isOwner) {
@@ -269,38 +292,38 @@ export default React.memo(function PostCard({
       ) : null}
 
       {/* Render Reposted Content */}
-      {post?.repost && (
+      {hasValidRepost && (
         <Pressable 
           className="border border-slate-200 dark:border-slate-700 rounded-2xl p-3 mb-3 bg-slate-50 dark:bg-slate-800/50"
           onPress={() => {
-            if (!isSinglePost) {
-              router.push(`/posts/${post.repost.id}` as any);
+            if (!isSinglePost && repostData?.id) {
+              router.push(`/posts/${repostData.id}` as any);
             }
           }}
         >
           <View className="flex-row items-center mb-2">
-            {post.repost.author?.avatar_url ? (
-              <Image source={{ uri: post.repost.author.avatar_url }} className="w-5 h-5 rounded-full mr-2" />
+            {repostAuthor?.avatar_url ? (
+              <Image source={{ uri: repostAuthor.avatar_url }} className="w-5 h-5 rounded-full mr-2" />
             ) : (
               <View className="w-5 h-5 rounded-full mr-2 bg-slate-200 dark:bg-slate-700 items-center justify-center">
                 <User size={12} color={isDark ? "#94a3b8" : "#64748b"} />
               </View>
             )}
             <Text className="font-bold text-xs text-slate-900 dark:text-slate-100">
-              {post.repost.author?.name || post.repost.author?.full_name || 'Scholar'}
+              {repostAuthor?.name || repostAuthor?.full_name || 'Scholar'}
             </Text>
             <Text className="text-[10px] text-slate-500 dark:text-slate-400 ml-1">
-              @{post.repost.author?.username || 'scholar'}
+              @{repostAuthor?.username || 'scholar'}
             </Text>
           </View>
-          {post.repost.content ? (
+          {repostData?.content ? (
              <Text className="text-sm text-slate-800 dark:text-slate-200" numberOfLines={3}>
-               {renderContent(post.repost.content)}
+               {renderContent(repostData.content)}
              </Text>
           ) : null}
-          {post.repost.image_urls?.[0] || post.repost.image_url ? (
-            <Image source={{ uri: post.repost.image_urls?.[0] || post.repost.image_url }} className="w-full h-32 rounded-xl mt-2" resizeMode="cover" />
-          ) : post.repost.video_url ? (
+          {repostData?.image_urls?.[0] || repostData?.image_url ? (
+            <Image source={{ uri: repostData.image_urls?.[0] || repostData.image_url }} className="w-full h-32 rounded-xl mt-2" resizeMode="cover" />
+          ) : repostData?.video_url ? (
             <View className="w-full h-32 bg-slate-900 rounded-xl mt-2 items-center justify-center">
               <Text className="text-white font-bold text-xs">▶ Video Clip</Text>
             </View>

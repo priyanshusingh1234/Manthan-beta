@@ -263,7 +263,7 @@ export default function PublicProfileScreen() {
       // Fetch user's posts (applies to both students and teachers)
       const { data: postsData } = await supabase
         .from('posts')
-        .select('*, post_likes(user_id)')
+        .select('*, post_likes(user_id), repost:posts!repost_id(*)')
         .eq('author_id', dbProfile.id)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -274,6 +274,7 @@ export default function PublicProfileScreen() {
           is_liked_by_me: post.post_likes?.some((like: any) => like.user_id === user?.id) || false,
           likes_count: post.likes_count ?? post.post_likes?.length ?? 0,
           author: {
+            id: dbProfile.id,
             avatar_url: dbProfile.avatar_url,
             name: dbProfile.name || dbProfile.full_name,
             username: dbProfile.username,
