@@ -9,6 +9,39 @@ import DailyGoalCard from '@/components/DailyGoalCard';
 export default function FeedScreen() {
   const router = useRouter();
   
+  const [rsvpStatus, setRsvpStatus] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const handleRsvp = async (status: 'in' | 'out') => {
+    setIsSubmitting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
+      
+      const res = await fetch(`${API_URL}/api/events/rsvp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          eventId: 'class10_unit_test_1',
+          status: status
+        })
+      });
+      
+      if (res.ok) {
+        setRsvpStatus(status);
+      }
+    } catch (e) {
+      console.error('RSVP Error:', e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const Header = (
     <View style={{ paddingTop: 40, paddingBottom: 16 }}>
       {/* Top Banner */}
@@ -31,12 +64,39 @@ export default function FeedScreen() {
       <View className="px-6 mb-6">
         <View className="bg-indigo-600 rounded-2xl p-4 shadow-sm border border-indigo-500">
           <Text className="text-white font-black text-lg mb-2">✨ Upcoming Class 10 Unit Test</Text>
-          <Text className="text-indigo-100 font-medium text-sm leading-5">
+          <Text className="text-indigo-100 font-medium text-sm leading-5 mb-4">
             <Text className="font-bold text-white">History:</Text> Ch 1 | <Text className="font-bold text-white">Geo:</Text> Ch 1 | <Text className="font-bold text-white">Eco:</Text> Ch 1 | <Text className="font-bold text-white">Civics:</Text> Ch 1{'\n'}
             <Text className="font-bold text-white">Hindi:</Text> Bade Bhai Sahab, Harihar Kaka, Grammar: Samash{'\n'}
             <Text className="font-bold text-white">English:</Text> A Letter to God, Fire and Ice, Grammar: Tense{'\n'}
             <Text className="font-bold text-white">Bio:</Text> Ch 1 | <Text className="font-bold text-white">Chem:</Text> Ch 1 | <Text className="font-bold text-white">Physics:</Text> Ch 1
           </Text>
+
+          {rsvpStatus ? (
+            <View className="bg-indigo-500/50 p-3 rounded-xl items-center border border-indigo-400">
+              <Text className="text-white font-bold">
+                {rsvpStatus === 'in' ? "🔥 Awesome! You're In!" : "👍 No worries, maybe next time!"}
+              </Text>
+            </View>
+          ) : (
+            <View className="flex-row gap-3">
+              <TouchableOpacity 
+                onPress={() => handleRsvp('in')}
+                disabled={isSubmitting}
+                className="flex-1 bg-white py-3 rounded-xl items-center active:scale-95 transition-transform"
+                style={{ opacity: isSubmitting ? 0.7 : 1 }}
+              >
+                <Text className="text-indigo-600 font-black text-base">I'm In! ✋</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => handleRsvp('out')}
+                disabled={isSubmitting}
+                className="flex-1 bg-indigo-500/50 border border-indigo-400 py-3 rounded-xl items-center active:scale-95 transition-transform"
+                style={{ opacity: isSubmitting ? 0.7 : 1 }}
+              >
+                <Text className="text-white font-bold text-base">I'm Out 🙅</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
 
