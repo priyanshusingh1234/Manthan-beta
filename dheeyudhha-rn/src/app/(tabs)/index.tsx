@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Trophy, Target, Zap, Play, ShoppingBag } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 import QuestionsFeed from '@/components/QuestionsFeed';
 import RecentDuels from '@/components/RecentDuels';
 import DailyGoalCard from '@/components/DailyGoalCard';
@@ -11,6 +12,29 @@ export default function FeedScreen() {
   
   const [rsvpStatus, setRsvpStatus] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  React.useEffect(() => {
+    const fetchExistingRsvp = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        
+        const { data } = await supabase
+          .from('event_rsvps')
+          .select('status')
+          .eq('event_id', 'class10_unit_test_1')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+          
+        if (data) {
+          setRsvpStatus(data.status);
+        }
+      } catch (e) {
+        console.error('Fetch RSVP Error:', e);
+      }
+    };
+    fetchExistingRsvp();
+  }, []);
 
   const handleRsvp = async (status: 'in' | 'out') => {
     setIsSubmitting(true);
