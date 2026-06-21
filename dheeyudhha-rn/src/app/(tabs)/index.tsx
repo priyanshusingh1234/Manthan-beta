@@ -12,28 +12,40 @@ export default function FeedScreen() {
   
   const [rsvpStatus, setRsvpStatus] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [activeTestId, setActiveTestId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const fetchExistingRsvp = async () => {
+    const fetchExistingRsvpAndTest = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
         
-        const { data } = await supabase
+        const { data: rsvpData } = await supabase
           .from('event_rsvps')
           .select('status')
           .eq('event_id', 'class10_unit_test_1')
           .eq('user_id', session.user.id)
           .maybeSingle();
           
-        if (data) {
-          setRsvpStatus(data.status);
+        if (rsvpData) {
+          setRsvpStatus(rsvpData.status);
+        }
+
+        const { data: testData } = await supabase
+          .from('tests')
+          .select('id')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (testData) {
+          setActiveTestId(testData.id);
         }
       } catch (e) {
         console.error('Fetch RSVP Error:', e);
       }
     };
-    fetchExistingRsvp();
+    fetchExistingRsvpAndTest();
   }, []);
 
   const handleRsvp = async (status: 'in' | 'out') => {
@@ -97,9 +109,17 @@ export default function FeedScreen() {
 
           {rsvpStatus ? (
             <View className="bg-indigo-500/50 p-3 rounded-xl items-center border border-indigo-400">
-              <Text className="text-white font-bold">
+              <Text className="text-white font-bold mb-2">
                 {rsvpStatus === 'in' ? "🔥 Awesome! You're In!" : "👍 No worries, maybe next time!"}
               </Text>
+              {rsvpStatus === 'in' && activeTestId && (
+                <TouchableOpacity 
+                  onPress={() => router.push(`/test/${activeTestId}` as any)}
+                  className="bg-white px-6 py-2 rounded-full mt-2 active:scale-95 transition-transform"
+                >
+                  <Text className="text-indigo-600 font-black">Start Test Now</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             <View className="flex-row gap-3">
