@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Upload, CheckCircle, Loader2 } from 'lucide-react';
 
-export default function WebTestTakingScreen({ params }: { params: Promise<{ testId: string }> }) {
-  const unwrappedParams = use(params);
-  const testId = unwrappedParams.testId;
+export default function WebTestTakingScreen({ params }: { params: { testId: string } }) {
+  const testId = params.testId;
   const router = useRouter();
   
   const [testInfo, setTestInfo] = useState<any>(null);
