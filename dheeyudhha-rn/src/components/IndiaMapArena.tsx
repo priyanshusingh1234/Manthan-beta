@@ -92,7 +92,7 @@ export default function IndiaMapArena({ question, disabled, onSubmit }: { questi
                 <View className="flex-1">
                     {selectedState ? (
                         <Text className="text-sm font-black text-slate-700 dark:text-slate-300">
-                            Selected: {IndiaMapData.locations.find((l: any) => l.id === selectedState)?.name}
+                            Selected: {disabled ? IndiaMapData.locations.find((l: any) => l.id === selectedState)?.name : 'State Region'}
                         </Text>
                     ) : null}
                 </View>

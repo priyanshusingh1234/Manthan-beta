@@ -89,7 +89,7 @@ export default function IndiaMapArena({ question, disabled, onSubmit }: { questi
             <div className="flex justify-between items-center">
                 {selectedState ? (
                     <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                        Selected: {IndiaMapData.locations.find((l: any) => l.id === selectedState)?.name}
+                        Selected: {disabled ? IndiaMapData.locations.find((l: any) => l.id === selectedState)?.name : 'State Region'}
                     </p>
                 ) : (
                     <div />

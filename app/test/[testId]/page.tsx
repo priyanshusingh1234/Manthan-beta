@@ -15,10 +15,27 @@ export default function WebTestTakingScreen({ params }: { params: { testId: stri
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingQId, setUploadingQId] = useState<string | null>(null);
+  const [hasAttempted, setHasAttempted] = useState(false);
 
   useEffect(() => {
     const fetchTest = async () => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: subData } = await supabase
+            .from('test_submissions')
+            .select('id')
+            .eq('test_id', testId)
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+            
+          if (subData) {
+            setHasAttempted(true);
+            setLoading(false);
+            return;
+          }
+        }
+
         const { data: testData, error: testErr } = await supabase
           .from('tests')
           .select('*')
@@ -47,27 +64,21 @@ export default function WebTestTakingScreen({ params }: { params: { testId: stri
     setAnswers(prev => ({ ...prev, [qId]: { type: 'mcq', answerText: option } }));
   };
 
-  const uploadToCloudinary = async (qId: string, file: File) => {
+  const uploadToSupabase = async (qId: string, file: File) => {
     try {
       setUploadingQId(qId);
       const { data: { session } } = await supabase.auth.getSession();
       
       const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-      const signRes = await fetch(`${API_URL}/api/cloudinary/sign`, {
-        headers: { Authorization: `Bearer ${session?.access_token}` }
-      });
-      if (!signRes.ok) throw new Error('Failed to get signature');
-      const signData = await signRes.json();
 
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('api_key', signData.apiKey);
-      formData.append('timestamp', String(signData.timestamp));
-      formData.append('signature', signData.signature);
-      formData.append('folder', signData.folder);
 
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${signData.cloudName}/image/upload`, {
+      const res = await fetch(`${API_URL}/api/posts/upload`, {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        },
         body: formData
       });
       
@@ -75,7 +86,8 @@ export default function WebTestTakingScreen({ params }: { params: { testId: stri
         const data = await res.json();
         setAnswers(prev => ({ ...prev, [qId]: { type: 'written', imageUrl: data.url } }));
       } else {
-        throw new Error('Upload failed');
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || 'Upload failed');
       }
     } catch (e: any) {
       alert('Upload Error: ' + e.message);
@@ -87,7 +99,7 @@ export default function WebTestTakingScreen({ params }: { params: { testId: stri
   const handleFileChange = (qId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      uploadToCloudinary(qId, file);
+      uploadToSupabase(qId, file);
     }
   };
 
@@ -131,6 +143,22 @@ export default function WebTestTakingScreen({ params }: { params: { testId: stri
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950"><Loader2 className="animate-spin text-indigo-600" size={48} /></div>;
+  }
+
+  if (hasAttempted) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 px-6 text-center">
+        <CheckCircle size={64} className="text-emerald-500 mb-4" />
+        <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Test Attempted!</h2>
+        <p className="text-slate-500 font-medium max-w-md">You have already submitted this test. Re-attempts are not allowed to maintain fairness.</p>
+        <button 
+          onClick={() => router.replace('/')}
+          className="mt-8 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold px-6 py-3 rounded-xl transition-colors"
+        >
+          Go Back Home
+        </button>
+      </div>
+    );
   }
 
   if (!testInfo) {
@@ -189,7 +217,7 @@ export default function WebTestTakingScreen({ params }: { params: { testId: stri
                     {uploadingQId === q.id ? (
                       <>
                         <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400 mb-2" size={32} />
-                        <span className="text-indigo-600 dark:text-indigo-400 font-bold">Uploading to Cloudinary...</span>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-bold">Uploading image...</span>
                       </>
                     ) : (
                       <>

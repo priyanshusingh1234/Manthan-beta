@@ -15,10 +15,27 @@ export default function TestTakingScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingQId, setUploadingQId] = useState<string | null>(null);
+  const [hasAttempted, setHasAttempted] = useState(false);
 
   useEffect(() => {
     const fetchTest = async () => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: subData } = await supabase
+            .from('test_submissions')
+            .select('id')
+            .eq('test_id', testId)
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+            
+          if (subData) {
+            setHasAttempted(true);
+            setLoading(false);
+            return;
+          }
+        }
+
         const { data: testData, error: testErr } = await supabase
           .from('tests')
           .select('*')
@@ -47,36 +64,25 @@ export default function TestTakingScreen() {
     setAnswers(prev => ({ ...prev, [qId]: { type: 'mcq', answerText: option } }));
   };
 
-  const uploadToCloudinary = async (qId: string, uri: string) => {
+  const uploadToSupabase = async (qId: string, uri: string) => {
     try {
       setUploadingQId(qId);
       const { data: { session } } = await supabase.auth.getSession();
       
       const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
-      const signRes = await fetch(`${API_URL}/api/cloudinary/sign`, {
-        headers: { Authorization: `Bearer ${session?.access_token}` }
-      });
-      if (!signRes.ok) throw new Error('Failed to get signature');
-      const signData = await signRes.json();
-
-      const uploadTask = FileSystem.createUploadTask(
-        `https://api.cloudinary.com/v1_1/${signData.cloudName}/image/upload`,
+      
+      const res = await FileSystem.uploadAsync(
+        `${API_URL}/api/posts/upload`,
         uri,
         {
           httpMethod: 'POST',
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          uploadType: 1, // FileSystem.FileSystemUploadType.MULTIPART
           fieldName: 'file',
-          parameters: {
-            api_key: signData.apiKey,
-            timestamp: String(signData.timestamp),
-            signature: signData.signature,
-            folder: signData.folder
-          }
+          headers: { Authorization: `Bearer ${session?.access_token}` }
         }
       );
       
-      const res = await uploadTask.uploadAsync();
-      if (res && res.status >= 200 && res.status < 300) {
+      if (res.status >= 200 && res.status < 300) {
         const data = JSON.parse(res.body);
         setAnswers(prev => ({ ...prev, [qId]: { type: 'written', imageUrl: data.url } }));
       } else {
@@ -96,7 +102,7 @@ export default function TestTakingScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      await uploadToCloudinary(qId, result.assets[0].uri);
+      await uploadToSupabase(qId, result.assets[0].uri);
     }
   };
 
@@ -141,6 +147,22 @@ export default function TestTakingScreen() {
 
   if (loading) {
     return <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950"><ActivityIndicator size="large" color="#4f46e5"/></View>;
+  }
+
+  if (hasAttempted) {
+    return (
+      <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950 px-6">
+        <CheckCircle size={64} color="#10b981" className="mb-4" />
+        <Text className="text-2xl font-black text-slate-900 dark:text-white mb-2 text-center">Test Attempted!</Text>
+        <Text className="text-slate-500 text-center font-medium">You have already submitted this test. Re-attempts are not allowed.</Text>
+        <TouchableOpacity 
+          onPress={() => router.replace('/(tabs)/')}
+          className="mt-8 bg-slate-200 dark:bg-slate-800 px-6 py-3 rounded-xl"
+        >
+          <Text className="text-slate-700 dark:text-slate-300 font-bold">Go Back Home</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   if (!testInfo) {
@@ -199,7 +221,7 @@ export default function TestTakingScreen() {
                   {uploadingQId === q.id ? (
                     <>
                       <ActivityIndicator color="#4f46e5" className="mb-2" />
-                      <Text className="text-indigo-600 dark:text-indigo-400 font-bold">Uploading to Cloudinary...</Text>
+                      <Text className="text-indigo-600 dark:text-indigo-400 font-bold">Uploading image...</Text>
                     </>
                   ) : (
                     <>
