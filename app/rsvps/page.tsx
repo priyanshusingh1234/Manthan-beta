@@ -19,7 +19,7 @@ export default function RSVPsPage() {
           .select(`
             status,
             created_at,
-            profiles:user_id (
+            profiles (
               id,
               username,
               full_name,
