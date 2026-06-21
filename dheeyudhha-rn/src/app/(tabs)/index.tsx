@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Trophy, Target, Zap, Play, ShoppingBag } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import QuestionsFeed from '@/components/QuestionsFeed';
 import RecentDuels from '@/components/RecentDuels';
 import DailyGoalCard from '@/components/DailyGoalCard';
