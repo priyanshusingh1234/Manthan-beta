@@ -44,6 +44,24 @@ export default function Home() {
   const [rsvpStatus, setRsvpStatus] = useState<string | null>(null);
   const [isSubmittingRsvp, setIsSubmittingRsvp] = useState(false);
 
+  useEffect(() => {
+    // Fetch existing RSVP on load
+    const fetchExistingRsvp = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data } = await supabase
+        .from('event_rsvps')
+        .select('status')
+        .eq('event_id', 'class10_unit_test_1')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if (data) {
+        setRsvpStatus(data.status);
+      }
+    };
+    fetchExistingRsvp();
+  }, []);
+
   const handleRsvp = async (status: 'in' | 'out') => {
     setIsSubmittingRsvp(true);
     try {
