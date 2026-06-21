@@ -41,6 +41,37 @@ export default function Home() {
     };
   }, []);
 
+  const [rsvpStatus, setRsvpStatus] = useState<string | null>(null);
+  const [isSubmittingRsvp, setIsSubmittingRsvp] = useState(false);
+
+  const handleRsvp = async (status: 'in' | 'out') => {
+    setIsSubmittingRsvp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const res = await fetch('/api/events/rsvp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          eventId: 'class10_unit_test_1',
+          status: status
+        })
+      });
+      
+      if (res.ok) {
+        setRsvpStatus(status);
+      }
+    } catch (e) {
+      console.error('RSVP Error:', e);
+    } finally {
+      setIsSubmittingRsvp(false);
+    }
+  };
+
   if (isAuthenticated === null) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 px-4 sm:px-6 lg:px-8 pt-8">
@@ -89,6 +120,42 @@ export default function Home() {
       <main className="mx-auto mt-6 grid max-w-6xl grid-cols-1 gap-6 px-4 pb-28 sm:px-6 lg:grid-cols-3 lg:px-8">
         <div className="lg:col-span-2">
           {/* <LiveWarFeed /> */}
+
+          {/* Unit Test RSVP Card */}
+          <div className="mb-6 bg-indigo-600 rounded-2xl p-6 shadow-sm border border-indigo-500">
+            <h2 className="text-white font-black text-xl mb-2">✨ Upcoming Class 10 Unit Test</h2>
+            <p className="text-indigo-100 font-medium text-sm leading-relaxed mb-4">
+              <span className="font-bold text-white">History:</span> Ch 1 | <span className="font-bold text-white">Geo:</span> Ch 1 | <span className="font-bold text-white">Eco:</span> Ch 1 | <span className="font-bold text-white">Civics:</span> Ch 1<br/>
+              <span className="font-bold text-white">Hindi:</span> Bade Bhai Sahab, Harihar Kaka, Grammar: Samash<br/>
+              <span className="font-bold text-white">English:</span> A Letter to God, Fire and Ice, Grammar: Tense<br/>
+              <span className="font-bold text-white">Bio:</span> Ch 1 | <span className="font-bold text-white">Chem:</span> Ch 1 | <span className="font-bold text-white">Physics:</span> Ch 1
+            </p>
+
+            {rsvpStatus ? (
+              <div className="bg-indigo-500/50 p-4 rounded-xl text-center border border-indigo-400">
+                <span className="text-white font-bold text-lg">
+                  {rsvpStatus === 'in' ? "🔥 Awesome! You're In!" : "👍 No worries, maybe next time!"}
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-row gap-4">
+                <button 
+                  onClick={() => handleRsvp('in')}
+                  disabled={isSubmittingRsvp}
+                  className="flex-1 bg-white hover:bg-slate-50 py-3 rounded-xl text-center transition-transform active:scale-95 disabled:opacity-70"
+                >
+                  <span className="text-indigo-600 font-black text-lg">I'm In! ✋</span>
+                </button>
+                <button 
+                  onClick={() => handleRsvp('out')}
+                  disabled={isSubmittingRsvp}
+                  className="flex-1 bg-indigo-500/50 hover:bg-indigo-500/70 border border-indigo-400 py-3 rounded-xl text-center transition-transform active:scale-95 disabled:opacity-70"
+                >
+                  <span className="text-white font-bold text-lg">I'm Out 🙅</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Questions feed placed on the home screen */}
           <div className="mt-6">
