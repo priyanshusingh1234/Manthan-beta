@@ -235,15 +235,15 @@ export async function GET(req: NextRequest) {
             return postObj;
         });
 
-        // Only sort by algorithm if it's the first page (no `before` cursor)
-        // because sorting randomly breaks infinite scrolling cursor logic.
-        if (!before) {
+        // Only sort by algorithm if it's the first page
+        // because sorting randomly breaks infinite scrolling logic.
+        if (page === 1) {
             enriched.sort((a, b) => b._feedScore - a._feedScore);
         }
 
         const response = NextResponse.json(enriched);
         // Cache for 30s on first page; pagination pages are unique so no caching needed
-        if (!before) response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60');
+        if (page === 1) response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60');
         return response;
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
