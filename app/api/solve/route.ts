@@ -135,7 +135,7 @@ export async function POST(req: Request) {
         // 3. Evaluate answer
         let isCorrect = false;
         let correctOpt: number | null = null;
-        if (q.question_type === 'match' || q.question_type === 'hotspot') {
+        if (q.question_type === 'match' || q.question_type === 'hotspot' || q.question_type === 'india_map') {
             isCorrect = clientIsCorrect === true;
         } else {
             correctOpt = typeof q.correct_option === 'number' ? q.correct_option : null;
