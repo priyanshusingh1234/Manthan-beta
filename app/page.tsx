@@ -74,9 +74,9 @@ export default function Home() {
       <div className="block w-full bg-gradient-to-r from-rose-500 to-purple-600 py-3 overflow-hidden shadow-lg border-b border-white/10 relative z-10">
         <div 
           className="whitespace-nowrap text-white font-bold text-sm sm:text-base inline-block"
-          style={{ animation: 'marquee 25s linear infinite' }}
+          style={{ animation: 'marquee 40s linear infinite' }}
         >
-          ✨ DHEEYUDHA ✨ DHEEYUDHA ✨ DHEEYUDHA ✨ DHEEYUDHA ✨ DHEEYUDHA ✨ DHEEYUDHA ✨
+          ✨ UPCOMING CLASS 10 UNIT TEST ✨ History: Ch 1 | Geo: Ch 1 | Eco: Ch 1 | Civics: Ch 1 | Hindi: Bade Bhai Sahab, Harihar Kaka, Grammar: Samash | English: A Letter to God, Fire and Ice, Grammar: Tense | Bio: Ch 1 | Chemistry: Ch 1 | Physics: Ch 1 ✨
         </div>
         <style dangerouslySetInnerHTML={{__html: `
           @keyframes marquee {

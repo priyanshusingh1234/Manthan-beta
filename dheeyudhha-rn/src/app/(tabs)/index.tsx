@@ -27,6 +27,19 @@ export default function FeedScreen() {
         </View>
       </View>
 
+      {/* Unit Test Announcement Banner */}
+      <View className="px-6 mb-6">
+        <View className="bg-indigo-600 rounded-2xl p-4 shadow-sm border border-indigo-500">
+          <Text className="text-white font-black text-lg mb-2">✨ Upcoming Class 10 Unit Test</Text>
+          <Text className="text-indigo-100 font-medium text-sm leading-5">
+            <Text className="font-bold text-white">History:</Text> Ch 1 | <Text className="font-bold text-white">Geo:</Text> Ch 1 | <Text className="font-bold text-white">Eco:</Text> Ch 1 | <Text className="font-bold text-white">Civics:</Text> Ch 1{'\n'}
+            <Text className="font-bold text-white">Hindi:</Text> Bade Bhai Sahab, Harihar Kaka, Grammar: Samash{'\n'}
+            <Text className="font-bold text-white">English:</Text> A Letter to God, Fire and Ice, Grammar: Tense{'\n'}
+            <Text className="font-bold text-white">Bio:</Text> Ch 1 | <Text className="font-bold text-white">Chem:</Text> Ch 1 | <Text className="font-bold text-white">Physics:</Text> Ch 1
+          </Text>
+        </View>
+      </View>
+
       {/* Daily Goal Card */}
       <DailyGoalCard />
 
