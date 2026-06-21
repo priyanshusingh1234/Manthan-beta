@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { IndiaMapData } from '../../../../components/IndiaMapData'; // Shared data file
+import { IndiaMapData } from './IndiaMapData';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -106,7 +106,7 @@ export default function IndiaMapArena({ question, disabled, onSubmit }: { questi
                         Submit
                     </Text>
                 </TouchableOpacity>
-            </div>
+            </View>
         </View>
     );
 }
