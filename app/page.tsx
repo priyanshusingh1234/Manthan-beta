@@ -43,10 +43,11 @@ export default function Home() {
 
   const [rsvpStatus, setRsvpStatus] = useState<string | null>(null);
   const [isSubmittingRsvp, setIsSubmittingRsvp] = useState(false);
+  const [activeTestId, setActiveTestId] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch existing RSVP on load
-    const fetchExistingRsvp = async () => {
+    const fetchExistingRsvpAndTest = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const { data } = await supabase
@@ -58,8 +59,19 @@ export default function Home() {
       if (data) {
         setRsvpStatus(data.status);
       }
+
+      const { data: testData } = await supabase
+        .from('tests')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (testData) {
+        setActiveTestId(testData.id);
+      }
     };
-    fetchExistingRsvp();
+    fetchExistingRsvpAndTest();
   }, []);
 
   const handleRsvp = async (status: 'in' | 'out') => {
@@ -155,10 +167,18 @@ export default function Home() {
             </p>
 
             {rsvpStatus ? (
-              <div className="bg-indigo-500/50 p-4 rounded-xl text-center border border-indigo-400">
-                <span className="text-white font-bold text-lg">
+              <div className="bg-indigo-500/50 p-4 rounded-xl text-center border border-indigo-400 flex flex-col items-center">
+                <span className="text-white font-bold text-lg mb-2">
                   {rsvpStatus === 'in' ? "🔥 Awesome! You're In!" : "👍 No worries, maybe next time!"}
                 </span>
+                {rsvpStatus === 'in' && activeTestId && (
+                  <Link 
+                    href={`/test/${activeTestId}`}
+                    className="bg-white text-indigo-600 px-6 py-2 rounded-full font-black hover:bg-slate-50 transition-colors mt-2 inline-block"
+                  >
+                    Start Test Now
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="flex flex-row gap-4">
