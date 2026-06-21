@@ -34,6 +34,7 @@ function SocialFeedContent() {
     // Pagination state
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
+    const [page, setPage] = useState(1);
     const observerTarget = useRef<HTMLDivElement>(null);
 
     // Background refresh — queued new posts waiting to be shown
@@ -79,6 +80,7 @@ function SocialFeedContent() {
             setLoading(true);
         }
         setHasMore(true);
+        setPage(1);
         try {
             const { data: { session: s } } = await supabase.auth.getSession();
             const token = s?.access_token || null;
@@ -129,6 +131,7 @@ function SocialFeedContent() {
         currentPostIdsRef.current = new Set(newPostsQueue.map(p => p.id));
         setNewPostsQueue([]);
         setHasMore(true);
+        setPage(1);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, [newPostsQueue]);
 
@@ -136,17 +139,9 @@ function SocialFeedContent() {
         if (!hasMore || loadingMore || posts.length === 0) return;
         setLoadingMore(true);
         try {
-            const lastPost = posts[posts.length - 1];
-            // Determine timestamp: some come as 'createdAt' (from questions), some as 'created_at' (from posts).
-            // But since these are social posts, it's usually created_at.
-            const cursor = lastPost.created_at || lastPost.createdAt;
-            if (!cursor) {
-                setHasMore(false);
-                return;
-            }
-
             const token = session?.access_token || null;
-            const fbRes = await fetch(`/api/posts?limit=20&before=${encodeURIComponent(cursor)}&t=${Date.now()}`, {
+            const nextPage = page + 1;
+            const fbRes = await fetch(`/api/posts?limit=20&page=${nextPage}&t=${Date.now()}`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                 cache: 'no-store',
             });
@@ -165,7 +160,8 @@ function SocialFeedContent() {
                         const uniqueNew = formattedPosts.filter(p => !existingIds.has(p.id));
                         return [...prev, ...uniqueNew];
                     });
-                    if (newPosts.length < 20) setHasMore(false);
+                    setPage(nextPage);
+                    if (newPosts.length === 0) setHasMore(false);
                 }
             } else {
                 setHasMore(false);

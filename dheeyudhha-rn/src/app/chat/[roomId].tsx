@@ -251,7 +251,7 @@ const MessageItem = memo(({
         {!isMe && (
           <View className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden mr-2 mb-0.5 items-center justify-center">
             {participant?.avatar_url ? (
-              <Image source={{ uri: participant.avatar_url }} className="w-full h-full" />
+              <Image source={{ uri: participant.avatar_url }} style={{ width: '100%', height: '100%', position: 'absolute' }} contentFit="cover" />
             ) : (
               <Text className="text-indigo-600 dark:text-indigo-400 text-xs font-bold">
                 {participant?.full_name?.[0]?.toUpperCase()}
@@ -449,7 +449,11 @@ export default function ChatRoomScreen() {
         if (pData?.user_id) {
           const { data: prof } = await supabase.from('profiles').select('full_name, avatar_url, username, is_teacher').eq('id', pData.user_id).single();
           if (prof) {
-            setParticipant({ user_id: pData.user_id, ...prof });
+            setParticipant({ 
+              user_id: pData.user_id, 
+              ...prof,
+              avatar_url: prof.avatar_url && !prof.avatar_url.includes('googleusercontent.com') ? prof.avatar_url : null
+            });
             syncBlockStatus(currentUser.id, pData.user_id);
           }
         }
@@ -763,7 +767,7 @@ export default function ChatRoomScreen() {
 
             <TouchableOpacity className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden items-center justify-center ml-1">
               {participant?.avatar_url ? (
-                <Image source={{ uri: participant.avatar_url }} className="w-full h-full" contentFit="cover" />
+                <Image source={{ uri: participant.avatar_url }} style={{ width: '100%', height: '100%', position: 'absolute' }} contentFit="cover" />
               ) : (
                 <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-base">{displayName[0]?.toUpperCase()}</Text>
               )}

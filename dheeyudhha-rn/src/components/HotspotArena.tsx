@@ -56,7 +56,8 @@ export default function HotspotArena({ question, onAttempt, disabled, isSubmitti
     let isCorrect = false;
     for (const h of hotspots) {
       const dist = Math.sqrt(Math.pow(pin.x - h.x, 2) + Math.pow(pin.y - h.y, 2));
-      if (dist <= h.radius) {
+      const effectiveRadius = h.radius + 0.04;
+      if (dist <= effectiveRadius) {
         isCorrect = true;
         break;
       }
@@ -107,7 +108,7 @@ export default function HotspotArena({ question, onAttempt, disabled, isSubmitti
                 key={i}
                 style={[
                     styles.hotspotReveal,
-                    { left: h.x * 100 + '%', top: h.y * 100 + '%', width: h.radius * 2 * 100 + '%', height: h.radius * 2 * 100 + '%' }
+                    { left: h.x * 100 + '%', top: h.y * 100 + '%', width: (h.radius + 0.04) * 2 * 100 + '%', height: (h.radius + 0.04) * 2 * 100 + '%' }
                 ]}
              />
           ))}

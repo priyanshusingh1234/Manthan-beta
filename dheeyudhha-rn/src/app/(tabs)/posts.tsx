@@ -64,19 +64,16 @@ export default function PostsScreen() {
     }
   };
 
+  const [page, setPage] = useState(1);
+
   const fetchPosts = async (isLoadMore = false) => {
     try {
       if (isLoadMore) setLoadingMore(true);
       
       const { data: { session } } = await supabase.auth.getSession();
       
-      let url = `${process.env.EXPO_PUBLIC_API_URL}/api/posts?limit=15`;
-      if (isLoadMore && posts.length > 0) {
-        const oldestPost = posts[posts.length - 1];
-        if (oldestPost?.created_at) {
-          url += `&before=${encodeURIComponent(oldestPost.created_at)}`;
-        }
-      }
+      const nextPage = isLoadMore ? page + 1 : 1;
+      let url = `${process.env.EXPO_PUBLIC_API_URL}/api/posts?limit=15&page=${nextPage}`;
 
       const response = await fetch(url, {
         headers: {
@@ -90,13 +87,14 @@ export default function PostsScreen() {
 
       const postsArray = Array.isArray(data) ? data : (data?.posts && Array.isArray(data.posts) ? data.posts : []);
       
-      if (postsArray.length < 15) {
+      if (postsArray.length === 0) {
         setHasMore(false);
       } else {
         setHasMore(true);
       }
 
       setPosts(prev => isLoadMore ? [...prev, ...postsArray] : postsArray);
+      setPage(nextPage);
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {

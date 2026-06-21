@@ -11,6 +11,7 @@ import WrittenSolveClient from '@/components/WrittenSolveClient';
 import { getRandomMessage } from '@/lib/feedbackMessages';
 import MatchArena from '@/components/MatchArena';
 import HotspotArena from '@/components/HotspotArena';
+import IndiaMapArena from '@/components/IndiaMapArena';
 import BadgedName from '@/components/BadgedName';
 import { useCorrectSound } from '@/hooks/useCorrectSound';
 
@@ -301,7 +302,7 @@ export default function SolveQuestionScreen() {
     );
   }
 
-  if (question && (!question.options || question.options.length === 0) && question.question_type !== 'match' && question.question_type !== 'hotspot') {
+  if (question && (!question.options || question.options.length === 0) && question.question_type !== 'match' && question.question_type !== 'hotspot' && question.question_type !== 'india_map') {
     return <WrittenSolveClient question={question} challengeId={challenge as string | undefined} />;
   }
 
@@ -621,6 +622,14 @@ export default function SolveQuestionScreen() {
               isSubmitting={isSubmitting}
             />
           </View>
+        ) : question.question_type === 'india_map' ? (
+          <View className="mt-4">
+            <IndiaMapArena
+              question={question}
+              onSubmit={(isCorrect) => handleSubmit(-1, isCorrect)}
+              disabled={isSubmitting || !!result}
+            />
+          </View>
         ) : (
           <View className="space-y-3">
             {question.options?.map((option: string, index: number) => {
@@ -652,7 +661,7 @@ export default function SolveQuestionScreen() {
       </ScrollView>
 
       {/* Footer Submit */}
-      {question.question_type !== 'match' && question.question_type !== 'hotspot' && (
+      {question.question_type !== 'match' && question.question_type !== 'hotspot' && question.question_type !== 'india_map' && (
         <View className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
           <TouchableOpacity
             onPress={() => handleSubmit()}

@@ -13,6 +13,7 @@ import CoopChallengeHeader from "@/components/CoopChallengeHeader";
 import CoopSpectatorScreen from "@/components/CoopSpectatorScreen";
 import MatchArena from "@/components/MatchArena";
 import HotspotArena from "@/components/HotspotArena";
+import IndiaMapArena from "@/components/IndiaMapArena";
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 import { queueAchievementUnlock } from '@/components/AchievementUnlockOverlay';
@@ -871,7 +872,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 </div>
 
                 {/* MCQ Feedback */}
-                {!result.isCorrect && question.question_type !== 'match' && question.question_type !== 'hotspot' && question.options && result.correctOption !== undefined && result.correctOption !== null && (
+                {!result.isCorrect && question.question_type !== 'match' && question.question_type !== 'hotspot' && question.question_type !== 'india_map' && question.options && result.correctOption !== undefined && result.correctOption !== null && (
                     <div className="mt-6 w-full max-w-md mx-auto text-left space-y-2">
                         <div className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3 text-center">Let's review the options:</div>
                         <div className="flex flex-col gap-2">
@@ -1167,6 +1168,14 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                                 onSubmit={(isCorrect) => handleSubmit(-1, isCorrect)}
                             />
                         </div>
+                    ) : question.question_type === 'india_map' ? (
+                        <div className="mt-8">
+                            <IndiaMapArena 
+                                question={question}
+                                disabled={isSubmitting || !!result}
+                                onSubmit={(isCorrect) => handleSubmit(-1, isCorrect)}
+                            />
+                        </div>
                     ) : question.options && question.options.length > 0 ? (
                         <div className="grid gap-3 mt-8">
                             {question.options.map((opt: string, idx: number) => {
@@ -1192,7 +1201,7 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                     ) : null}
 
                     {/* Submit Button for normal questions */}
-                    {question.question_type !== 'match' && question.question_type !== 'hotspot' && (
+                    {question.question_type !== 'match' && question.question_type !== 'hotspot' && question.question_type !== 'india_map' && (
                         <div className="mt-12 pt-8 border-t border-gray-100 dark:border-slate-800 flex justify-end">
                             <button
                                 onClick={() => handleSubmit()}

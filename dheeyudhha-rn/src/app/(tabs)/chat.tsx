@@ -163,7 +163,7 @@ export default function ChatListPage() {
           participant: {
             user_id: otherUid || '',
             full_name: prof?.full_name || 'Scholar',
-            avatar_url: prof?.avatar_url || null,
+            avatar_url: prof?.avatar_url && !prof.avatar_url.includes('googleusercontent.com') ? prof.avatar_url : null,
             username: prof?.username || 'scholar',
             is_teacher: !!prof?.is_teacher
           },
@@ -244,7 +244,13 @@ export default function ChatListPage() {
           .or(`full_name.ilike.%${searchQuery}%,username.ilike.%${searchQuery}%`)
           .neq('id', user.id)
           .limit(10);
-        setSearchResults(profiles || []);
+        
+        const safeProfiles = (profiles || []).map(p => ({
+          ...p,
+          avatar_url: p.avatar_url && !p.avatar_url.includes('googleusercontent.com') ? p.avatar_url : null
+        }));
+        
+        setSearchResults(safeProfiles);
       } catch (err) {
         console.error(err);
       } finally {
@@ -379,7 +385,7 @@ export default function ChatListPage() {
                 >
                   <View className="h-11 w-11 rounded-full bg-slate-200 dark:bg-slate-850 overflow-hidden items-center justify-center shrink-0">
                     {res.avatar_url ? (
-                      <Image source={{ uri: res.avatar_url }} className="w-full h-full" resizeMode="cover" />
+                      <Image source={{ uri: res.avatar_url }} style={{ width: '100%', height: '100%', position: 'absolute' }} resizeMode="cover" />
                     ) : (
                       <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">
                         {(res.full_name || 'S')[0].toUpperCase()}
@@ -447,7 +453,7 @@ function ChatCard({ room, onPress, user }: { room: ChatRoom; onPress: () => void
       <View className="relative shrink-0">
         <View className="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-850 overflow-hidden items-center justify-center">
           {room.participant.avatar_url ? (
-            <Image source={{ uri: room.participant.avatar_url }} className="w-full h-full" resizeMode="cover" />
+            <Image source={{ uri: room.participant.avatar_url }} style={{ width: '100%', height: '100%', position: 'absolute' }} resizeMode="cover" />
           ) : (
             <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">
               {room.participant.full_name?.[0]?.toUpperCase() || 'U'}

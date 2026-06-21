@@ -25,7 +25,8 @@ export default function HotspotArena({ question, disabled, onSubmit }: { questio
         let isCorrect = false;
         for (const h of hotspots) {
             const dist = Math.sqrt(Math.pow(pin.x - h.x, 2) + Math.pow(pin.y - h.y, 2));
-            if (dist <= h.radius) {
+            const effectiveRadius = h.radius + 0.04; // Added padding to make the circle bigger
+            if (dist <= effectiveRadius) {
                 isCorrect = true;
                 break;
             }
@@ -65,7 +66,7 @@ export default function HotspotArena({ question, disabled, onSubmit }: { questio
                     <div 
                         key={i}
                         className="absolute rounded-full border-2 border-emerald-500 bg-emerald-500/20 flex items-center justify-center transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                        style={{ left: `${h.x * 100}%`, top: `${h.y * 100}%`, width: `${h.radius * 2 * 100}%`, height: `${h.radius * 2 * 100}%` }}
+                        style={{ left: `${h.x * 100}%`, top: `${h.y * 100}%`, width: `${(h.radius + 0.04) * 2 * 100}%`, height: `${(h.radius + 0.04) * 2 * 100}%` }}
                     >
                     </div>
                 ))}

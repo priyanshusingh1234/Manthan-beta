@@ -16,9 +16,14 @@ const cleanAvatar = (url?: string | null): string | null =>
 export async function GET(req: NextRequest) {
     try {
         const url = new URL(req.url);
-        const before = url.searchParams.get('before'); // ISO timestamp cursor
+        const page = Number(url.searchParams.get('page') || '1');
         const limit = Math.min(Number(url.searchParams.get('limit') || '30'), 60);
         const clipsOnly = url.searchParams.get('clipsOnly') === 'true';
+
+        const recentLimit = Math.floor(limit * 0.5);
+        const trendingLimit = Math.ceil(limit * 0.5);
+        const recentOffset = (page - 1) * recentLimit;
+        const trendingOffset = (page - 1) * trendingLimit;
 
         const authHeader = req.headers.get('Authorization');
         // ── Parallel Data Fetching ───────────────
@@ -42,121 +47,136 @@ export async function GET(req: NextRequest) {
                     followingIds: (followsRes.data || []).map((f: any) => f.following_id)
                 };
             })(),
-            // 2. Fetch posts (Concurrent) - Use Global Cache if not paginating
+            // 2. Fetch posts (Concurrent) - Mixed 50/50 Recent & Trending
             (async () => {
-                if (!before && !clipsOnly) {
-                    return await getCachedPublicPosts(limit);
-                } else {
-                    // Slow path: paginated or filtered
-                    let query = supabaseAdmin
-                        .from('posts')
-                        .select('id, author_id, content, image_url, image_urls, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id ), repost_id, repost:posts!repost_id ( id, author_id, content, image_url, image_urls, video_url, video_thumbnail, created_at )')
-                        .order('created_at', { ascending: false })
-                        .limit(limit);
+                const selectFields = 'id, author_id, content, image_url, image_urls, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id ), repost_id';
+                
+                let recentQuery = supabaseAdmin
+                    .from('posts')
+                    .select(selectFields)
+                    .order('created_at', { ascending: false })
+                    .range(recentOffset, recentOffset + recentLimit - 1);
+                
+                // For trending, we sort by likes_count and created_at
+                let trendingQuery = supabaseAdmin
+                    .from('posts')
+                    .select(selectFields)
+                    .order('likes_count', { ascending: false })
+                    .order('created_at', { ascending: false })
+                    .range(trendingOffset, trendingOffset + trendingLimit - 1);
 
-                    if (clipsOnly) query = query.not('video_url', 'is', null);
-                    if (before) query = query.lt('created_at', before);
+                if (clipsOnly) {
+                    recentQuery = recentQuery.not('video_url', 'is', null);
+                    trendingQuery = trendingQuery.not('video_url', 'is', null);
+                }
 
-                    const { data: posts, error } = await query;
-                    if (error) throw error;
+                const [recentRes, trendingRes] = await Promise.all([recentQuery, trendingQuery]);
+                if (recentRes.error) throw recentRes.error;
+                if (trendingRes.error) throw trendingRes.error;
 
-                    const authorIds = [...new Set((posts || []).flatMap((p: any) => p.repost ? [p.author_id, p.repost.author_id] : [p.author_id]))] as string[];
-                    const { data: profilesRaw } = authorIds.length
-                        ? await supabaseAdmin
-                            .from('profiles')
-                            .select('id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics')
-                            .in('id', authorIds)
-                        : { data: [] };
-                    const profilesMap = new Map((profilesRaw || []).map((p: any) => [p.id, p]));
+                const combined = [...(recentRes.data || []), ...(trendingRes.data || [])];
+                const uniqueMap = new Map();
+                for (const p of combined) {
+                    if (!uniqueMap.has(p.id)) uniqueMap.set(p.id, p);
+                }
+                const posts = Array.from(uniqueMap.values());
 
-                    const missingAuthorIds = authorIds.filter(id => {
-                        const p = profilesMap.get(id);
-                        return !p || !p.full_name;
-                    });
+                const authorIds = [...new Set(posts.map((p: any) => p.author_id))] as string[];
+                const { data: profilesRaw } = authorIds.length
+                    ? await supabaseAdmin
+                        .from('profiles')
+                        .select('id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics')
+                        .in('id', authorIds)
+                    : { data: [] };
+                const profilesMap = new Map((profilesRaw || []).map((p: any) => [p.id, p]));
 
-                    const authUsersMap = new Map();
-                    if (missingAuthorIds.length > 0) {
-                        await Promise.allSettled(missingAuthorIds.map(async (id) => {
-                            try {
-                                const { data } = await supabaseAdmin.auth.admin.getUserById(id);
-                                if (data?.user) authUsersMap.set(id, data.user);
-                            } catch { /* silent */ }
-                        }));
+                const missingAuthorIds = authorIds.filter(id => {
+                    const p = profilesMap.get(id);
+                    return !p || !p.full_name;
+                });
+
+                const authUsersMap = new Map();
+                if (missingAuthorIds.length > 0) {
+                    await Promise.allSettled(missingAuthorIds.map(async (id) => {
+                        try {
+                            const { data } = await supabaseAdmin.auth.admin.getUserById(id);
+                            if (data?.user) authUsersMap.set(id, data.user);
+                        } catch { /* silent */ }
+                    }));
+                }
+
+                return posts.map(p => {
+                    const profile = profilesMap.get(p.author_id);
+                    const isGhost = profile?.is_ghost === true;
+                    const likesCount = Array.isArray(p.post_likes) ? p.post_likes.length : (p.likes_count || 0);
+
+                    let finalContent = p.content || '';
+                    let isPinned = false;
+                    if (finalContent.startsWith('[PINNED]')) {
+                        isPinned = true;
+                        finalContent = finalContent.substring(8).trim();
                     }
 
-                    return (posts || []).map(p => {
-                        const profile = profilesMap.get(p.author_id);
-                        const isGhost = profile?.is_ghost === true;
-                        const likesCount = Array.isArray(p.post_likes) ? p.post_likes.length : (p.likes_count || 0);
+                    const authUser = authUsersMap.get(p.author_id);
+                    const meta = authUser?.user_metadata || {};
+                    const authName = authUser?.full_name || meta?.fullName || meta?.full_name || meta?.name || meta?.username || (authUser?.email ? authUser.email.split('@')[0] : null);
 
-                        let finalContent = p.content || '';
-                        let isPinned = false;
-                        if (finalContent.startsWith('[PINNED]')) {
-                            isPinned = true;
-                            finalContent = finalContent.substring(8).trim();
-                        }
-
-                        const authUser = authUsersMap.get(p.author_id);
-                        const meta = authUser?.user_metadata || {};
-                        const authName = authUser?.full_name || meta?.fullName || meta?.full_name || meta?.name || meta?.username || (authUser?.email ? authUser.email.split('@')[0] : null);
-
-                        let formattedRepost = null;
-                        if (p.repost) {
-                            const rpProfile = profilesMap.get(p.repost.author_id);
-                            const rpAuthUser = authUsersMap.get(p.repost.author_id);
-                            const rpMeta = rpAuthUser?.user_metadata || {};
-                            const rpAuthName = rpAuthUser?.full_name || rpMeta?.fullName || rpMeta?.full_name || rpMeta?.name || rpMeta?.username || (rpAuthUser?.email ? rpAuthUser.email.split('@')[0] : null);
-                            
-                            formattedRepost = {
-                                id: p.repost.id,
-                                author_id: p.repost.author_id,
-                                content: p.repost.content,
-                                image_url: p.repost.image_url,
-                                image_urls: p.repost.image_urls || [],
-                                video_url: p.repost.video_url || null,
-                                video_thumbnail: p.repost.video_thumbnail || null,
-                                created_at: p.repost.created_at,
-                                author: {
-                                    id: p.repost.author_id,
-                                    name: rpProfile?.full_name || rpAuthName || rpProfile?.username || 'Student',
-                                    username: rpProfile?.username || rpMeta?.username || null,
-                                    avatar_url: rpProfile?.avatar_url || rpMeta?.avatar_url || rpMeta?.picture || null,
-                                    isTeacher: rpProfile?.is_teacher || rpMeta?.isTeacher || rpMeta?.is_teacher || false,
-                                    school: rpProfile?.school || rpMeta?.school || null,
-                                    isGhost: rpProfile?.is_ghost === true,
-                                    cosmetics: rpProfile?.cosmetics || rpMeta?.cosmetics || [],
-                                }
-                            };
-                        }
-
-                        return {
-                            id: p.id,
-                            author_id: p.author_id,
-                            content: finalContent,
-                            image_url: p.image_url,
-                            image_urls: p.image_urls || [],
-                            video_url: p.video_url || null,
-                            video_thumbnail: p.video_thumbnail || null,
-                            likes_count: likesCount,
-                            comments_count: p.comments_count || 0,
-                            created_at: p.created_at,
-                            is_pinned: isPinned,
-                            _likeUserIds: (p.post_likes || []).map((l: any) => l.user_id) as string[],
-                            repost: formattedRepost,
+                    let formattedRepost = null;
+                    if (p.repost) {
+                        const rpProfile = profilesMap.get(p.repost.author_id);
+                        const rpAuthUser = authUsersMap.get(p.repost.author_id);
+                        const rpMeta = rpAuthUser?.user_metadata || {};
+                        const rpAuthName = rpAuthUser?.full_name || rpMeta?.fullName || rpMeta?.full_name || rpMeta?.name || rpMeta?.username || (rpAuthUser?.email ? rpAuthUser.email.split('@')[0] : null);
+                        
+                        formattedRepost = {
+                            id: p.repost.id,
+                            author_id: p.repost.author_id,
+                            content: p.repost.content,
+                            image_url: p.repost.image_url,
+                            image_urls: p.repost.image_urls || [],
+                            video_url: p.repost.video_url || null,
+                            video_thumbnail: p.repost.video_thumbnail || null,
+                            created_at: p.repost.created_at,
                             author: {
-                                id: p.author_id,
-                                name: profile?.full_name || authName || profile?.username || 'Student',
-                                username: profile?.username || meta?.username || null,
-                                avatar_url: profile?.avatar_url || meta?.avatar_url || meta?.picture || null,
-                                school: profile?.school || meta?.school || null,
-                                isTeacher: profile?.is_teacher || meta?.isTeacher || meta?.is_teacher || false,
-                                totalPoints: Number(profile?.total_points) || Number(meta?.totalPoints) || 0,
-                                isGhost: isGhost,
-                                cosmetics: profile?.cosmetics || meta?.cosmetics || [],
+                                id: p.repost.author_id,
+                                name: rpProfile?.full_name || rpAuthName || rpProfile?.username || 'Student',
+                                username: rpProfile?.username || rpMeta?.username || null,
+                                avatar_url: rpProfile?.avatar_url || rpMeta?.avatar_url || rpMeta?.picture || null,
+                                isTeacher: rpProfile?.is_teacher || rpMeta?.isTeacher || rpMeta?.is_teacher || false,
+                                school: rpProfile?.school || rpMeta?.school || null,
+                                isGhost: rpProfile?.is_ghost === true,
+                                cosmetics: rpProfile?.cosmetics || rpMeta?.cosmetics || [],
                             }
                         };
-                    });
-                }
+                    }
+
+                    return {
+                        id: p.id,
+                        author_id: p.author_id,
+                        content: finalContent,
+                        image_url: p.image_url,
+                        image_urls: p.image_urls || [],
+                        video_url: p.video_url || null,
+                        video_thumbnail: p.video_thumbnail || null,
+                        likes_count: likesCount,
+                        comments_count: p.comments_count || 0,
+                        created_at: p.created_at,
+                        is_pinned: isPinned,
+                        _likeUserIds: (p.post_likes || []).map((l: any) => l.user_id) as string[],
+                        repost: formattedRepost,
+                        author: {
+                            id: p.author_id,
+                            name: profile?.full_name || authName || profile?.username || 'Student',
+                            username: profile?.username || meta?.username || null,
+                            avatar_url: profile?.avatar_url || meta?.avatar_url || meta?.picture || null,
+                            school: profile?.school || meta?.school || null,
+                            isTeacher: profile?.is_teacher || meta?.isTeacher || meta?.is_teacher || false,
+                            totalPoints: Number(profile?.total_points) || Number(meta?.totalPoints) || 0,
+                            isGhost: isGhost,
+                            cosmetics: profile?.cosmetics || meta?.cosmetics || [],
+                        }
+                    };
+                });
             })()
         ]);
 
