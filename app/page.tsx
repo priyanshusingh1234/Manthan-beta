@@ -64,9 +64,14 @@ export default function Home() {
       
       if (res.ok) {
         setRsvpStatus(status);
+        alert(status === 'in' ? "You're In! Let's go! 🔥" : "No worries! Maybe next time.");
+      } else {
+        const errorData = await res.json();
+        alert("Error saving RSVP: " + (errorData.error || 'Unknown error. Did you create the database table?'));
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('RSVP Error:', e);
+      alert('Network error: ' + e.message);
     } finally {
       setIsSubmittingRsvp(false);
     }
@@ -155,6 +160,12 @@ export default function Home() {
                 </button>
               </div>
             )}
+            
+            <div className="mt-4 text-center">
+              <Link href="/rsvps" className="text-indigo-200 hover:text-white text-sm font-semibold underline decoration-indigo-400 underline-offset-4">
+                👀 View all RSVPs
+              </Link>
+            </div>
           </div>
 
           {/* Questions feed placed on the home screen */}
