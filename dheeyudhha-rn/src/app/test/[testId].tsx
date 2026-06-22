@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Upload, CheckCircle, XCircle } from 'lucide-react-native';
 
 export default function TestTakingScreen() {
@@ -76,7 +77,7 @@ export default function TestTakingScreen() {
         uri,
         {
           httpMethod: 'POST',
-          uploadType: 1, // FileSystem.FileSystemUploadType.MULTIPART
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
           fieldName: 'file',
           headers: { Authorization: `Bearer ${session?.access_token}` }
         }
@@ -99,11 +100,41 @@ export default function TestTakingScreen() {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      quality: 0.8,
+      quality: 1, // we compress in ImageManipulator
     });
-    if (!result.canceled && result.assets[0]) {
-      await uploadToSupabase(qId, result.assets[0].uri);
+    
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    
+    try {
+      setUploadingQId(qId);
+      const maxW = 1200;
+      const maxH = 1200;
+      const needsResize = (asset.width || 0) > maxW || (asset.height || 0) > maxH;
+      
+      const manipulated = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        needsResize ? [{ resize: { width: maxW, height: maxH } }] : [],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      
+      const uriToUpload = Platform.OS === 'android' && !manipulated.uri.startsWith('file://') 
+        ? `file://${manipulated.uri}` 
+        : manipulated.uri;
+        
+      await uploadToSupabase(qId, uriToUpload);
+    } catch (e: any) {
+      setUploadingQId(null);
+      Alert.alert('Image Processing Error', e.message);
     }
+  };
+
+  const deleteImage = (qId: string) => {
+    setAnswers(prev => {
+      const newAnswers = { ...prev };
+      delete newAnswers[qId];
+      return newAnswers;
+    });
   };
 
   const handleSubmit = async () => {
@@ -201,10 +232,16 @@ export default function TestTakingScreen() {
               {answers[q.id]?.imageUrl ? (
                 <View className="relative">
                   <Image source={{ uri: answers[q.id].imageUrl }} className="w-full h-48 rounded-xl" resizeMode="cover" />
-                  <View className="absolute top-2 right-2 bg-emerald-500 rounded-full p-1 flex-row items-center gap-1 px-2">
+                  <View className="absolute top-2 left-2 bg-emerald-500 rounded-full p-1 flex-row items-center gap-1 px-2">
                     <CheckCircle size={14} color="white" />
                     <Text className="text-white text-xs font-bold">Uploaded</Text>
                   </View>
+                  <TouchableOpacity 
+                    onPress={() => deleteImage(q.id)}
+                    className="absolute top-2 right-2 bg-rose-500/90 rounded-full p-2"
+                  >
+                    <XCircle size={20} color="white" />
+                  </TouchableOpacity>
                   <TouchableOpacity 
                     onPress={() => pickImage(q.id)}
                     className="mt-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg items-center"
