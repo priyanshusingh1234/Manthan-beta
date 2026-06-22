@@ -19,6 +19,8 @@ import BadgedName from '@/components/BadgedName';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LinearGradient } from 'expo-linear-gradient';
+
 const { width } = Dimensions.get('window');
 
 interface ChatRoom {
@@ -332,32 +334,37 @@ export default function ChatListPage() {
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
-      {/* Custom Top Header */}
-      <View className="px-4 pt-3 pb-4 bg-white dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800/60">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Messages</Text>
-          <TouchableOpacity className="h-9 w-9 bg-indigo-600 rounded-full items-center justify-center shadow-md active:scale-95">
-            <MessageCirclePlus size={18} color="white" />
+      {/* Custom Top Header with Gradient */}
+      <LinearGradient
+        colors={isDark ? ['#1e1b4b', '#0f172a'] : ['#e0e7ff', '#f8fafc']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        className="px-5 pt-4 pb-6 border-b border-indigo-100 dark:border-indigo-950/30 shadow-sm"
+      >
+        <View className="flex-row items-center justify-between mb-6">
+          <Text className="text-3xl font-black tracking-tight text-indigo-950 dark:text-white">Messages</Text>
+          <TouchableOpacity className="h-10 w-10 bg-indigo-600 rounded-full items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-95">
+            <MessageCirclePlus size={20} color="white" />
           </TouchableOpacity>
         </View>
 
         {/* Search Input */}
-        <View className="relative flex-row items-center bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-2 border border-transparent focus:border-indigo-400/50">
-          <Search size={16} color="#94a3b8" />
+        <View className="relative flex-row items-center bg-white dark:bg-slate-900/60 rounded-2xl px-4 py-3.5 border border-indigo-100 dark:border-slate-800 shadow-sm shadow-indigo-100/50 dark:shadow-none">
+          <Search size={18} color={isDark ? '#818cf8' : '#6366f1'} />
           <TextInput
             placeholder="Search or start a new chat..."
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            className="flex-1 ml-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 font-medium py-1"
+            className="flex-1 ml-3 text-base text-slate-900 dark:text-white font-medium py-0"
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')} className="p-1">
-              <X size={16} color="#94a3b8" />
+            <TouchableOpacity onPress={() => setSearchQuery('')} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+              <X size={14} color="#64748b" />
             </TouchableOpacity>
           ) : null}
         </View>
-      </View>
+      </LinearGradient>
 
       <ScrollView
         className="flex-1"
