@@ -112,7 +112,12 @@ export default React.memo(function PostCard({
   // Silently increment views count when this component mounts
   React.useEffect(() => {
     if (post?.id) {
-      supabase.rpc('increment_post_views', { p_post_id: post.id }).catch(() => {});
+      const increment = async () => {
+        try {
+          await supabase.rpc('increment_post_views', { p_post_id: post.id });
+        } catch (e) {}
+      };
+      increment();
     }
   }, [post?.id]);
 
