@@ -333,6 +333,7 @@ export default function ChatListPage() {
   }
 
   return (
+    <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
       {/* Custom Top Header */}
       <View className="px-5 pt-4 pb-4 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800/80 z-10 shadow-sm">
         <View className="flex-row items-center justify-between mb-5 mt-1">
