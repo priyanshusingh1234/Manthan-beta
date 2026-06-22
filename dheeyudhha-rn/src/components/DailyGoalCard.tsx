@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { Target, Gift, CheckCircle2, Zap, PartyPopper } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabaseClient';
@@ -210,7 +210,7 @@ export default function DailyGoalCard() {
             {fetching && <ActivityIndicator size="small" color="#94a3b8" style={{ marginLeft: 4 }} />}
             <TouchableOpacity 
               onPress={() => {
-                import('react-native').then(m => m.DeviceEventEmitter.emit('open_daily_planner'));
+                DeviceEventEmitter.emit('open_daily_planner');
               }}
               className="ml-auto bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md"
             >
