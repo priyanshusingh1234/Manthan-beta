@@ -15,7 +15,6 @@ import { registerForPushNotificationsAsync } from '@/lib/pushUtils';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold, Inter_900Black } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import StreakCompletedOverlay from '@/components/StreakCompletedOverlay';
-import DailyPlannerModal from '@/components/DailyPlannerModal';
 import LevelUpModal from '@/components/LevelUpModal';
 import LeagueUpModal from '@/components/LeagueUpModal';
 import StreakLostOverlay from '@/components/StreakLostOverlay';
@@ -262,7 +261,6 @@ function RootLayout() {
       <StreakLostOverlay />
       <StreakFriendToast />
       <CoopDuelToast />
-      <DailyPlannerModal />
       <LevelUpModal />
       <LeagueUpModal />
       <LoginBonusModal />
