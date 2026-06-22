@@ -333,41 +333,35 @@ export default function ChatListPage() {
   }
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
-      {/* Custom Top Header with Gradient */}
-      <LinearGradient
-        colors={isDark ? ['#1e1b4b', '#0f172a'] : ['#e0e7ff', '#f8fafc']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        className="px-5 pt-4 pb-6 border-b border-indigo-100 dark:border-indigo-950/30 shadow-sm"
-      >
-        <View className="flex-row items-center justify-between mb-6">
-          <Text className="text-3xl font-black tracking-tight text-indigo-950 dark:text-white">Messages</Text>
-          <TouchableOpacity className="h-10 w-10 bg-indigo-600 rounded-full items-center justify-center shadow-lg shadow-indigo-500/30 active:scale-95">
+      {/* Custom Top Header */}
+      <View className="px-5 pt-4 pb-4 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800/80 z-10 shadow-sm">
+        <View className="flex-row items-center justify-between mb-5 mt-1">
+          <Text className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Messages</Text>
+          <TouchableOpacity className="h-10 w-10 bg-indigo-600 rounded-full items-center justify-center active:opacity-80">
             <MessageCirclePlus size={20} color="white" />
           </TouchableOpacity>
         </View>
 
         {/* Search Input */}
-        <View className="relative flex-row items-center bg-white dark:bg-slate-900/60 rounded-2xl px-4 py-3.5 border border-indigo-100 dark:border-slate-800 shadow-sm shadow-indigo-100/50 dark:shadow-none">
-          <Search size={18} color={isDark ? '#818cf8' : '#6366f1'} />
+        <View className="relative flex-row items-center bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-2.5">
+          <Search size={18} color="#94a3b8" />
           <TextInput
             placeholder="Search or start a new chat..."
-            placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+            placeholderTextColor="#94a3b8"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            className="flex-1 ml-3 text-base text-slate-900 dark:text-white font-medium py-0"
+            className="flex-1 ml-3 text-base text-slate-900 dark:text-white font-medium py-1"
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+            <TouchableOpacity onPress={() => setSearchQuery('')} className="p-1 bg-slate-200 dark:bg-slate-700 rounded-full">
               <X size={14} color="#64748b" />
             </TouchableOpacity>
           ) : null}
         </View>
-      </LinearGradient>
+      </View>
 
       <ScrollView
-        className="flex-1"
+        className="flex-1 bg-white dark:bg-slate-950"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4f46e5']} tintColor="#4f46e5" />

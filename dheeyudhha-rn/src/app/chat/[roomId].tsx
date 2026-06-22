@@ -275,97 +275,119 @@ const MessageItem = memo(({
             ) : null}
 
             {isMe ? (
-              <LinearGradient
-                colors={['#6366f1', '#4f46e5']} // Beautiful indigo gradient
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                className="rounded-3xl rounded-br-md overflow-hidden shadow-sm px-4 py-3 min-w-[80px]"
+              <View 
+                style={{
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                  borderBottomLeftRadius: 20,
+                  borderBottomRightRadius: 4,
+                  overflow: 'hidden'
+                }}
+                className="shadow-sm min-w-[80px]"
               >
-                {msg.message_type === 'image_once' ? (
-                  <TouchableOpacity
-                    className="flex-row items-center gap-2"
-                    onPress={() => onImageClick(rawContent, msg.message_type, msg.id, isMe)}
-                  >
-                    <View className="w-8 h-8 rounded-full items-center justify-center bg-white/20">
-                      <ImageIcon size={16} color="#fff" />
-                    </View>
-                    <View>
-                      <Text className="font-bold text-sm text-white">Photo</Text>
-                      <Text className="text-[10px] font-semibold text-white/80">View once</Text>
-                    </View>
-                  </TouchableOpacity>
-                ) : msg.message_type === 'image' || rawContent.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
-                  <TouchableOpacity onPress={() => onImageClick(imageUri, msg.message_type, msg.id, isMe)} className="-mx-4 -my-3">
-                    <Image source={{ uri: imageUri }} style={{ width: 220, height: 280, borderRadius: 12 }} contentFit="cover" />
-                    <View className="absolute bottom-2 right-2 flex-row items-center gap-1 bg-black/50 px-2 py-1 rounded-full backdrop-blur-md">
-                      <Text className="text-[10px] text-white font-medium">{timeStr}</Text>
-                      {msg.is_read ? <CheckCheck size={12} color="#60a5fa" strokeWidth={2.5} /> : <Check size={12} color="#cbd5e1" strokeWidth={2.5} />}
-                    </View>
-                  </TouchableOpacity>
-                ) : (
-                  <View className="justify-between">
-                    <Text className="text-[16px] leading-6 text-white font-medium">
-                      {mainContent}
-                      {meta.edited && <Text className="text-[10px] italic text-white/70"> (edited)</Text>}
-                    </Text>
-                    
-                    {(() => {
-                      const match = mainContent.match(/https?:\/\/[^\s]+/);
-                      const previewUrl = match ? match[0] : null;
-                      return previewUrl ? <LinkPreview url={previewUrl} /> : null;
-                    })()}
-
-                    <View className="flex-row items-center justify-end gap-1 mt-1.5 opacity-90">
-                      <Text className="text-[10px] font-semibold text-indigo-100">
-                        {timeStr}
+                <LinearGradient
+                  colors={['#6366f1', '#4f46e5']} // Premium solid gradient
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  className="px-4 py-2.5"
+                >
+                  {msg.message_type === 'image_once' ? (
+                    <TouchableOpacity
+                      className="flex-row items-center gap-2"
+                      onPress={() => onImageClick(rawContent, msg.message_type, msg.id, isMe)}
+                    >
+                      <View className="w-8 h-8 rounded-full items-center justify-center bg-white/20">
+                        <ImageIcon size={16} color="#fff" />
+                      </View>
+                      <View>
+                        <Text className="font-bold text-sm text-white">Photo</Text>
+                        <Text className="text-[10px] font-semibold text-white/80">View once</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ) : msg.message_type === 'image' || rawContent.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
+                    <TouchableOpacity onPress={() => onImageClick(imageUri, msg.message_type, msg.id, isMe)} className="-mx-4 -my-2.5">
+                      <Image source={{ uri: imageUri }} style={{ width: 220, height: 280, borderRadius: 16 }} contentFit="cover" />
+                      <View className="absolute bottom-2 right-2 flex-row items-center gap-1 bg-black/50 px-2 py-1 rounded-full">
+                        <Text className="text-[10px] text-white font-medium">{timeStr}</Text>
+                        {msg.is_read ? <CheckCheck size={12} color="#60a5fa" strokeWidth={2.5} /> : <Check size={12} color="#cbd5e1" strokeWidth={2.5} />}
+                      </View>
+                    </TouchableOpacity>
+                  ) : (
+                    <View className="justify-between">
+                      <Text className="text-[16px] leading-6 text-white font-medium">
+                        {mainContent}
+                        {meta.edited && <Text className="text-[10px] italic text-white/70"> (edited)</Text>}
                       </Text>
-                      {msg.is_read ? <CheckCheck size={12} color="#93c5fd" strokeWidth={2.5} /> : <Check size={12} color="#c7d2fe" strokeWidth={2.5} />}
+                      
+                      {(() => {
+                        const match = mainContent.match(/https?:\/\/[^\s]+/);
+                        const previewUrl = match ? match[0] : null;
+                        return previewUrl ? <LinkPreview url={previewUrl} /> : null;
+                      })()}
+
+                      <View className="flex-row items-center justify-end gap-1 mt-1 opacity-90">
+                        <Text className="text-[10px] font-semibold text-indigo-100">
+                          {timeStr}
+                        </Text>
+                        {msg.is_read ? <CheckCheck size={12} color="#93c5fd" strokeWidth={2.5} /> : <Check size={12} color="#c7d2fe" strokeWidth={2.5} />}
+                      </View>
                     </View>
-                  </View>
-                )}
-              </LinearGradient>
+                  )}
+                </LinearGradient>
+              </View>
             ) : (
-              <View className="bg-white dark:bg-slate-800 rounded-3xl rounded-bl-md overflow-hidden shadow-sm border border-slate-100/50 dark:border-slate-700/50 px-4 py-3 min-w-[80px]">
-                {msg.message_type === 'image_once' ? (
-                  <TouchableOpacity
-                    className="flex-row items-center gap-2"
-                    onPress={() => onImageClick(rawContent, msg.message_type, msg.id, isMe)}
-                  >
-                    <View className="w-8 h-8 rounded-full items-center justify-center bg-indigo-50 dark:bg-indigo-900/30">
-                      <ImageIcon size={16} color="#4f46e5" />
-                    </View>
-                    <View>
-                      <Text className="font-bold text-sm text-slate-900 dark:text-white">Photo</Text>
-                      <Text className="text-[10px] font-semibold text-slate-500">View once</Text>
-                    </View>
-                  </TouchableOpacity>
-                ) : msg.message_type === 'image' || rawContent.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
-                  <TouchableOpacity onPress={() => onImageClick(imageUri, msg.message_type, msg.id, isMe)} className="-mx-4 -my-3">
-                    <Image source={{ uri: imageUri }} style={{ width: 220, height: 280, borderRadius: 12 }} contentFit="cover" />
-                    <View className="absolute bottom-2 right-2 flex-row items-center gap-1 bg-black/50 px-2 py-1 rounded-full backdrop-blur-md">
-                      <Text className="text-[10px] text-white font-medium">{timeStr}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ) : (
-                  <View className="justify-between">
-                    <Text className="text-[16px] leading-6 text-slate-800 dark:text-slate-100 font-medium">
-                      {mainContent}
-                      {meta.edited && <Text className="text-[10px] italic text-slate-500"> (edited)</Text>}
-                    </Text>
-                    
-                    {(() => {
-                      const match = mainContent.match(/https?:\/\/[^\s]+/);
-                      const previewUrl = match ? match[0] : null;
-                      return previewUrl ? <LinkPreview url={previewUrl} /> : null;
-                    })()}
-
-                    <View className="flex-row items-center justify-end gap-1 mt-1.5 opacity-70">
-                      <Text className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
-                        {timeStr}
+              <View 
+                style={{
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                  borderBottomLeftRadius: 4,
+                  borderBottomRightRadius: 20,
+                  overflow: 'hidden'
+                }}
+                className="bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700/60 min-w-[80px]"
+              >
+                <View className="px-4 py-2.5">
+                  {msg.message_type === 'image_once' ? (
+                    <TouchableOpacity
+                      className="flex-row items-center gap-2"
+                      onPress={() => onImageClick(rawContent, msg.message_type, msg.id, isMe)}
+                    >
+                      <View className="w-8 h-8 rounded-full items-center justify-center bg-indigo-50 dark:bg-indigo-900/30">
+                        <ImageIcon size={16} color="#4f46e5" />
+                      </View>
+                      <View>
+                        <Text className="font-bold text-sm text-slate-900 dark:text-white">Photo</Text>
+                        <Text className="text-[10px] font-semibold text-slate-500">View once</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ) : msg.message_type === 'image' || rawContent.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) ? (
+                    <TouchableOpacity onPress={() => onImageClick(imageUri, msg.message_type, msg.id, isMe)} className="-mx-4 -my-2.5">
+                      <Image source={{ uri: imageUri }} style={{ width: 220, height: 280, borderRadius: 16 }} contentFit="cover" />
+                      <View className="absolute bottom-2 right-2 flex-row items-center gap-1 bg-black/50 px-2 py-1 rounded-full">
+                        <Text className="text-[10px] text-white font-medium">{timeStr}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ) : (
+                    <View className="justify-between">
+                      <Text className="text-[16px] leading-6 text-slate-800 dark:text-slate-100 font-medium">
+                        {mainContent}
+                        {meta.edited && <Text className="text-[10px] italic text-slate-500"> (edited)</Text>}
                       </Text>
+                      
+                      {(() => {
+                        const match = mainContent.match(/https?:\/\/[^\s]+/);
+                        const previewUrl = match ? match[0] : null;
+                        return previewUrl ? <LinkPreview url={previewUrl} /> : null;
+                      })()}
+
+                      <View className="flex-row items-center justify-end gap-1 mt-1 opacity-70">
+                        <Text className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+                          {timeStr}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                )}
+                  )}
+                </View>
               </View>
             )}
           </View>
