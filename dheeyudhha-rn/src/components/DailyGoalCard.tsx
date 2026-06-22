@@ -208,6 +208,14 @@ export default function DailyGoalCard() {
             <Target size={20} color="#6366f1" />
             <Text className="text-[18px] font-black text-slate-900 dark:text-slate-100 tracking-tight">Daily Goal</Text>
             {fetching && <ActivityIndicator size="small" color="#94a3b8" style={{ marginLeft: 4 }} />}
+            <TouchableOpacity 
+              onPress={() => {
+                import('react-native').then(m => m.DeviceEventEmitter.emit('open_daily_planner'));
+              }}
+              className="ml-auto bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md"
+            >
+              <Text className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Change Plan</Text>
+            </TouchableOpacity>
           </View>
           <Text className="text-[12px] text-slate-500 dark:text-slate-400 font-medium">Solve questions to earn rewards</Text>
         </View>

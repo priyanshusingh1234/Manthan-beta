@@ -109,6 +109,13 @@ export default React.memo(function PostCard({
     }
   }, [repostData]);
 
+  // Silently increment views count when this component mounts
+  React.useEffect(() => {
+    if (post?.id) {
+      supabase.rpc('increment_post_views', { p_post_id: post.id }).catch(() => {});
+    }
+  }, [post?.id]);
+
   const handleOptions = () => {
     const isOwner = currentUserId && (author.id === currentUserId || post?.author_id === currentUserId);
     if (isOwner) {

@@ -80,6 +80,11 @@ export default function DailyPlannerModal() {
 
         let chapterList = Array.from(uniqueChapters);
         chapterList = chapterList.sort((a, b) => a.localeCompare(b));
+        
+        if (chapterList.length === 0) {
+          chapterList = ["Chapter 1", "Chapter 2", "Chapter 3", "Mixed Practice"];
+        }
+        
         setChapters(chapterList);
       }
     } catch (err) {
