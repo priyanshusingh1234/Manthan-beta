@@ -10,7 +10,6 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || process.env.ADMIN_
 
 export default function AdminGradingDashboard() {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   
   const [tests, setTests] = useState<any[]>([]);
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
@@ -23,30 +22,12 @@ export default function AdminGradingDashboard() {
   
   const [grades, setGrades] = useState<Record<string, number>>({}); // answerId -> marksAwarded
   
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    checkAdmin();
+    fetchTests();
   }, []);
-
-  const checkAdmin = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const userEmail = user?.email?.toLowerCase() || '';
-      const authorized = ['kpk22128@gmail.com', 's61038955@gmail.com', ...ADMIN_EMAILS].includes(userEmail);
-      
-      setIsAdmin(authorized);
-      if (authorized) {
-        fetchTests();
-      } else {
-        setLoading(false);
-      }
-    } catch (e) {
-      setIsAdmin(false);
-      setLoading(false);
-    }
-  };
 
   const fetchTests = async () => {
     setLoading(true);
@@ -155,21 +136,6 @@ export default function AdminGradingDashboard() {
       setSaving(false);
     }
   };
-
-  if (loading && isAdmin === null) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950"><Loader2 className="animate-spin text-indigo-600 w-10 h-10" /></div>;
-  }
-
-  if (isAdmin === false) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white">
-        <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-2xl font-black mb-2">Access Denied</h1>
-        <p className="text-slate-500">You do not have administrative privileges to view this page.</p>
-        <button onClick={() => router.push('/')} className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-xl font-bold">Go Home</button>
-      </div>
-    );
-  }
 
   // View 3: Grading a specific submission
   if (selectedSubmissionId && selectedTestId) {

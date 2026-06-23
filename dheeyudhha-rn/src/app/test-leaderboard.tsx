@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Trophy, Medal } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
@@ -28,24 +29,25 @@ export default function TestLeaderboardScreen() {
   }, []);
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
-      {/* Header */}
-      <View className="bg-indigo-600 dark:bg-indigo-900 pt-16 pb-12 px-6 rounded-b-[40px]">
-        <TouchableOpacity 
-          onPress={() => router.back()}
-          className="flex-row items-center gap-2 mb-6"
-        >
-          <ArrowLeft size={24} color="#e0e7ff" />
-          <Text className="text-indigo-100 font-bold text-lg">Back</Text>
-        </TouchableOpacity>
+    <SafeAreaView edges={['top']} className="flex-1 bg-slate-50 dark:bg-slate-950">
+      <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+        {/* Header */}
+        <View className="bg-indigo-600 dark:bg-indigo-900 pt-6 pb-12 px-6 rounded-b-[40px]">
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            className="flex-row items-center gap-2 mb-6"
+          >
+            <ArrowLeft size={24} color="#e0e7ff" />
+            <Text className="text-indigo-100 font-bold text-lg">Back</Text>
+          </TouchableOpacity>
 
-        <View className="flex-row items-center gap-2 bg-white/20 self-start px-4 py-1.5 rounded-full mb-4">
-          <Trophy size={16} color="#fde047" />
-          <Text className="text-white font-black text-xs uppercase tracking-widest">Unit Tests Rankings</Text>
+          <View className="flex-row items-center gap-2 bg-white/20 self-start px-4 py-1.5 rounded-full mb-4">
+            <Trophy size={16} color="#fde047" />
+            <Text className="text-white font-black text-xs uppercase tracking-widest">Unit Tests Rankings</Text>
+          </View>
+          <Text className="text-white font-black text-4xl mb-2">Hall of Fame</Text>
+          <Text className="text-indigo-200 font-medium text-base">See who is leading the scoreboard!</Text>
         </View>
-        <Text className="text-white font-black text-4xl mb-2">Hall of Fame</Text>
-        <Text className="text-indigo-200 font-medium text-base">See who is leading the scoreboard!</Text>
-      </View>
 
       {/* Main Content */}
       <ScrollView className="flex-1 px-6 -mt-6">
@@ -110,5 +112,6 @@ export default function TestLeaderboardScreen() {
         </View>
       </ScrollView>
     </View>
+    </SafeAreaView>
   );
 }
