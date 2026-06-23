@@ -60,11 +60,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 pb-20">
-      {/* Top Banner indicating Admin Mode */}
-      <div className="bg-slate-900 dark:bg-black text-white px-6 py-2 flex items-center justify-center text-xs font-bold tracking-widest uppercase gap-2 shadow-sm relative z-50">
-        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-        Admin Mode Active
-      </div>
       {children}
     </div>
   );
