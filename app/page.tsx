@@ -41,71 +41,7 @@ export default function Home() {
     };
   }, []);
 
-  const [rsvpStatus, setRsvpStatus] = useState<string | null>(null);
-  const [isSubmittingRsvp, setIsSubmittingRsvp] = useState(false);
-  const [activeTestId, setActiveTestId] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Fetch existing RSVP on load
-    const fetchExistingRsvpAndTest = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const { data } = await supabase
-        .from('event_rsvps')
-        .select('status')
-        .eq('event_id', 'class10_unit_test_1')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-      if (data) {
-        setRsvpStatus(data.status);
-      }
-
-      const { data: testData } = await supabase
-        .from('tests')
-        .select('id')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (testData) {
-        setActiveTestId(testData.id);
-      }
-    };
-    fetchExistingRsvpAndTest();
-  }, []);
-
-  const handleRsvp = async (status: 'in' | 'out') => {
-    setIsSubmittingRsvp(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      
-      const res = await fetch('/api/events/rsvp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          eventId: 'class10_unit_test_1',
-          status: status
-        })
-      });
-      
-      if (res.ok) {
-        setRsvpStatus(status);
-        alert(status === 'in' ? "You're In! Let's go! 🔥" : "No worries! Maybe next time.");
-      } else {
-        const errorData = await res.json();
-        alert("Error saving RSVP: " + (errorData.error || 'Unknown error. Did you create the database table?'));
-      }
-    } catch (e: any) {
-      console.error('RSVP Error:', e);
-      alert('Network error: ' + e.message);
-    } finally {
-      setIsSubmittingRsvp(false);
-    }
-  };
+  // Removed RSVP logic as requested
 
   if (isAuthenticated === null) {
     return (
@@ -142,7 +78,7 @@ export default function Home() {
           className="whitespace-nowrap text-white font-bold text-sm sm:text-base inline-block"
           style={{ animation: 'marquee 40s linear infinite' }}
         >
-          ✨ UPCOMING CLASS 10 UNIT TEST ✨ History: Ch 1 | Geo: Ch 1 | Eco: Ch 1 | Civics: Ch 1 | Hindi: Bade Bhai Sahab, Harihar Kaka, Grammar: Samash | English: A Letter to God, Fire and Ice, Grammar: Tense | Bio: Ch 1 | Chemistry: Ch 1 | Physics: Ch 1 ✨
+          ✨ UPCOMING CLASS 10 UNIT TEST TOMORROW ✨ Civics: Ch 1 | Eco: Ch 1 | Geo: Ch 1 ✨
         </div>
         <style dangerouslySetInnerHTML={{__html: `
           @keyframes marquee {
@@ -156,52 +92,24 @@ export default function Home() {
         <div className="lg:col-span-2">
           {/* <LiveWarFeed /> */}
 
-          {/* Unit Test RSVP Card */}
+          {/* Unit Test Card & Leaderboard */}
           <div className="mb-6 bg-indigo-600 rounded-2xl p-6 shadow-sm border border-indigo-500">
             <h2 className="text-white font-black text-xl mb-2">✨ Upcoming Class 10 Unit Test</h2>
-            <p className="text-indigo-100 font-medium text-sm leading-relaxed mb-4">
-              <span className="font-bold text-white">History:</span> Ch 1 | <span className="font-bold text-white">Geo:</span> Ch 1 | <span className="font-bold text-white">Eco:</span> Ch 1 | <span className="font-bold text-white">Civics:</span> Ch 1<br/>
-              <span className="font-bold text-white">Hindi:</span> Bade Bhai Sahab, Harihar Kaka, Grammar: Samash<br/>
-              <span className="font-bold text-white">English:</span> A Letter to God, Fire and Ice, Grammar: Tense<br/>
-              <span className="font-bold text-white">Bio:</span> Ch 1 | <span className="font-bold text-white">Chem:</span> Ch 1 | <span className="font-bold text-white">Physics:</span> Ch 1
+            <p className="text-indigo-100 font-medium text-sm leading-relaxed mb-6">
+              Get ready for tomorrow's subjective unit tests!<br/>
+              <span className="font-bold text-white">Civics:</span> Power Sharing<br/>
+              <span className="font-bold text-white">Economics:</span> Development<br/>
+              <span className="font-bold text-white">Geography:</span> Resources and Development
             </p>
 
-            {rsvpStatus ? (
-              <div className="bg-indigo-500/50 p-4 rounded-xl text-center border border-indigo-400 flex flex-col items-center">
-                <span className="text-white font-bold text-lg mb-2">
-                  {rsvpStatus === 'in' ? "🔥 Awesome! You're In!" : "👍 No worries, maybe next time!"}
-                </span>
-                {rsvpStatus === 'in' && activeTestId && (
-                  <Link 
-                    href={`/test/${activeTestId}`}
-                    className="bg-white text-indigo-600 px-6 py-2 rounded-full font-black hover:bg-slate-50 transition-colors mt-2 inline-block"
-                  >
-                    Start Test Now
-                  </Link>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-row gap-4">
-                <button 
-                  onClick={() => handleRsvp('in')}
-                  disabled={isSubmittingRsvp}
-                  className="flex-1 bg-white hover:bg-slate-50 py-3 rounded-xl text-center transition-transform active:scale-95 disabled:opacity-70"
-                >
-                  <span className="text-indigo-600 font-black text-lg">I'm In! ✋</span>
-                </button>
-                <button 
-                  onClick={() => handleRsvp('out')}
-                  disabled={isSubmittingRsvp}
-                  className="flex-1 bg-indigo-500/50 hover:bg-indigo-500/70 border border-indigo-400 py-3 rounded-xl text-center transition-transform active:scale-95 disabled:opacity-70"
-                >
-                  <span className="text-white font-bold text-lg">I'm Out 🙅</span>
-                </button>
-              </div>
-            )}
-            
-            <div className="mt-4 text-center">
-              <Link href="/rsvps" className="text-indigo-200 hover:text-white text-sm font-semibold underline decoration-indigo-400 underline-offset-4">
-                👀 View all RSVPs
+            <div className="bg-indigo-500/50 p-6 rounded-xl border border-indigo-400 flex flex-col items-center">
+              <span className="text-white font-black text-xl mb-1">See Who Is Ahead!</span>
+              <span className="text-indigo-200 text-sm font-medium mb-4">Check out the rankings from the previous tests.</span>
+              <Link 
+                href="/tests/leaderboard"
+                className="bg-white text-indigo-600 px-8 py-3 rounded-xl font-black text-lg hover:bg-slate-50 transition-transform active:scale-95 shadow-md"
+              >
+                View Rankings
               </Link>
             </div>
           </div>

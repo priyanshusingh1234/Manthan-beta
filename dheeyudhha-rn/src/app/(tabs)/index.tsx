@@ -10,73 +10,7 @@ import DailyGoalCard from '@/components/DailyGoalCard';
 export default function FeedScreen() {
   const router = useRouter();
   
-  const [rsvpStatus, setRsvpStatus] = React.useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [activeTestId, setActiveTestId] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    const fetchExistingRsvpAndTest = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-        
-        const { data: rsvpData } = await supabase
-          .from('event_rsvps')
-          .select('status')
-          .eq('event_id', 'class10_unit_test_1')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-          
-        if (rsvpData) {
-          setRsvpStatus(rsvpData.status);
-        }
-
-        const { data: testData } = await supabase
-          .from('tests')
-          .select('id')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        if (testData) {
-          setActiveTestId(testData.id);
-        }
-      } catch (e) {
-        console.error('Fetch RSVP Error:', e);
-      }
-    };
-    fetchExistingRsvpAndTest();
-  }, []);
-
-  const handleRsvp = async (status: 'in' | 'out') => {
-    setIsSubmitting(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
-      
-      const res = await fetch(`${API_URL}/api/events/rsvp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          eventId: 'class10_unit_test_1',
-          status: status
-        })
-      });
-      
-      if (res.ok) {
-        setRsvpStatus(status);
-      }
-    } catch (e) {
-      console.error('RSVP Error:', e);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // Removed RSVP logic as requested
 
   const Header = (
     <View style={{ paddingTop: 40, paddingBottom: 16 }}>
@@ -101,46 +35,22 @@ export default function FeedScreen() {
         <View className="bg-indigo-600 rounded-2xl p-4 shadow-sm border border-indigo-500">
           <Text className="text-white font-black text-lg mb-2">✨ Upcoming Class 10 Unit Test</Text>
           <Text className="text-indigo-100 font-medium text-sm leading-5 mb-4">
-            <Text className="font-bold text-white">History:</Text> Ch 1 | <Text className="font-bold text-white">Geo:</Text> Ch 1 | <Text className="font-bold text-white">Eco:</Text> Ch 1 | <Text className="font-bold text-white">Civics:</Text> Ch 1{'\n'}
-            <Text className="font-bold text-white">Hindi:</Text> Bade Bhai Sahab, Harihar Kaka, Grammar: Samash{'\n'}
-            <Text className="font-bold text-white">English:</Text> A Letter to God, Fire and Ice, Grammar: Tense{'\n'}
-            <Text className="font-bold text-white">Bio:</Text> Ch 1 | <Text className="font-bold text-white">Chem:</Text> Ch 1 | <Text className="font-bold text-white">Physics:</Text> Ch 1
+            Get ready for tomorrow's subjective unit tests!{'\n'}
+            <Text className="font-bold text-white">Civics:</Text> Power Sharing{'\n'}
+            <Text className="font-bold text-white">Economics:</Text> Development{'\n'}
+            <Text className="font-bold text-white">Geography:</Text> Resources and Development
           </Text>
 
-          {rsvpStatus ? (
-            <View className="bg-indigo-500/50 p-3 rounded-xl items-center border border-indigo-400">
-              <Text className="text-white font-bold mb-2">
-                {rsvpStatus === 'in' ? "🔥 Awesome! You're In!" : "👍 No worries, maybe next time!"}
-              </Text>
-              {rsvpStatus === 'in' && activeTestId && (
-                <TouchableOpacity 
-                  onPress={() => router.push(`/test/${activeTestId}` as any)}
-                  className="bg-white px-6 py-2 rounded-full mt-2 active:scale-95 transition-transform"
-                >
-                  <Text className="text-indigo-600 font-black">Start Test Now</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            <View className="flex-row gap-3">
-              <TouchableOpacity 
-                onPress={() => handleRsvp('in')}
-                disabled={isSubmitting}
-                className="flex-1 bg-white py-3 rounded-xl items-center active:scale-95 transition-transform"
-                style={{ opacity: isSubmitting ? 0.7 : 1 }}
-              >
-                <Text className="text-indigo-600 font-black text-base">I'm In! ✋</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={() => handleRsvp('out')}
-                disabled={isSubmitting}
-                className="flex-1 bg-indigo-500/50 border border-indigo-400 py-3 rounded-xl items-center active:scale-95 transition-transform"
-                style={{ opacity: isSubmitting ? 0.7 : 1 }}
-              >
-                <Text className="text-white font-bold text-base">I'm Out 🙅</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <View className="bg-indigo-500/50 p-4 rounded-xl items-center border border-indigo-400 mt-2">
+            <Text className="text-white font-black text-lg mb-1">See Who Is Ahead!</Text>
+            <Text className="text-indigo-200 text-xs font-medium mb-4 text-center">Check out the rankings from the previous tests.</Text>
+            <TouchableOpacity 
+              onPress={() => router.push('/test-leaderboard' as any)}
+              className="bg-white px-8 py-3 rounded-xl active:scale-95 transition-transform w-full items-center"
+            >
+              <Text className="text-indigo-600 font-black text-base">View Rankings</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
