@@ -31,7 +31,9 @@ export type NotificationType =
     | 'incoming_call'
     | 'missed_call'
     | 'chat_message'
-    | 'streak_friend';
+    | 'streak_friend'
+    | 'league_overtake'
+    | 'league_taunt';
 
 interface CreateNotificationParams {
     userId: string;          // who receives the notification
@@ -136,6 +138,8 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                     incoming_call: 'calls',
                                     missed_call: 'calls',
                                     chat_message: 'social',
+                                    league_overtake: 'alerts',
+                                    league_taunt: 'social',
                                 };
                                 const COLOR_MAP: Record<string, string> = {
                                     coop_challenge: '#f97316', // orange — battle
@@ -157,6 +161,8 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                     war_started: '#dc2626',
                                     incoming_call: '#6366f1',
                                     chat_message: '#3b82f6',
+                                    league_overtake: '#ef4444', // red alert
+                                    league_taunt: '#f59e0b', // amber
                                 };
 
                                 const channelId: ChannelId = CHANNEL_MAP[params.type] || 'default';

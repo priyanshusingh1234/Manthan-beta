@@ -57,7 +57,8 @@ export default function LeaguePage() {
     : 100;
   const ptsToNext = nextLeague ? nextLeague.min - monthlyPts : 0;
   const now = new Date();
-  const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+  // Calculate days left in the week (reset Sunday midnight)
+  const daysLeft = now.getDay() === 0 ? 0 : 7 - now.getDay();
   const myEntry = leaderboard.find((p: any) => p.id === userId);
 
   const TABS = [
@@ -101,7 +102,7 @@ export default function LeaguePage() {
           <div className="mt-4 flex items-stretch gap-3 w-full">
             {[
               { icon: Crown, label: 'Rank', value: `#${leagueRank}`, color: 'text-amber-500' },
-              { icon: Zap, label: 'Monthly', value: `${monthlyPts} pts`, color: 'text-indigo-500' },
+              { icon: Zap, label: 'Weekly', value: `${monthlyPts} pts`, color: 'text-indigo-500' },
               { icon: Calendar, label: 'Days Left', value: `${daysLeft}d`, color: 'text-emerald-500' },
             ].map(({ icon: Icon, label, value, color }) => (
               <div key={label} className="flex-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-3 shadow-sm flex flex-col items-center gap-1">
@@ -184,19 +185,26 @@ export default function LeaguePage() {
             ) : (
               leaderboard.slice(0, 20).map((p: any, i: number) => {
                 const isMe = p.id === userId;
+                const isPromotionZone = i < 3;
+                const isDemotionZone = leaderboard.length >= 10 && i >= leaderboard.length - 3;
+                
                 return (
                   <Link key={p.id} href={`/user/${p.username || p.id}`}
                     className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all active:scale-[0.99] ${
                       isMe
                         ? 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800'
-                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
+                        : isPromotionZone 
+                          ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/30'
+                          : isDemotionZone
+                            ? 'bg-red-50 dark:bg-red-950/20 border-red-100 dark:border-red-900/30'
+                            : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
                     }`}>
                     {/* Rank */}
                     <div className="w-8 text-center shrink-0">
                       {i === 0 ? <span className="text-xl">🥇</span>
                         : i === 1 ? <span className="text-xl">🥈</span>
                         : i === 2 ? <span className="text-xl">🥉</span>
-                        : <span className={`text-sm font-black ${isMe ? 'text-indigo-500' : 'text-slate-400'}`}>#{i + 1}</span>}
+                        : <span className={`text-sm font-black ${isMe ? 'text-indigo-500' : isDemotionZone ? 'text-red-400' : 'text-slate-400'}`}>#{i + 1}</span>}
                     </div>
                     {/* Avatar */}
                     {p.avatar_url
@@ -244,7 +252,7 @@ export default function LeaguePage() {
             ) : (
               <>
                 <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
-                  {friends.length} Friends · Ranked by Monthly Points
+                  {friends.length} Friends · Ranked by Weekly Points
                 </p>
                 {friends.map((f: any, i: number) => {
                   const fl = getLeague(f.monthly_points || 0);
@@ -264,11 +272,44 @@ export default function LeaguePage() {
                         <p className="font-black text-sm truncate text-slate-800 dark:text-slate-100">{f.full_name}</p>
                         <p className="text-[11px] font-bold" style={{ color: fl.color }}>{fl.name} League</p>
                       </div>
-                      <LeagueBadge name={fl.name} size={32} />
-                      <div className="text-right shrink-0 ml-1">
-                        <p className="font-black text-sm text-slate-700 dark:text-slate-300">{f.monthly_points}</p>
-                        <p className="text-[10px] text-slate-400 font-bold">pts</p>
+                      <LeagueBadge name={fl.name} size={48} />
+                      <div className="flex flex-col items-end">
+                        <div className="text-xl font-bold">{f.monthly_points}</div>
+                        <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">pts</div>
                       </div>
+
+                      {/* TAUNT BUTTON */}
+                      {f.monthly_points < monthlyPts && (
+                        <button
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const toast = (await import('react-hot-toast')).default;
+                            try {
+                              const { data: { session } } = await supabase.auth.getSession();
+                              const res = await fetch('/api/league/taunt', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  ...(session?.access_token && { Authorization: `Bearer ${session.access_token}` })
+                                },
+                                body: JSON.stringify({ targetUserId: f.id })
+                              });
+                              if (res.ok) {
+                                toast.success(`Taunted ${f.full_name}! 💥`);
+                              } else {
+                                toast.error('Failed to send taunt.');
+                              }
+                            } catch (err) {
+                              toast.error('Failed to send taunt.');
+                            }
+                          }}
+                          className="ml-2 p-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-full transition-colors flex items-center justify-center"
+                          title={`Taunt ${f.full_name}`}
+                        >
+                          <span className="text-lg">💥</span>
+                        </button>
+                      )}
                     </Link>
                   );
                 })}

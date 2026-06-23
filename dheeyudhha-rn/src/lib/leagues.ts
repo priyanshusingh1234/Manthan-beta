@@ -20,18 +20,34 @@ export function getNextLeague(pts: number) {
   return idx < LEAGUES.length - 1 ? LEAGUES[idx + 1] : null;
 }
 
-export function getMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+export function getWeekKey() {
+  // Use IST timezone for Indian users to align with midnight Sunday resets
+  const now = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+  const d = new Date(now);
+  d.setDate(d.getDate() - d.getDay()); // Roll back to Sunday
+  return `${d.getFullYear()}-W${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// Monthly reset: what pts a user starts with next month
+// Weekly reset: Free Fire style soft-reset
+// Higher leagues drop more tiers, lower leagues drop fewer.
 export function getResetPoints(pts: number): number {
-  if (pts >= 450) return 200;
-  if (pts >= 400) return 200;
-  if (pts >= 350) return 200;
-  if (pts >= 250) return 150;
-  if (pts >= 200) return 150;
-  if (pts >= 100) return 50;
-  return 50;
+  const currentIdx = LEAGUES.findIndex(l => pts >= l.min && pts <= l.max);
+  const idx = currentIdx === -1 ? LEAGUES.length - 1 : currentIdx;
+  
+  let demotedIdx = 0;
+  if (idx >= 7) {
+    // Pinnacle (8) & Apex (7) drop to Visionary (4) [250 pts]
+    demotedIdx = 4;
+  } else if (idx >= 5) {
+    // Luminary (6) & Vanguard (5) drop to Catalyst (3) [200 pts]
+    demotedIdx = 3;
+  } else if (idx >= 3) {
+    // Visionary (4) & Catalyst (3) drop to Spark (2) [150 pts]
+    demotedIdx = 2;
+  } else if (idx >= 1) {
+    // Spark (2) & Explorer (1) drop to Scholar (0) [0 pts]
+    demotedIdx = 0;
+  }
+  
+  return LEAGUES[demotedIdx].min;
 }

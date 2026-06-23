@@ -4,6 +4,7 @@ import { leaderboardCache } from "@/lib/leaderboardCache";
 import { createNotification } from "@/lib/createNotification";
 import { upsertProfile } from "@/lib/profiles";
 import { getSelectedWarMemberIds } from "@/lib/warRoster";
+import { LEAGUES } from "@/lib/leagues";
 
 const WRONG_ANSWER_PENALTY = 1;
 
@@ -258,23 +259,30 @@ export async function POST(req: Request) {
         const actualCurrentPoints = profile ? Number(profile.total_points) : currentPoints;
         const newTotal = Math.max(0, actualCurrentPoints + userPointsChange);
 
-        // ── Monthly Points Tracker ───────────────────────────────────────
-        // We calculate reset points if the month rolled over, then add the new points
+        // ── Weekly Points Tracker ───────────────────────────────────────
+        // We calculate reset points if the week rolled over, then add the new points
+        // using the new weekKey logic to reset every Sunday
         const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000); // UTC+5:30
-        const currentMonth = `${nowIST.getFullYear()}-${String(nowIST.getMonth() + 1).padStart(2, '0')}`;
+        const dWeek = new Date(nowIST);
+        dWeek.setDate(dWeek.getDate() - dWeek.getDay());
+        const currentWeekKey = `${dWeek.getFullYear()}-W${String(dWeek.getMonth() + 1).padStart(2, '0')}-${String(dWeek.getDate()).padStart(2, '0')}`;
         
         let dbMonthlyMonth = (profile as any)?.monthly_points_month || null;
         let currentMonthlyPts = Number((profile as any)?.monthly_points) || 0;
         
-        if (dbMonthlyMonth !== currentMonth) {
-            // Helper logic for getResetPoints since we are in backend
+        if (dbMonthlyMonth !== currentWeekKey) {
             const getResetPts = (pts: number) => {
-              if (pts >= 450) return 200; if (pts >= 350) return 200;
-              if (pts >= 250) return 150; if (pts >= 200) return 150;
-              if (pts >= 100) return 50;  return 50; // default for any rolled over month
+              const currentIdx = LEAGUES.findIndex(l => pts >= l.min && pts <= l.max);
+              const idx = currentIdx === -1 ? LEAGUES.length - 1 : currentIdx;
+              let demotedIdx = 0;
+              if (idx >= 7) demotedIdx = 4;
+              else if (idx >= 5) demotedIdx = 3;
+              else if (idx >= 3) demotedIdx = 2;
+              else if (idx >= 1) demotedIdx = 0;
+              return LEAGUES[demotedIdx].min;
             };
             currentMonthlyPts = dbMonthlyMonth === null ? 0 : getResetPts(currentMonthlyPts);
-            dbMonthlyMonth = currentMonth;
+            dbMonthlyMonth = currentWeekKey;
         }
         
         const newMonthlyPts = Math.max(0, currentMonthlyPts + userPointsChange);
@@ -360,7 +368,7 @@ export async function POST(req: Request) {
             dailySolveCount: newDailySolveCount,
             dailySolveDate: todayStr,
             monthlyPoints: newMonthlyPts,
-            monthlyPointsMonth: currentMonth,
+            monthlyPointsMonth: currentWeekKey,
         };
 
         // SYNC BOTH: Auth & Profiles
@@ -528,6 +536,47 @@ export async function POST(req: Request) {
                 }
             } catch (e) {
                 console.error('[solve] streak_friend notif error:', e);
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────
+
+        // ── PASS/OVERTAKE NOTIFICATION LOGIC ──────────────────────────────
+        // If user gained points, check if they passed any friends
+        if (newMonthlyPts > currentMonthlyPts) {
+            try {
+                const { data: followRows } = await supabaseAdmin.from('follows').select('following_id').eq('follower_id', userId);
+                if (followRows && followRows.length > 0) {
+                    const friendIds = followRows.map((f: any) => f.following_id);
+                    
+                    // We look for friends whose points were >= our old points, but are strictly < our new points.
+                    // Meaning we just overtook them!
+                    const { data: overtakenFriends } = await supabaseAdmin
+                        .from('profiles')
+                        .select('id, monthly_points')
+                        .in('id', friendIds)
+                        .gte('monthly_points', currentMonthlyPts)
+                        .lt('monthly_points', newMonthlyPts);
+
+                    if (overtakenFriends && overtakenFriends.length > 0) {
+                        const { data: solverProfile } = await supabaseAdmin.from('profiles').select('full_name, avatar_url').eq('id', userId).single();
+                        const solverName = solverProfile?.full_name || 'Your friend';
+
+                        await Promise.allSettled(overtakenFriends.map((friend: any) => 
+                            createNotification({
+                                userId: friend.id,
+                                type: 'league_overtake',
+                                title: `🚨 Overtaken in League!`,
+                                body: `${solverName} just passed you in the leaderboard! Reclaim your spot!`,
+                                href: '/league',
+                                actorId: userId,
+                                actorName: solverName,
+                                actorAvatar: solverProfile?.avatar_url,
+                            })
+                        ));
+                    }
+                }
+            } catch (e) {
+                console.error('[solve] overtake notif error:', e);
             }
         }
         // ─────────────────────────────────────────────────────────────────

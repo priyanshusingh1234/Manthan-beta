@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { createClient } from '@supabase/supabase-js';
-import { getLeague, getMonthKey, getResetPoints } from '@/lib/leagues';
+import { getLeague, getWeekKey, getResetPoints } from '@/lib/leagues';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,13 +15,13 @@ async function getUser(bearer?: string | null) {
   } catch { return null; }
 }
 
-async function ensureMonthReset(userId: string, currentMonth: string, currentPts: number, storedMonth: string | null) {
-  if (storedMonth === currentMonth) return currentPts;
-  // NULL storedMonth = column just added, no penalty — just initialize to 0
-  const resetPts = storedMonth === null ? 0 : getResetPoints(currentPts);
+async function ensureWeekReset(userId: string, currentWeek: string, currentPts: number, storedWeek: string | null) {
+  if (storedWeek === currentWeek) return currentPts;
+  // NULL storedWeek = column just added, no penalty — just initialize to 0
+  const resetPts = storedWeek === null ? 0 : getResetPoints(currentPts);
   await supabaseAdmin.from('profiles').update({
     monthly_points: resetPts,
-    monthly_points_month: currentMonth
+    monthly_points_month: currentWeek
   }).eq('id', userId);
   return resetPts;
 }
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     const user = await getUser(req.headers.get('authorization'));
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const currentMonth = getMonthKey();
+    const currentWeek = getWeekKey();
 
     const { data: profile } = await supabaseAdmin
       .from('profiles')
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
 
-    const monthlyPts = await ensureMonthReset(user.id, currentMonth, profile.monthly_points || 0, profile.monthly_points_month);
+    const monthlyPts = await ensureWeekReset(user.id, currentWeek, profile.monthly_points || 0, profile.monthly_points_month);
     const userLeague = getLeague(monthlyPts);
 
     // Global rank by total_points (always meaningful)
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     const { count: leagueHigher } = await supabaseAdmin
       .from('profiles')
       .select('id', { count: 'exact', head: true })
-      .eq('monthly_points_month', currentMonth)
+      .eq('monthly_points_month', currentWeek)
       .gte('monthly_points', userLeague.min)
       .lte('monthly_points', userLeague.max === Infinity ? 99999 : userLeague.max)
       .gt('monthly_points', monthlyPts);
@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
     const leagueMin = userLeague.min;
     const leagueMax = userLeague.max === Infinity ? 99999 : userLeague.max;
 
-    // Get users whose monthly_points_month matches (active this month) OR who have 0/null (unstarted = Scholar)
+    // Get users whose monthly_points_month matches (active this week) OR who have 0/null (unstarted = Scholar)
     let leaderboardQuery = supabaseAdmin
       .from('profiles')
       .select('id, full_name, username, avatar_url, monthly_points, total_points')
@@ -74,13 +74,13 @@ export async function GET(req: NextRequest) {
       .not('full_name', 'is', null);
 
     if (userLeague.min === 0) {
-      // Scholar: include users active this month, OR users who have 0/null points regardless of month
+      // Scholar: include users active this week, OR users who have 0/null points regardless of week
       leaderboardQuery = leaderboardQuery
         .lte('monthly_points', leagueMax)
-        .or(`monthly_points_month.eq.${currentMonth},monthly_points.eq.0,monthly_points.is.null`);
+        .or(`monthly_points_month.eq.${currentWeek},monthly_points.eq.0,monthly_points.is.null`);
     } else {
       leaderboardQuery = leaderboardQuery
-        .eq('monthly_points_month', currentMonth)
+        .eq('monthly_points_month', currentWeek)
         .gte('monthly_points', leagueMin)
         .lte('monthly_points', leagueMax);
     }
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
         .order('total_points', { ascending: false });
       friends = (data || []).map((f: any) => ({
         ...f,
-        monthly_points: f.monthly_points_month === currentMonth ? (f.monthly_points || 0) : getResetPoints(f.monthly_points || 0),
+        monthly_points: f.monthly_points_month === currentWeek ? (f.monthly_points || 0) : getResetPoints(f.monthly_points || 0),
       }));
     }
 
@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
       monthlyPts,
       leagueRank,
       globalRank,
-      currentMonth,
+      currentMonth: currentWeek, // returning currentWeek under currentMonth for backwards compatibility in UI if needed
       leaderboard: leaderboard || [],
       friends,
       userId: user.id,

@@ -38,8 +38,8 @@ export default function LeagueScreen() {
           const currentLeagueName = getLeague(d.monthlyPts).name;
           const lastLeague = await AsyncStorage.getItem('last_known_league');
           if (lastLeague && lastLeague !== currentLeagueName) {
-            const oldIdx = LEAGUE_NAMES.indexOf(lastLeague);
-            const newIdx = LEAGUE_NAMES.indexOf(currentLeagueName);
+            const oldIdx = LEAGUE_NAMES.indexOf(lastLeague as any);
+            const newIdx = LEAGUE_NAMES.indexOf(currentLeagueName as any);
             if (newIdx > oldIdx) {
                DeviceEventEmitter.emit('trigger_league_up', { oldLeague: lastLeague, newLeague: currentLeagueName });
             }
@@ -75,7 +75,7 @@ export default function LeagueScreen() {
   const ptsToNext = nextLeague ? nextLeague.min - monthlyPts : 0;
   
   const now = new Date();
-  const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+  const daysLeft = now.getDay() === 0 ? 0 : 7 - now.getDay();
   const myEntry = leaderboard.find((p: any) => p.id === userId);
 
   const isDark = theme === 'dark';
@@ -129,12 +129,12 @@ export default function LeagueScreen() {
               <LeagueBadge name={league.name} size={110} animate />
             </View>
             <Text style={[styles.leagueName, { color: league.color }]}>{league.name}</Text>
-            <Text style={[styles.leagueSub, { color: textMuted }]}>League · {monthlyPts} pts this month</Text>
+            <Text style={[styles.leagueSub, { color: textMuted }]}>League · {monthlyPts} pts this week</Text>
 
             <View style={styles.statsRow}>
               {[
                 { icon: <Crown size={16} color="#f59e0b" />, label: 'Rank', value: `#${leagueRank}` },
-                { icon: <Zap size={16} color="#6366f1" />, label: 'Monthly', value: `${monthlyPts} pts` },
+                { icon: <Zap size={16} color="#6366f1" />, label: 'Weekly', value: `${monthlyPts} pts` },
                 { icon: <Calendar size={16} color="#10b981" />, label: 'Days Left', value: `${daysLeft}d` },
               ].map((s, i) => (
                 <View key={i} style={[styles.statCard, { backgroundColor: cardBg, borderColor }]}>
@@ -173,7 +173,7 @@ export default function LeagueScreen() {
         <View style={styles.contentPadding}>
           {tab === 'leaderboard' && (
             <View style={styles.listContainer}>
-              <Text style={[styles.listSubtitle, { color: textMuted }]}>{league.name} League · Ranked by Monthly Points</Text>
+              <Text style={[styles.listSubtitle, { color: textMuted }]}>{league.name} League · Ranked by Weekly Points</Text>
               
               {myEntry && !leaderboard.slice(0, 20).find((p: any) => p.id === userId) && (
                 <View style={[styles.listItem, { borderColor: league.color, backgroundColor: `${league.color}10` }]}>
@@ -192,15 +192,30 @@ export default function LeagueScreen() {
                   <Text style={[styles.emptySub, { color: textMuted }]}>Earn points to enter the league!</Text>
                 </View>
               ) : (
-                leaderboard.slice(0, 20).map((p: any, i: number) => {
+                leaderboard.slice(0, 20).map((p: any, i: number, arr: any[]) => {
                   const isMe = p.id === userId;
+                  const isPromotionZone = i < 3;
+                  const isDemotionZone = arr.length >= 10 && i >= arr.length - 3;
+                  
+                  // Zone styling
+                  let bgCol = isMe ? (isDark ? '#312e81' : '#e0e7ff') : cardBg;
+                  let borderCol = isMe ? (isDark ? '#3730a3' : '#c7d2fe') : borderColor;
+
+                  if (isPromotionZone && !isMe) {
+                    bgCol = isDark ? '#022c22' : '#ecfdf5'; // slight emerald
+                    borderCol = isDark ? '#059669' : '#34d399';
+                  } else if (isDemotionZone && !isMe) {
+                    bgCol = isDark ? '#450a0a' : '#fef2f2'; // slight red
+                    borderCol = isDark ? '#dc2626' : '#fca5a5';
+                  }
+
                   return (
-                    <TouchableOpacity key={p.id} style={[styles.listItem, { backgroundColor: isMe ? (isDark ? '#312e81' : '#e0e7ff') : cardBg, borderColor: isMe ? (isDark ? '#3730a3' : '#c7d2fe') : borderColor }]} onPress={() => router.push(`/user/${p.username || p.id}`)}>
+                    <TouchableOpacity key={p.id} style={[styles.listItem, { backgroundColor: bgCol, borderColor: borderCol }]} onPress={() => router.push(`/user/${p.username || p.id}`)}>
                       <View style={{ width: 32, alignItems: 'center' }}>
                         {i === 0 ? <Text style={styles.rankEmoji}>🥇</Text>
                          : i === 1 ? <Text style={styles.rankEmoji}>🥈</Text>
                          : i === 2 ? <Text style={styles.rankEmoji}>🥉</Text>
-                         : <Text style={[styles.rankText, { color: isMe ? '#6366f1' : textMuted }]}>#{i + 1}</Text>}
+                         : <Text style={[styles.rankText, { color: isMe ? '#6366f1' : (isDemotionZone ? '#ef4444' : textMuted) }]}>#{i + 1}</Text>}
                       </View>
                       
                       {p.avatar_url ? (
@@ -220,10 +235,10 @@ export default function LeagueScreen() {
                       </View>
 
                       <View style={styles.scoreContainer}>
-                        <Text style={[styles.ptsText, { color: i < 3 ? league.color : textColor }]}>
-                          {p.monthly_points > 0 ? `${p.monthly_points} m.pts` : `${p.total_points ?? 0} pts`}
+                        <Text style={[styles.ptsText, { color: isPromotionZone ? league.color : (isDemotionZone ? '#ef4444' : textColor) }]}>
+                          {p.monthly_points > 0 ? `${p.monthly_points} w.pts` : `${p.total_points ?? 0} pts`}
                         </Text>
-                        <Text style={[styles.ptsSub, { color: textMuted }]}>{p.monthly_points > 0 ? 'this month' : 'all time'}</Text>
+                        <Text style={[styles.ptsSub, { color: textMuted }]}>{p.monthly_points > 0 ? 'this week' : 'all time'}</Text>
                       </View>
                       <ChevronRight size={16} color={textMuted} />
                     </TouchableOpacity>
@@ -242,7 +257,7 @@ export default function LeagueScreen() {
                 </View>
               ) : (
                 <>
-                  <Text style={[styles.listSubtitle, { color: textMuted }]}>{friends.length} Friends · Ranked by Monthly Points</Text>
+                  <Text style={[styles.listSubtitle, { color: textMuted }]}>{friends.length} Friends · Ranked by Weekly Points</Text>
                   {friends.map((f: any, i: number) => {
                     const fl = getLeague(f.monthly_points || 0);
                     return (
@@ -268,6 +283,34 @@ export default function LeagueScreen() {
                           <Text style={[styles.ptsText, { color: textColor }]}>{f.monthly_points}</Text>
                           <Text style={[styles.ptsSub, { color: textMuted }]}>pts</Text>
                         </View>
+
+                        {/* TAUNT BUTTON */}
+                        {f.monthly_points < monthlyPts && (
+                          <TouchableOpacity 
+                            style={styles.tauntButton}
+                            onPress={async (e) => {
+                              e.stopPropagation(); // prevent navigating to profile
+                              // Optimistic UI could be added, but simple alert is fine for now
+                              try {
+                                const { data: { session } } = await supabase.auth.getSession();
+                                const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
+                                await fetch(`${API_URL}/api/league/taunt`, {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    Authorization: `Bearer ${session?.access_token}`
+                                  },
+                                  body: JSON.stringify({ targetUserId: f.id })
+                                });
+                                // Maybe show a quick toast here
+                              } catch (err) {
+                                console.error('Taunt failed', err);
+                              }
+                            }}
+                          >
+                            <Text style={{ fontSize: 16 }}>💥</Text>
+                          </TouchableOpacity>
+                        )}
                       </TouchableOpacity>
                     );
                   })}
@@ -370,5 +413,6 @@ const styles = StyleSheet.create({
   allLeagueCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, gap: 16, marginBottom: 8 },
   allLeagueInfo: { flex: 1 },
   badgePill: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
-  badgePillText: { color: '#fff', fontSize: 9, fontWeight: '900' }
+  badgePillText: { color: '#fff', fontSize: 9, fontWeight: '900' },
+  tauntButton: { marginLeft: 8, padding: 8, backgroundColor: '#f59e0b20', borderRadius: 20, borderWidth: 1, borderColor: '#f59e0b40' }
 });
