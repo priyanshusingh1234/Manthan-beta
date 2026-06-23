@@ -167,7 +167,7 @@ export default function TestTakingScreen() {
       if (!res.ok) throw new Error('Submission failed on server');
       
       Alert.alert('Success!', 'Your test has been securely submitted.', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)/') }
+        { text: 'OK', onPress: () => router.replace('/(tabs)/' as any) }
       ]);
     } catch (e: any) {
       Alert.alert('Error', e.message);
@@ -187,7 +187,7 @@ export default function TestTakingScreen() {
         <Text className="text-2xl font-black text-slate-900 dark:text-white mb-2 text-center">Test Attempted!</Text>
         <Text className="text-slate-500 text-center font-medium">You have already submitted this test. Re-attempts are not allowed.</Text>
         <TouchableOpacity 
-          onPress={() => router.replace('/(tabs)/')}
+          onPress={() => router.replace('/(tabs)/' as any)}
           className="mt-8 bg-slate-200 dark:bg-slate-800 px-6 py-3 rounded-xl"
         >
           <Text className="text-slate-700 dark:text-slate-300 font-bold">Go Back Home</Text>
