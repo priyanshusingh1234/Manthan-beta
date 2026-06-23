@@ -307,7 +307,7 @@ export default function LeaguePage() {
                           className="ml-2 p-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-full transition-colors flex items-center justify-center"
                           title={`Taunt ${f.full_name}`}
                         >
-                          <span className="text-lg">💥</span>
+                          <span className="text-lg">🔥</span>
                         </button>
                       )}
                     </Link>

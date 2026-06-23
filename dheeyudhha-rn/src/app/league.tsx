@@ -1,13 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Dimensions, Platform, DeviceEventEmitter } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import { getLeague, getNextLeague, LEAGUES } from '@/lib/leagues';
 import LeagueBadge from '@/components/LeagueBadge';
 import { ArrowLeft, Crown, Users, ChevronRight, Calendar, Zap, Shield, Trophy } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 const { width } = Dimensions.get('window');
 const LEAGUE_NAMES = LEAGUES.map(l => l.name);
 
@@ -18,42 +17,53 @@ export default function LeagueScreen() {
   const [tab, setTab] = useState<'leaderboard' | 'friends' | 'all'>('leaderboard');
   const [theme, setTheme] = useState<'light'|'dark'>('light');
 
+  // Load theme on mount
   useEffect(() => {
     AsyncStorage.getItem('app_theme').then((t) => {
       if (t === 'dark') setTheme('dark');
     });
+  }, []);
 
-    const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { router.replace('/login'); return; }
-      
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
-      try {
-        const res = await fetch(`${API_URL}/api/league`, { 
-          headers: { Authorization: `Bearer ${session.access_token}` } 
-        });
-        if (res.ok) {
-          const d = await res.json();
-          setData(d);
-          const currentLeagueName = getLeague(d.monthlyPts).name;
-          const lastLeague = await AsyncStorage.getItem('last_known_league');
-          if (lastLeague && lastLeague !== currentLeagueName) {
-            const oldIdx = LEAGUE_NAMES.indexOf(lastLeague as any);
-            const newIdx = LEAGUE_NAMES.indexOf(currentLeagueName as any);
-            if (newIdx > oldIdx) {
-               DeviceEventEmitter.emit('trigger_league_up', { oldLeague: lastLeague, newLeague: currentLeagueName });
+  // Fetch data on focus
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const load = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { router.replace('/login'); return; }
+        
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
+        try {
+          const res = await fetch(`${API_URL}/api/league`, { 
+            headers: { Authorization: `Bearer ${session.access_token}` } 
+          });
+          if (res.ok && isActive) {
+            const d = await res.json();
+            setData(d);
+            const currentLeagueName = getLeague(d.monthlyPts).name;
+            const lastLeague = await AsyncStorage.getItem('last_known_league');
+            if (lastLeague && lastLeague !== currentLeagueName) {
+              const oldIdx = LEAGUE_NAMES.indexOf(lastLeague as any);
+              const newIdx = LEAGUE_NAMES.indexOf(currentLeagueName as any);
+              if (newIdx > oldIdx) {
+                 DeviceEventEmitter.emit('trigger_league_up', { oldLeague: lastLeague, newLeague: currentLeagueName });
+              }
             }
+            await AsyncStorage.setItem('last_known_league', currentLeagueName);
           }
-          await AsyncStorage.setItem('last_known_league', currentLeagueName);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          if (isActive) setLoading(false);
         }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [router]);
+      };
+      load();
+
+      return () => {
+        isActive = false;
+      };
+    }, [router])
+  );
 
   if (loading) {
     return (
@@ -308,7 +318,7 @@ export default function LeagueScreen() {
                               }
                             }}
                           >
-                            <Text style={{ fontSize: 16 }}>💥</Text>
+                            <Text style={{ fontSize: 16 }}>🔥</Text>
                           </TouchableOpacity>
                         )}
                       </TouchableOpacity>
