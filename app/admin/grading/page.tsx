@@ -65,13 +65,18 @@ export default function AdminGradingDashboard() {
     setSelectedSubmissionId(null);
     setLoading(true);
     try {
-      const { data: subs } = await supabase
-        .from('test_submissions')
-        .select('*, profiles!user_id(id, full_name, username)')
-        .eq('test_id', testId)
-        .order('created_at', { ascending: false });
-        
-      setSubmissions(subs || []);
+      const { data: { session } } = await supabase.auth.getSession();
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+      
+      const res = await fetch(`${API_URL}/api/admin/submissions?testId=${testId}`, {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        }
+      });
+      
+      if (!res.ok) throw new Error('Failed to fetch submissions');
+      const data = await res.json();
+      setSubmissions(data.submissions || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -83,26 +88,24 @@ export default function AdminGradingDashboard() {
     setSelectedSubmissionId(subId);
     setLoading(true);
     try {
-      // Fetch questions
-      const { data: qData } = await supabase
-        .from('test_questions')
-        .select('*')
-        .eq('test_id', testId)
-        .order('order_index', { ascending: true });
+      const { data: { session } } = await supabase.auth.getSession();
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+      
+      const res = await fetch(`${API_URL}/api/admin/submissions?testId=${testId}&submissionId=${subId}`, {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        }
+      });
+      
+      if (!res.ok) throw new Error('Failed to fetch details');
+      const data = await res.json();
         
-      setQuestions(qData || []);
-
-      // Fetch answers
-      const { data: aData } = await supabase
-        .from('test_answers')
-        .select('*')
-        .eq('submission_id', subId);
-        
-      setAnswers(aData || []);
+      setQuestions(data.questions || []);
+      setAnswers(data.answers || []);
       
       // Init grades state
       const initialGrades: Record<string, number> = {};
-      aData?.forEach(ans => {
+      (data.answers || []).forEach((ans: any) => {
         initialGrades[ans.id] = ans.marks_awarded || 0;
       });
       setGrades(initialGrades);
