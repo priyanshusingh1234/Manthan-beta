@@ -78,7 +78,7 @@ export default function Home() {
           className="whitespace-nowrap text-white font-bold text-sm sm:text-base inline-block"
           style={{ animation: 'marquee 40s linear infinite' }}
         >
-          ✨ UPCOMING CLASS 10 UNIT TEST TOMORROW ✨ Civics: Ch 1 | Eco: Ch 1 | Geo: Ch 1 ✨
+          ✨ LIVE TEST: CLASS 10 ENGLISH ✨ Formative Assessment on Grammar, Literature, and Writing Skills ✨
         </div>
         <style dangerouslySetInnerHTML={{__html: `
           @keyframes marquee {
@@ -94,22 +94,26 @@ export default function Home() {
 
           {/* Unit Test Card & Leaderboard */}
           <div className="mb-6 bg-indigo-600 rounded-2xl p-6 shadow-sm border border-indigo-500">
-            <h2 className="text-white font-black text-xl mb-2">✨ Upcoming Class 10 Unit Test</h2>
+            <h2 className="text-white font-black text-xl mb-2">✍️ Live Test: Class 10 English</h2>
             <p className="text-indigo-100 font-medium text-sm leading-relaxed mb-6">
-              Get ready for tomorrow's subjective unit tests!<br/>
-              <span className="font-bold text-white">Civics:</span> Power Sharing<br/>
-              <span className="font-bold text-white">Economics:</span> Development<br/>
-              <span className="font-bold text-white">Geography:</span> Resources and Development
+              The Formative Assessment for English is now LIVE!<br/>
+              Test your knowledge on <span className="font-bold text-white">Grammar, Literature, and Writing Skills</span>.
             </p>
 
             <div className="bg-indigo-500/50 p-6 rounded-xl border border-indigo-400 flex flex-col items-center">
-              <span className="text-white font-black text-xl mb-1">See Who Is Ahead!</span>
-              <span className="text-indigo-200 text-sm font-medium mb-4">Check out the rankings from the previous tests.</span>
+              <span className="text-white font-black text-xl mb-1">Take the Test Now!</span>
+              <span className="text-indigo-200 text-sm font-medium mb-4">Your performance will be manually graded by your teacher.</span>
+              <Link 
+                href="/test/bdb02f09-92fa-4e49-8a77-d537b8bdfd89"
+                className="bg-white text-indigo-600 px-8 py-3 rounded-xl font-black text-lg hover:bg-slate-50 transition-transform active:scale-95 shadow-md mb-3"
+              >
+                Start English Test
+              </Link>
               <Link 
                 href="/tests/leaderboard"
-                className="bg-white text-indigo-600 px-8 py-3 rounded-xl font-black text-lg hover:bg-slate-50 transition-transform active:scale-95 shadow-md"
+                className="text-indigo-100 font-bold text-sm hover:text-white"
               >
-                View Rankings
+                View Previous Rankings
               </Link>
             </div>
           </div>
