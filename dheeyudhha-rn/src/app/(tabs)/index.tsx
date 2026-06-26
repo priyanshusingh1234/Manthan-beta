@@ -33,27 +33,18 @@ export default function FeedScreen() {
       {/* Unit Test Announcement Banner */}
       <View className="px-6 mb-6">
         <View className="bg-indigo-600 rounded-2xl p-4 shadow-sm border border-indigo-500">
-          <Text className="text-white font-black text-lg mb-2">✍️ Live Test: Class 10 English</Text>
+          <Text className="text-white font-black text-lg mb-2">✍️ Live Test: Class 10 Maths</Text>
           <Text className="text-indigo-100 font-medium text-sm leading-5 mb-4">
-            The Formative Assessment for English is now LIVE!{'\n'}
-            Test your knowledge on <Text className="font-bold text-white">Grammar, Literature, and Writing Skills</Text>.
+            The Formative Assessment for Maths is now LIVE!{'\n'}
+            Check out the rankings to see who scored the highest.
           </Text>
 
           <View className="bg-indigo-500/50 p-4 rounded-xl items-center border border-indigo-400 mt-2">
-            <Text className="text-white font-black text-lg mb-1">Take the Test Now!</Text>
-            <Text className="text-indigo-200 text-xs font-medium mb-4 text-center">Your performance will be manually graded by your teacher.</Text>
-            <TouchableOpacity 
-              onPress={() => router.push('/test/bdb02f09-92fa-4e49-8a77-d537b8bdfd89' as any)}
-              className="bg-white px-8 py-3 rounded-xl active:scale-95 transition-transform w-full items-center mb-2"
-            >
-              <Text className="text-indigo-600 font-black text-base">Start English Test</Text>
-            </TouchableOpacity>
-            
             <TouchableOpacity 
               onPress={() => router.push('/test-leaderboard' as any)}
-              className="px-8 py-2 w-full items-center"
+              className="bg-white px-8 py-3 rounded-xl active:scale-95 transition-transform w-full items-center"
             >
-              <Text className="text-indigo-100 font-bold text-sm">View Previous Rankings</Text>
+              <Text className="text-indigo-600 font-black text-base">View Ranks</Text>
             </TouchableOpacity>
           </View>
         </View>

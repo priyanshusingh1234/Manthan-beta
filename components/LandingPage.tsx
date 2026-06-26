@@ -63,9 +63,9 @@ export default function LandingPage() {
   const [statsVisible, setStatsVisible] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
 
-  const students = useCounter(12400, 1800, statsVisible);
+  const students = useCounter(50, 1800, statsVisible);
   const questions = useCounter(1200, 1600, statsVisible);
-  const duels = useCounter(8900, 2000, statsVisible);
+  const duels = useCounter(100, 2000, statsVisible);
 
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setStatsVisible(true); }, { threshold: 0.3 });
@@ -232,7 +232,7 @@ export default function LandingPage() {
       <section ref={statsRef} className="relative z-10 max-w-7xl mx-auto px-5 sm:px-10 py-16">
         <div className="grid grid-cols-3 gap-4 sm:gap-8 bg-[#13131a] border border-white/8 rounded-3xl p-6 sm:p-10">
           {[
-            { value: students, suffix: '+', label: 'Active Students', icon: Users, color: 'text-violet-400' },
+            { value: students, suffix: '+', label: 'Users Online Now', icon: Users, color: 'text-emerald-400' },
             { value: questions, suffix: '+', label: 'Curated Questions', icon: BookOpen, color: 'text-cyan-400' },
             { value: duels, suffix: '+', label: 'Duels Fought', icon: Swords, color: 'text-rose-400' },
           ].map(({ value, suffix, label, icon: Icon, color }) => (
