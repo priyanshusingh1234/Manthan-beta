@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { useRouter } from 'expo-router';
 
 function VideoPreviewItem({ uri }: { uri: string }) {
   const player = useVideoPlayer(uri, p => {
@@ -43,6 +44,7 @@ export default function PostsScreen() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const router = useRouter();
   
   // Composer state
   const [content, setContent] = useState('');
@@ -260,12 +262,17 @@ export default function PostsScreen() {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to post');
       }
+      const newPostData = await response.json();
       
       onRefresh();
       setContent('');
       setMediaFiles([]);
       setSelectedCategory('general');
       Keyboard.dismiss();
+
+      if (videoUrl && newPostData?.post?.id) {
+        router.push(`/clips?postId=${newPostData.post.id}` as any);
+      }
     } catch (e: any) {
       console.error('Error posting:', e);
       alert(e.message || 'Failed to post. Please try again.');
@@ -279,11 +286,15 @@ export default function PostsScreen() {
     if (!currentUser) return null;
     return (
       <View className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 mb-4 shadow-sm">
-        <View className="flex-row items-center mb-3">
+        <View className="flex-row items-center justify-between mb-3">
           <View className="bg-purple-100 dark:bg-purple-900/30 rounded-full px-2.5 py-1 flex-row items-center">
             <Sparkles size={12} color={isDark ? "#c084fc" : "#9333ea"} />
             <Text className="text-purple-700 dark:text-purple-400 text-[10px] font-bold ml-1 tracking-wider uppercase">Social Fire</Text>
           </View>
+          <TouchableOpacity onPress={() => router.push('/clips' as any)} className="bg-rose-500 rounded-full px-3 py-1.5 flex-row items-center shadow-sm">
+             <VideoIcon size={12} color="#FFF" />
+             <Text className="text-white text-[10px] font-bold ml-1 uppercase tracking-wider">Watch Clips</Text>
+          </TouchableOpacity>
         </View>
 
         <View className="flex-row items-start">

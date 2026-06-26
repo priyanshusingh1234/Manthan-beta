@@ -224,8 +224,15 @@ export default function LeaderboardScreen() {
         {/* List Header */}
         <View className="flex-row items-center justify-between mb-3 px-2">
           <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-lg">Top Players</Text>
-          <View className="bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded-md">
-            <Text className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Live</Text>
+          <View className="flex-row items-center gap-2">
+            {activeTab === 'league' && (
+              <TouchableOpacity onPress={() => router.push('/league' as any)} className="bg-indigo-100 dark:bg-indigo-900/30 px-3 py-1 rounded-md border border-indigo-200 dark:border-indigo-800">
+                <Text className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">View League</Text>
+              </TouchableOpacity>
+            )}
+            <View className="bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded-md">
+              <Text className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Live</Text>
+            </View>
           </View>
         </View>
 
