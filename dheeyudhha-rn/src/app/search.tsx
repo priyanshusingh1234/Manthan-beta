@@ -122,8 +122,8 @@ export default function SearchScreen() {
                   key={tab.id}
                   onPress={() => setActiveTab(tab.id as any)}
                   className={`flex-row items-center gap-1.5 px-4 py-2 rounded-full border ${isTabActive
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800'
-                      : 'bg-transparent border-transparent'
+                    ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800'
+                    : 'bg-transparent border-transparent'
                     }`}
                 >
                   <tab.icon size={14} className={isTabActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-slate-400"} />

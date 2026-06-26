@@ -16,17 +16,17 @@ export default function BossFight() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colorScheme } = useColorScheme();
-  
+
   const [loading, setLoading] = useState(true);
   const [question, setQuestion] = useState<any>(null);
   const [phase, setPhase] = useState<'entrance' | 'fight' | 'victory' | 'defeat'>('entrance');
-  
+
   // MCQ state
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [purchasedHint, setPurchasedHint] = useState<string | false>(false);
   const [hintError, setHintError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Audio
   let player: any = null;
   try {
@@ -42,7 +42,7 @@ export default function BossFight() {
 
   useEffect(() => {
     fetchBoss();
-    
+
     // Play Entrance Audio
     if (player) {
       player.loop = true;
@@ -85,7 +85,7 @@ export default function BossFight() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      
+
       const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
       const res = await fetch(`${API_URL}/api/boss/daily`, {
         headers: { Authorization: `Bearer ${session.access_token}` }
@@ -106,7 +106,7 @@ export default function BossFight() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      
+
       const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
       const res = await fetch(`${API_URL}/api/solve/hint`, {
         method: 'POST',
@@ -135,10 +135,10 @@ export default function BossFight() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
-      
+
       // Look up the exact index of the selected option to send to the backend
       const optionIndex = question.options.indexOf(opt);
-      
+
       await fetch(`${API_URL}/api/solve`, {
         method: "POST",
         headers: {
@@ -153,7 +153,7 @@ export default function BossFight() {
           isBoss: true,
         }),
       });
-      
+
     } catch (e) {
       console.error('Failed to submit boss score:', e);
     } finally {
@@ -255,10 +255,10 @@ export default function BossFight() {
 
   // FIGHT PHASE
   return (
-    <ScrollView 
+    <ScrollView
       className="flex-1 bg-slate-50 dark:bg-slate-950"
-      contentContainerStyle={{ 
-        paddingTop: Math.max(insets.top, 16) + 20, 
+      contentContainerStyle={{
+        paddingTop: Math.max(insets.top, 16) + 20,
         paddingBottom: insets.bottom + 100,
         paddingHorizontal: 16
       }}

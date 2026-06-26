@@ -305,7 +305,7 @@ const MessageItem = memo(({
                     {mainContent}
                     {meta.edited && <Text className={`text-[10px] italic ${isMe ? 'text-white/70' : 'text-slate-500'}`}> (edited)</Text>}
                   </Text>
-                  
+
                   {(() => {
                     const match = mainContent.match(/https?:\/\/[^\s]+/);
                     const previewUrl = match ? match[0] : null;
@@ -363,7 +363,7 @@ export default function ChatRoomScreen() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [roomStatus, setRoomStatus] = useState<{ status: string, created_by: string } | null>(null);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-  
+
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const MESSAGES_PER_PAGE = 100;
@@ -411,7 +411,7 @@ export default function ChatRoomScreen() {
       const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
 
       const filtered = (list || []).filter(m => !deletedIds.includes(m.id));
-      
+
       if (list.length < MESSAGES_PER_PAGE) setHasMore(false);
 
       if (loadMore) {
@@ -450,8 +450,8 @@ export default function ChatRoomScreen() {
         if (pData?.user_id) {
           const { data: prof } = await supabase.from('profiles').select('full_name, avatar_url, username, is_teacher').eq('id', pData.user_id).single();
           if (prof) {
-            setParticipant({ 
-              user_id: pData.user_id, 
+            setParticipant({
+              user_id: pData.user_id,
               ...prof,
               avatar_url: prof.avatar_url && !prof.avatar_url.includes('googleusercontent.com') ? prof.avatar_url : null
             });
@@ -634,8 +634,8 @@ export default function ChatRoomScreen() {
           { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
         );
 
-        const uriToUpload = Platform.OS === 'android' && !manipulated.uri.startsWith('file://') 
-          ? `file://${manipulated.uri}` 
+        const uriToUpload = Platform.OS === 'android' && !manipulated.uri.startsWith('file://')
+          ? `file://${manipulated.uri}`
           : manipulated.uri;
 
         const { data: { session } } = await supabase.auth.getSession();
@@ -654,7 +654,7 @@ export default function ChatRoomScreen() {
         );
 
         if (uploadRes.status < 200 || uploadRes.status >= 300) throw new Error('Upload failed');
-        
+
         const data = JSON.parse(uploadRes.body);
         const publicUrl = data.publicUrl;
 
@@ -833,8 +833,8 @@ export default function ChatRoomScreen() {
             )}
             ListFooterComponent={() => (
               hasMore ? (
-                <TouchableOpacity 
-                  onPress={() => fetchMessages(true)} 
+                <TouchableOpacity
+                  onPress={() => fetchMessages(true)}
                   disabled={loadingMore}
                   className="py-6 items-center justify-center"
                 >

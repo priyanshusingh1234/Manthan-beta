@@ -7,8 +7,20 @@ export const fetchCache = 'force-no-store';
 
 export async function GET(req: NextRequest) {
     try {
-        const testId = req.nextUrl.searchParams.get('testId');
+        let testId = req.nextUrl.searchParams.get('testId');
         
+        if (!testId) {
+            const { data: latestTest } = await supabaseAdmin
+                .from('tests')
+                .select('id')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            if (latestTest) {
+                testId = latestTest.id;
+            }
+        }
+
         let query = supabaseAdmin
             .from('test_submissions')
             .select('user_id, total_score, created_at, profiles!user_id(full_name, username, avatar_url, school)')

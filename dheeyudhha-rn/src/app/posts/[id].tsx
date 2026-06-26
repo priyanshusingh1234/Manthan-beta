@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TextInput, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -49,7 +49,7 @@ export default function SinglePostScreen() {
         .select('full_name, username, avatar_url')
         .eq('id', session.user.id)
         .single();
-        
+
       setCurrentUser({
         id: session.user.id,
         ...profile,
@@ -120,7 +120,7 @@ export default function SinglePostScreen() {
 
   const handleCommentSubmit = async () => {
     if (!newComment.trim() || !currentUser || submitting) return;
-    
+
     setSubmitting(true);
     const tempId = `temp-${Date.now()}`;
     const optimisticComment = {
@@ -143,7 +143,7 @@ export default function SinglePostScreen() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/posts/${id}/comments`, {
         method: 'POST',
         headers: {
@@ -268,8 +268,8 @@ export default function SinglePostScreen() {
   }
 
   return (
-    <KeyboardAvoidingView 
-      className="flex-1 bg-white dark:bg-slate-950" 
+    <KeyboardAvoidingView
+      className="flex-1 bg-white dark:bg-slate-950"
       behavior="padding"
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
     >
@@ -279,10 +279,10 @@ export default function SinglePostScreen() {
         renderItem={renderComment}
         ListHeaderComponent={
           <>
-            <PostCard 
-              post={post} 
-              currentUserId={currentUser?.id || null} 
-              isSinglePost={true} 
+            <PostCard
+              post={post}
+              currentUserId={currentUser?.id || null}
+              isSinglePost={true}
               onImagePress={(uri) => setFullscreenImage(uri)}
               onUpdate={() => router.back()}
             />
@@ -340,7 +340,7 @@ export default function SinglePostScreen() {
                 className="flex-1 text-[15px] text-slate-900 dark:text-slate-100 py-2 max-h-[100px]"
                 editable={!submitting}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleCommentSubmit}
                 disabled={!newComment.trim() || submitting}
                 className={`ml-2 p-1.5 rounded-full ${newComment.trim() ? 'bg-indigo-600' : 'bg-transparent'}`}

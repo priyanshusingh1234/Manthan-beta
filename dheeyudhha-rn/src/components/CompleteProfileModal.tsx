@@ -97,10 +97,17 @@ export default function CompleteProfileModal() {
     try {
       // Check username unique
       if (username !== currentUser?.user_metadata?.username) {
-        try {
-          // Use fetch against your next.js api to check unique username
-          // Or just let supabase DB handle it via unique constraint
-        } catch {}
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', username)
+          .maybeSingle();
+          
+        if (existingUser && existingUser.id !== currentUser.id) {
+          setError('Username is already taken. Please choose a different username.');
+          setSubmitting(false);
+          return;
+        }
       }
 
       const { error: updateError } = await supabase.auth.updateUser({
@@ -124,13 +131,15 @@ export default function CompleteProfileModal() {
         try {
           // If you have a proxy or API URL, you might fetch it here.
           // Since we are in RN, we rely on the DB trigger `handle_new_user` which already handles Google logins.
-          // But to be safe, we will call update on `profiles` manually since the trigger only runs on INSERT.
-          await supabase.from('profiles').update({
+          // But to be safe, we will call upsert on `profiles` manually since the trigger only runs on INSERT
+          // and might have failed if required fields were missing initially.
+          await supabase.from('profiles').upsert({
+            id: currentUser.id,
             username,
             full_name: fullName,
             school,
             class_grade: classGrade
-          }).eq('id', currentUser.id);
+          });
         } catch (e) {
           console.warn("Manual profile sync failed", e);
         }
@@ -151,7 +160,14 @@ export default function CompleteProfileModal() {
   const isClassLocked = !!currentUser?.user_metadata?.classGrade;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false}>
+    <Modal 
+      visible={visible} 
+      animationType="slide" 
+      transparent={false}
+      onRequestClose={() => {
+        // Prevent dismissal on Android back button to make it truly mandatory
+      }}
+    >
       <ScrollView className="flex-1 bg-slate-50 dark:bg-slate-950 px-6 py-12">
         <View className="items-center mt-10 mb-8">
           <View className="w-16 h-16 bg-indigo-500 rounded-3xl items-center justify-center mb-6 shadow-xl shadow-indigo-500/30">
