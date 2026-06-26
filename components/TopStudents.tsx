@@ -65,7 +65,7 @@ export default function TopStudents() {
             const res = await fetch('/api/leaderboard');
             if (!res.ok) return;
             const data = await res.json();
-            const fetched: Student[] = (data.topBrains?.topByTotal || []).map((p: any) => ({
+            const fetched: Student[] = (data.topBrains?.topByTotal || []).slice(0, 10).map((p: any) => ({
                 rank: p.rank,
                 name: p.name || 'Student',
                 username: p.username,
