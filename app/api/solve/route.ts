@@ -496,7 +496,7 @@ export async function POST(req: Request) {
         const newLevel = Math.floor(newXp / XP_PER_LEVEL) + 1;
         const leveledUp = newLevel > oldLevel;
 
-        const response = NextResponse.json({
+        const responseData: any = {
             success: true,
             isCorrect,
             correctOption: correctOpt,
@@ -515,7 +515,7 @@ export async function POST(req: Request) {
                 goalMetToday: newDailySolveCount >= 2,
                 streakEarnedToday,
             }
-        });
+        };
 
         // ── streak_friend notifications ────────────────────────────────────
         // Notify followers who haven't met today's goal that this user just earned
@@ -546,12 +546,12 @@ export async function POST(req: Request) {
                     });
 
                     await Promise.allSettled(pendingFollowers.map((fp: any) =>
-                        createNotification({
-                            userId: fp.id,
-                            type: 'streak_friend',
-                            title: `🔥 ${solverName} just earned their streak!`,
-                            body: `Don't fall behind — solve 2 questions to keep your streak alive too!`,
-                            href: '/streaks',
+                            createNotification({
+                                userId: fp.id,
+                                type: 'streak_friend',
+                                title: `Your friend ${solverName} has answered daily goal questions, can you?`,
+                                body: `They just hit their daily goal! Open the app to complete yours.`,
+                                href: '/streaks',
                             actorId: userId,
                             actorName: solverName,
                             actorAvatar: solverAvatar ?? undefined,
@@ -629,6 +629,9 @@ export async function POST(req: Request) {
                 const timeDiffSecs = Math.floor((new Date().getTime() - new Date(sessionStreakStart).getTime()) / 1000);
                 // If they did it in under 5 minutes (300 secs), challenge followers
                 if (timeDiffSecs <= 300) {
+                    responseData.challengeTriggered = true;
+                    responseData.challengeTime = timeDiffSecs;
+
                     const rewardPoolVal = 15; // 20% of ~75 possible points
                     const { data: followers } = await supabaseAdmin.from('follows').select('follower_id').eq('following_id', userId).limit(10);
                     
@@ -693,7 +696,7 @@ export async function POST(req: Request) {
         }
         // ─────────────────────────────────────────────────────────────────
 
-        return response;
+        return NextResponse.json(responseData);
     } catch (err: any) {
         console.error(err);
         return NextResponse.json({ error: err.message || "Failed to submit answer" }, { status: 500 });
