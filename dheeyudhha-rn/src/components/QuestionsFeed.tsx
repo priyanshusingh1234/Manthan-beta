@@ -49,10 +49,10 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
   allDataRef.current = allData;
   const isMountedRef = useRef(false);
 
-  const loadFeed = useCallback(async (isRefresh = false, silent = false) => {
+  const loadFeed = useCallback(async (isRefresh = false, silent = false, isLoadMore = false) => {
     if (isRefresh && !silent) {
       setRefreshing(true);
-    } else if (!silent && allDataRef.current.length === 0) {
+    } else if (!silent && !isLoadMore && allDataRef.current.length === 0) {
       setLoading(true);
     }
 
@@ -60,12 +60,17 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
       const data = await fetchFeed({ subject: subjectFilter, chapter: chapterFilter, limit: 40 });
       
       // Cache the feed for the default view to enable instant launch next time
-      if (!subjectFilter && !chapterFilter) {
+      if (!subjectFilter && !chapterFilter && !isLoadMore) {
         AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
       }
 
       const currentAllData = allDataRef.current;
-      if (silent && currentAllData.length > 0) {
+      if (isLoadMore) {
+        const existingIds = new Set(currentAllData.map(q => q.id));
+        const uniqueNewData = data.filter(q => !existingIds.has(q.id));
+        setAllData(prev => [...prev, ...uniqueNewData]);
+        setVisibleCount(prev => prev + PAGE_SIZE);
+      } else if (silent && currentAllData.length > 0) {
         // Background refresh: check if new questions arrived
         const existingIds = new Set(currentAllData.map(q => q.id));
         const newItems = data.filter(q => !existingIds.has(q.id));
@@ -79,7 +84,7 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
     } catch (err) {
       console.error('Error fetching feed:', err);
     } finally {
-      if (!silent) {
+      if (!silent && !isLoadMore) {
         setLoading(false);
         setRefreshing(false);
       }
@@ -176,7 +181,7 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
   const handleLoadMore = () => {
     if (visibleCount >= allData.length) {
       setLoadingMore(true);
-      loadFeed(); // fetch another batch from the algorithm
+      loadFeed(false, false, true); // fetch another batch from the algorithm
     } else {
       setVisibleCount(prev => prev + PAGE_SIZE);
     }

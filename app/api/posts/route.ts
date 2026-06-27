@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
         const page = Number(url.searchParams.get('page') || '1');
         const limit = Math.min(Number(url.searchParams.get('limit') || '30'), 60);
         const clipsOnly = url.searchParams.get('clipsOnly') === 'true';
+        const category = url.searchParams.get('category');
 
         const recentLimit = Math.floor(limit * 0.5);
         const trendingLimit = Math.ceil(limit * 0.5);
@@ -26,49 +27,69 @@ export async function GET(req: NextRequest) {
         const trendingOffset = (page - 1) * trendingLimit;
 
         const authHeader = req.headers.get('Authorization');
-        // ── Parallel Data Fetching ───────────────
-        const [userData, cachedPostsData] = await Promise.all([
-            // 1. Fetch current user metadata (Concurrent)
-            (async () => {
-                if (!authHeader) return null;
-                const token = authHeader.replace('Bearer ', '');
-                const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-                if (!user) return null;
-
+        // ── Data Fetching ───────────────
+        let userData: any = null;
+        if (authHeader) {
+            const token = authHeader.replace('Bearer ', '');
+            const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+            if (user) {
                 const [profileRes, followsRes] = await Promise.all([
                     supabaseAdmin.from('profiles').select('school').eq('id', user.id).maybeSingle(),
                     supabaseAdmin.from('follows').select('following_id').eq('follower_id', user.id),
                 ]);
 
-                return {
+                userData = {
                     id: user.id,
                     grade: user.user_metadata?.classGrade?.toString() || user.user_metadata?.grade?.toString() || null,
                     school: profileRes.data?.school || user.user_metadata?.school || null,
                     followingIds: (followsRes.data || []).map((f: any) => f.following_id)
                 };
-            })(),
-            // 2. Fetch posts (Concurrent) - Mixed 50/50 Recent & Trending
-            (async () => {
-                const selectFields = 'id, author_id, content, image_url, image_urls, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id ), repost_id';
-                
-                let recentQuery = supabaseAdmin
-                    .from('posts')
-                    .select(selectFields)
-                    .order('created_at', { ascending: false })
-                    .range(recentOffset, recentOffset + recentLimit - 1);
-                
-                // For trending, we sort by likes_count and created_at
-                let trendingQuery = supabaseAdmin
-                    .from('posts')
-                    .select(selectFields)
-                    .order('likes_count', { ascending: false })
-                    .order('created_at', { ascending: false })
-                    .range(trendingOffset, trendingOffset + trendingLimit - 1);
+            }
+        }
 
-                if (clipsOnly) {
-                    recentQuery = recentQuery.not('video_url', 'is', null);
-                    trendingQuery = trendingQuery.not('video_url', 'is', null);
+        // 2. Fetch posts - Mixed 50/50 Recent & Trending
+        const cachedPostsData = await (async () => {
+            const selectFields = 'id, author_id, content, image_url, image_urls, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id ), repost_id';
+            
+            let recentQuery = supabaseAdmin
+                .from('posts')
+                .select(selectFields)
+                .order('created_at', { ascending: false })
+                .range(recentOffset, recentOffset + recentLimit - 1);
+            
+            // For trending, we sort by likes_count and created_at
+            let trendingQuery = supabaseAdmin
+                .from('posts')
+                .select(selectFields)
+                .order('likes_count', { ascending: false })
+                .order('created_at', { ascending: false })
+                .range(trendingOffset, trendingOffset + trendingLimit - 1);
+
+            if (clipsOnly) {
+                recentQuery = recentQuery.not('video_url', 'is', null);
+                trendingQuery = trendingQuery.not('video_url', 'is', null);
+            }
+
+            if (category === 'educational') {
+                recentQuery = recentQuery.ilike('content', '%#educational%');
+                trendingQuery = trendingQuery.ilike('content', '%#educational%');
+                
+                if (userData?.grade) {
+                    const gradeTag = `%#Class${userData.grade.replace(/\\s+/g, '')}%`;
+                    recentQuery = recentQuery.ilike('content', gradeTag);
+                    trendingQuery = trendingQuery.ilike('content', gradeTag);
                 }
+            } else if (category === 'casual') {
+                if (userData?.grade) {
+                    const gradeTag = `%#Class${userData.grade.replace(/\\s+/g, '')}%`;
+                    const orFilter = `content.not.ilike.%#educational%,content.not.ilike.${gradeTag}`;
+                    recentQuery = recentQuery.or(orFilter);
+                    trendingQuery = trendingQuery.or(orFilter);
+                } else {
+                    recentQuery = recentQuery.not('content', 'ilike', '%#educational%');
+                    trendingQuery = trendingQuery.not('content', 'ilike', '%#educational%');
+                }
+            }
 
                 const [recentRes, trendingRes] = await Promise.all([recentQuery, trendingQuery]);
                 if (recentRes.error) throw recentRes.error;
@@ -177,8 +198,7 @@ export async function GET(req: NextRequest) {
                         }
                     };
                 });
-            })()
-        ]);
+            })();
 
         const currentUserId = userData?.id || null;
         const userGrade = userData?.grade || null;

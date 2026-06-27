@@ -266,25 +266,25 @@ export async function POST(req: Request) {
         const dWeek = new Date(nowIST);
         dWeek.setDate(dWeek.getDate() - dWeek.getDay());
         const currentWeekKey = `${dWeek.getFullYear()}-W${String(dWeek.getMonth() + 1).padStart(2, '0')}-${String(dWeek.getDate()).padStart(2, '0')}`;
-        
+
         let dbMonthlyMonth = (profile as any)?.monthly_points_month || null;
         let currentMonthlyPts = Number((profile as any)?.monthly_points) || 0;
-        
+
         if (dbMonthlyMonth !== currentWeekKey) {
             const getResetPts = (pts: number) => {
-              const currentIdx = LEAGUES.findIndex(l => pts >= l.min && pts <= l.max);
-              const idx = currentIdx === -1 ? LEAGUES.length - 1 : currentIdx;
-              let demotedIdx = 0;
-              if (idx >= 7) demotedIdx = 4;
-              else if (idx >= 5) demotedIdx = 3;
-              else if (idx >= 3) demotedIdx = 2;
-              else if (idx >= 1) demotedIdx = 0;
-              return LEAGUES[demotedIdx].min;
+                const currentIdx = LEAGUES.findIndex(l => pts >= l.min && pts <= l.max);
+                const idx = currentIdx === -1 ? LEAGUES.length - 1 : currentIdx;
+                let demotedIdx = 0;
+                if (idx >= 7) demotedIdx = 4;
+                else if (idx >= 5) demotedIdx = 3;
+                else if (idx >= 3) demotedIdx = 2;
+                else if (idx >= 1) demotedIdx = 0;
+                return LEAGUES[demotedIdx].min;
             };
             currentMonthlyPts = dbMonthlyMonth === null ? 0 : getResetPts(currentMonthlyPts);
             dbMonthlyMonth = currentWeekKey;
         }
-        
+
         const newMonthlyPts = Math.max(0, currentMonthlyPts + userPointsChange);
         // ─────────────────────────────────────────────────────────────────
 
@@ -302,11 +302,11 @@ export async function POST(req: Request) {
         // stale JWT metadata causing double-counts.
         const todayStr = nowIST.toISOString().slice(0, 10);          // "YYYY-MM-DD"
 
-        const dbDailySolveDate  = (profile as any)?.daily_solve_date  || null;
+        const dbDailySolveDate = (profile as any)?.daily_solve_date || null;
         const dbDailySolveCount = Number((profile as any)?.daily_solve_count) || 0;
-        const dbStreakCount     = Number((profile as any)?.streak_count) || 0;
-        const dbStreakLongest   = Number((profile as any)?.streak_longest) || 0;
-        const dbLastStreakAt    = (profile as any)?.last_streak_at || null;
+        const dbStreakCount = Number((profile as any)?.streak_count) || 0;
+        const dbStreakLongest = Number((profile as any)?.streak_longest) || 0;
+        const dbLastStreakAt = (profile as any)?.last_streak_at || null;
 
         // Compute yesterday string to detect a missed day
         const yesterdayIST = new Date(nowIST);
@@ -314,10 +314,10 @@ export async function POST(req: Request) {
         const yesterdayStr = yesterdayIST.toISOString().slice(0, 10);
 
         let newDailySolveCount = dbDailySolveCount;
-        let newStreakCount     = dbStreakCount;
-        let newStreakLongest   = dbStreakLongest;
-        let newLastStreakAt    = dbLastStreakAt;
-        let lastStreakCount    = Number((profile as any)?.last_streak_count) || dbStreakCount;
+        let newStreakCount = dbStreakCount;
+        let newStreakLongest = dbStreakLongest;
+        let newLastStreakAt = dbLastStreakAt;
+        let lastStreakCount = Number((profile as any)?.last_streak_count) || dbStreakCount;
 
         if (dbDailySolveDate === todayStr) {
             // Same day — just increment daily count
@@ -353,27 +353,6 @@ export async function POST(req: Request) {
             }
         }
         // ────────────────────────────────────────────────────────────────
-
-        // ── Dynamic Session Streak for Friend Challenges ───────────────
-        let sessionCorrectStreak = Number(userMeta.sessionCorrectStreak) || 0;
-        let sessionStreakStart = userMeta.sessionStreakStart || new Date().toISOString();
-        let lastSolveTime = userMeta.lastSolveTime || new Date().toISOString();
-
-        // If it's been more than 30 minutes since the last solve, reset the session
-        const timeSinceLastSolve = new Date().getTime() - new Date(lastSolveTime).getTime();
-        if (timeSinceLastSolve > 30 * 60 * 1000) {
-            sessionCorrectStreak = 0;
-        }
-
-        if (isCorrect) {
-            if (sessionCorrectStreak === 0) {
-                sessionStreakStart = new Date().toISOString();
-            }
-            sessionCorrectStreak += 1;
-        } else {
-            sessionCorrectStreak = 0;
-            sessionStreakStart = new Date().toISOString();
-        }
         // ────────────────────────────────────────────────────────────────
 
         const updatedMeta = {
@@ -390,8 +369,6 @@ export async function POST(req: Request) {
             dailySolveDate: todayStr,
             monthlyPoints: newMonthlyPts,
             monthlyPointsMonth: currentWeekKey,
-            sessionCorrectStreak,
-            sessionStreakStart,
             lastSolveTime: new Date().toISOString()
         };
 
@@ -517,51 +494,6 @@ export async function POST(req: Request) {
             }
         };
 
-        // ── streak_friend notifications ────────────────────────────────────
-        // Notify followers who haven't met today's goal that this user just earned
-        // their streak. Must be awaited — Vercel kills un-awaited promises on return.
-        if (streakEarnedToday) {
-            try {
-                const todayForNotif = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-                const [{ data: solverProfile }, { data: followerRows }] = await Promise.all([
-                    supabaseAdmin.from('profiles').select('full_name, username, avatar_url').eq('id', userId).single(),
-                    supabaseAdmin.from('follows').select('follower_id').eq('following_id', userId),
-                ]);
-
-                const solverName = solverProfile?.full_name || 'Your friend';
-                const solverAvatar = solverProfile?.avatar_url || null;
-
-                if (followerRows && followerRows.length > 0) {
-                    const followerIds = followerRows.map((r: any) => r.follower_id);
-
-                    const { data: followerProfiles } = await supabaseAdmin
-                        .from('profiles')
-                        .select('id, daily_solve_date, daily_solve_count')
-                        .in('id', followerIds);
-
-                    const pendingFollowers = (followerProfiles || []).filter((fp: any) => {
-                        const metGoal = fp.daily_solve_date === todayForNotif && Number(fp.daily_solve_count) >= 2;
-                        return !metGoal;
-                    });
-
-                    await Promise.allSettled(pendingFollowers.map((fp: any) =>
-                            createNotification({
-                                userId: fp.id,
-                                type: 'streak_friend',
-                                title: `Your friend ${solverName} has answered daily goal questions, can you?`,
-                                body: `They just hit their daily goal! Open the app to complete yours.`,
-                                href: '/streaks',
-                            actorId: userId,
-                            actorName: solverName,
-                            actorAvatar: solverAvatar ?? undefined,
-                        })
-                    ));
-                }
-            } catch (e) {
-                console.error('[solve] streak_friend notif error:', e);
-            }
-        }
         // ─────────────────────────────────────────────────────────────────
 
         // ── PASS/OVERTAKE NOTIFICATION LOGIC ──────────────────────────────
@@ -571,7 +503,7 @@ export async function POST(req: Request) {
                 const { data: followRows } = await supabaseAdmin.from('follows').select('following_id').eq('follower_id', userId);
                 if (followRows && followRows.length > 0) {
                     const friendIds = followRows.map((f: any) => f.following_id);
-                    
+
                     // We look for friends whose points were >= our old points, but are strictly < our new points.
                     // Meaning we just overtook them!
                     const { data: overtakenFriends } = await supabaseAdmin
@@ -585,7 +517,7 @@ export async function POST(req: Request) {
                         const { data: solverProfile } = await supabaseAdmin.from('profiles').select('full_name, avatar_url').eq('id', userId).single();
                         const solverName = solverProfile?.full_name || 'Your friend';
 
-                        await Promise.allSettled(overtakenFriends.map((friend: any) => 
+                        await Promise.allSettled(overtakenFriends.map((friend: any) =>
                             createNotification({
                                 userId: friend.id,
                                 type: 'league_overtake',
@@ -623,77 +555,6 @@ export async function POST(req: Request) {
         }
         // ─────────────────────────────────────────────────────────────────
 
-        // ── TRIGGER DYNAMIC CHALLENGE ─────────────────────────────────────
-        if (sessionCorrectStreak === 5) {
-            try {
-                const timeDiffSecs = Math.floor((new Date().getTime() - new Date(sessionStreakStart).getTime()) / 1000);
-                // If they did it in under 5 minutes (300 secs), challenge followers
-                if (timeDiffSecs <= 300) {
-                    responseData.challengeTriggered = true;
-                    responseData.challengeTime = timeDiffSecs;
-
-                    const rewardPoolVal = 15; // 20% of ~75 possible points
-                    const { data: followers } = await supabaseAdmin.from('follows').select('follower_id').eq('following_id', userId).limit(10);
-                    
-                    if (followers && followers.length > 0) {
-                        const now = new Date().toISOString();
-                        const todayStart = new Date();
-                        todayStart.setHours(0, 0, 0, 0);
-
-                        for (const f of followers) {
-                            // Check if this follower has received 5 active challenges today
-                            const { count } = await supabaseAdmin
-                                .from('dynamic_challenges')
-                                .select('*', { count: 'exact', head: true })
-                                .eq('receiver_id', f.follower_id)
-                                .eq('status', 'active')
-                                .gte('activated_at', todayStart.toISOString());
-                                
-                            if ((count || 0) < 5) {
-                                // Create active challenge
-                                const { data: newChal } = await supabaseAdmin.from('dynamic_challenges').insert({
-                                    challenger_id: userId,
-                                    receiver_id: f.follower_id,
-                                    challenge_type: 'hot_streak',
-                                    target_score: 5,
-                                    time_limit_seconds: timeDiffSecs,
-                                    reward_pool: rewardPoolVal,
-                                    status: 'active',
-                                    activated_at: now
-                                }).select('id').single();
-                                
-                                if (newChal) {
-                                    // Send Push Notification instantly!
-                                    await createNotification({
-                                        userId: f.follower_id,
-                                        type: 'dynamic_challenge',
-                                        title: `🔥 New Challenge from ${userMeta.full_name || 'A friend'}!`,
-                                        body: `They solved 5 questions in ${Math.floor(timeDiffSecs / 60)}m ${timeDiffSecs % 60}s. Can you beat their time?`,
-                                        href: `/challenge/${newChal.id}`,
-                                        actorId: userId,
-                                        actorName: userMeta.full_name,
-                                        actorAvatar: userMeta.avatar_url
-                                    });
-                                }
-                            } else {
-                                // Queue it for later
-                                await supabaseAdmin.from('dynamic_challenges').insert({
-                                    challenger_id: userId,
-                                    receiver_id: f.follower_id,
-                                    challenge_type: 'hot_streak',
-                                    target_score: 5,
-                                    time_limit_seconds: timeDiffSecs,
-                                    reward_pool: rewardPoolVal,
-                                    status: 'queued'
-                                });
-                            }
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error('[solve] dynamic challenge error:', e);
-            }
-        }
         // ─────────────────────────────────────────────────────────────────
 
         return NextResponse.json(responseData);

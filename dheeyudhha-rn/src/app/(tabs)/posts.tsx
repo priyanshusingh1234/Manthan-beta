@@ -13,7 +13,7 @@ import {
   Image,
   StyleSheet
 } from 'react-native';
-import { Sparkles, User, Send, Image as ImageIcon, Video as VideoIcon, X } from 'lucide-react-native';
+import { Sparkles, User, Send, Image as ImageIcon, Video as VideoIcon, X, HelpCircle, Edit3 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
 import { useColorScheme } from 'nativewind';
@@ -45,6 +45,7 @@ export default function PostsScreen() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
+  const [feedTab, setFeedTab] = useState<'educational' | 'casual'>('casual');
   
   // Composer state
   const [content, setContent] = useState('');
@@ -53,6 +54,9 @@ export default function PostsScreen() {
   const [mediaFiles, setMediaFiles] = useState<{ uri: string, type: 'image' | 'video' }[]>([]);
   const CATEGORIES = ['education', 'lifestyle', 'news', 'funny', 'general'];
   const [selectedCategory, setSelectedCategory] = useState<string>('general');
+  const [postMode, setPostMode] = useState<'standard' | 'question'>('standard');
+  const SUBJECTS = ['Maths', 'Science', 'English', 'SST', 'G.K', 'Hindi'];
+  const [selectedSubject, setSelectedSubject] = useState<string>('Maths');
 
   const fetchUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -62,7 +66,9 @@ export default function PostsScreen() {
         .select('full_name, avatar_url')
         .eq('id', session.user.id)
         .single();
-      setCurrentUser({ id: session.user.id, avatar_url: profile?.avatar_url });
+      const userMeta = session.user.user_metadata || {};
+      const grade = userMeta.classGrade || userMeta.grade || '';
+      setCurrentUser({ id: session.user.id, avatar_url: profile?.avatar_url, grade });
     }
   };
 
@@ -75,7 +81,7 @@ export default function PostsScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       
       const nextPage = isLoadMore ? page + 1 : 1;
-      let url = `${process.env.EXPO_PUBLIC_API_URL}/api/posts?limit=15&page=${nextPage}`;
+      let url = `${process.env.EXPO_PUBLIC_API_URL}/api/posts?limit=15&page=${nextPage}&category=${feedTab}`;
 
       const response = await fetch(url, {
         headers: {
@@ -114,6 +120,15 @@ export default function PostsScreen() {
   useEffect(() => {
     fetchUser().then(() => fetchPosts());
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+       setPage(1);
+       setPosts([]);
+       setLoading(true);
+       fetchPosts(false);
+    }
+  }, [feedTab]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -246,7 +261,13 @@ export default function PostsScreen() {
 
       if (imageUrls.length > 0) imageUrl = imageUrls[0];
 
-      const finalContent = (content.trim() + (videoUrl && selectedCategory !== 'general' ? ` #${selectedCategory}` : '')).trim();
+      let finalContent = content.trim();
+      if (postMode === 'question') {
+        const classTag = currentUser?.grade ? ` #Class${String(currentUser.grade).replace(/\s+/g, '')}` : '';
+        finalContent += `\n\n#educational #${selectedSubject.replace(/\s+/g, '')}${classTag}`;
+      } else if (videoUrl && selectedCategory !== 'general') {
+        finalContent += ` #${selectedCategory}`;
+      }
 
       const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/posts`, {
         method: 'POST',
@@ -273,6 +294,7 @@ export default function PostsScreen() {
       setContent('');
       setMediaFiles([]);
       setSelectedCategory('general');
+      setPostMode('standard');
       Keyboard.dismiss();
 
       if (videoUrl && newPostData?.post?.id) {
@@ -290,7 +312,8 @@ export default function PostsScreen() {
   const renderComposer = () => {
     if (!currentUser) return null;
     return (
-      <View className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 mb-4 shadow-sm">
+      <View>
+      <View className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 mb-3 shadow-sm">
         <View className="flex-row items-center justify-between mb-3">
           <View className="bg-purple-100 dark:bg-purple-900/30 rounded-full px-2.5 py-1 flex-row items-center">
             <Sparkles size={12} color={isDark ? "#c084fc" : "#9333ea"} />
@@ -317,12 +340,56 @@ export default function PostsScreen() {
             <TextInput
               value={content}
               onChangeText={setContent}
-              placeholder="What's happening in the academy?"
+              placeholder={postMode === 'question' ? "What's your question?" : "What's happening in the academy?"}
               placeholderTextColor={isDark ? "#64748b" : "#94a3b8"}
               multiline
               className="text-slate-900 dark:text-slate-100 text-[16px] min-h-[40px] pt-1 pb-2"
               editable={!submitting}
             />
+
+            {/* Post Mode Toggle */}
+            {!submitting && mediaFiles.length === 0 && (
+              <View className="flex-row items-center mt-2 mb-2 bg-slate-100 dark:bg-slate-800/50 self-start rounded-xl p-1">
+                <TouchableOpacity 
+                  onPress={() => setPostMode('standard')}
+                  className={`flex-row items-center px-3 py-1.5 rounded-lg ${postMode === 'standard' ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}`}
+                >
+                  <Edit3 size={14} color={postMode === 'standard' ? (isDark ? '#fff' : '#0f172a') : '#64748b'} />
+                  <Text className={`ml-1.5 text-[12px] font-bold ${postMode === 'standard' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>Post</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => setPostMode('question')}
+                  className={`flex-row items-center px-3 py-1.5 rounded-lg ${postMode === 'question' ? 'bg-indigo-50 dark:bg-indigo-900/40 shadow-sm border border-indigo-100 dark:border-indigo-800' : ''}`}
+                >
+                  <HelpCircle size={14} color={postMode === 'question' ? '#4f46e5' : '#64748b'} />
+                  <Text className={`ml-1.5 text-[12px] font-bold ${postMode === 'question' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>Question</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Subject Picker for Questions */}
+            {postMode === 'question' && !submitting && (
+              <View className="mt-2 mb-2">
+                <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-widest">Select Subject</Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {SUBJECTS.map(sub => (
+                    <TouchableOpacity
+                      key={sub}
+                      onPress={() => setSelectedSubject(sub)}
+                      className={`px-3 py-1.5 rounded-full border ${
+                        selectedSubject === sub ? 'bg-indigo-600 border-indigo-600' : 'bg-transparent border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      <Text className={`text-[11px] font-bold ${
+                        selectedSubject === sub ? 'text-white' : 'text-slate-600 dark:text-slate-400'
+                      }`}>
+                        {sub}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
 
             {/* Media Previews */}
             {mediaFiles.length > 0 && (
@@ -414,6 +481,25 @@ export default function PostsScreen() {
             </View>
           </View>
         </View>
+      </View>
+
+      {/* Tab Switcher */}
+      <View className="px-4 mb-3">
+        <View className="flex-row bg-slate-200/80 dark:bg-slate-800/80 p-1 rounded-xl">
+          <TouchableOpacity 
+            onPress={() => setFeedTab('casual')}
+            className={`flex-1 items-center justify-center py-2.5 rounded-lg ${feedTab === 'casual' ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}`}
+          >
+            <Text className={`text-[13px] font-bold ${feedTab === 'casual' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>Casual</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setFeedTab('educational')}
+            className={`flex-1 items-center justify-center py-2.5 rounded-lg ${feedTab === 'educational' ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}`}
+          >
+            <Text className={`text-[13px] font-bold ${feedTab === 'educational' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>Educational</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
       </View>
     );
   };

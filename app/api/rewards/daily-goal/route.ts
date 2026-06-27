@@ -106,6 +106,50 @@ export async function POST(req: NextRequest) {
       user_metadata: { ...meta, daily_goal_claimed_date: today }
     });
 
+    // Notify followers that this user just completed their Daily Goal!
+    try {
+      const solverName = meta.full_name || 'Your friend';
+      const solverAvatar = meta.avatar_url || undefined;
+
+      const { data: followerRows } = await supabaseAdmin
+        .from('follows')
+        .select('follower_id')
+        .eq('following_id', user.id);
+
+      if (followerRows && followerRows.length > 0) {
+        const followerIds = followerRows.map((r: any) => r.follower_id);
+
+        const { data: followerProfiles } = await supabaseAdmin
+          .from('profiles')
+          .select('id, daily_solve_date, daily_solve_count')
+          .in('id', followerIds);
+
+        // Find followers who haven't met their own simple daily solve count goal today
+        const pendingFollowers = (followerProfiles || []).filter((fp: any) => {
+          const metGoal = fp.daily_solve_date === today && Number(fp.daily_solve_count) >= 2;
+          return !metGoal;
+        });
+
+        // We can dynamically import createNotification here or at the top
+        const { createNotification } = await import('@/lib/createNotification');
+
+        await Promise.allSettled(pendingFollowers.map((fp: any) =>
+          createNotification({
+            userId: fp.id,
+            type: 'streak_friend',
+            title: `Your friend ${solverName} has answered daily goal questions, can you?`,
+            body: `They just hit their daily goal! Open the app to complete yours.`,
+            href: '/streaks',
+            actorId: user.id,
+            actorName: solverName,
+            actorAvatar: solverAvatar,
+          })
+        ));
+      }
+    } catch (e) {
+      console.error('[daily-goal] streak_friend notif error:', e);
+    }
+
     return NextResponse.json({ success: true, xp: 10, points: 5 });
 
   } catch (err: any) {

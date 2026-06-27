@@ -53,14 +53,14 @@ export default function ArenaFeedCard({ gauntlet }: { gauntlet: any }) {
 
       <View className="flex-row gap-3">
         <TouchableOpacity
-          onPress={() => router.push(`/gauntlet/${gauntlet.slug}` as any)}
+          onPress={() => router.push(`/arena/${gauntlet.slug}` as any)}
           className="flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-900 dark:bg-white active:opacity-80"
         >
           <Play size={16} color={isDark ? '#0f172a' : '#fff'} fill={isDark ? '#0f172a' : '#fff'} />
           <Text className="text-white dark:text-slate-900 font-bold text-sm">Solve Now</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => router.push('/arena' as any)}
+          onPress={() => router.push('/(tabs)/arena' as any)}
           className="flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 active:bg-slate-50 dark:active:bg-slate-800"
         >
           <Text className="text-slate-700 dark:text-slate-300 font-bold text-sm">See All Arenas</Text>
