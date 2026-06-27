@@ -33,7 +33,9 @@ export type NotificationType =
     | 'chat_message'
     | 'streak_friend'
     | 'league_overtake'
-    | 'league_taunt';
+    | 'league_taunt'
+    | 'dynamic_challenge'
+    | 'dynamic_challenge_result';
 
 interface CreateNotificationParams {
     userId: string;          // who receives the notification

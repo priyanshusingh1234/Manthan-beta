@@ -354,6 +354,26 @@ export async function POST(req: Request) {
         }
         // ────────────────────────────────────────────────────────────────
 
+        // ── Dynamic Session Streak for Friend Challenges ───────────────
+        let sessionCorrectStreak = Number(userMeta.sessionCorrectStreak) || 0;
+        let sessionStreakStart = userMeta.sessionStreakStart || new Date().toISOString();
+
+        // If it's been more than 30 minutes since the last solve, reset the session
+        const timeSinceLastSolve = new Date().getTime() - new Date(dbLastStreakAt || sessionStreakStart).getTime();
+        if (timeSinceLastSolve > 30 * 60 * 1000) {
+            sessionCorrectStreak = 0;
+        }
+
+        if (isCorrect) {
+            if (sessionCorrectStreak === 0) {
+                sessionStreakStart = new Date().toISOString();
+            }
+            sessionCorrectStreak += 1;
+        } else {
+            sessionCorrectStreak = 0;
+            sessionStreakStart = new Date().toISOString();
+        }
+        // ────────────────────────────────────────────────────────────────
 
         const updatedMeta = {
             ...userMeta,
@@ -364,11 +384,13 @@ export async function POST(req: Request) {
             streakCount: newStreakCount,
             streakLongest: newStreakLongest,
             lastStreakAt: newLastStreakAt,
-            lastStreakCount,        // ← the streak count before it was lost
+            lastStreakCount,
             dailySolveCount: newDailySolveCount,
             dailySolveDate: todayStr,
             monthlyPoints: newMonthlyPts,
             monthlyPointsMonth: currentWeekKey,
+            sessionCorrectStreak,
+            sessionStreakStart
         };
 
         // SYNC BOTH: Auth & Profiles
@@ -595,6 +617,34 @@ export async function POST(req: Request) {
                 }
             } catch (e) {
                 console.error('[solve] pet feed error:', e);
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────
+
+        // ── TRIGGER DYNAMIC CHALLENGE ─────────────────────────────────────
+        if (sessionCorrectStreak === 5) {
+            try {
+                const timeDiffSecs = Math.floor((new Date().getTime() - new Date(sessionStreakStart).getTime()) / 1000);
+                // If they did it in under 5 minutes (300 secs), challenge followers
+                if (timeDiffSecs <= 300) {
+                    const rewardPoolVal = 15; // 20% of ~75 possible points
+                    const { data: followers } = await supabaseAdmin.from('follows').select('follower_id').eq('following_id', userId).limit(10);
+                    
+                    if (followers && followers.length > 0) {
+                        const challenges = followers.map((f: any) => ({
+                            challenger_id: userId,
+                            receiver_id: f.follower_id,
+                            challenge_type: 'hot_streak',
+                            target_score: 5,
+                            time_limit_seconds: timeDiffSecs,
+                            reward_pool: rewardPoolVal,
+                            status: 'queued'
+                        }));
+                        await supabaseAdmin.from('dynamic_challenges').insert(challenges);
+                    }
+                }
+            } catch (e) {
+                console.error('[solve] dynamic challenge error:', e);
             }
         }
         // ─────────────────────────────────────────────────────────────────
