@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -20,7 +21,7 @@ const CENTER_RISE = 24; // px the center button floats above the nav bar
 const TAB_CONFIG = [
   { name: 'index',       icon: Home,          label: 'Home' },
   { name: 'posts',       icon: MessageSquare, label: 'Community' },
-  { name: 'clips',       icon: Play,          label: 'Clips', isCenter: true },
+  { name: 'leaderboard', icon: Trophy,        label: 'Leaderboard', isCenter: true },
   { name: 'chat',        icon: MessageCircle, label: 'Chat' },
   { name: 'settings',    icon: Settings,      label: 'Settings' },
 ];

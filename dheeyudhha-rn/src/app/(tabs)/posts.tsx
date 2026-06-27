@@ -95,7 +95,12 @@ export default function PostsScreen() {
         setHasMore(true);
       }
 
-      setPosts(prev => isLoadMore ? [...prev, ...postsArray] : postsArray);
+      setPosts(prev => {
+        if (!isLoadMore) return postsArray;
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueNewPosts = postsArray.filter(p => !existingIds.has(p.id));
+        return [...prev, ...uniqueNewPosts];
+      });
       setPage(nextPage);
     } catch (error) {
       console.error('Error fetching posts:', error);
@@ -442,10 +447,10 @@ export default function PostsScreen() {
         showsVerticalScrollIndicator={false}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        removeClippedSubviews={Platform.OS === 'android'}
-        initialNumToRender={4}
-        maxToRenderPerBatch={4}
-        windowSize={5}
+        removeClippedSubviews={true}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={11}
         updateCellsBatchingPeriod={50}
         ListEmptyComponent={
           <View className="p-8 items-center justify-center">

@@ -32,10 +32,11 @@ import {
   ArrowLeft,
   ChevronLeft,
   VolumeX,
-  Mail,
   Smartphone,
   CheckCircle2,
   AlertTriangle,
+  CheckSquare,
+  Zap,
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useColorScheme } from 'nativewind';
@@ -888,6 +889,46 @@ export default function SettingsScreen() {
                 thumbColor={isDarkMode ? '#4f46e5' : '#f4f4f5'}
               />
             </View>
+          </View>
+        </View>
+
+        {/* Tools & Modes Group */}
+        <View className="px-4 mt-6 gap-2">
+          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2">Tools & Modes</Text>
+          <View className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+            {/* Checker */}
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/checker-feed' as any)}
+              className="flex-row items-center px-4 py-4 active:bg-slate-50 dark:active:bg-slate-800 justify-between"
+            >
+              <View className="flex-row items-center">
+                <View className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl mr-4">
+                  <CheckSquare size={18} color={isDarkMode ? '#94a3b8' : '#64748b'} />
+                </View>
+                <View>
+                  <Text className="text-slate-800 dark:text-slate-200 font-bold text-[14px]">Checker Feed</Text>
+                  <Text className="text-slate-500 dark:text-slate-400 text-[10px] mt-0.5">Review submissions</Text>
+                </View>
+              </View>
+              <ChevronRight size={18} color={isDarkMode ? '#475569' : '#94a3b8'} />
+            </TouchableOpacity>
+
+            {/* Arena */}
+            <TouchableOpacity
+              onPress={() => router.push('/(tabs)/arena' as any)}
+              className="flex-row items-center px-4 py-4 active:bg-slate-50 dark:active:bg-slate-800 justify-between"
+            >
+              <View className="flex-row items-center">
+                <View className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl mr-4">
+                  <Zap size={18} color={isDarkMode ? '#94a3b8' : '#64748b'} />
+                </View>
+                <View>
+                  <Text className="text-slate-800 dark:text-slate-200 font-bold text-[14px]">Arena</Text>
+                  <Text className="text-slate-500 dark:text-slate-400 text-[10px] mt-0.5">Competitive matches</Text>
+                </View>
+              </View>
+              <ChevronRight size={18} color={isDarkMode ? '#475569' : '#94a3b8'} />
+            </TouchableOpacity>
           </View>
         </View>
 

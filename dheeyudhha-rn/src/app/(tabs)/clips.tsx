@@ -16,6 +16,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { ArrowLeft, Heart, MessageCircle, Share2, User } from 'lucide-react-native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
+import { useFocusEffect } from 'expo-router';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -55,6 +56,14 @@ const VideoClipItem = React.memo(({
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [isFocused, setIsFocused] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => setIsFocused(false);
+    }, [])
+  );
 
   const [isLiked, setIsLiked] = useState(!!item.is_liked_by_me);
   const [likesCount, setLikesCount] = useState(Number(item.likes_count) || 0);
@@ -65,12 +74,12 @@ const VideoClipItem = React.memo(({
   });
 
   useEffect(() => {
-    if (isActive) {
+    if (isActive && isFocused) {
       player.play();
     } else {
       player.pause();
     }
-  }, [isActive, player]);
+  }, [isActive, isFocused, player]);
 
   const handleLike = () => {
     const newLiked = !isLiked;
@@ -275,7 +284,7 @@ export default function ClipsScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-black">
+    <SafeAreaView edges={['top']} style={[StyleSheet.absoluteFill, { backgroundColor: 'black' }]}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <FlatList
         data={posts}

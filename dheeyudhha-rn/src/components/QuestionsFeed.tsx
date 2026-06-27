@@ -11,6 +11,7 @@ import {
 import { fetchFeed } from '@/lib/feedService';
 import QuestionCard from './QuestionCard';
 import PostCard from './PostCard';
+import ArenaFeedCard from './ArenaFeedCard';
 import FeedSkeleton from './FeedSkeleton';
 import { ArrowUp } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
@@ -194,6 +195,9 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
           />
         </View>
       );
+    }
+    if (item.type === 'gauntlet') {
+      return <ArenaFeedCard key={item.id} gauntlet={item} />;
     }
     return <QuestionCard key={item.id} q={item} />;
   };

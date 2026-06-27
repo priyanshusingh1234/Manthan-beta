@@ -352,7 +352,6 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
             {[
               { label: 'Streak 🔥', href: '/streaks', icon: Flame },
               { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
-              { label: 'BOSS 💀', href: '/boss', icon: Skull },
               { label: 'Gauntlet 📖', href: '/gauntlet', icon: BookOpen },
               { label: 'Duels ⚔️', href: '/duels', icon: Swords },
               { label: 'Arena', href: '/tests', icon: Zap },

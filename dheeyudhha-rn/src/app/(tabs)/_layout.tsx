@@ -21,7 +21,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index"    options={{ title: 'Home' }} />
       <Tabs.Screen name="posts"    options={{ title: 'Community' }} />
-      <Tabs.Screen name="clips"       options={{ title: 'Clips' }} />
+      <Tabs.Screen name="clips"       options={{ title: 'Clips', headerShown: false, sceneStyle: { paddingBottom: 0 } }} />
       <Tabs.Screen name="chat"     options={{ title: 'Chat' }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
       {/* Hidden tabs so they retain the layout's header and bottom nav */}

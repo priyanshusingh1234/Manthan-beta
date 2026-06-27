@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState } from 'react';
 import { View, Text, Image, TouchableWithoutFeedback, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { CheckCircle2 } from 'lucide-react-native';

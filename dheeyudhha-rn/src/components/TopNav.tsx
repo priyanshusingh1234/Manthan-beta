@@ -86,59 +86,30 @@ export default function TopNav() {
         </View>
       </View>
 
-      {/* Bottom Row: Sliding Horizontal Links */}
-      <View className="mt-3">
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="px-4"
-          contentContainerStyle={{ paddingRight: 32, alignItems: 'center' }}
-          keyboardShouldPersistTaps="handled"
+      {/* Fixed Second Row: Search & Gauntlet */}
+      <View className="flex-row items-center justify-between px-4 mt-3">
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => router.push('/search' as any)}
+          className="flex-row items-center flex-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl mr-3"
         >
-          {NAV_LINKS.map((nav) => {
-            const normalizedHref = nav.href.replace('/(tabs)', '');
-            const isActive = pathname === normalizedHref || pathname === nav.href || pathname.startsWith(`${normalizedHref}/`);
+          <Search size={16} color={colorScheme === 'dark' ? '#94a3b8' : '#64748b'} />
+          <Text className="ml-2 text-[13px] font-medium text-slate-500 dark:text-slate-400">
+            Search users, posts...
+          </Text>
+        </TouchableOpacity>
 
-            // Replicate web colors
-            let bgClass = 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800';
-            let textClass = 'text-slate-600 dark:text-slate-300';
-            let iconColor = colorScheme === 'dark' ? '#cbd5e1' : '#475569'; // slate-600 / slate-300
-
-            if (isActive) {
-              if (nav.href === '/streaks') {
-                bgClass = 'bg-orange-500 border-orange-500 shadow-sm';
-                textClass = 'text-white';
-                iconColor = '#fff';
-              } else {
-                bgClass = 'bg-blue-600 border-blue-600 shadow-sm';
-                textClass = 'text-white';
-                iconColor = '#fff';
-              }
-            } else {
-              if (nav.href === '/streaks') {
-                bgClass = 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900/50';
-                textClass = 'text-orange-600 dark:text-orange-400';
-                iconColor = colorScheme === 'dark' ? '#fb923c' : '#f97316'; // orange-400 / orange-500
-              }
-            }
-
-            return (
-              <TouchableOpacity
-                key={nav.label}
-                activeOpacity={0.7}
-                onPress={() => router.push(nav.href as any)}
-                className={`flex-row items-center px-3 py-1.5 rounded-full mr-2 border ${bgClass}`}
-              >
-                <nav.icon size={14} color={iconColor} />
-                <Text className={`ml-1.5 text-[11px] font-bold ${textClass}`}>
-                  {nav.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => router.push('/gauntlet' as any)}
+          className="flex-row items-center bg-indigo-600 px-4 py-2 rounded-xl shadow-sm"
+        >
+          <BookOpen size={16} color="#ffffff" />
+          <Text className="ml-1.5 text-[13px] font-bold text-white">
+            Gauntlet
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
-

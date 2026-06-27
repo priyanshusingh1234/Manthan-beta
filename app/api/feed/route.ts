@@ -456,11 +456,22 @@ export async function GET(req: NextRequest) {
             });
         }
 
-        // Deduplicate
+        // Deduplicate and cap lower-grade questions
         const seen = new Set<string>();
+        let lowerGradeCount = 0;
         pool = pool.filter(r => {
             if (seen.has(String(r.id))) return false;
-            seen.add(String(r.id)); return true;
+            seen.add(String(r.id));
+            
+            if (r.type !== 'post' && r.type !== 'gauntlet' && userGrade && r.class_grade && r.class_grade !== 'All' && r.class_grade !== 'Any') {
+                const qGrade = Number(r.class_grade);
+                const uGrade = Number(userGrade);
+                if (!isNaN(qGrade) && !isNaN(uGrade) && qGrade < uGrade) {
+                    if (lowerGradeCount >= 2) return false;
+                    lowerGradeCount++;
+                }
+            }
+            return true;
         });
 
         // Shuffle within layers and take limit
