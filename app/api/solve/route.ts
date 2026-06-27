@@ -357,9 +357,10 @@ export async function POST(req: Request) {
         // ── Dynamic Session Streak for Friend Challenges ───────────────
         let sessionCorrectStreak = Number(userMeta.sessionCorrectStreak) || 0;
         let sessionStreakStart = userMeta.sessionStreakStart || new Date().toISOString();
+        let lastSolveTime = userMeta.lastSolveTime || new Date().toISOString();
 
         // If it's been more than 30 minutes since the last solve, reset the session
-        const timeSinceLastSolve = new Date().getTime() - new Date(dbLastStreakAt || sessionStreakStart).getTime();
+        const timeSinceLastSolve = new Date().getTime() - new Date(lastSolveTime).getTime();
         if (timeSinceLastSolve > 30 * 60 * 1000) {
             sessionCorrectStreak = 0;
         }
@@ -390,7 +391,8 @@ export async function POST(req: Request) {
             monthlyPoints: newMonthlyPts,
             monthlyPointsMonth: currentWeekKey,
             sessionCorrectStreak,
-            sessionStreakStart
+            sessionStreakStart,
+            lastSolveTime: new Date().toISOString()
         };
 
         // SYNC BOTH: Auth & Profiles
