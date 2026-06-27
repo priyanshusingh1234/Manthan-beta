@@ -166,7 +166,7 @@ export function shuffleWithinGroups(arr: any[]): any[] {
         }
     });
     const result: any[] = [];
-    const layerOrder = [10, 8, 6, 1, 7, 2, 3, 4, 5, 0];
+    const layerOrder = [-3, -2, -1, 10, 8, 6, 1, 7, 2, 3, 4, 5, 0];
     let hasMore = true;
     while (hasMore) {
         hasMore = false;
