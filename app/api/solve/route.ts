@@ -631,16 +631,58 @@ export async function POST(req: Request) {
                     const { data: followers } = await supabaseAdmin.from('follows').select('follower_id').eq('following_id', userId).limit(10);
                     
                     if (followers && followers.length > 0) {
-                        const challenges = followers.map((f: any) => ({
-                            challenger_id: userId,
-                            receiver_id: f.follower_id,
-                            challenge_type: 'hot_streak',
-                            target_score: 5,
-                            time_limit_seconds: timeDiffSecs,
-                            reward_pool: rewardPoolVal,
-                            status: 'queued'
-                        }));
-                        await supabaseAdmin.from('dynamic_challenges').insert(challenges);
+                        const now = new Date().toISOString();
+                        const todayStart = new Date();
+                        todayStart.setHours(0, 0, 0, 0);
+
+                        for (const f of followers) {
+                            // Check if this follower has received 5 active challenges today
+                            const { count } = await supabaseAdmin
+                                .from('dynamic_challenges')
+                                .select('*', { count: 'exact', head: true })
+                                .eq('receiver_id', f.follower_id)
+                                .eq('status', 'active')
+                                .gte('activated_at', todayStart.toISOString());
+                                
+                            if ((count || 0) < 5) {
+                                // Create active challenge
+                                const { data: newChal } = await supabaseAdmin.from('dynamic_challenges').insert({
+                                    challenger_id: userId,
+                                    receiver_id: f.follower_id,
+                                    challenge_type: 'hot_streak',
+                                    target_score: 5,
+                                    time_limit_seconds: timeDiffSecs,
+                                    reward_pool: rewardPoolVal,
+                                    status: 'active',
+                                    activated_at: now
+                                }).select('id').single();
+                                
+                                if (newChal) {
+                                    // Send Push Notification instantly!
+                                    await createNotification({
+                                        userId: f.follower_id,
+                                        type: 'dynamic_challenge',
+                                        title: `🔥 New Challenge from ${userMeta.full_name || 'A friend'}!`,
+                                        body: `They solved 5 questions in ${Math.floor(timeDiffSecs / 60)}m ${timeDiffSecs % 60}s. Can you beat their time?`,
+                                        href: `/challenge/${newChal.id}`,
+                                        actorId: userId,
+                                        actorName: userMeta.full_name,
+                                        actorAvatar: userMeta.avatar_url
+                                    });
+                                }
+                            } else {
+                                // Queue it for later
+                                await supabaseAdmin.from('dynamic_challenges').insert({
+                                    challenger_id: userId,
+                                    receiver_id: f.follower_id,
+                                    challenge_type: 'hot_streak',
+                                    target_score: 5,
+                                    time_limit_seconds: timeDiffSecs,
+                                    reward_pool: rewardPoolVal,
+                                    status: 'queued'
+                                });
+                            }
+                        }
                     }
                 }
             } catch (e) {
