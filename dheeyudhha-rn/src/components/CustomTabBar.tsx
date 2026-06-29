@@ -12,6 +12,8 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, MessageSquare, Trophy, MessageCircle, Settings, Flame, Play } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
+import StreakCompletedOverlay from './StreakCompletedOverlay';
+import LeaderboardToastOverlay from './LeaderboardToastOverlay';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 
@@ -162,6 +164,8 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             </TouchableOpacity>
           );
         })}
+        <StreakCompletedOverlay />
+        <LeaderboardToastOverlay />
       </View>
     </View>
   );

@@ -146,7 +146,8 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
   useFocusEffect(
     useCallback(() => {
       if (isMountedRef.current) {
-        loadFeed(false, false);
+        // Fetch silently (true) so we don't wipe out the current feed data and reset the user's scroll position back to the top
+        loadFeed(false, true);
       } else {
         isMountedRef.current = true;
       }

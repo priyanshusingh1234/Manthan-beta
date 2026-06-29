@@ -134,7 +134,7 @@ export default function PostsScreen() {
     setRefreshing(true);
     setHasMore(true);
     fetchPosts();
-  }, [currentUser]);
+  }, [currentUser, feedTab]);
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMore && !loading && !refreshing) {
@@ -319,10 +319,7 @@ export default function PostsScreen() {
             <Sparkles size={12} color={isDark ? "#c084fc" : "#9333ea"} />
             <Text className="text-purple-700 dark:text-purple-400 text-[10px] font-bold ml-1 tracking-wider uppercase">Social Fire</Text>
           </View>
-          <TouchableOpacity onPress={() => router.push('/clips' as any)} className="bg-rose-500 rounded-full px-3 py-1.5 flex-row items-center shadow-sm">
-             <VideoIcon size={12} color="#FFF" />
-             <Text className="text-white text-[10px] font-bold ml-1 uppercase tracking-wider">Watch Clips</Text>
-          </TouchableOpacity>
+
         </View>
 
         <View className="flex-row items-start">

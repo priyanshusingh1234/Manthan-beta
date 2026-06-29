@@ -31,6 +31,8 @@ export default function SolveQuestionScreen() {
   const [alreadyAttempted, setAlreadyAttempted] = useState<any>(null);
   const [recoveredViaCoop, setRecoveredViaCoop] = useState(false);
   const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+  const [socialPresence, setSocialPresence] = useState<any>(null);
+  const [currentActivity, setCurrentActivity] = useState<any>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const playCorrectSound = useCorrectSound();
   
@@ -179,6 +181,10 @@ export default function SolveQuestionScreen() {
       // 🔥 Fire global streak toast when daily goal is completed
       if (data?.streak?.streakEarnedToday) {
         DeviceEventEmitter.emit('streak_earned', { streak: data.streak.current });
+      }
+
+      if (data?.leaderboardEvent) {
+        DeviceEventEmitter.emit('leaderboard_event', data.leaderboardEvent);
       }
 
       if (data.isCorrect) {
@@ -461,6 +467,15 @@ export default function SolveQuestionScreen() {
             </View>
           )}
 
+          {/* Micro-Leaderboard Snippet */}
+          {socialPresence?.leaderboardGap && result?.isCorrect && (
+            <View className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 rounded-2xl p-4 mb-4 items-center w-full">
+              <Text className="text-emerald-700 dark:text-emerald-400 font-bold text-center">
+                🏆 {socialPresence.leaderboardGap}
+              </Text>
+            </View>
+          )}
+
           {/* Rating */}
           <View className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 mb-8 w-full items-center">
             {!reviewSubmitted ? (
@@ -511,6 +526,7 @@ export default function SolveQuestionScreen() {
   // Active Solve UI
   return (
     <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
+      <LiveActivityTicker activity={currentActivity} />
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <TouchableOpacity onPress={() => router.back()} className="p-2">
@@ -558,7 +574,29 @@ export default function SolveQuestionScreen() {
           </View>
         )}
 
-        <Text className="text-2xl font-black text-slate-900 dark:text-slate-100 mb-4">{question.title}</Text>
+        <Text className="text-2xl font-black text-slate-900 dark:text-slate-100 mb-2">{question.title}</Text>
+        
+        {/* Friends who solved this */}
+        {socialPresence?.solvedFriends && socialPresence.solvedFriends.length > 0 && (
+          <View className="flex-row items-center mb-4">
+            <View className="flex-row -space-x-2 mr-2">
+              {socialPresence.solvedFriends.map((friend: any) => (
+                <View key={friend.id} className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-950 overflow-hidden bg-slate-200">
+                  {friend.avatar ? (
+                    <Image source={{ uri: friend.avatar }} className="w-full h-full" />
+                  ) : (
+                    <View className="w-full h-full bg-indigo-100 items-center justify-center">
+                      <Text className="text-[8px] font-bold text-indigo-600">{friend.name[0]}</Text>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
+            <Text className="text-xs font-bold text-slate-500 dark:text-slate-400">
+              {socialPresence.solvedFriends.length === 1 ? `${socialPresence.solvedFriends[0].name} got this right.` : `${socialPresence.solvedFriends.length} friends got this right.`}
+            </Text>
+          </View>
+        )}
         
         {imageUrl && (
           <Image 

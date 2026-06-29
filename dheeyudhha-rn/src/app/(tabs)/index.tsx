@@ -30,25 +30,6 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      {/* Unit Test Announcement Banner */}
-      <View className="px-6 mb-6">
-        <View className="bg-indigo-600 rounded-2xl p-4 shadow-sm border border-indigo-500">
-          <Text className="text-white font-black text-lg mb-2">✍️ Live Test: Class 10 Maths</Text>
-          <Text className="text-indigo-100 font-medium text-sm leading-5 mb-4">
-            The Formative Assessment for Maths is now LIVE!{'\n'}
-            Check out the rankings to see who scored the highest.
-          </Text>
-
-          <View className="bg-indigo-500/50 p-4 rounded-xl items-center border border-indigo-400 mt-2">
-            <TouchableOpacity 
-              onPress={() => router.push('/test-leaderboard' as any)}
-              className="bg-white px-8 py-3 rounded-xl active:scale-95 transition-transform w-full items-center"
-            >
-              <Text className="text-indigo-600 font-black text-base">View Ranks</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
 
       {/* Daily Goal Card */}
       <DailyGoalCard />

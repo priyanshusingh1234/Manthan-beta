@@ -75,13 +75,13 @@ export async function GET(req: NextRequest) {
                 trendingQuery = trendingQuery.ilike('content', '%#educational%');
                 
                 if (userData?.grade) {
-                    const gradeTag = `%#Class${userData.grade.replace(/\\s+/g, '')}%`;
+                    const gradeTag = `%#Class${userData.grade.replace(/\s+/g, '')}%`;
                     recentQuery = recentQuery.ilike('content', gradeTag);
                     trendingQuery = trendingQuery.ilike('content', gradeTag);
                 }
             } else if (category === 'casual') {
                 if (userData?.grade) {
-                    const gradeTag = `%#Class${userData.grade.replace(/\\s+/g, '')}%`;
+                    const gradeTag = `%#Class${userData.grade.replace(/\s+/g, '')}%`;
                     const orFilter = `content.not.ilike.%#educational%,content.not.ilike.${gradeTag}`;
                     recentQuery = recentQuery.or(orFilter);
                     trendingQuery = trendingQuery.or(orFilter);
