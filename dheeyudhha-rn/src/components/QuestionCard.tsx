@@ -161,7 +161,7 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
               <Image 
                 source={{ uri: imageUrl }} 
                 className="w-full h-48"
-                resizeMode="contain"
+                contentFit="contain"
               />
               <View className="absolute bottom-2 right-2 px-2 py-1 bg-black/50 rounded border border-white/20 shadow-sm">
                 <Text className="text-[9px] font-extrabold text-white uppercase tracking-wider">Attachment</Text>

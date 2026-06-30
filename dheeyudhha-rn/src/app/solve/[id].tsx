@@ -481,10 +481,11 @@ export default function SolveQuestionScreen() {
                 {result.explanation}
               </Text>
               {question.explanation_image_url && (
-                <View className="mt-4 items-center">
+                <View className="mb-3 rounded-xl overflow-hidden bg-white/50 dark:bg-black/20 p-2 items-center justify-center">
                   <Image 
                     source={{ uri: resolveImageUrl(question.explanation_image_url) }} 
-                    style={{ width: '100%', height: 200, resizeMode: 'contain' }}
+                    className="w-full h-40"
+                    contentFit="contain"
                   />
                 </View>
               )}
@@ -685,7 +686,7 @@ export default function SolveQuestionScreen() {
           <Image 
             source={{ uri: imageUrl }} 
             className="w-full h-48 rounded-2xl bg-slate-200 dark:bg-slate-800 mb-4"
-            resizeMode="contain"
+            contentFit="contain"
           />
         )}
 
