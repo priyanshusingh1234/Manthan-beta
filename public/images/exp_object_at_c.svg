@@ -1,0 +1,68 @@
+<svg width="440" height="280" viewBox="0 0 440 280" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    Concave mirror: circle center C=(160,140), R=155, Pole P=(315,140), Focus F=(237,140)
+    Object AT C: base=(160,140), tip=(160,95)  [height=45]
+    Image AT C: base=(160,140), tip=(160,185) [same size, inverted]
+
+    Mirror surface x at any y: x = 160 + sqrt(155²-(y-140)²)
+      y=95:  x = 160+sqrt(24025-2025) = 160+sqrt(22000) = 160+148.3 = 308.3 ≈ 308
+
+    Ray 1 (parallel at y=95): (160,95)→(308,95) | reflects through F(237,140) → (160,185)
+      Reflected slope = (140-95)/(237-308) = 45/-71 = -0.634
+      At x=160: y = 95+(160-308)*(-0.634) = 95+93.8 = 188.8 ≈ 189 ≈ 185 ✓ (small approx error)
+
+    Ray 2 (to Pole P): (160,95)→(315,140) | normal at P is horizontal → reflects at -slope
+      Incident slope = (140-95)/(315-160) = 45/155 = 0.290
+      Reflected slope = -0.290
+      At x=160: y = 140+(160-315)*(-0.290) = 140+44.95 = 184.95 ≈ 185 ✓
+  -->
+  <rect width="440" height="280" fill="#f8fafc" rx="12"/>
+
+  <!-- Principal axis -->
+  <line x1="20" y1="140" x2="420" y2="140" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+  <!-- Concave mirror arc -->
+  <path d="M 293 60 A 155 155 0 0 1 293 220" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round"/>
+  <line x1="296" y1="68"  x2="313" y2="80"  stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="305" y1="93"  x2="321" y2="105" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="312" y1="119" x2="327" y2="131" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="314" y1="149" x2="328" y2="161" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="308" y1="177" x2="322" y2="189" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="298" y1="203" x2="312" y2="215" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <!-- Key points -->
+  <circle cx="160" cy="140" r="5" fill="#10b981"/>
+  <text x="152" y="162" font-family="sans-serif" font-size="13" font-weight="bold" fill="#10b981">C</text>
+  <circle cx="237" cy="140" r="5" fill="#ef4444"/>
+  <text x="229" y="162" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ef4444">F</text>
+  <circle cx="315" cy="140" r="4" fill="#334155"/>
+  <text x="307" y="162" font-family="sans-serif" font-size="13" font-weight="bold" fill="#334155">P</text>
+
+  <!-- Object arrow at C (upward) -->
+  <line x1="160" y1="140" x2="160" y2="95" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"/>
+  <polygon points="160,95 153,111 167,111" fill="#3b82f6"/>
+  <text x="108" y="88" font-family="sans-serif" font-size="11" font-weight="bold" fill="#3b82f6">Object (at C)</text>
+
+  <!-- RAY 1: parallel to axis at y=95 -->
+  <line x1="160" y1="95" x2="308" y2="95" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="308,95 294,90 294,100" fill="#6366f1"/>
+  <!-- Reflected through F(237,140) → converges at image (160,185) -->
+  <line x1="308" y1="95" x2="160" y2="185" stroke="#6366f1" stroke-width="2"/>
+
+  <!-- RAY 2: to Pole P(315,140) → reflects symmetrically → image (160,185) -->
+  <line x1="160" y1="95" x2="315" y2="140" stroke="#f97316" stroke-width="2"/>
+  <polygon points="315,140 299,136 303,149" fill="#f97316"/>
+  <line x1="315" y1="140" x2="160" y2="185" stroke="#f97316" stroke-width="2"/>
+
+  <!-- Image arrow at C (inverted, same size) -->
+  <line x1="160" y1="140" x2="160" y2="185" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+  <polygon points="160,185 153,169 167,169" fill="#ef4444"/>
+  <text x="108" y="205" font-family="sans-serif" font-size="11" font-weight="bold" fill="#ef4444">Image at C</text>
+
+  <!-- Legend -->
+  <text x="20" y="250" font-family="sans-serif" font-size="11" fill="#334155">Result: Real · Inverted · Same Size  (image at C) ✓</text>
+  <line x1="20" y1="264" x2="35" y2="264" stroke="#6366f1" stroke-width="2"/>
+  <text x="38" y="268" font-family="sans-serif" font-size="10" fill="#6366f1">Ray 1 (parallel → through F)</text>
+  <line x1="200" y1="264" x2="215" y2="264" stroke="#f97316" stroke-width="2"/>
+  <text x="218" y="268" font-family="sans-serif" font-size="10" fill="#f97316">Ray 2 (to Pole P → reflects)</text>
+</svg>

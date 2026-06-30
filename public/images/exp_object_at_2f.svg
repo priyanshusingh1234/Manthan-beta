@@ -1,0 +1,78 @@
+<svg width="440" height="280" viewBox="0 0 440 280" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    Convex lens: O=(220,140), F1=(150,140), 2F1=(80,140), F2=(290,140), 2F2=(360,140)
+    focal length f=70px
+    Object at 2F1: base=(80,140), tip=(80,90) [height=50]
+
+    Ray rules for convex lens:
+    1. Parallel to axis → after lens → through F2(290,140)
+    2. Through F1 → after lens → parallel to axis
+    3. Through O(220,140) → undeviated
+
+    All 3 meet at image: 2F2=(360,190) [real, inverted, same size]
+
+    Ray 1 hits lens at y=90 (x=220):
+      After: slope=(140-90)/(290-220)=50/70=0.714
+      At x=360: y=90+(360-220)*0.714=90+100=190 ✓
+
+    Ray 2: from (80,90) through F1(150,140); slope=(140-90)/(150-80)=50/70=0.714
+      At x=220 (lens): y=90+(220-80)*0.714=90+100=190 → hits lens at (220,190)
+      After lens: parallel at y=190 → continues to (360,190) ✓
+
+    Ray 3: from (80,90) through O(220,140); slope=(140-90)/(220-80)=50/140=0.357
+      At x=360: y=90+(360-80)*0.357=90+100=190 ✓
+  -->
+  <rect width="440" height="280" fill="#f8fafc" rx="12"/>
+  <!-- Principal axis -->
+  <line x1="20" y1="140" x2="420" y2="140" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <!-- Lens center vertical reference -->
+  <line x1="220" y1="35" x2="220" y2="245" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+
+  <!-- Biconvex lens shape -->
+  <path d="M 220 40 Q 188 140 220 240 Q 252 140 220 40 Z" fill="rgba(56,189,248,0.15)" stroke="#0ea5e9" stroke-width="2.5"/>
+
+  <!-- Key points -->
+  <circle cx="80"  cy="140" r="5" fill="#10b981"/>
+  <text x="68"  y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#10b981">2F₁</text>
+  <circle cx="150" cy="140" r="5" fill="#ef4444"/>
+  <text x="142" y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">F₁</text>
+  <circle cx="220" cy="140" r="4" fill="#334155"/>
+  <text x="213" y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#334155">O</text>
+  <circle cx="290" cy="140" r="5" fill="#ef4444"/>
+  <text x="282" y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">F₂</text>
+  <circle cx="360" cy="140" r="5" fill="#10b981"/>
+  <text x="348" y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#10b981">2F₂</text>
+
+  <!-- Object arrow at 2F1 -->
+  <line x1="80" y1="140" x2="80" y2="90" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"/>
+  <polygon points="80,90 73,106 87,106" fill="#3b82f6"/>
+  <text x="42" y="82" font-family="sans-serif" font-size="11" font-weight="bold" fill="#3b82f6">Object</text>
+  <text x="50" y="96" font-family="sans-serif" font-size="10" fill="#3b82f6">(at 2F₁)</text>
+
+  <!-- RAY 1: parallel at y=90 → (80,90)→(220,90) | (220,90)→(360,190) through F2 -->
+  <line x1="80"  y1="90"  x2="220" y2="90"  stroke="#6366f1" stroke-width="2"/>
+  <polygon points="220,90 206,85 206,95" fill="#6366f1"/>
+  <line x1="220" y1="90"  x2="360" y2="190" stroke="#6366f1" stroke-width="2"/>
+
+  <!-- RAY 2: through F1 → hits lens at (220,190) → parallel at y=190 → (360,190) -->
+  <line x1="80"  y1="90"  x2="220" y2="190" stroke="#f97316" stroke-width="2"/>
+  <polygon points="220,190 206,185 206,195" fill="#f97316"/>
+  <line x1="220" y1="190" x2="360" y2="190" stroke="#f97316" stroke-width="2"/>
+
+  <!-- RAY 3: through O undeviated → (80,90)→(360,190) -->
+  <line x1="80"  y1="90"  x2="360" y2="190" stroke="#10b981" stroke-width="2" stroke-dasharray="6,3"/>
+
+  <!-- Image arrow at 2F2 (inverted, same size) -->
+  <line x1="360" y1="140" x2="360" y2="190" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+  <polygon points="360,190 353,174 367,174" fill="#ef4444"/>
+  <text x="323" y="208" font-family="sans-serif" font-size="11" font-weight="bold" fill="#ef4444">Image (at 2F₂)</text>
+
+  <!-- Result -->
+  <text x="20" y="255" font-family="sans-serif" font-size="11" fill="#334155">Result: Real · Inverted · Same Size  (image at 2F₂) ✓</text>
+  <line x1="20" y1="268" x2="35" y2="268" stroke="#6366f1" stroke-width="2"/>
+  <text x="38" y="272" font-family="sans-serif" font-size="10" fill="#6366f1">Parallel ray</text>
+  <line x1="120" y1="268" x2="135" y2="268" stroke="#f97316" stroke-width="2"/>
+  <text x="138" y="272" font-family="sans-serif" font-size="10" fill="#f97316">Through F₁</text>
+  <line x1="210" y1="268" x2="225" y2="268" stroke="#10b981" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="228" y="272" font-family="sans-serif" font-size="10" fill="#10b981">Through O</text>
+</svg>

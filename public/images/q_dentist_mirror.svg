@@ -1,0 +1,36 @@
+<svg width="440" height="280" viewBox="0 0 440 280" xmlns="http://www.w3.org/2000/svg">
+  <rect width="440" height="280" fill="#f8fafc" rx="12"/>
+  <!-- Principal axis -->
+  <line x1="20" y1="140" x2="420" y2="140" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+  <!-- Concave mirror arc (same geometry as above) -->
+  <path d="M 293 60 A 155 155 0 0 1 293 220" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round"/>
+  <line x1="296" y1="68"  x2="312" y2="80"  stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="305" y1="94"  x2="320" y2="106" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="313" y1="120" x2="326" y2="132" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="315" y1="148" x2="328" y2="160" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="309" y1="175" x2="322" y2="187" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="299" y1="200" x2="313" y2="212" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <!-- F label -->
+  <circle cx="237" cy="140" r="5" fill="#ef4444"/>
+  <text x="229" y="162" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ef4444">F</text>
+  <!-- P label -->
+  <circle cx="315" cy="140" r="4" fill="#334155"/>
+  <text x="307" y="162" font-family="sans-serif" font-size="13" font-weight="bold" fill="#334155">P</text>
+
+  <!-- Tooth object (between P and F) -->
+  <rect x="270" y="120" width="12" height="22" fill="#fde68a" stroke="#d97706" stroke-width="1.5" rx="2"/>
+  <rect x="270" y="138" width="4"  height="8"  fill="#fde68a" stroke="#d97706" stroke-width="1" rx="1"/>
+  <rect x="277" y="138" width="4"  height="8"  fill="#fde68a" stroke="#d97706" stroke-width="1" rx="1"/>
+  <text x="258" y="175" font-family="sans-serif" font-size="11" font-weight="bold" fill="#d97706">Tooth</text>
+  <text x="252" y="188" font-family="sans-serif" font-size="10" fill="#d97706">(between P–F)</text>
+
+  <!-- Dentist icon -->
+  <text x="35" y="105" font-family="sans-serif" font-size="28">🦷</text>
+  <text x="35" y="140" font-family="sans-serif" font-size="11" fill="#64748b">Object</text>
+  
+  <!-- Question mark for image -->
+  <text x="90" y="120" font-family="sans-serif" font-size="42" font-weight="bold" fill="#f59e0b">?</text>
+  <text x="80" y="178" font-family="sans-serif" font-size="12" fill="#6366f1">What image forms?</text>
+</svg>

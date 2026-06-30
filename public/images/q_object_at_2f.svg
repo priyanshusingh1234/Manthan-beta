@@ -1,0 +1,35 @@
+<svg width="440" height="280" viewBox="0 0 440 280" xmlns="http://www.w3.org/2000/svg">
+  <!-- Q14: Where to place object for same-size real image? Setup only, no answer. -->
+  <rect width="440" height="280" fill="#f8fafc" rx="12"/>
+  <line x1="20" y1="140" x2="420" y2="140" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <line x1="220" y1="35" x2="220" y2="245" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+
+  <!-- Biconvex lens -->
+  <path d="M 220 40 Q 188 140 220 240 Q 252 140 220 40 Z" fill="rgba(56,189,248,0.15)" stroke="#0ea5e9" stroke-width="2.5"/>
+
+  <!-- Key points -->
+  <circle cx="80"  cy="140" r="5" fill="#10b981"/>
+  <text x="68"  y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#10b981">2F₁</text>
+  <circle cx="150" cy="140" r="5" fill="#ef4444"/>
+  <text x="142" y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">F₁</text>
+  <circle cx="220" cy="140" r="4" fill="#334155"/>
+  <text x="213" y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#334155">O</text>
+  <circle cx="290" cy="140" r="5" fill="#ef4444"/>
+  <text x="282" y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">F₂</text>
+  <circle cx="360" cy="140" r="5" fill="#10b981"/>
+  <text x="348" y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#10b981">2F₂</text>
+
+  <!-- Object arrow at left -->
+  <line x1="80" y1="140" x2="80" y2="90" stroke="#3b82f6" stroke-width="3" stroke-linecap="round"/>
+  <polygon points="80,90 73,106 87,106" fill="#3b82f6"/>
+  <text x="42" y="82" font-family="sans-serif" font-size="11" font-weight="bold" fill="#3b82f6">Object</text>
+
+  <!-- Two dashed rays going toward lens (problem setup hint) -->
+  <line x1="80" y1="90" x2="220" y2="90"  stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.7"/>
+  <line x1="80" y1="90" x2="220" y2="140" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.7"/>
+
+  <!-- Big question mark on right side for image position -->
+  <text x="295" y="135" font-family="sans-serif" font-size="58" font-weight="bold" fill="#f59e0b">?</text>
+  <text x="305" y="205" font-family="sans-serif" font-size="12" fill="#6366f1">Where is image?</text>
+  <text x="275" y="220" font-family="sans-serif" font-size="10" fill="#6366f1">(Real, same-size as object)</text>
+</svg>

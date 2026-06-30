@@ -1,45 +1,53 @@
-<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
-  <rect width="400" height="300" fill="#f8fafc" />
-  <!-- Principal Axis -->
-  <line x1="20" y1="150" x2="380" y2="150" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,5" />
-  
-  <!-- Convex Lens -->
-  <path d="M 200 30 C 240 100 240 200 200 270 C 160 200 160 100 200 30" fill="rgba(56, 189, 248, 0.2)" stroke="#0ea5e9" stroke-width="2" />
-  <line x1="200" y1="30" x2="200" y2="270" stroke="#0ea5e9" stroke-width="1" stroke-dasharray="3,3" />
+<svg width="440" height="280" viewBox="0 0 440 280" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    Convex lens explanation: 3 parallel rays → converge at F2.
+    O=(220,140), F2=(290,140), lens from y=40 to y=240.
+    Rays at y=80, y=140, y=200.
+    After lens: all go through F2(290,140).
+      Ray at y=80: slope=(140-80)/(290-220)=60/70=0.857; at x=380: y=80+(380-220)*0.857=80+137=217
+      Ray at y=140: horizontal → stays at y=140 → (380,140)
+      Ray at y=200: slope=(140-200)/(290-220)=-60/70=-0.857; at x=380: y=200+(380-220)*(-0.857)=200-137=63
+  -->
+  <rect width="440" height="280" fill="#f8fafc" rx="12"/>
+  <line x1="20" y1="140" x2="420" y2="140" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <line x1="220" y1="35" x2="220" y2="245" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
 
-  <!-- Points -->
-  <circle cx="200" cy="150" r="4" fill="#ef4444" />
-  <text x="205" y="145" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">O</text>
-  
-  <circle cx="120" cy="150" r="4" fill="#3b82f6" />
-  <text x="110" y="170" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6">F1</text>
-  
-  <circle cx="40" cy="150" r="4" fill="#10b981" />
-  <text x="30" y="170" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981">2F1</text>
-  
-  <circle cx="280" cy="150" r="4" fill="#3b82f6" />
-  <text x="275" y="170" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6">F2</text>
-  
-  <circle cx="360" cy="150" r="4" fill="#10b981" />
-  <text x="350" y="170" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981">2F2</text>
+  <!-- Biconvex lens -->
+  <path d="M 220 40 Q 188 140 220 240 Q 252 140 220 40 Z" fill="rgba(56,189,248,0.15)" stroke="#0ea5e9" stroke-width="2.5"/>
 
-  <!-- Object at 2F1 -->
-  <line x1="40" y1="150" x2="40" y2="80" stroke="#f59e0b" stroke-width="4" />
-  <polygon points="40,70 35,85 45,85" fill="#f59e0b" />
-  
-  <!-- Image at 2F2 -->
-  <line x1="360" y1="150" x2="360" y2="220" stroke="#f59e0b" stroke-width="4" />
-  <polygon points="360,230 355,215 365,215" fill="#f59e0b" />
+  <!-- Focal points -->
+  <circle cx="150" cy="140" r="5" fill="#ef4444" opacity="0.5"/>
+  <text x="142" y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">F₁</text>
+  <circle cx="220" cy="140" r="4" fill="#334155"/>
+  <text x="213" y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#334155">O</text>
+  <circle cx="290" cy="140" r="6" fill="#ef4444"/>
+  <text x="282" y="162" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ef4444">F₂</text>
 
-  <!-- Rays -->
-  <!-- Parallel ray -->
-  <line x1="40" y1="80" x2="200" y2="80" stroke="#ec4899" stroke-width="2" />
-  <polygon points="120,76 130,80 120,84" fill="#ec4899" />
-  
-  <!-- Refracted ray passing through F2 -->
-  <line x1="200" y1="80" x2="360" y2="220" stroke="#ec4899" stroke-width="2" />
-  <polygon points="280,145 288,157 278,160" fill="#ec4899" />
+  <!-- Parallel rays BEFORE lens (from left) -->
+  <line x1="30" y1="80"  x2="220" y2="80"  stroke="#6366f1" stroke-width="2"/>
+  <polygon points="220,80 206,75 206,85" fill="#6366f1"/>
+  <line x1="30" y1="140" x2="220" y2="140" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="220,140 206,135 206,145" fill="#6366f1"/>
+  <line x1="30" y1="200" x2="220" y2="200" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="220,200 206,195 206,205" fill="#6366f1"/>
 
-  <!-- Ray passing through Optical Center O -->
-  <line x1="40" y1="80" x2="360" y2="220" stroke="#ec4899" stroke-width="2" />
+  <!-- After lens: all converge at F2(290,140) then continue -->
+  <line x1="220" y1="80"  x2="290" y2="140" stroke="#6366f1" stroke-width="2"/>
+  <line x1="290" y1="140" x2="380" y2="217" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <line x1="220" y1="140" x2="380" y2="140" stroke="#6366f1" stroke-width="2"/>
+  <line x1="220" y1="200" x2="290" y2="140" stroke="#6366f1" stroke-width="2"/>
+  <line x1="290" y1="140" x2="380" y2="63"  stroke="#6366f1" stroke-width="1.5" stroke-dasharray="5,3"/>
+
+  <!-- Convergence point marker -->
+  <circle cx="290" cy="140" r="7" fill="none" stroke="#ef4444" stroke-width="2"/>
+
+  <!-- Labels -->
+  <text x="25" y="60" font-family="sans-serif" font-size="12" font-weight="bold" fill="#6366f1">Parallel rays →</text>
+  <text x="300" y="115" font-family="sans-serif" font-size="11" font-weight="bold" fill="#ef4444">All rays</text>
+  <text x="300" y="128" font-family="sans-serif" font-size="11" font-weight="bold" fill="#ef4444">converge</text>
+  <text x="302" y="141" font-family="sans-serif" font-size="11" font-weight="bold" fill="#ef4444">at F₂ ✓</text>
+
+  <!-- Title -->
+  <text x="20" y="255" font-family="sans-serif" font-size="12" font-weight="bold" fill="#334155">Convex Lens = Converging Lens ✓</text>
+  <text x="20" y="270" font-family="sans-serif" font-size="10" fill="#64748b">Parallel rays always converge at the principal focus (F₂)</text>
 </svg>

@@ -1,0 +1,76 @@
+<svg width="440" height="280" viewBox="0 0 440 280" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    Mirror: circle center C=(160,140), radius R=155 → Pole P=(315,140)
+    Arc endpoints: x = 160 + sqrt(155²-(140-y)²)
+      y=60:  x = 160 + sqrt(24025-6400)  = 160+132.8 = 292.8 ≈ 293
+      y=100: x = 160 + sqrt(24025-1600)  = 160+149.7 = 309.7 ≈ 310  ← Ray1 hits here
+      y=88:  x = 160 + sqrt(24025-2704)  = 160+145.9 = 305.9 ≈ 306  ← Ray2 hits here
+    Object at (270,140)→tip(270,100); F=(237,140); C=(160,140)
+    
+    Ray1 (parallel to axis, y=100): (270,100)→(310,100); reflected through F(237,140) → continues to (80,213)
+    Ray2 (aimed at C): (270,100)→(306,88); reflected back through C(160,140) → continues to (80,165)
+    Virtual extensions behind mirror meet at virtual image (~380,62)
+  -->
+  <rect width="440" height="280" fill="#f8fafc" rx="12"/>
+
+  <!-- Principal axis -->
+  <line x1="20" y1="140" x2="420" y2="140" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,4"/>
+
+  <!-- Concave mirror arc: endpoints (293,60)–(293,220), circle centre (160,140) R=155 -->
+  <path d="M 293 60 A 155 155 0 0 1 293 220" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round"/>
+  <!-- Hatching on back (right) side -->
+  <line x1="296" y1="68"  x2="313" y2="80"  stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="305" y1="93"  x2="321" y2="105" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="312" y1="119" x2="327" y2="131" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="314" y1="149" x2="328" y2="161" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="308" y1="177" x2="322" y2="189" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="298" y1="203" x2="312" y2="215" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <!-- Key points -->
+  <circle cx="160" cy="140" r="5" fill="#10b981"/>
+  <text x="152" y="162" font-family="sans-serif" font-size="13" font-weight="bold" fill="#10b981">C</text>
+
+  <circle cx="237" cy="140" r="5" fill="#ef4444"/>
+  <text x="229" y="162" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ef4444">F</text>
+
+  <circle cx="315" cy="140" r="4" fill="#334155"/>
+  <text x="307" y="162" font-family="sans-serif" font-size="13" font-weight="bold" fill="#334155">P</text>
+
+  <!-- Object between P and F (x=270, base on axis, tip at y=100) -->
+  <line x1="270" y1="140" x2="270" y2="100" stroke="#10b981" stroke-width="3" stroke-linecap="round"/>
+  <polygon points="270,100 263,116 277,116" fill="#10b981"/>
+  <text x="240" y="93" font-family="sans-serif" font-size="11" font-weight="bold" fill="#10b981">Object</text>
+
+  <!-- ── RAY 1: parallel to axis at y=100 ──────────────────────────── -->
+  <!-- Incident: (270,100) → mirror at (310,100) -->
+  <line x1="270" y1="100" x2="310" y2="100" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="310,100 296,95 296,105" fill="#6366f1"/>
+  <!-- Reflected: (310,100) → through F(237,140) → continues to (80,213) -->
+  <!-- slope = (140-100)/(237-310) = 40/-73 = -0.548  →  at x=80: y=100+(80-310)*(-0.548)=100+126=226 -->
+  <line x1="310" y1="100" x2="80" y2="226" stroke="#6366f1" stroke-width="2"/>
+  <!-- Virtual extension behind mirror: same line going RIGHT from (310,100) -->
+  <!-- slope: going right from (310,100) with slope -0.548 → at x=420: y=100+(420-310)*(-0.548)=100-60=40 -->
+  <line x1="310" y1="100" x2="420" y2="40" stroke="#6366f1" stroke-width="1.2" stroke-dasharray="4,4" opacity="0.55"/>
+
+  <!-- ── RAY 2: aimed at centre of curvature C=(160,140) ───────────── -->
+  <!-- Incident: (270,100) → mirror at (306,88) [calculated] -->
+  <line x1="270" y1="100" x2="306" y2="88" stroke="#f97316" stroke-width="2"/>
+  <polygon points="306,88 291,88 297,100" fill="#f97316"/>
+  <!-- Reflected: (306,88) back through C(160,140) → continues to (80,163) -->
+  <!-- slope = (88-140)/(306-160) = -52/146 = -0.356 → at x=80: y=88+(80-306)*(-0.356)=88+80.5=169 -->
+  <line x1="306" y1="88" x2="80" y2="169" stroke="#f97316" stroke-width="2"/>
+  <!-- Virtual extension behind mirror: (306,88) going RIGHT slope -0.356 → at x=420: y=88+(420-306)*(-0.356)=88-40.6=47 -->
+  <line x1="306" y1="88" x2="420" y2="47" stroke="#f97316" stroke-width="1.2" stroke-dasharray="4,4" opacity="0.55"/>
+
+  <!-- Virtual image: dashed extensions meet at ~(380,62); image from (380,140) up to (380,62) -->
+  <line x1="380" y1="140" x2="380" y2="62" stroke="#a78bfa" stroke-width="3" stroke-dasharray="5,3"/>
+  <polygon points="380,62 373,80 387,80" fill="#a78bfa"/>
+  <text x="333" y="55" font-family="sans-serif" font-size="10" font-weight="bold" fill="#a78bfa">Virtual Image</text>
+  <text x="328" y="67" font-family="sans-serif" font-size="10" fill="#a78bfa">(Magnified, Erect)</text>
+
+  <!-- Legend -->
+  <line x1="20" y1="258" x2="35" y2="258" stroke="#6366f1" stroke-width="2"/>
+  <text x="38" y="262" font-family="sans-serif" font-size="10" fill="#6366f1">Ray 1 (parallel → through F)</text>
+  <line x1="20" y1="272" x2="35" y2="272" stroke="#f97316" stroke-width="2"/>
+  <text x="38" y="276" font-family="sans-serif" font-size="10" fill="#f97316">Ray 2 (toward C → reflects back)</text>
+</svg>
