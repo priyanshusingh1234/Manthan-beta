@@ -261,7 +261,16 @@ export default function QuestionCard({ q }: { q: Question }) {
 
   // Fix: Use Supabase client to generate the public URL correctly
   const getPublicUrl = () => {
-    if (q.imageUrl) return q.imageUrl; // Direct URL
+    if (!q.imageUrl && !q.imagePath) return null;
+    
+    if (q.imageUrl) {
+        if (q.imageUrl.startsWith('http')) return q.imageUrl;
+        if (q.imageUrl.startsWith('/')) return q.imageUrl;
+        // Bare path means it's in the question-images bucket
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ivkrupsksxibaibmiibk.supabase.co';
+        return `${supabaseUrl}/storage/v1/object/public/question-images/${q.imageUrl}`;
+    }
+    
     if (q.imagePath) {
       const { data } = supabase.storage.from('question-images').getPublicUrl(q.imagePath);
       return data.publicUrl;

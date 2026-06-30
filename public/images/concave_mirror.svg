@@ -1,0 +1,34 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#f8fafc" />
+  <!-- Principal Axis -->
+  <line x1="20" y1="150" x2="380" y2="150" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,5" />
+  <!-- Concave Mirror -->
+  <path d="M 300 50 Q 350 150 300 250" fill="none" stroke="#334155" stroke-width="4" />
+  <!-- Hatching for back of mirror -->
+  <path d="M 305 60 L 315 50 M 315 90 L 325 80 M 322 120 L 332 110 M 326 150 L 336 140 M 322 180 L 332 170 M 315 210 L 325 200 M 305 240 L 315 230" stroke="#cbd5e1" stroke-width="2" />
+  
+  <!-- Points -->
+  <circle cx="326" cy="150" r="4" fill="#ef4444" />
+  <text x="335" y="145" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ef4444">P</text>
+  
+  <circle cx="250" cy="150" r="4" fill="#3b82f6" />
+  <text x="245" y="170" font-family="sans-serif" font-size="14" font-weight="bold" fill="#3b82f6">F</text>
+  
+  <circle cx="174" cy="150" r="4" fill="#10b981" />
+  <text x="169" y="170" font-family="sans-serif" font-size="14" font-weight="bold" fill="#10b981">C</text>
+  
+  <!-- Object -->
+  <line x1="100" y1="150" x2="100" y2="80" stroke="#f59e0b" stroke-width="4" />
+  <polygon points="100,70 95,85 105,85" fill="#f59e0b" />
+  <text x="95" y="60" font-family="sans-serif" font-size="14" font-weight="bold" fill="#f59e0b">A</text>
+  <text x="95" y="170" font-family="sans-serif" font-size="14" font-weight="bold" fill="#f59e0b">B</text>
+
+  <!-- Rays -->
+  <!-- Parallel ray -->
+  <line x1="100" y1="80" x2="313" y2="80" stroke="#ec4899" stroke-width="2" />
+  <polygon points="200,76 210,80 200,84" fill="#ec4899" />
+  
+  <!-- Reflected ray passing through F -->
+  <line x1="313" y1="80" x2="120" y2="295" stroke="#ec4899" stroke-width="2" />
+  <polygon points="216.5,187.5 210,195 220,198" fill="#ec4899" />
+</svg>

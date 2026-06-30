@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Vibration, Image, ScrollView, StyleSheet, DeviceEventEmitter } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Vibration, ScrollView, StyleSheet, DeviceEventEmitter } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import { Clock, Zap, CheckCircle2, XCircle, ArrowLeft, Trophy, Users, Star, Lightbulb, Send } from 'lucide-react-native';
@@ -14,6 +15,7 @@ import HotspotArena from '@/components/HotspotArena';
 import IndiaMapArena from '@/components/IndiaMapArena';
 import BadgedName from '@/components/BadgedName';
 import { useCorrectSound } from '@/hooks/useCorrectSound';
+import LiveActivityTicker from '@/components/LiveActivityTicker';
 
 export default function SolveQuestionScreen() {
   const { id, challenge } = useLocalSearchParams<{ id: string; challenge?: string }>();
@@ -135,6 +137,40 @@ export default function SolveQuestionScreen() {
     if (id) fetchQuestionAndAuth();
   }, [id, router]);
 
+  // Fetch Social Presence
+  useEffect(() => {
+    let interval: any;
+    if (question && id) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
+        fetch(`${API_URL}/api/social/presence?questionId=${id}`, {
+          headers: { Authorization: `Bearer ${session?.access_token || ''}` }
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data && !data.error) {
+              setSocialPresence(data);
+              if (data.activities && data.activities.length > 0) {
+                let idx = 0;
+                const cycleActivity = () => {
+                  if (idx < data.activities.length) {
+                    setCurrentActivity(data.activities[idx]);
+                    idx++;
+                  }
+                };
+                setTimeout(cycleActivity, 3000);
+                interval = setInterval(cycleActivity, 12000);
+              }
+            }
+          })
+          .catch(err => console.log('Social presence fetch error:', err));
+      });
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    }
+  }, [question, id]);
+
   const handleSubmit = useCallback(async (forcedOption?: number | null, forcedIsCorrect?: boolean) => {
     if (isSubmitting || result || alreadyAttempted) return;
     setIsSubmitting(true);
@@ -196,7 +232,7 @@ export default function SolveQuestionScreen() {
         Vibration.vibrate(300); // Heavy buzz
         // Automatically open the Co-op (Ask for Help) modal instantly on wrong answer
         if (!challenge && !recoveredViaCoop) {
-          setTimeout(() => setIsChallengeModalOpen(true), 800);
+          setIsChallengeModalOpen(true);
         }
       }
     } catch (err: any) {
@@ -444,6 +480,14 @@ export default function SolveQuestionScreen() {
               <Text className="text-slate-700 dark:text-slate-300">
                 {result.explanation}
               </Text>
+              {question.explanation_image_url && (
+                <View className="mt-4 items-center">
+                  <Image 
+                    source={{ uri: resolveImageUrl(question.explanation_image_url) }} 
+                    style={{ width: '100%', height: 200, resizeMode: 'contain' }}
+                  />
+                </View>
+              )}
             </View>
           )}
 
@@ -514,11 +558,30 @@ export default function SolveQuestionScreen() {
 
           <TouchableOpacity 
             onPress={() => router.back()}
-            className="bg-slate-900 dark:bg-white px-8 py-4 rounded-xl w-full items-center shadow-sm"
+            className="bg-slate-900 dark:bg-white px-8 py-4 rounded-xl w-full items-center shadow-sm mb-4"
           >
             <Text className="text-white dark:text-slate-900 font-bold text-lg">Continue</Text>
           </TouchableOpacity>
+          
+          {!result.isCorrect && !challenge && !recoveredViaCoop && (
+            <TouchableOpacity 
+              onPress={() => setIsChallengeModalOpen(true)}
+              className="bg-indigo-600 flex-row items-center justify-center py-4 rounded-xl w-full shadow-sm mb-4"
+            >
+              <Users size={20} color="white" style={{ marginRight: 8 }} />
+              <Text className="text-white font-bold text-lg">Ask for Help</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
+
+        {currentUserId && (
+          <ChallengeFriendModal
+            visible={isChallengeModalOpen}
+            onClose={() => setIsChallengeModalOpen(false)}
+            questionId={question.id}
+            currentUserId={currentUserId}
+          />
+        )}
       </View>
     );
   }
@@ -571,6 +634,26 @@ export default function SolveQuestionScreen() {
                 iconSize={16}
               />
             </View>
+          </View>
+        )}
+
+        {/* Subject & Chapter Tags */}
+        {(question.subject || question.chapter) && (
+          <View className="flex-row flex-wrap gap-2 mb-3">
+            {question.subject && (
+              <View className="bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1 rounded-full">
+                <Text className="text-indigo-700 dark:text-indigo-400 font-bold text-[10px] uppercase tracking-wider">
+                  {question.subject}
+                </Text>
+              </View>
+            )}
+            {question.chapter && (
+              <View className="bg-slate-200 dark:bg-slate-800 px-3 py-1 rounded-full">
+                <Text className="text-slate-600 dark:text-slate-400 font-bold text-[10px] uppercase tracking-wider">
+                  {question.chapter}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 

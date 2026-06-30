@@ -318,7 +318,15 @@ export default function SolveQuestionClient({ question }: { question: any }) {
         return () => { mounted = false; };
     }, [question.id, router, challengeId, autoAccept, autoReject]);
 
-    const publicUrl = question.image_url || (question.image_path ? supabase.storage.from("question-images").getPublicUrl(question.image_path).data.publicUrl : null);
+    const resolveImageUrl = (raw: string | null | undefined) => {
+        if (!raw) return null;
+        if (raw.startsWith('http')) return raw;
+        if (raw.startsWith('/')) return raw; // Local public folder
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ivkrupsksxibaibmiibk.supabase.co';
+        return `${supabaseUrl}/storage/v1/object/public/question-images/${raw}`;
+    };
+
+    const publicUrl = resolveImageUrl(question.image_url) || (question.image_path ? supabase.storage.from("question-images").getPublicUrl(question.image_path).data.publicUrl : null);
 
     const handleSubmit = useCallback(async (forcedOption?: number | null, forcedIsCorrect?: boolean) => {
         if (isSubmitting || result) return;
@@ -921,11 +929,24 @@ export default function SolveQuestionClient({ question }: { question: any }) {
                 )}
 
                 {/* Explanation */}
-                {result.explanation && !result.isCorrect && (
+                {(result.explanation || result.explanation_image_url) && !result.isCorrect && (
                     <div className="mt-6 w-full max-w-md mx-auto text-left space-y-2">
                         <div className="text-sm font-bold text-indigo-500 dark:text-indigo-400 mb-2 uppercase tracking-wider text-center">Explanation</div>
-                        <div className="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300 p-4 rounded-2xl border border-indigo-200 dark:border-indigo-800 text-sm leading-relaxed whitespace-pre-wrap">
-                            {result.explanation}
+                        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-2xl border border-indigo-200 dark:border-indigo-800 flex flex-col gap-4">
+                            {result.explanation_image_url && (
+                                <div className="w-full rounded-xl overflow-hidden bg-white/50 dark:bg-black/20 flex items-center justify-center p-2">
+                                    <img 
+                                        src={resolveImageUrl(result.explanation_image_url)} 
+                                        alt="Explanation diagram" 
+                                        className="max-h-[250px] object-contain drop-shadow-sm" 
+                                    />
+                                </div>
+                            )}
+                            {result.explanation && (
+                                <div className="text-indigo-800 dark:text-indigo-300 text-sm leading-relaxed whitespace-pre-wrap">
+                                    {result.explanation}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

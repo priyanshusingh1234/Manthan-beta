@@ -484,6 +484,7 @@ export async function POST(req: Request) {
             leveledUp,
             newLevel,
             explanation: q.explanation || null,
+            explanation_image_url: q.explanation_image_url || null,
             streak: {
                 current: newStreakCount,
                 longest: newStreakLongest,

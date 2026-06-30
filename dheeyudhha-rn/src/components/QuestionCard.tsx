@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { Play, Clock, Users, Zap, Swords, Award, CheckCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
@@ -34,6 +35,7 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
     if (rawUrl) {
       if (rawUrl.startsWith('http')) return rawUrl;
       if (rawUrl.startsWith('/')) return `${process.env.EXPO_PUBLIC_API_URL}${rawUrl}`;
+      return `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/question-images/${rawUrl}`;
     }
     const rawPath = q?.imagePath || q?.image_path;
     if (rawPath) {
