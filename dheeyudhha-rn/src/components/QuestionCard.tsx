@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { Image } from 'expo-image';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Play, Clock, Users, Zap, Swords, Award, CheckCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
@@ -161,7 +160,7 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
               <Image 
                 source={{ uri: imageUrl }} 
                 className="w-full h-48"
-                contentFit="contain"
+                resizeMode="contain"
               />
               <View className="absolute bottom-2 right-2 px-2 py-1 bg-black/50 rounded border border-white/20 shadow-sm">
                 <Text className="text-[9px] font-extrabold text-white uppercase tracking-wider">Attachment</Text>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Vibration, ScrollView, StyleSheet, DeviceEventEmitter } from 'react-native';
-import { Image } from 'expo-image';
+import { View, Text, TouchableOpacity, ActivityIndicator, Vibration, ScrollView, StyleSheet, DeviceEventEmitter, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import { Clock, Zap, CheckCircle2, XCircle, ArrowLeft, Trophy, Users, Star, Lightbulb, Send } from 'lucide-react-native';
@@ -485,7 +484,7 @@ export default function SolveQuestionScreen() {
                   <Image 
                     source={{ uri: resolveImageUrl(question.explanation_image_url) }} 
                     className="w-full h-40"
-                    contentFit="contain"
+                    resizeMode="contain"
                   />
                 </View>
               )}
@@ -686,7 +685,7 @@ export default function SolveQuestionScreen() {
           <Image 
             source={{ uri: imageUrl }} 
             className="w-full h-48 rounded-2xl bg-slate-200 dark:bg-slate-800 mb-4"
-            contentFit="contain"
+            resizeMode="contain"
           />
         )}
 
