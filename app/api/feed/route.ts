@@ -99,10 +99,15 @@ export async function GET(req: NextRequest) {
                 if (gradeToFetch) query = query.in('class_grade', [String(gradeToFetch), 'All', 'Any']);
                 return query;
             };
+
+            // Use a random offset for bucket C so old questions rotate every call
+            // (Supabase doesn't support RANDOM() natively, so we use a time-based seed offset)
+            const oldOffset = Math.floor(Math.random() * 60); // rotate across up to 60 old questions
+
             const [resA, resB, resC] = await Promise.all([
                 applyFilter(supabaseAdmin.from('questions').select('*')).gte('created_at', daysAgo(3)).order('created_at', { ascending: false }).limit(20),
-                applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(3)).gte('created_at', daysAgo(14)).order('created_at', { ascending: false }).limit(25),
-                applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(14)).order('created_at', { ascending: false }).limit(20),
+                applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(3)).gte('created_at', daysAgo(30)).order('created_at', { ascending: false }).limit(30),
+                applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(30)).order('created_at', { ascending: false }).range(oldOffset, oldOffset + 39),
             ]);
             return {
                 subject: subjectToFetch,
@@ -233,6 +238,21 @@ export async function GET(req: NextRequest) {
                 }
             }
             if (!addedInRound) runningL1 = false;
+        }
+
+        // Layer 1b — Guaranteed old questions (bucket C)
+        // Without this, Layer 1 always fills from bucket A/B (new content) first
+        // and bucket C (30+ days old) never gets a turn.
+        const layer1bCount = Math.ceil(limit * 0.20 * overFetch); // 20% guaranteed for old
+        let layer1bAdded = 0;
+        for (const bData of bucketsData) {
+            while (layer1bAdded < layer1bCount && bData.C.length > 0) {
+                const qIdx = bData.C.findIndex((q: any) => !userAttempted.has(String(q.id)) && !pool.some((p: any) => p.id === q.id));
+                if (qIdx === -1) break;
+                const q = bData.C.splice(qIdx, 1)[0];
+                pool.push({ ...q, _layer: 1, _label: '📚 From the Library', _score: 88 });
+                layer1bAdded++;
+            }
         }
 
         // Layer 2 — SRS review (data already pre-fetched in parallel above)
@@ -462,7 +482,7 @@ export async function GET(req: NextRequest) {
         pool = pool.filter(r => {
             if (seen.has(String(r.id))) return false;
             seen.add(String(r.id));
-            
+
             if (r.type !== 'post' && r.type !== 'gauntlet' && userGrade && r.class_grade && r.class_grade !== 'All' && r.class_grade !== 'Any') {
                 const qGrade = Number(r.class_grade);
                 const uGrade = Number(userGrade);
@@ -517,12 +537,12 @@ export async function GET(req: NextRequest) {
         const writtenItems = questions.filter(q => (q as any).is_written_challenge);
         const arenaItems = questions.filter(q => q.type === 'gauntlet');
         const normalItems = questions.filter(q => !(q as any).is_vip && !(q as any).is_written_challenge && q.type !== 'gauntlet');
-        
+
         const interleavedFeed: any[] = [];
         let vipIdx = 0;
         let writtenIdx = 0;
         let arenaIdx = 0;
-        
+
         for (let i = 0; i < normalItems.length; i++) {
             // Insert Arena at pos 0, 5, 10...
             if (arenaIdx < arenaItems.length && (i === 0 || (i > 0 && i % 5 === 0))) {
@@ -538,7 +558,7 @@ export async function GET(req: NextRequest) {
             }
             interleavedFeed.push(normalItems[i]);
         }
-        
+
         // Append any remaining
         while (arenaIdx < arenaItems.length) interleavedFeed.push(arenaItems[arenaIdx++]);
         while (vipIdx < vipItems.length) interleavedFeed.push(vipItems[vipIdx++]);
