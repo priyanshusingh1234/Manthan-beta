@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabaseAdmin
       .from('questions')
-      .select('id, question_text, title, body, image_url, image_path, options, correct_option, explanation, explanation_image_url, points, time_limit, difficulty, subject, chapter, class_grade, question_type, match_pairs, is_mcq, created_by')
+      .select('*')
       .ilike('chapter', `%${chapter}%`)
       .order('id', { ascending: true })
       .limit(limit);

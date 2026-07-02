@@ -12,22 +12,36 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.ve
 const PAGE_SIZE = 20;
 
 function normalizeForCard(q: any) {
+  const parsedOptions = (() => {
+    try {
+      if (typeof q.options === 'string') return JSON.parse(q.options);
+      return q.options || null;
+    } catch { return null; }
+  })();
+
   return {
     ...q,
     id: String(q.id),
-    title: q.question_text || q.title || 'Question',
+    // Support both DB field naming conventions
+    title: q.title || q.question_text || 'Question',
     body: q.body || null,
-    subject: q.subject,
-    chapter: q.chapter,
-    classGrade: q.class_grade,
+    subject: q.subject || 'General',
+    chapter: q.chapter || null,
+    classGrade: q.class_grade || q.classGrade || null,
     points: q.points || 5,
-    timeLimit: q.time_limit || 60,
+    timeLimit: q.time_limit || q.timeLimit || 60,
     difficulty: q.difficulty || null,
-    options: typeof q.options === 'string' ? JSON.parse(q.options) : (q.options || null),
-    correctOption: q.correct_option ?? null,
-    questionType: q.question_type || 'mcq',
-    imageUrl: q.image_url || null,
-    imagePath: q.image_path || null,
+    options: parsedOptions,
+    correctOption: q.correct_option ?? q.correctOption ?? null,
+    questionType: q.question_type || q.questionType || 'mcq',
+    matchPairs: (() => {
+      try {
+        if (typeof q.match_pairs === 'string') return JSON.parse(q.match_pairs);
+        return q.match_pairs || null;
+      } catch { return null; }
+    })(),
+    imageUrl: q.image_url || q.imageUrl || null,
+    imagePath: q.image_path || q.imagePath || null,
     hasAttempted: false,
     hasFailed: false,
     totalAttempts: 0,
