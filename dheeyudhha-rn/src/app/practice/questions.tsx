@@ -19,10 +19,11 @@ function normalizeForCard(q: any) {
     } catch { return null; }
   })();
 
+  const profile = q.profiles || null;
+
   return {
     ...q,
     id: String(q.id),
-    // Support both DB field naming conventions
     title: q.title || q.question_text || 'Question',
     body: q.body || null,
     subject: q.subject || 'General',
@@ -42,17 +43,18 @@ function normalizeForCard(q: any) {
     })(),
     imageUrl: q.image_url || q.imageUrl || null,
     imagePath: q.image_path || q.imagePath || null,
-    hasAttempted: false,
-    hasFailed: false,
+    hasAttempted: q.hasAttempted || false,
+    hasFailed: q.hasFailed || false,
     totalAttempts: 0,
     solvedCount: 0,
-    _feedLabel: '📖 Practice',
+    // Teacher profile from DB join
+    profiles: profile,
+    createdByName: profile?.full_name || 'Teacher',
+    createdByAvatar: profile?.avatar_url || null,
+    createdByUsername: profile?.username || null,
+    createdByIsTeacher: profile?.is_teacher ?? true,
+    _feedLabel: q.hasAttempted ? '✅ Solved' : '📖 Practice',
     _feedScore: 0,
-    profiles: null,
-    createdByName: 'Teacher',
-    createdByAvatar: null,
-    createdByUsername: null,
-    createdByIsTeacher: true,
   };
 }
 
