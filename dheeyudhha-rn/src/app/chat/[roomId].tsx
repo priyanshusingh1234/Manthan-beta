@@ -90,6 +90,19 @@ const formatDateBanner = (date: Date) => {
   return date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
 };
 
+const getCleanMessageText = (rawText: string) => {
+  if (!rawText) return '';
+  let text = rawText;
+  if (text.includes('|||META|||')) text = text.split('|||META|||')[0];
+  if (text.startsWith('> Replying to **')) {
+    const splitIndex = text.indexOf('\n\n');
+    if (splitIndex !== -1) {
+      text = text.substring(splitIndex + 2);
+    }
+  }
+  return text;
+};
+
 // ─── Message Item Component ────────────────────────────────────────
 const MessageItem = memo(({
   msg,
@@ -124,7 +137,7 @@ const MessageItem = memo(({
       const match = firstLine.match(/> Replying to \*\*(.+?)\*\*:\s*"?(.*?)"?$/);
       if (match) {
         replyAuthor = match[1];
-        replyPreview = match[2];
+        replyPreview = getCleanMessageText(match[2]);
         mainContent = rest;
       }
     }
@@ -553,10 +566,9 @@ export default function ChatRoomScreen() {
     }
 
     if (replyingTo) {
-      let rawPreviewText = replyingTo.content;
-      if (rawPreviewText.includes('|||META|||')) rawPreviewText = rawPreviewText.split('|||META|||')[0];
+      const cleanText = getCleanMessageText(replyingTo.content);
       const isImg = replyingTo.message_type === 'image' || replyingTo.message_type === 'image_once';
-      const preview = isImg ? 'Photo 📷' : rawPreviewText.substring(0, 35);
+      const preview = isImg ? 'Photo 📷' : cleanText.substring(0, 35);
       const who = replyingTo.sender_id === user.id ? 'You' : (participant?.full_name || 'Scholar');
       content = `> Replying to **${who}**: "${preview}"\n\n${content}`;
       setReplyingTo(null);
@@ -598,7 +610,7 @@ export default function ChatRoomScreen() {
             receiverId: participant.user_id,
             senderId: user.id,
             roomId,
-            content: content.substring(0, 50)
+            content: getCleanMessageText(content).substring(0, 50)
           })
         }).catch(null);
       }
@@ -738,17 +750,21 @@ export default function ChatRoomScreen() {
     );
   };
 
-  const handleLongPress = (msg: Message) => {
+  const handleLongPress = useCallback((msg: Message) => {
     Vibration.vibrate(30);
     setContextMsg(msg);
     setShowContextModal(true);
-  };
+  }, []);
 
-  const handleReply = (msg: Message) => {
+  const handleReply = useCallback((msg: Message) => {
     setReplyingTo(msg);
     setShowContextModal(false);
     setTimeout(() => inputRef.current?.focus(), 100);
-  };
+  }, []);
+
+  const handleImageClick = useCallback((url: string) => {
+    setFullscreenImage(url);
+  }, []);
 
   const displayName = participant?.full_name || initialName;
 
@@ -827,7 +843,7 @@ export default function ChatRoomScreen() {
                 prevMsg={index < messages.length - 1 ? messages[index + 1] : null}
                 onLongPress={handleLongPress}
                 onReply={handleReply}
-                onImageClick={(url: string) => setFullscreenImage(url)}
+                onImageClick={handleImageClick}
                 isDark={isDark}
               />
             )}
@@ -864,9 +880,7 @@ export default function ChatRoomScreen() {
 
                   {contextMsg?.message_type === 'text' && (
                     <TouchableOpacity onPress={async () => {
-                      let text = contextMsg.content;
-                      if (text.includes('|||META|||')) text = text.split('|||META|||')[0];
-                      if (text.startsWith('> Replying to **')) text = text.split('\n\n').slice(1).join('\n\n');
+                      const text = getCleanMessageText(contextMsg.content);
                       await Clipboard.setStringAsync(text);
                       setShowContextModal(false);
                     }} className="flex-row items-center gap-3 py-3 border-b border-slate-100 dark:border-slate-800/80 active:opacity-70">
@@ -877,9 +891,7 @@ export default function ChatRoomScreen() {
 
                   {contextMsg?.sender_id === user?.id && contextMsg?.message_type === 'text' && (
                     <TouchableOpacity onPress={() => {
-                      let text = contextMsg.content;
-                      if (text.includes('|||META|||')) text = text.split('|||META|||')[0];
-                      if (text.startsWith('> Replying to **')) text = text.split('\n\n').slice(1).join('\n\n');
+                      const text = getCleanMessageText(contextMsg.content);
                       setEditingMsg(contextMsg);
                       setNewMessage(text);
                       setShowContextModal(false);
@@ -972,7 +984,7 @@ export default function ChatRoomScreen() {
                     Replying to {replyingTo.sender_id === user?.id ? 'Yourself' : participant?.full_name}
                   </Text>
                   <Text className="text-slate-600 dark:text-slate-300 text-xs" numberOfLines={1}>
-                    {replyingTo.content.includes('|||META|||') ? replyingTo.content.split('|||META|||')[0] : replyingTo.content}
+                    {getCleanMessageText(replyingTo.content)}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => setReplyingTo(null)} className="p-1 rounded-full bg-slate-200 dark:bg-slate-700">

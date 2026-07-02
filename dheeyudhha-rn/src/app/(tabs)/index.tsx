@@ -30,6 +30,31 @@ export default function FeedScreen() {
         </View>
       </View>
 
+      {/* Practice Mode Entry */}
+      <TouchableOpacity
+        onPress={() => router.push('/practice' as any)}
+        activeOpacity={0.85}
+        className="mx-6 mb-5 rounded-2xl overflow-hidden"
+        style={{
+          backgroundColor: '#1e1b4b',
+          borderWidth: 1, borderColor: '#312e81',
+          shadowColor: '#4f46e5', shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 6 },
+          elevation: 8,
+          flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14,
+        }}
+      >
+        <View style={{
+          width: 48, height: 48, borderRadius: 14,
+          backgroundColor: '#312e81', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Target size={24} color="#a5b4fc" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: -0.3 }}>Practice Mode</Text>
+          <Text style={{ color: '#818cf8', fontSize: 12, fontWeight: '600', marginTop: 2 }}>Browse all questions by chapter</Text>
+        </View>
+        <Play size={20} color="#818cf8" fill="#818cf8" />
+      </TouchableOpacity>
 
       {/* Daily Goal Card */}
       <DailyGoalCard />

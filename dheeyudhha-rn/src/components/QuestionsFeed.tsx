@@ -44,7 +44,7 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [freshItems, setFreshItems] = useState<any[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  
+
   const allDataRef = useRef<any[]>([]);
   allDataRef.current = allData;
   const isMountedRef = useRef(false);

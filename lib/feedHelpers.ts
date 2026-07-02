@@ -134,7 +134,26 @@ export function applyCommonFilters(query: any, subject: string, difficulty: stri
         if (sLower.startsWith('math') || sLower === 'maths') {
             q = q.ilike('subject', '%math%');
         } else if (sLower === 'sst' || sLower === 'social studies' || sLower === 'social science') {
-            q = q.or('subject.ilike.%SST%,subject.ilike.%social%,subject.ilike.%history%,subject.ilike.%geography%,subject.ilike.%civics%');
+            // Catch any SST-related subject name
+            q = q.or(
+                'subject.ilike.%sst%,' +
+                'subject.ilike.%social%,' +
+                'subject.ilike.%history%,' +
+                'subject.ilike.%geography%,' +
+                'subject.ilike.%civics%,' +
+                'subject.ilike.%political%,' +
+                'subject.ilike.%economics%'
+            );
+        } else if (sLower === 'science') {
+            // Catch Physics, Chemistry, Biology all under Science
+            q = q.or(
+                'subject.ilike.%science%,' +
+                'subject.ilike.%physics%,' +
+                'subject.ilike.%chemistry%,' +
+                'subject.ilike.%biology%'
+            );
+        } else if (sLower === 'g.k' || sLower === 'gk' || sLower === 'general knowledge') {
+            q = q.or('subject.ilike.%g.k%,subject.ilike.%gk%,subject.ilike.%general knowledge%');
         } else {
             q = q.eq('subject', subject);
         }

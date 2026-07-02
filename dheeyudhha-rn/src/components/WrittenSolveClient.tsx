@@ -14,6 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '@/lib/supabaseClient';
+import ImageViewerModal from '@/components/ImageViewerModal';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
@@ -71,6 +72,8 @@ export default function WrittenSolveClient({ question, challengeId }: { question
   const [teacherSolutionUrl, setTeacherSolutionUrl] = useState<string | null>(null);
   const [showTeacherAnswer, setShowTeacherAnswer] = useState(false);
   const [loadingTeacherAnswer, setLoadingTeacherAnswer] = useState(false);
+  
+  const [viewerImageUri, setViewerImageUri] = useState<string | null>(null);
 
   const [selfMarked, setSelfMarked] = useState(false);
   const [selfMarkResult, setSelfMarkResult] = useState<any>(null);
@@ -350,14 +353,18 @@ export default function WrittenSolveClient({ question, challengeId }: { question
 
           {/* Question image */}
           {questionImageUrl && (
-            <View className="mb-4 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 items-center justify-center">
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              onPress={() => setViewerImageUri(questionImageUrl)}
+              className="mb-4 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 items-center justify-center"
+            >
               <Image
                 source={{ uri: questionImageUrl }}
                 style={{ width: '100%', height: 200 }}
                 resizeMode="contain"
                 onError={(e) => console.warn('[WrittenSolveClient] Question image load error:', e.nativeEvent.error, questionImageUrl)}
               />
-            </View>
+            </TouchableOpacity>
           )}
 
           {/* Rules */}
@@ -442,12 +449,14 @@ export default function WrittenSolveClient({ question, challengeId }: { question
             <View className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800">
               <Text className="font-bold text-slate-400 mb-2 uppercase text-xs tracking-widest">Your Uploaded Answer</Text>
               {activeSubmission.submission_url ? (
-                <Image
-                  source={{ uri: activeSubmission.submission_url }}
-                  style={{ width: '100%', height: 220 }}
-                  className="rounded-xl bg-slate-100"
-                  resizeMode="contain"
-                />
+                <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerImageUri(activeSubmission.submission_url)}>
+                  <Image
+                    source={{ uri: activeSubmission.submission_url }}
+                    style={{ width: '100%', height: 220 }}
+                    className="rounded-xl bg-slate-100"
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
               ) : (
                 <View className="h-32 items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-xl">
                   <Text className="text-slate-400">Image not available</Text>
@@ -465,12 +474,14 @@ export default function WrittenSolveClient({ question, challengeId }: { question
                     <Text className="text-slate-400 mt-2 text-sm">Loading model answer...</Text>
                   </View>
                 ) : teacherSolutionUrl ? (
-                  <Image
-                    source={{ uri: teacherSolutionUrl }}
-                    style={{ width: '100%', height: 220 }}
-                    className="rounded-xl bg-white"
-                    resizeMode="contain"
-                  />
+                  <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerImageUri(teacherSolutionUrl)}>
+                    <Image
+                      source={{ uri: teacherSolutionUrl }}
+                      style={{ width: '100%', height: 220 }}
+                      className="rounded-xl bg-white"
+                      resizeMode="contain"
+                    />
+                  </TouchableOpacity>
                 ) : (
                   <View className="h-24 items-center justify-center bg-white/50 dark:bg-slate-800/50 rounded-xl">
                     <Text className="text-slate-500 italic text-center px-4">No model answer provided by teacher yet.</Text>
@@ -625,6 +636,11 @@ export default function WrittenSolveClient({ question, challengeId }: { question
           </View>
         )}
       </ScrollView>
+      <ImageViewerModal 
+        visible={!!viewerImageUri} 
+        imageUri={viewerImageUri} 
+        onClose={() => setViewerImageUri(null)} 
+      />
     </View>
   );
 }
