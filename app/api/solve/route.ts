@@ -495,6 +495,33 @@ export async function POST(req: Request) {
             }
         };
 
+        // ── WEAKNESS CONQUERED MOTIVATOR ─────────────────────────────────
+        if (isCorrect) {
+            try {
+                const { data: lastIncorrectAttempt } = await supabaseAdmin
+                    .from('question_attempts')
+                    .select('question_id')
+                    .eq('user_id', userId)
+                    .eq('is_correct', false)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (lastIncorrectAttempt) {
+                    const { data: lastWrongQ } = await supabaseAdmin
+                        .from('questions')
+                        .select('subject')
+                        .eq('id', lastIncorrectAttempt.question_id)
+                        .maybeSingle();
+
+                    if (lastWrongQ && lastWrongQ.subject === q.subject) {
+                        responseData.funnyMessage = "Incredible! You learned from your mistakes in this topic and conquered it! 💪";
+                    }
+                }
+            } catch (err) {
+                console.error('[solve] weakness conquer check error:', err);
+            }
+        }
         // ─────────────────────────────────────────────────────────────────
 
         // ── PASS/OVERTAKE NOTIFICATION LOGIC ──────────────────────────────

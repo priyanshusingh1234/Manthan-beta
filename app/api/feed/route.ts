@@ -167,11 +167,8 @@ export async function GET(req: NextRequest) {
             ])
             : Promise.resolve(null);
 
-        // Layer 2: SRS review IDs (prefetch missed questions so Layer 2 needs no serial await)
-        const failedArr = userFailed.size > 0 ? shuffle(Array.from(userFailed)).slice(0, 2) : [];
-        const srsReviewFetch = failedArr.length > 0
-            ? supabaseAdmin.from('questions').select('*').in('id', failedArr)
-            : Promise.resolve(null);
+        // Layer 2: SRS review IDs (Removed per new weakness system — no exact retries)
+        const srsReviewFetch = Promise.resolve(null);
 
         // Layer 5: Stretch questions (one grade up) — also prefetch
         const nextGrade = userGrade ? String(Number(userGrade) + 1) : null;
@@ -202,6 +199,8 @@ export async function GET(req: NextRequest) {
         // ── Step 4: Build the pool from fetched data — NO more serial awaits ──
         let pool: any[] = [];
         const overFetch = subject ? 1 : 1.5;
+        const maxWeaknessCount = Math.ceil(limit * 0.10);
+        let weaknessAddedCount = 0;
 
         // Layer 8 — New questions booster
         const layer8Count = Math.ceil(limit * 0.10 * overFetch);
@@ -211,11 +210,16 @@ export async function GET(req: NextRequest) {
             let addedInRound = false;
             for (const bData of bucketsData) {
                 if (layer8AddedCount >= layer8Count) break;
+                // Skip if this is a weakness bucket and we've hit the limit
+                if (bData.isWeakness && weaknessAddedCount >= maxWeaknessCount) continue;
+                
                 const qIdx = bData.A.findIndex((q: any) => !userAttempted.has(String(q.id)) && !pool.some((p: any) => p.id === q.id));
                 if (qIdx !== -1) {
                     const q = bData.A.splice(qIdx, 1)[0];
-                    pool.push({ ...q, _layer: 8, _label: bData.isWeakness ? '🎯 Target Weakness' : '✨ Just Added', _score: 120 });
-                    layer8AddedCount++; addedInRound = true;
+                    pool.push({ ...q, _layer: 8, _label: bData.isWeakness ? '🎯 Conquer Your Weakness' : '✨ Just Added', _score: 120 });
+                    layer8AddedCount++; 
+                    if (bData.isWeakness) weaknessAddedCount++;
+                    addedInRound = true;
                 }
             }
             if (!addedInRound) runningL8 = false;
@@ -229,6 +233,9 @@ export async function GET(req: NextRequest) {
             let addedInRound = false;
             for (const bData of bucketsData) {
                 if (layer1AddedCount >= layer1Count) break;
+                // Skip if this is a weakness bucket and we've hit the limit
+                if (bData.isWeakness && weaknessAddedCount >= maxWeaknessCount) continue;
+
                 const combined = [...bData.A, ...bData.B, ...bData.C];
                 const qIdx = combined.findIndex((q: any) => !userAttempted.has(String(q.id)) && !pool.some((p: any) => p.id === q.id));
                 if (qIdx !== -1) {
@@ -236,8 +243,10 @@ export async function GET(req: NextRequest) {
                     if (bData.A.includes(q)) bData.A.splice(bData.A.indexOf(q), 1);
                     else if (bData.B.includes(q)) bData.B.splice(bData.B.indexOf(q), 1);
                     else if (bData.C.includes(q)) bData.C.splice(bData.C.indexOf(q), 1);
-                    pool.push({ ...q, _layer: 1, _label: bData.isWeakness ? '🎯 Target Weakness' : '✨ For You', _score: 100 });
-                    layer1AddedCount++; addedInRound = true;
+                    pool.push({ ...q, _layer: 1, _label: bData.isWeakness ? '🎯 Conquer Your Weakness' : '✨ For You', _score: 100 });
+                    layer1AddedCount++; 
+                    if (bData.isWeakness) weaknessAddedCount++;
+                    addedInRound = true;
                 }
             }
             if (!addedInRound) runningL1 = false;
@@ -258,12 +267,7 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        // Layer 2 — SRS review (data already pre-fetched in parallel above)
-        if (srsRes && (srsRes as any).data?.length > 0) {
-            shuffle((srsRes as any).data).forEach((r: any) => {
-                pool.push({ ...r, _layer: 2, _label: '🔄 Review: You missed this', _score: 95 });
-            });
-        }
+        // Layer 2 — SRS review (Removed per new weakness system)
 
         // Layer 3 — Schoolmate trending
         // We have schoolmatesRes already. We now need their attempts — but this is
