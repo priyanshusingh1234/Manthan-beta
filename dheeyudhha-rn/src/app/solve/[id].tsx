@@ -455,6 +455,30 @@ export default function SolveQuestionScreen() {
             </Text>
           )}
 
+          {/* Coop Success Banner - shown when solving as a coop partner */}
+          {challenge && result.isCorrect && (
+            <View className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl p-5 mb-5 w-full">
+              <View className="flex-row items-center gap-3 mb-2">
+                <View className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 items-center justify-center">
+                  <Users size={20} color="#10b981" />
+                </View>
+                <View className="flex-1">
+                  <Text className="font-black text-emerald-800 dark:text-emerald-300 text-sm">Co-op Help Delivered! 🎉</Text>
+                  <Text className="text-emerald-600 dark:text-emerald-500 text-xs mt-0.5">You and your partner both split the points!</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {challenge && !result.isCorrect && (
+            <View className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40 rounded-2xl p-5 mb-5 w-full">
+              <View className="flex-row items-center gap-3">
+                <XCircle size={20} color="#ef4444" />
+                <Text className="flex-1 font-bold text-red-700 dark:text-red-400 text-sm">Incorrect answer — no points for the co-op this time.</Text>
+              </View>
+            </View>
+          )}
+
           <View className="flex-row items-center gap-4 mb-6">
             <View className="bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
               <Text className="text-slate-600 dark:text-slate-300 font-bold">
@@ -556,11 +580,14 @@ export default function SolveQuestionScreen() {
             )}
           </View>
 
+          {/* Continue / Back to coop button */}
           <TouchableOpacity 
-            onPress={() => router.back()}
+            onPress={() => challenge ? router.replace(`/coop/${challenge}` as any) : router.back()}
             className="bg-slate-900 dark:bg-white px-8 py-4 rounded-xl w-full items-center shadow-sm mb-4"
           >
-            <Text className="text-white dark:text-slate-900 font-bold text-lg">Continue</Text>
+            <Text className="text-white dark:text-slate-900 font-bold text-lg">
+              {challenge ? 'View Co-op Status →' : 'Continue'}
+            </Text>
           </TouchableOpacity>
           
           {!result.isCorrect && !challenge && !recoveredViaCoop && (
