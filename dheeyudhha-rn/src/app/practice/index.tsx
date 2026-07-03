@@ -15,6 +15,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; icon: string }> = {
   'SST':       { bg: '#fff7ed', icon: '#f97316' },
   'English':   { bg: '#fdf4ff', icon: '#a855f7' },
   'Hindi':     { bg: '#fff1f2', icon: '#f43f5e' },
+  'Hindi Gr':  { bg: '#fff1f2', icon: '#f43f5e' },
 };
 
 export default function PracticeIndexScreen() {

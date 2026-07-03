@@ -32,6 +32,7 @@ const SUBJECTS = [
   { label: 'SST', value: 'SST', emoji: '🌍' },
   { label: 'G.K', value: 'G.K', emoji: '🧠' },
   { label: 'Hindi', value: 'Hindi', emoji: '🇮🇳' },
+  { label: 'Hindi Gr', value: 'Hindi Gr', emoji: '📖' },
 ];
 
 export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderComponent?: React.ReactElement }) {
