@@ -276,6 +276,12 @@ export default function CoopStatusScreen() {
     const partnerWon = challengeWon || ["auto_approved", "ai_confirmed_correct", "points_given"].includes(data.partner.submission?.status || "");
     const bothSubmitted = challengeWon || (!!data.initiator.submission && !!data.partner.submission);
 
+    // Determine the current user's player state and whether they've already submitted
+    const isInitiator = data.currentUserId === data.initiator.id;
+    const isPartner = data.currentUserId === data.partner.id;
+    const currentPlayerSubmission = isInitiator ? data.initiator.submission : isPartner ? data.partner.submission : null;
+    const currentUserAlreadySubmitted = !!currentPlayerSubmission;
+
     return (
         <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
             <Stack.Screen options={{ headerShown: false }} />
@@ -331,7 +337,7 @@ export default function CoopStatusScreen() {
                         <View className="mt-4 bg-white/20 rounded-xl px-4 py-2 flex-row items-center gap-1.5">
                             <Zap size={14} color="white" fill="white" />
                             <Text className="text-white text-xs font-black uppercase">
-                                {data.question.points} PTS — {data.question.subject || "Question"}
+                                +{splitPoints} PTS EACH — {data.question.subject || "Question"}
                             </Text>
                         </View>
                     )}
@@ -428,26 +434,26 @@ export default function CoopStatusScreen() {
                     <PlayerCard player={data.partner} splitPoints={splitPoints} challengeMeta={data} />
                 </View>
 
-                {/* CTAs / Action panel */}
-                {!bothSubmitted && data.challenge.status !== "won" && data.challenge.status !== "lost" && (
+                {/* CTAs: only show if challenge is still open AND current user hasn't submitted yet */}
+                {!bothSubmitted && !currentUserAlreadySubmitted && data.challenge.status !== "won" && data.challenge.status !== "lost" && (
                     <View className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/30 rounded-3xl p-5 mt-6 gap-3">
                         <View>
                             <Text className="font-extrabold text-indigo-800 dark:text-indigo-400 text-sm">
-                                {data.currentUserId === data.initiator.id
+                                {isInitiator
                                     ? "Waiting for your partner to submit!"
-                                    : data.currentUserId === data.partner.id && !data.partner.submission
+                                    : isPartner && !data.partner.submission
                                         ? "Your partner is waiting — solve your part!"
                                         : "Waiting for the checker to review"}
                             </Text>
                             <Text className="text-indigo-600 dark:text-indigo-500 text-xs mt-0.5">
-                                {data.currentUserId === data.initiator.id
+                                {isInitiator
                                     ? "They must solve it correctly to save your points."
-                                    : data.currentUserId === data.partner.id && !data.partner.submission
+                                    : isPartner && !data.partner.submission
                                         ? "Head to the solve arena and provide help."
                                         : "Hold tight! The submission is under review."}
                             </Text>
                         </View>
-                        {data.currentUserId === data.partner.id && !data.partner.submission && (
+                        {isPartner && !data.partner.submission && (
                             <View className="flex-row items-center gap-2 justify-end mt-2">
                                 <TouchableOpacity
                                     onPress={handleWithdraw}
@@ -465,6 +471,17 @@ export default function CoopStatusScreen() {
                                 </TouchableOpacity>
                             </View>
                         )}
+                    </View>
+                )}
+
+                {/* Show waiting state if current user submitted but challenge not resolved yet */}
+                {currentUserAlreadySubmitted && !challengeWon && data.challenge.status !== "lost" && (
+                    <View className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-3xl p-5 mt-6 gap-2">
+                        <View className="flex-row items-center gap-2">
+                            <ActivityIndicator size="small" color="#d97706" />
+                            <Text className="font-extrabold text-amber-800 dark:text-amber-400 text-sm">Submission Under Review</Text>
+                        </View>
+                        <Text className="text-amber-600 dark:text-amber-500 text-xs">Your answer has been submitted. Hold tight while it's being verified!</Text>
                     </View>
                 )}
 
