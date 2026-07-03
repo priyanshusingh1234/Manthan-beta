@@ -5,22 +5,23 @@ export interface FeedOptions {
   difficulty?: string;
   chapter?: string;
   limit?: number;
+  excludeIds?: string[];
 }
 
 export async function fetchFeed(options: FeedOptions = {}): Promise<any[]> {
-  const { subject = '', difficulty = '', chapter = '', limit = 30 } = options;
+  const { subject = '', difficulty = '', chapter = '', limit = 30, excludeIds = [] } = options;
 
-  // 1. Get the current user's session for the auth header
   const { data: { session } } = await supabase.auth.getSession();
-  
-  // 2. Build the API URL
+
   const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
   const url = new URL(`${API_URL}/api/feed`);
-  
+
   if (subject) url.searchParams.append('subject', subject);
   if (difficulty) url.searchParams.append('difficulty', difficulty);
   if (chapter) url.searchParams.append('chapter', chapter);
   if (limit) url.searchParams.append('limit', String(limit));
+  // Pass seen IDs as a comma-separated string so server can exclude them
+  if (excludeIds.length > 0) url.searchParams.append('exclude', excludeIds.join(','));
 
   // 3. Set up the headers
   const headers: Record<string, string> = {

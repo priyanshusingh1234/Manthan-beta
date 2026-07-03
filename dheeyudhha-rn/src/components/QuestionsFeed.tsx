@@ -21,6 +21,8 @@ import { useFocusEffect } from 'expo-router';
 
 const PAGE_SIZE = 10;
 const CACHE_KEY = 'dheeyudhha_feed_cache';
+const CACHE_TS_KEY = 'dheeyudhha_feed_cache_ts';
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — stale after this
 
 const SUBJECTS = [
   { label: 'All', value: '', emoji: '⚡' },
@@ -40,14 +42,25 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
   const [subjectFilter, setSubjectFilter] = useState('');
   const [chapterFilter, setChapterFilter] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  
+
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [freshItems, setFreshItems] = useState<any[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Track all question IDs seen so far — sent to API on load-more to avoid duplicates
+  const seenIdsRef = useRef<Set<string>>(new Set());
   const allDataRef = useRef<any[]>([]);
   allDataRef.current = allData;
   const isMountedRef = useRef(false);
+
+  const saveCache = useCallback((data: any[]) => {
+    AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
+    AsyncStorage.setItem(CACHE_TS_KEY, String(Date.now())).catch(() => {});
+  }, []);
+
+  const clearCache = useCallback(() => {
+    AsyncStorage.multiRemove([CACHE_KEY, CACHE_TS_KEY]).catch(() => {});
+  }, []);
 
   const loadFeed = useCallback(async (isRefresh = false, silent = false, isLoadMore = false) => {
     if (isRefresh && !silent) {
@@ -57,27 +70,38 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
     }
 
     try {
-      const data = await fetchFeed({ subject: subjectFilter, chapter: chapterFilter, limit: 40 });
-      
-      // Cache the feed for the default view to enable instant launch next time
+      // For load-more, pass seen IDs so server avoids returning the same ones
+      const excludeIds = isLoadMore ? [...seenIdsRef.current] : [];
+
+      const data = await fetchFeed({
+        subject: subjectFilter,
+        chapter: chapterFilter,
+        limit: 40,
+        excludeIds,
+      });
+
+      // Cache only the default (no filters) fresh fetch
       if (!subjectFilter && !chapterFilter && !isLoadMore) {
-        AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
+        saveCache(data);
       }
 
       const currentAllData = allDataRef.current;
+
       if (isLoadMore) {
-        const existingIds = new Set(currentAllData.map(q => q.id));
-        const uniqueNewData = data.filter(q => !existingIds.has(q.id));
-        setAllData(prev => [...prev, ...uniqueNewData]);
+        const existingIds = new Set(currentAllData.map((q: any) => String(q.id)));
+        const uniqueNew = data.filter((q: any) => !existingIds.has(String(q.id)));
+        uniqueNew.forEach((q: any) => seenIdsRef.current.add(String(q.id)));
+        setAllData(prev => [...prev, ...uniqueNew]);
         setVisibleCount(prev => prev + PAGE_SIZE);
       } else if (silent && currentAllData.length > 0) {
-        // Background refresh: check if new questions arrived
-        const existingIds = new Set(currentAllData.map(q => q.id));
-        const newItems = data.filter(q => !existingIds.has(q.id));
+        const existingIds = new Set(currentAllData.map((q: any) => String(q.id)));
+        const newItems = data.filter((q: any) => !existingIds.has(String(q.id)));
         if (newItems.length > 0) {
-          setFreshItems(data); // store the full new feed to apply later
+          setFreshItems(data);
         }
       } else {
+        // Full load/refresh: reset seen IDs
+        seenIdsRef.current = new Set(data.map((q: any) => String(q.id)));
         setAllData(data);
         setVisibleCount(PAGE_SIZE);
       }
@@ -90,63 +114,62 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
       }
       setLoadingMore(false);
     }
-  }, [subjectFilter, chapterFilter]);
+  }, [subjectFilter, chapterFilter, saveCache]);
 
-  const loadFiltersFromStorage = async () => {
-    try {
-      const storedSubject = await AsyncStorage.getItem('dheeyudhha_feed_subject');
-      const storedChapter = await AsyncStorage.getItem('dheeyudhha_feed_chapter');
+  // Parallel init: read cache + filters simultaneously, then fetch fresh
+  useEffect(() => {
+    const init = async () => {
+      const [cachedRaw, cacheTs, storedSubject, storedChapter] = await Promise.all([
+        AsyncStorage.getItem(CACHE_KEY).catch(() => null),
+        AsyncStorage.getItem(CACHE_TS_KEY).catch(() => null),
+        AsyncStorage.getItem('dheeyudhha_feed_subject').catch(() => null),
+        AsyncStorage.getItem('dheeyudhha_feed_chapter').catch(() => null),
+      ]);
+
       if (storedSubject !== null) setSubjectFilter(storedSubject);
       if (storedChapter !== null) setChapterFilter(storedChapter);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
-  useEffect(() => {
-    const initCache = async () => {
-      try {
-        const cached = await AsyncStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const parsed = JSON.parse(cached);
+      // Only serve cache if it's within TTL
+      const cacheAge = cacheTs ? Date.now() - Number(cacheTs) : Infinity;
+      if (cachedRaw && cacheAge < CACHE_TTL_MS) {
+        try {
+          const parsed = JSON.parse(cachedRaw);
           if (Array.isArray(parsed) && parsed.length > 0) {
+            seenIdsRef.current = new Set(parsed.map((q: any) => String(q.id)));
             setAllData(parsed);
-            setLoading(false); // Instantly dismiss loader since we have cached data
+            setLoading(false);
           }
-        }
-      } catch (e) {
-        // ignore cache read errors
+        } catch { /* ignore */ }
       }
     };
-    initCache().then(() => {
-      loadFiltersFromStorage().then(() => loadFeed());
-    });
+
+    init().then(() => loadFeed());
 
     const refreshListener = DeviceEventEmitter.addListener('refresh_feed_filters', () => {
-      loadFiltersFromStorage();
+      clearCache();
+      loadFeed(true);
     });
 
     const solvedListener = DeviceEventEmitter.addListener('question_solved', ({ questionId }) => {
-      setAllData((prev) => prev.filter((q) => String(q.id) !== String(questionId)));
+      const id = String(questionId);
+      seenIdsRef.current.add(id); // prevent it from coming back on load-more
+      setAllData(prev => prev.filter((q: any) => String(q.id) !== id));
+      clearCache(); // cache now has a solved question — invalidate it
     });
 
     return () => {
       refreshListener.remove();
       solvedListener.remove();
     };
-  }, []); // Initial load and event setup
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    // Only fetch if filters actually change and it's not the initial mount
-    // since initial mount is handled above.
-    // For simplicity, we just trigger loadFeed when filters change.
     loadFeed();
-  }, [subjectFilter, chapterFilter]);
+  }, [subjectFilter, chapterFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useFocusEffect(
     useCallback(() => {
       if (isMountedRef.current) {
-        // Fetch silently (true) so we don't wipe out the current feed data and reset the user's scroll position back to the top
         loadFeed(false, true);
       } else {
         isMountedRef.current = true;
@@ -156,35 +179,36 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        setCurrentUserId(user.id);
-      }
+      if (user) setCurrentUserId(user.id);
     });
   }, []);
 
   useEffect(() => {
-    // Silent background polling every 30 seconds
+    // Background poll every 60s (reduced from 30s)
     pollRef.current = setInterval(() => {
       loadFeed(false, true);
-    }, 30000);
+    }, 60000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [loadFeed]);
 
   const applyNewPosts = () => {
+    seenIdsRef.current = new Set(freshItems.map((q: any) => String(q.id)));
     setAllData(freshItems);
     setFreshItems([]);
     setVisibleCount(PAGE_SIZE);
-    // FlatList will naturally render the new items at top
   };
 
   const handleLoadMore = () => {
-    if (visibleCount >= allData.length) {
-      setLoadingMore(true);
-      loadFeed(false, false, true); // fetch another batch from the algorithm
-    } else {
+    if (loadingMore) return;
+    if (visibleCount < allData.length) {
+      // Still have buffered items — just reveal more without a network call
       setVisibleCount(prev => prev + PAGE_SIZE);
+    } else {
+      // Buffer exhausted — fetch fresh batch, excluding seen IDs
+      setLoadingMore(true);
+      loadFeed(false, false, true);
     }
   };
 
@@ -194,10 +218,10 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
     if (item.type === 'post') {
       return (
         <View className="mb-4">
-          <PostCard 
-            post={item} 
-            currentUserId={currentUserId} 
-            onUpdate={() => {}} 
+          <PostCard
+            post={item}
+            currentUserId={currentUserId}
+            onUpdate={() => {}}
           />
         </View>
       );
@@ -262,11 +286,12 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
                         onPress={async () => {
                           const newSub = isActive ? '' : sub.value;
                           setSubjectFilter(newSub);
-                          setChapterFilter(''); // Reset chapter when changing subject
+                          setChapterFilter('');
                           await AsyncStorage.setItem('dheeyudhha_feed_subject', newSub);
                           await AsyncStorage.removeItem('dheeyudhha_feed_chapter');
                           setAllData([]);
                           setVisibleCount(PAGE_SIZE);
+                          clearCache();
                         }}
                         className={`flex-row items-center gap-1.5 px-4 py-2.5 rounded-full border ${
                           isActive
@@ -304,7 +329,10 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => loadFeed(true)}
+              onRefresh={() => {
+                clearCache();
+                loadFeed(true);
+              }}
               colors={['#4f46e5']}
               tintColor="#4f46e5"
             />
@@ -322,4 +350,3 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
     </View>
   );
 }
-

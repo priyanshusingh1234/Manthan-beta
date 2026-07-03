@@ -29,6 +29,9 @@ export async function GET(req: NextRequest) {
         const chapter = req.nextUrl.searchParams.get('chapter') || '';
         const targetClass = req.nextUrl.searchParams.get('class') || null;
         const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') || '30'), 60);
+        // IDs to exclude (already seen by client — used for infinite scroll)
+        const excludeParam = req.nextUrl.searchParams.get('exclude') || '';
+        const excludeIds = excludeParam ? excludeParam.split(',').filter(Boolean) : [];
 
         const now = new Date();
         const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 60 * 60 * 1000).toISOString();
@@ -476,8 +479,8 @@ export async function GET(req: NextRequest) {
             });
         }
 
-        // Deduplicate and cap lower-grade questions
-        const seen = new Set<string>();
+        // Deduplicate, cap lower-grade questions, and exclude client-seen IDs
+        const seen = new Set<string>(excludeIds); // pre-seed with client's seen IDs
         let lowerGradeCount = 0;
         pool = pool.filter(r => {
             if (seen.has(String(r.id))) return false;
