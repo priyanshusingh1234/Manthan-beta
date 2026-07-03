@@ -43,7 +43,7 @@ import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Circle } fr
 import { supabase } from '@/lib/supabaseClient';
 import { useColorScheme } from 'nativewind';
 import { getLevel } from '@/lib/xp';
-import { getLeague } from '@/lib/leagues';
+import { getLeague, getWeekKey } from '@/lib/leagues';
 import PostCard from '@/components/PostCard';
 import QuestionCard from '@/components/QuestionCard';
 
@@ -667,8 +667,10 @@ export default function PublicProfileScreen() {
   const streakGoalMetToday = profile.daily_solve_date === todayIST && (profile.daily_solve_count || 0) >= 2;
 
   // Monthly points & League
-  const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-  const monthlyPoints = profile.monthly_points_month === currentMonthKey ? profile.monthly_points || 0 : 0;
+  // monthly_points_month is stored as a week key (e.g. "2026-W07-28") by the league API
+  // Must compare with getWeekKey() — NOT a calendar month string.
+  const currentWeekKey = getWeekKey();
+  const monthlyPoints = profile.monthly_points_month === currentWeekKey ? profile.monthly_points || 0 : 0;
   const userLeague = getLeague(monthlyPoints);
 
   return (
