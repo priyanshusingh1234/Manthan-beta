@@ -97,9 +97,11 @@ export async function GET(req: NextRequest) {
         };
 
         async function fetchSubjectTimeBuckets(subjectToFetch: string, gradeToFetch: string | null) {
+            const allExcluded = [...Array.from(userAttempted), ...excludeIds].filter(Boolean);
             const applyFilter = (q: any) => {
                 let query = applyCommonFilters(q, subjectToFetch, difficulty, chapter);
                 if (gradeToFetch) query = query.in('class_grade', [String(gradeToFetch), 'All', 'Any']);
+                if (allExcluded.length > 0) query = query.not('id', 'in', `(${allExcluded.join(',')})`);
                 return query;
             };
 
@@ -108,9 +110,9 @@ export async function GET(req: NextRequest) {
             const oldOffset = Math.floor(Math.random() * 60); // rotate across up to 60 old questions
 
             const [resA, resB, resC] = await Promise.all([
-                applyFilter(supabaseAdmin.from('questions').select('*')).gte('created_at', daysAgo(3)).order('created_at', { ascending: false }).limit(20),
-                applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(3)).gte('created_at', daysAgo(30)).order('created_at', { ascending: false }).limit(30),
-                applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(30)).order('created_at', { ascending: false }).range(oldOffset, oldOffset + 39),
+                applyFilter(supabaseAdmin.from('questions').select('*')).gte('created_at', daysAgo(3)).order('created_at', { ascending: false }).limit(150),
+                applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(3)).gte('created_at', daysAgo(30)).order('created_at', { ascending: false }).limit(150),
+                applyFilter(supabaseAdmin.from('questions').select('*')).lt('created_at', daysAgo(30)).order('created_at', { ascending: false }).range(oldOffset, oldOffset + 149),
             ]);
             return {
                 subject: subjectToFetch,
