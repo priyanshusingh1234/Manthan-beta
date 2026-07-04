@@ -97,11 +97,9 @@ export async function GET(req: NextRequest) {
         };
 
         async function fetchSubjectTimeBuckets(subjectToFetch: string, gradeToFetch: string | null) {
-            const allExcluded = [...Array.from(userAttempted), ...excludeIds].filter(Boolean);
             const applyFilter = (q: any) => {
                 let query = applyCommonFilters(q, subjectToFetch, difficulty, chapter);
                 if (gradeToFetch) query = query.in('class_grade', [String(gradeToFetch), 'All', 'Any']);
-                if (allExcluded.length > 0) query = query.not('id', 'in', `(${allExcluded.join(',')})`);
                 return query;
             };
 
