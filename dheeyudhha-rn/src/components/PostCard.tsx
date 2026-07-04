@@ -197,10 +197,10 @@ export default React.memo(function PostCard({
   };
 
   return (
-    <View className={`bg-white dark:bg-slate-900 px-4 py-4 ${isSinglePost ? 'border-b border-slate-100 dark:border-slate-800' : 'mx-3 mb-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm'}`}>
+    <View className={`bg-white dark:bg-slate-900 py-4 border-b border-slate-200 dark:border-slate-800`}>
       
       {/* Header */}
-      <View className="flex-row items-center mb-3">
+      <View className="flex-row items-center mb-3 px-4">
         <TouchableOpacity activeOpacity={0.8} onPress={handleProfilePress}>
           <View className="w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mr-3 justify-center items-center">
             {avatarUrl ? (
@@ -234,7 +234,7 @@ export default React.memo(function PostCard({
 
       {/* Feed Label */}
       {post?._feedLabel ? (
-        <View className="flex-row items-center mb-2">
+        <View className="flex-row items-center mb-2 px-4">
           <Sparkles size={12} color="#6366f1" />
           <Text className="text-indigo-600 dark:text-indigo-400 text-[10px] font-bold ml-1.5 tracking-widest uppercase">
             {post._feedLabel}
@@ -244,7 +244,7 @@ export default React.memo(function PostCard({
 
       {/* Content */}
       {content ? (
-        <Pressable onPress={handlePress} disabled={isSinglePost} className="mb-3">
+        <Pressable onPress={handlePress} disabled={isSinglePost} className="mb-3 px-4">
           <Text className="text-[15.5px] text-slate-800 dark:text-slate-200 leading-relaxed tracking-tight">
             {renderContent(content)}
           </Text>
@@ -256,7 +256,7 @@ export default React.memo(function PostCard({
         isSinglePost ? (
           <PostVideoPlayer url={videoUrl} />
         ) : (
-          <Pressable onPress={handlePress} className="w-full h-64 bg-slate-900 rounded-2xl overflow-hidden mb-3 justify-center items-center">
+          <Pressable onPress={handlePress} className="w-full aspect-[4/5] max-h-[75vh] bg-slate-900 overflow-hidden mb-3 justify-center items-center">
             {videoThumbnail || images[0] ? (
               <Image source={{ uri: videoThumbnail || images[0] }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             ) : null}
@@ -272,7 +272,7 @@ export default React.memo(function PostCard({
           {images.length === 1 ? (
             <Pressable 
               onPress={() => onImagePress ? onImagePress(images[0]) : handlePress()} 
-              className={`w-full h-48 overflow-hidden bg-slate-100 dark:bg-slate-800 ${isSinglePost ? 'rounded-xl' : 'rounded-2xl'}`}
+              className={`w-full aspect-[4/5] max-h-[75vh] overflow-hidden bg-slate-100 dark:bg-slate-800`}
             >
               <Image source={{ uri: images[0] }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             </Pressable>
@@ -283,8 +283,8 @@ export default React.memo(function PostCard({
                   <Pressable 
                     key={`img-${idx}`} 
                     onPress={() => onImagePress ? onImagePress(uri) : handlePress()} 
-                    className={`h-48 overflow-hidden bg-slate-100 dark:bg-slate-800 ${isSinglePost ? '' : 'rounded-2xl mr-2'}`}
-                    style={{ width: isSinglePost ? SCREEN_WIDTH : SCREEN_WIDTH - 64 }}
+                    className={`aspect-[4/5] max-h-[75vh] overflow-hidden bg-slate-100 dark:bg-slate-800`}
+                    style={{ width: SCREEN_WIDTH }}
                   >
                     <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
                   </Pressable>
@@ -305,7 +305,7 @@ export default React.memo(function PostCard({
       {/* Render Reposted Content */}
       {hasValidRepost && (
         <Pressable 
-          className="border border-slate-200 dark:border-slate-700 rounded-2xl p-3 mb-3 bg-slate-50 dark:bg-slate-800/50"
+          className="border border-slate-200 dark:border-slate-700 rounded-2xl p-3 mb-3 mx-4 bg-slate-50 dark:bg-slate-800/50"
           onPress={() => {
             if (!isSinglePost && repostData?.id) {
               router.push(`/posts/${repostData.id}` as any);
@@ -359,9 +359,9 @@ export default React.memo(function PostCard({
       )}
 
       {/* Action Bar */}
-      <View className="flex-row items-center justify-between bg-slate-50 dark:bg-slate-800/50 rounded-2xl px-2 py-1.5 border border-slate-200/50 dark:border-slate-700/50 mt-1">
+      <View className="flex-row items-center justify-between mt-2 mx-2">
         <View className="flex-row items-center">
-          <TouchableOpacity onPress={handleLike} activeOpacity={0.7} className={`flex-row items-center px-3 py-1.5 rounded-xl ${isLiked ? 'bg-rose-50 dark:bg-rose-900/20' : ''}`}>
+          <TouchableOpacity onPress={handleLike} activeOpacity={0.7} className={`flex-row items-center px-3 py-1.5 rounded-xl`}>
             <Heart size={18} color={isLiked ? '#f43f5e' : (isDark ? '#94a3b8' : '#64748b')} fill={isLiked ? '#f43f5e' : 'none'} />
             {likesCount > 0 && (
               <Text className={`text-[13px] font-black ml-1.5 ${isLiked ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}`}>
@@ -389,7 +389,7 @@ export default React.memo(function PostCard({
       {(author?.id === currentUserId || post?.user_id === currentUserId) && (
         <TouchableOpacity 
           onPress={() => router.push(`/insights/${post.id}` as any)}
-          className="mt-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl items-center justify-center border border-indigo-100 dark:border-indigo-800/30"
+          className="mt-3 mx-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl items-center justify-center border border-indigo-100 dark:border-indigo-800/30"
         >
           <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-[13px]">View Insights</Text>
         </TouchableOpacity>
