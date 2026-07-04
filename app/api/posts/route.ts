@@ -111,21 +111,6 @@ export async function GET(req: NextRequest) {
                     : { data: [] };
                 const profilesMap = new Map((profilesRaw || []).map((p: any) => [p.id, p]));
 
-                const missingAuthorIds = authorIds.filter(id => {
-                    const p = profilesMap.get(id);
-                    return !p || !p.full_name;
-                });
-
-                const authUsersMap = new Map();
-                if (missingAuthorIds.length > 0) {
-                    await Promise.allSettled(missingAuthorIds.map(async (id) => {
-                        try {
-                            const { data } = await supabaseAdmin.auth.admin.getUserById(id);
-                            if (data?.user) authUsersMap.set(id, data.user);
-                        } catch { /* silent */ }
-                    }));
-                }
-
                 return posts.map(p => {
                     const profile = profilesMap.get(p.author_id);
                     const isGhost = profile?.is_ghost === true;
@@ -138,16 +123,9 @@ export async function GET(req: NextRequest) {
                         finalContent = finalContent.substring(8).trim();
                     }
 
-                    const authUser = authUsersMap.get(p.author_id);
-                    const meta = authUser?.user_metadata || {};
-                    const authName = authUser?.full_name || meta?.fullName || meta?.full_name || meta?.name || meta?.username || (authUser?.email ? authUser.email.split('@')[0] : null);
-
                     let formattedRepost = null;
                     if (p.repost) {
                         const rpProfile = profilesMap.get(p.repost.author_id);
-                        const rpAuthUser = authUsersMap.get(p.repost.author_id);
-                        const rpMeta = rpAuthUser?.user_metadata || {};
-                        const rpAuthName = rpAuthUser?.full_name || rpMeta?.fullName || rpMeta?.full_name || rpMeta?.name || rpMeta?.username || (rpAuthUser?.email ? rpAuthUser.email.split('@')[0] : null);
                         
                         formattedRepost = {
                             id: p.repost.id,
@@ -160,13 +138,13 @@ export async function GET(req: NextRequest) {
                             created_at: p.repost.created_at,
                             author: {
                                 id: p.repost.author_id,
-                                name: rpProfile?.full_name || rpAuthName || rpProfile?.username || 'Student',
-                                username: rpProfile?.username || rpMeta?.username || null,
-                                avatar_url: rpProfile?.avatar_url || rpMeta?.avatar_url || rpMeta?.picture || null,
-                                isTeacher: rpProfile?.is_teacher || rpMeta?.isTeacher || rpMeta?.is_teacher || false,
-                                school: rpProfile?.school || rpMeta?.school || null,
+                                name: rpProfile?.full_name || rpProfile?.username || 'Scholar',
+                                username: rpProfile?.username || null,
+                                avatar_url: rpProfile?.avatar_url || null,
+                                isTeacher: rpProfile?.is_teacher || false,
+                                school: rpProfile?.school || null,
                                 isGhost: rpProfile?.is_ghost === true,
-                                cosmetics: rpProfile?.cosmetics || rpMeta?.cosmetics || [],
+                                cosmetics: rpProfile?.cosmetics || [],
                             }
                         };
                     }
@@ -187,14 +165,14 @@ export async function GET(req: NextRequest) {
                         repost: formattedRepost,
                         author: {
                             id: p.author_id,
-                            name: profile?.full_name || authName || profile?.username || 'Student',
-                            username: profile?.username || meta?.username || null,
-                            avatar_url: profile?.avatar_url || meta?.avatar_url || meta?.picture || null,
-                            school: profile?.school || meta?.school || null,
-                            isTeacher: profile?.is_teacher || meta?.isTeacher || meta?.is_teacher || false,
-                            totalPoints: Number(profile?.total_points) || Number(meta?.totalPoints) || 0,
+                            name: profile?.full_name || profile?.username || 'Scholar',
+                            username: profile?.username || null,
+                            avatar_url: profile?.avatar_url || null,
+                            school: profile?.school || null,
+                            isTeacher: profile?.is_teacher || false,
+                            totalPoints: Number(profile?.total_points) || 0,
                             isGhost: isGhost,
-                            cosmetics: profile?.cosmetics || meta?.cosmetics || [],
+                            cosmetics: profile?.cosmetics || [],
                         }
                     };
                 });
