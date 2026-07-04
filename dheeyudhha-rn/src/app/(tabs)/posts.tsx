@@ -22,6 +22,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 function VideoPreviewItem({ uri }: { uri: string }) {
   const player = useVideoPlayer(uri, p => {
@@ -78,6 +79,21 @@ export default function PostsScreen() {
     try {
       if (isLoadMore) setLoadingMore(true);
       
+      const cacheKey = `posts_cache_${feedTab}`;
+      if (!isLoadMore && posts.length === 0) {
+        // Optimistically load from cache
+        const cachedStr = await AsyncStorage.getItem(cacheKey);
+        if (cachedStr) {
+          try {
+             const cached = JSON.parse(cachedStr);
+             if (Array.isArray(cached) && cached.length > 0) {
+               setPosts(cached);
+               setLoading(false); // Remove stutter
+             }
+          } catch(e) {}
+        }
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       
       const nextPage = isLoadMore ? page + 1 : 1;
@@ -102,10 +118,21 @@ export default function PostsScreen() {
       }
 
       setPosts(prev => {
-        if (!isLoadMore) return postsArray;
-        const existingIds = new Set(prev.map(p => p.id));
-        const uniqueNewPosts = postsArray.filter(p => !existingIds.has(p.id));
-        return [...prev, ...uniqueNewPosts];
+        let newPosts = [];
+        if (!isLoadMore) {
+          newPosts = postsArray;
+        } else {
+          const existingIds = new Set(prev.map(p => p.id));
+          const uniqueNewPosts = postsArray.filter(p => !existingIds.has(p.id));
+          newPosts = [...prev, ...uniqueNewPosts];
+        }
+        
+        // Save to cache asynchronously
+        if (!isLoadMore) {
+          AsyncStorage.setItem(`posts_cache_${feedTab}`, JSON.stringify(newPosts)).catch(() => {});
+        }
+        
+        return newPosts;
       });
       setPage(nextPage);
     } catch (error) {
