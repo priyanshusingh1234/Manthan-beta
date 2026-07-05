@@ -109,6 +109,13 @@ function NotifIconBadge({ type, size = 'md' }: { type: string; size?: 'sm' | 'md
     }
     if (type === 'streak_friend') {
         return (
+            <View className={`${dim} bg-emerald-500 rounded-2xl items-center justify-center shrink-0 shadow`}>
+                <Target size={iconDim} color="white" />
+            </View>
+        );
+    }
+    if (type === 'streak_extended') {
+        return (
             <View className={`${dim} bg-orange-500 rounded-2xl items-center justify-center shrink-0 shadow`}>
                 <Flame size={iconDim} color="white" fill="white" />
             </View>
@@ -266,6 +273,10 @@ export default function NotificationsScreen() {
             let targetHref = notif.href;
             if (targetHref.startsWith('/questions/')) {
                 targetHref = targetHref.replace('/questions/', '/solve/');
+            } else if (targetHref === '/league') {
+                targetHref = '/leaderboard';
+            } else if (targetHref === '/streaks') {
+                targetHref = '/profile';
             }
             router.push(targetHref as any);
         }
@@ -409,6 +420,7 @@ export default function NotificationsScreen() {
                         const isCoopChallenge = notif.type === 'coop_challenge';
                         const isDuelChallenge = isCoopChallenge && notif.href?.startsWith('/duel/');
                         const isStreakFriend = notif.type === 'streak_friend';
+                        const isStreakExtended = notif.type === 'streak_extended';
                         const isFollowRequest = notif.type === 'follow_request';
 
                         if (isDuelChallenge) {
@@ -437,6 +449,76 @@ export default function NotificationsScreen() {
                                                 <Text className="text-[9px] text-slate-400 font-bold shrink-0">{timeAgo(notif.created_at)}</Text>
                                             </View>
                                             <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal" numberOfLines={2}>
+                                                {notif.body}
+                                            </Text>
+                                        </View>
+                                        <ChevronRight size={16} color={isDark ? '#475569' : '#cbd5e1'} />
+                                    </TouchableOpacity>
+                                </View>
+                            );
+                        }
+
+                        if (isStreakFriend) {
+                            return (
+                                <View key={notif.id} className="mb-4">
+                                    <TouchableOpacity
+                                        onPress={() => handleNotifClick(notif)}
+                                        activeOpacity={0.8}
+                                        className={`p-4 rounded-3xl flex-row gap-4 items-center border relative overflow-hidden ${
+                                            !notif.read 
+                                                ? 'bg-emerald-50/40 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-900/40' 
+                                                : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
+                                        }`}
+                                    >
+                                        {!notif.read && <View className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500" />}
+                                        <View className="w-12 h-12 rounded-2xl bg-emerald-500 items-center justify-center shadow-sm shrink-0">
+                                            <Target size={24} color="#fff" />
+                                        </View>
+                                        <View className="flex-1 min-w-0">
+                                            <View className="flex-row justify-between items-baseline gap-1 mb-0.5">
+                                                <Text className={`text-xs truncate flex-1 ${
+                                                    !notif.read ? 'font-black text-emerald-900 dark:text-emerald-100' : 'font-bold text-slate-600 dark:text-slate-400'
+                                                }`}>
+                                                    {notif.title}
+                                                </Text>
+                                                <Text className="text-[9px] text-slate-400 font-bold shrink-0">{timeAgo(notif.created_at)}</Text>
+                                            </View>
+                                            <Text className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 leading-normal font-medium" numberOfLines={2}>
+                                                {notif.body}
+                                            </Text>
+                                        </View>
+                                        <ChevronRight size={16} color={isDark ? '#475569' : '#cbd5e1'} />
+                                    </TouchableOpacity>
+                                </View>
+                            );
+                        }
+
+                        if (isStreakExtended) {
+                            return (
+                                <View key={notif.id} className="mb-4">
+                                    <TouchableOpacity
+                                        onPress={() => handleNotifClick(notif)}
+                                        activeOpacity={0.8}
+                                        className={`p-4 rounded-3xl flex-row gap-4 items-center border relative overflow-hidden ${
+                                            !notif.read 
+                                                ? 'bg-orange-50/40 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900/40' 
+                                                : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
+                                        }`}
+                                    >
+                                        {!notif.read && <View className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500" />}
+                                        <View className="w-12 h-12 rounded-2xl bg-orange-500 items-center justify-center shadow-sm shrink-0 border border-orange-400">
+                                            <Flame size={24} color="#fff" fill="#fff" />
+                                        </View>
+                                        <View className="flex-1 min-w-0">
+                                            <View className="flex-row justify-between items-baseline gap-1 mb-0.5">
+                                                <Text className={`text-xs truncate flex-1 ${
+                                                    !notif.read ? 'font-black text-orange-900 dark:text-orange-100' : 'font-bold text-slate-600 dark:text-slate-400'
+                                                }`}>
+                                                    {notif.title}
+                                                </Text>
+                                                <Text className="text-[9px] text-slate-400 font-bold shrink-0">{timeAgo(notif.created_at)}</Text>
+                                            </View>
+                                            <Text className="text-[11px] text-orange-700/80 dark:text-orange-400/80 leading-normal font-medium" numberOfLines={2}>
                                                 {notif.body}
                                             </Text>
                                         </View>

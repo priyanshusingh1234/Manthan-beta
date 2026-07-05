@@ -50,6 +50,8 @@ import { useColorScheme } from 'nativewind';
 import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
+import { setActiveChatRoomId } from '@/lib/pushUtils';
+import { useMessageSound } from '@/hooks/useMessageSound';
 
 const WEB_URL = 'https://manthan-beta-c975.vercel.app';
 const { width } = Dimensions.get('window');
@@ -367,6 +369,7 @@ export default function ChatRoomScreen() {
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [sending, setSending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const playMessageSound = useMessageSound();
 
   // States
   const [isOnline, setIsOnline] = useState(false);
@@ -389,6 +392,11 @@ export default function ChatRoomScreen() {
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<any>(null);
   const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    setActiveChatRoomId(roomId);
+    return () => setActiveChatRoomId(null);
+  }, [roomId]);
 
   const syncBlockStatus = useCallback(async (myId: string, partnerId: string) => {
     try {
@@ -522,6 +530,7 @@ export default function ChatRoomScreen() {
               body: JSON.stringify({ messageIds: [msg.id] })
             }).catch(null);
             Vibration.vibrate(40);
+            playMessageSound();
           }
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
@@ -587,6 +596,7 @@ export default function ChatRoomScreen() {
 
       setMessages(prev => [optimisticMsg, ...prev]);
       setNewMessage('');
+      playMessageSound();
 
       const { error } = await supabase.from('chat_messages').insert({
         room_id: roomId,

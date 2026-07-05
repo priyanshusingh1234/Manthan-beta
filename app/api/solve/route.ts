@@ -467,6 +467,55 @@ export async function POST(req: Request) {
 
         const streakEarnedToday = newDailySolveCount === 2;
 
+        // ── STREAK FRIEND NOTIFICATION ────────────────────────────────────
+        if (streakEarnedToday) {
+            // Fire and forget to prevent blocking the response
+            (async () => {
+                try {
+                    const solverName = userMeta.full_name || 'Your friend';
+                    const solverAvatar = userMeta.avatar_url || undefined;
+                    const todayStr = new Date().toISOString().split('T')[0];
+
+                    const { data: followerRows } = await supabaseAdmin
+                        .from('follows')
+                        .select('follower_id')
+                        .eq('following_id', user.id);
+
+                    if (followerRows && followerRows.length > 0) {
+                        const followerIds = followerRows.map((r: any) => r.follower_id);
+                        
+                        const { data: followerProfiles } = await supabaseAdmin
+                            .from('profiles')
+                            .select('id, daily_solve_date, daily_solve_count')
+                            .in('id', followerIds);
+
+                        const pendingFollowers = (followerProfiles || []).filter((fp: any) => {
+                            const metGoal = fp.daily_solve_date === todayStr && Number(fp.daily_solve_count) >= 2;
+                            return !metGoal;
+                        });
+
+                        if (pendingFollowers.length > 0) {
+                            const { createNotification } = await import('@/lib/createNotification');
+                            await Promise.allSettled(pendingFollowers.map((fp: any) =>
+                                createNotification({
+                                    userId: fp.id,
+                                    type: 'streak_extended',
+                                    title: `🔥 ${solverName} just extended their streak!`,
+                                    body: `Don't let your streak die today. Open the app to practice now!`,
+                                    href: '/streaks',
+                                    actorId: user.id,
+                                    actorName: solverName,
+                                    actorAvatar: solverAvatar,
+                                })
+                            ));
+                        }
+                    }
+                } catch (e) {
+                    console.error('[solve] streak friend notif error:', e);
+                }
+            })();
+        }
+
         // ── Level-up detection ────────────────────────────────────────────
         const XP_PER_LEVEL = 50;
         const oldLevel = Math.floor(currentXp / XP_PER_LEVEL) + 1;
@@ -542,7 +591,7 @@ export async function POST(req: Request) {
                         .lt('monthly_points', newMonthlyPts);
 
                     if (overtakenFriends && overtakenFriends.length > 0) {
-                        const { data: solverProfile } = await supabaseAdmin.from('profiles').select('full_name, avatar_url').eq('id', userId).single();
+                        const { data: solverProfile } = await supabaseAdmin.from('profiles').select('full_name, avatar_url, username').eq('id', userId).single();
                         const solverName = solverProfile?.full_name || 'Your friend';
 
                         // Tell the frontend we surpassed someone! (20% chance to avoid spam)
@@ -583,7 +632,7 @@ export async function POST(req: Request) {
                                             type: 'friend_milestone',
                                             title: bTitle,
                                             body: bBody,
-                                            href: `/user/${solverProfile?.full_name ? encodeURIComponent(solverProfile.full_name) : userId}`,
+                                            href: `/user/${solverProfile?.username ? encodeURIComponent(solverProfile.username) : userId}`,
                                             actorId: userId,
                                             actorName: solverProfile?.full_name || 'Friend',
                                             actorAvatar: solverProfile?.avatar_url,

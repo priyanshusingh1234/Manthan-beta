@@ -26,6 +26,9 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import PostCard from '@/components/PostCard';
 import BadgedName from '@/components/BadgedName';
+import EditProfileModal from '@/components/EditProfileModal';
+import StoreItemCard from '@/components/StoreItemCard';
+import TitlesDashboard from '@/components/TitlesDashboard';
 
 type TabKey = 'stats' | 'posts' | 'achievements';
 
@@ -69,6 +72,7 @@ export default function ProfileScreen() {
 
   // Edit Modal
   const [editVisible, setEditVisible] = useState(false);
+  const [titlesVisible, setTitlesVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', username: '', bio: '', school: '', grade: '' });
   const [newAvatar, setNewAvatar] = useState<{ uri: string; type: string; name: string } | null>(null);
@@ -433,11 +437,32 @@ export default function ProfileScreen() {
   }
   if (!profile) return null;
 
-  const avatarPreview = newAvatar?.uri || profile.avatar_url;
-  const bannerPreview = newBanner?.uri || profile.banner_url;
-
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950">
+      <EditProfileModal
+        visible={editVisible}
+        onClose={() => setEditVisible(false)}
+        form={editForm}
+        setForm={setEditForm}
+        onPickImage={pickImage}
+        onSave={handleSaveProfile}
+        saving={saving}
+        newAvatar={newAvatar}
+        newBanner={newBanner}
+        currentAvatar={profile.avatar_url}
+        currentBanner={profile.banner_url}
+        onProfileUpdated={fetchProfile}
+      />
+
+      <TitlesDashboard
+        visible={titlesVisible}
+        onClose={() => setTitlesVisible(false)}
+        currentCosmetics={Array.isArray(profile?.cosmetics) ? profile.cosmetics : []}
+        onTitlesUpdated={(newCosmetics) => {
+           setProfile(prev => prev ? { ...prev, cosmetics: newCosmetics } : prev);
+        }}
+      />
+
       {/* Floating Back Button */}
       <TouchableOpacity
         onPress={() => router.back()}
@@ -488,6 +513,13 @@ export default function ProfileScreen() {
               </View>
 
               <View className="flex-row items-center gap-2 mt-12">
+                {/* Manage Titles button */}
+                <TouchableOpacity
+                  onPress={() => setTitlesVisible(true)}
+                  className="flex-row items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50"
+                >
+                  <Text className="text-amber-600 dark:text-amber-400 text-[12px] font-bold">🏆 Titles</Text>
+                </TouchableOpacity>
                 {/* Edit Profile button */}
                 <TouchableOpacity
                   onPress={() => setEditVisible(true)}
@@ -517,6 +549,19 @@ export default function ProfileScreen() {
               />
               {profile.username && (
                 <Text className="text-[14px] text-slate-500 dark:text-slate-400">@{profile.username}</Text>
+              )}
+              {/* Equipped Titles */}
+              {Array.isArray(profile.cosmetics) && profile.cosmetics.filter((c: any) => typeof c === 'string' && c.startsWith('equipped_title_')).length > 0 && (
+                <View className="flex-row flex-wrap gap-2 mt-2.5">
+                  {profile.cosmetics.filter((c: any) => typeof c === 'string' && c.startsWith('equipped_title_')).map((c: string, idx: number) => {
+                    const titleName = c.split(':')[1];
+                    return (
+                      <View key={idx} className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+                        <Text className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">{titleName}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
               )}
             </View>
 

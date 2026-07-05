@@ -2,16 +2,37 @@ import { supabase } from '@/lib/supabaseClient';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+export let activeChatRoomId: string | null = null;
+
+export const setActiveChatRoomId = (id: string | null) => {
+    activeChatRoomId = id;
+};
+
 /**
  * Set default notification behavior (show alert, sound, badge while app is open)
  */
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,   // shows banner when app is in foreground (replaces shouldShowAlert in v56+)
-    shouldShowList: true,     // shows in notification center
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data as any;
+    const url = data?.url || data?.href || data?.link || '';
+    
+    // Suppress foreground push if the user is currently inside this exact chat room
+    if (data?.type === 'chat_message' && activeChatRoomId && url.includes(`/chat/${activeChatRoomId}`)) {
+      return {
+        shouldShowBanner: false,
+        shouldShowList: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      };
+    }
+
+    return {
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    };
+  },
 });
 
 /**

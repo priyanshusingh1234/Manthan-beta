@@ -46,6 +46,7 @@ import { getLevel } from '@/lib/xp';
 import { getLeague, getWeekKey } from '@/lib/leagues';
 import PostCard from '@/components/PostCard';
 import QuestionCard from '@/components/QuestionCard';
+import AnimatedTitleBadge from '@/components/AnimatedTitleBadge';
 
 const { width } = Dimensions.get('window');
 
@@ -138,6 +139,11 @@ export default function PublicProfileScreen() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Title Popup State
+  const [selectedTitleForPopup, setSelectedTitleForPopup] = useState<string | null>(null);
+  const [gauntletSource, setGauntletSource] = useState<string | null>(null);
+  const [fetchingSource, setFetchingSource] = useState(false);
   
   // Current user & target profile state
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -1171,6 +1177,46 @@ export default function PublicProfileScreen() {
 
         {!isTeacher && studentTab === 'badges' && (
           <View className="px-4 pb-24 gap-3">
+            {/* Equipped Titles */}
+            {Array.isArray(profile.cosmetics) && profile.cosmetics.filter((c: any) => typeof c === 'string' && c.startsWith('equipped_title_')).map((c: string, idx: number) => {
+              const titleName = c.split(':')[1];
+              return (
+                <TouchableOpacity 
+                  key={`title-${idx}`} 
+                  activeOpacity={0.7}
+                  onPress={async () => {
+                    setSelectedTitleForPopup(titleName);
+                    setGauntletSource(null);
+                    setFetchingSource(true);
+                    try {
+                      const { data } = await supabase.from('gauntlets').select('title, reward_threshold_percent').ilike('reward', `%${titleName}%`).limit(1).single();
+                      if (data) {
+                        setGauntletSource(`Clear the '${data.title}' Arena Battle with ${data.reward_threshold_percent}% accuracy.`);
+                      } else {
+                        setGauntletSource('Earned by demonstrating exceptional skills in the Arena.');
+                      }
+                    } catch (e) {
+                      setGauntletSource('Earned by demonstrating exceptional skills in the Arena.');
+                    } finally {
+                      setFetchingSource(false);
+                    }
+                  }}
+                  className="bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/50 p-4 rounded-3xl shadow-sm flex-row items-center gap-3"
+                >
+                  <View className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/20 items-center justify-center">
+                    <Trophy size={20} color="#6366f1" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs font-black text-slate-900 dark:text-white">{titleName}</Text>
+                    <Text className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">
+                      Earned from the Arena Battle. Tap to view.
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color="#64748b" />
+                </TouchableOpacity>
+              );
+            })}
+
             {/* Champion Badge */}
             {globalRank && globalRank <= 3 && (
               <View className="bg-white dark:bg-slate-900 border border-amber-250 dark:border-amber-900/50 p-4 rounded-3xl shadow-sm flex-row items-center gap-3">
@@ -1305,6 +1351,59 @@ export default function PublicProfileScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Title Details Modal */}
+      <Modal visible={!!selectedTitleForPopup} transparent animationType="fade">
+        <View className="flex-1 bg-black/60 items-center justify-center px-6">
+          <View className="bg-white dark:bg-slate-900 w-full rounded-[32px] p-8 items-center border border-slate-100 dark:border-slate-800">
+            {/* Close Button */}
+            <TouchableOpacity 
+              onPress={() => setSelectedTitleForPopup(null)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+            >
+              <X size={16} color="#64748b" />
+            </TouchableOpacity>
+
+            <View className="mt-4 mb-6">
+              <AnimatedTitleBadge titleName={selectedTitleForPopup || ''} size={100} />
+            </View>
+            
+            <Text className="text-2xl font-black text-slate-900 dark:text-white text-center mb-2">
+              {selectedTitleForPopup}
+            </Text>
+            
+            <View className="bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 rounded-full mb-4">
+              <Text className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+                Arena Title
+              </Text>
+            </View>
+
+            {fetchingSource ? (
+              <ActivityIndicator size="small" color="#4f46e5" className="my-2" />
+            ) : (
+              <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 text-center leading-relaxed">
+                {gauntletSource}
+              </Text>
+            )}
+            
+            {selectedTitleForPopup === 'Matter Analyst' && (
+              <View className="w-full mt-6 bg-orange-50 dark:bg-orange-900/20 p-4 rounded-2xl border border-orange-100 dark:border-orange-500/30">
+                <Text className="text-xs font-bold text-orange-600 dark:text-orange-400 mb-1">🔥 Rare Achievement</Text>
+                <Text className="text-[11px] text-orange-500/80 dark:text-orange-300/80 leading-normal">
+                  Awarded for demonstrating exceptional analytical skills in high-level Matter & Composition chemistry.
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity 
+              onPress={() => setSelectedTitleForPopup(null)}
+              className="w-full py-3.5 bg-slate-900 dark:bg-white rounded-xl items-center mt-6"
+            >
+              <Text className="font-bold text-white dark:text-slate-900 text-sm">Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Followers/Following List Overlay Modal */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>

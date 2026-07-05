@@ -41,8 +41,8 @@ export default function StreakFriendToast() {
             filter: `user_id=eq.${session.user.id}` 
           }, 
           (payload) => {
-            const newRow = payload.new;
-            if (newRow.type === 'streak_friend' && mounted) {
+            const newRow = payload.new as any;
+            if ((newRow.type === 'streak_friend' || newRow.type === 'streak_extended') && mounted) {
               setNotif(newRow as any);
               translateY.value = withSpring(50, { damping: 12, stiffness: 100 });
               opacity.value = withTiming(1, { duration: 300 });
@@ -92,11 +92,11 @@ export default function StreakFriendToast() {
         onPress={handlePress}
         className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl flex-row items-center p-3"
       >
-        <View className="w-12 h-12 rounded-xl bg-orange-500 items-center justify-center mr-3 relative overflow-hidden">
+        <View className={`w-12 h-12 rounded-xl ${notif.type === 'streak_friend' ? 'bg-emerald-500' : 'bg-orange-500'} items-center justify-center mr-3 relative overflow-hidden`}>
           {notif.actor_avatar ? (
             <Image source={{ uri: notif.actor_avatar }} className="w-full h-full" />
           ) : (
-            <Flame size={24} color="white" fill="white" />
+             notif.type === 'streak_friend' ? <Target size={24} color="white" /> : <Flame size={24} color="white" fill="white" />
           )}
         </View>
         
