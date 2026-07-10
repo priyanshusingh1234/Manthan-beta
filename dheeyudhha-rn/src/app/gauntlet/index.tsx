@@ -42,6 +42,18 @@ const CHAPTERS = [
     description: 'Master the story from the Rowlatt Act to the Dandi March.',
   },
   {
+    id: 'real-numbers',
+    title: 'Real Numbers',
+    subject: 'Math · Chapter 1',
+    grade: 'Class 10',
+    emoji: '🔢',
+    color: '#0ea5e9',
+    acts: 4,
+    battles: 1,
+    unlocked: true,
+    description: 'Master prime factorizations, HCF, LCM, and irrational numbers.',
+  },
+  {
     id: 'making-global-world',
     title: 'The Making of a Global World',
     subject: 'History · Chapter 3',
