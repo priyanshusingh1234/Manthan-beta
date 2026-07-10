@@ -77,7 +77,7 @@ export default function TestLeaderboard({ testId }: { testId: string }) {
                 const headers: any = {};
                 if (session) headers['Authorization'] = `Bearer ${session.access_token}`;
 
-                const res = await fetch(`/api/test/leaderboard?testId=${testId}`, { headers });
+                const res = await fetch(`/api/gauntlet/leaderboard?testId=${testId}`, { headers });
                 const data = await res.json();
                 console.log('[TestLeaderboard] raw response:', JSON.stringify(data));
                 if (data.error) throw new Error(data.error);
