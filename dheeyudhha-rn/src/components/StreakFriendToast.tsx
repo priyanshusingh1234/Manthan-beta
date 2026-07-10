@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Image } from 'rea
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
-import { Flame, X } from 'lucide-react-native';
+import { Flame, X, Target } from 'lucide-react-native';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -14,6 +14,7 @@ type Notif = {
   actor_name: string | null;
   actor_avatar: string | null;
   href: string | null;
+  type: string;
 };
 
 export default function StreakFriendToast() {

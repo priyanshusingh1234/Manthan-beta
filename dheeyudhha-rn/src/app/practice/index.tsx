@@ -70,7 +70,7 @@ export default function PracticeIndexScreen() {
   }, [sections]);
 
   const goToChapter = (chapter: string) => {
-    router.push({ pathname: '/practice/questions', params: { chapter } });
+    router.push({ pathname: '/practice/questions' as any, params: { chapter } });
   };
 
   return (

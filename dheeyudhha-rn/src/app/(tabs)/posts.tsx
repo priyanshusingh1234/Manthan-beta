@@ -123,7 +123,7 @@ export default function PostsScreen() {
           newPosts = postsArray;
         } else {
           const existingIds = new Set(prev.map(p => p.id));
-          const uniqueNewPosts = postsArray.filter(p => !existingIds.has(p.id));
+          const uniqueNewPosts = postsArray.filter((p: any) => !existingIds.has(p.id));
           newPosts = [...prev, ...uniqueNewPosts];
         }
         

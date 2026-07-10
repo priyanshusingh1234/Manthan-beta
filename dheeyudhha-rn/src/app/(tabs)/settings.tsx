@@ -14,6 +14,10 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import {
+  Share2,
+  Phone,
+  Mail,
+  MoreVertical,
   User,
   Shield,
   FileText,

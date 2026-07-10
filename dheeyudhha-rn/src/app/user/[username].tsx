@@ -45,6 +45,7 @@ import { useColorScheme } from 'nativewind';
 import { getLevel } from '@/lib/xp';
 import { getLeague, getWeekKey } from '@/lib/leagues';
 import PostCard from '@/components/PostCard';
+import BadgedName from '@/components/BadgedName';
 import QuestionCard from '@/components/QuestionCard';
 import AnimatedTitleBadge from '@/components/AnimatedTitleBadge';
 
@@ -1494,29 +1495,3 @@ export default function PublicProfileScreen() {
     </View>
   );
 }
-
-// Wrapper for custom style names with verification badges
-const BadgedName = ({
-  name,
-  isTeacher,
-  isTopper,
-  rank,
-}: {
-  name: string;
-  isTeacher?: boolean;
-  isTopper?: boolean;
-  rank?: number | null;
-}) => {
-  return (
-    <View className="flex-row items-center gap-1.5 flex-wrap">
-      <Text className="text-[20px] font-black text-slate-900 dark:text-white leading-tight">{name}</Text>
-      <View className="flex-row items-center gap-1 shrink-0">
-        {isTeacher && <TeacherVerifiedBadge />}
-        {rank === 1 && <GoldBadge />}
-        {rank === 2 && <SilverBadge />}
-        {rank === 3 && <BronzeBadge />}
-        {isTopper && <TopperBadge />}
-      </View>
-    </View>
-  );
-};

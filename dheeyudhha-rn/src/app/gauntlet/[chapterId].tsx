@@ -20,11 +20,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ALL_LEVELS as nationalismEuropeLevels } from '@/data/gauntlet/nationalism-europe';
 import { ALL_LEVELS as frenchRevolutionLevels } from '@/data/gauntlet/french-revolution';
 import { ALL_LEVELS as nationalismIndiaLevels } from '@/data/gauntlet/nationalism-india';
+import { ALL_LEVELS as realNumbersLevels } from '@/data/gauntlet/real-numbers';
 
 const LEVEL_DATA_MAP: Record<string, any[]> = {
   'nationalism-europe': nationalismEuropeLevels,
   'french-revolution': frenchRevolutionLevels,
   'nationalism-india': nationalismIndiaLevels,
+  'real-numbers': realNumbersLevels,
 };
 
 // SVG Sketches to replace HTML Canvas
@@ -91,6 +93,7 @@ export default function GauntletEngineScreen() {
     'nationalism-europe': 'Nationalism in Europe',
     'french-revolution': 'The French Revolution',
     'nationalism-india': 'Nationalism in India',
+    'real-numbers': 'Real Numbers',
   }[chapterId as string] || 'Chapter Study';
 
   useEffect(() => {
@@ -385,7 +388,8 @@ function StudyNotesModal({
   const [phase, setPhase] = useState<'study' | 'quiz' | 'feedback'>('study');
   const [qIndex, setQIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
-  const [lives, setLives] = useState(3);
+  const [lives, setLives] = useState(level?.questions?.length >= 10 ? 5 : 3);
+  const [showHinglish, setShowHinglish] = useState(false);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
@@ -436,10 +440,20 @@ function StudyNotesModal({
             <X size={24} color={isDark ? '#cbd5e1' : '#64748b'} />
           </TouchableOpacity>
           <View className="flex-1 items-center px-4">
-            <View className="bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-0.5 rounded-full mb-0.5">
-              <Text className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-widest">
-                Study Notes
-              </Text>
+            <View className="flex-row items-center gap-2 mb-0.5">
+              <View className="bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-0.5 rounded-full">
+                <Text className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-widest">
+                  Study Notes
+                </Text>
+              </View>
+              <TouchableOpacity 
+                onPress={() => setShowHinglish(!showHinglish)}
+                className={`px-2 py-0.5 rounded-full border ${showHinglish ? 'bg-emerald-100 border-emerald-300 dark:bg-emerald-900/30 dark:border-emerald-700' : 'bg-slate-100 border-slate-200 dark:bg-slate-800 dark:border-slate-700'}`}
+              >
+                <Text className={`text-[9px] font-black uppercase ${showHinglish ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                  Hinglish
+                </Text>
+              </TouchableOpacity>
             </View>
             <Text className="font-extrabold text-base text-slate-800 dark:text-slate-100 text-center" numberOfLines={1}>
               {level.title}
@@ -460,38 +474,41 @@ function StudyNotesModal({
             >
               <View className="pb-32">
                 {level.notes.map((note: any, i: number) => {
+                  const displayContent = showHinglish && note.hinglishContent ? note.hinglishContent : note.content;
+                  const displayTitle = showHinglish && note.hinglishTitle ? note.hinglishTitle : note.title;
+
                   if (note.type === 'heading') {
                     return (
                       <Text key={i} className="text-xl font-black text-slate-900 dark:text-slate-50 mt-6 mb-2 font-serif leading-tight">
-                        {note.content}
+                        {displayContent}
                       </Text>
                     );
                   }
                   if (note.type === 'subheading') {
                     return (
                       <Text key={i} className="text-base font-bold text-slate-800 dark:text-slate-200 mt-4 mb-1">
-                        {note.content}
+                        {displayContent}
                       </Text>
                     );
                   }
                   if (note.type === 'paragraph') {
                     return (
                       <Text key={i} className="text-slate-600 dark:text-slate-300 leading-relaxed text-[14px] mb-3">
-                        {note.content}
+                        {displayContent}
                       </Text>
                     );
                   }
                   if (note.type === 'highlight') {
                     return (
                       <View key={i} className="self-start bg-amber-100 dark:bg-amber-950/30 rounded px-2 py-0.5 mb-2 mt-3 border border-amber-200 dark:border-amber-900/50">
-                        <Text className="text-amber-800 dark:text-amber-400 font-bold text-[12px]">{note.content}</Text>
+                        <Text className="text-amber-800 dark:text-amber-400 font-bold text-[12px]">{displayContent}</Text>
                       </View>
                     );
                   }
                   if (note.type === 'quote') {
                     return (
                       <View key={i} className="border-l-4 border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/20 pl-4 py-3 pr-3 rounded-r-xl my-4">
-                        <Text className="text-slate-600 dark:text-slate-300 italic text-[13px] leading-relaxed font-medium">{note.content}</Text>
+                        <Text className="text-slate-600 dark:text-slate-300 italic text-[13px] leading-relaxed font-medium">{displayContent}</Text>
                       </View>
                     );
                   }
@@ -500,10 +517,10 @@ function StudyNotesModal({
                       <View key={i} className="flex-row bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm my-2">
                         <View className="mt-1.5 w-2 h-2 rounded-full bg-indigo-500 mr-3 shrink-0" />
                         <View className="flex-1">
-                          {note.title && (
-                            <Text className="font-bold text-slate-800 dark:text-slate-200 text-[14px] mb-0.5">{note.title}</Text>
+                          {displayTitle && (
+                            <Text className="font-bold text-slate-800 dark:text-slate-200 text-[14px] mb-0.5">{displayTitle}</Text>
                           )}
-                          <Text className="text-slate-600 dark:text-slate-300 text-[13px] leading-relaxed">{note.content}</Text>
+                          <Text className="text-slate-600 dark:text-slate-300 text-[13px] leading-relaxed">{displayContent}</Text>
                         </View>
                       </View>
                     );
@@ -511,7 +528,7 @@ function StudyNotesModal({
                   if (note.type === 'narrative') {
                     return (
                       <Text key={i} className="text-center italic text-slate-400 dark:text-slate-500 text-[13px] my-6 px-4">
-                        {note.content}
+                        {displayContent}
                       </Text>
                     );
                   }

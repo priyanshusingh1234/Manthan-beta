@@ -14,7 +14,8 @@ import { supabase } from '@/lib/supabaseClient';
 import {
     Bell, CheckCheck, Trash2, UserPlus, CheckCircle2,
     XCircle, Zap, BookOpen, Sparkles, ChevronLeft,
-    ChevronRight, Users, BarChart3, AtSign, Flame
+    ChevronRight, Users, BarChart3, AtSign, Flame,
+    Target
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

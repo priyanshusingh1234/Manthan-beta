@@ -14,7 +14,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Trophy, Target, Zap, Star, User, MapPin, GraduationCap, Edit3, LogOut,
   Award, BookOpen, Shield, MessageSquare, Search, X, Camera, ChevronRight, PlaySquare, Play, ChevronLeft
@@ -24,11 +24,9 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import TitlesDashboard from '@/components/TitlesDashboard';
 import PostCard from '@/components/PostCard';
 import BadgedName from '@/components/BadgedName';
-import EditProfileModal from '@/components/EditProfileModal';
-import StoreItemCard from '@/components/StoreItemCard';
-import TitlesDashboard from '@/components/TitlesDashboard';
 
 type TabKey = 'stats' | 'posts' | 'achievements';
 
@@ -315,11 +313,28 @@ export default function ProfileScreen() {
         }
       }
 
+      // ── Check if username is already taken by someone else ────────
+      const trimmedUsername = editForm.username.trim().toLowerCase() || null;
+      if (trimmedUsername && trimmedUsername !== profile.username) {
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', trimmedUsername)
+          .neq('id', userId)
+          .maybeSingle();
+        
+        if (existingUser) {
+          Alert.alert('Error', 'Username is already taken');
+          setSaving(false);
+          return;
+        }
+      }
+
       // ── Update DB: only columns that exist in profiles table ──────────────
       // (bio, class_grade, banner_url are NOT in the DB — they live in auth metadata)
       const dbUpdate: Record<string, any> = {
         full_name: editForm.name.trim(),
-        username: editForm.username.trim().toLowerCase() || null,
+        username: trimmedUsername,
         school: editForm.school.trim() || null,
       };
       if (avatarUrl !== profile.avatar_url) dbUpdate.avatar_url = avatarUrl;
@@ -332,7 +347,7 @@ export default function ProfileScreen() {
         data: {
           fullName: editForm.name.trim(),
           full_name: editForm.name.trim(),
-          username: editForm.username.trim().toLowerCase() || null,
+          username: trimmedUsername,
           bio: editForm.bio.trim() || null,
           school: editForm.school.trim() || null,
           classGrade: editForm.grade.trim() || null,
@@ -439,27 +454,12 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950">
-      <EditProfileModal
-        visible={editVisible}
-        onClose={() => setEditVisible(false)}
-        form={editForm}
-        setForm={setEditForm}
-        onPickImage={pickImage}
-        onSave={handleSaveProfile}
-        saving={saving}
-        newAvatar={newAvatar}
-        newBanner={newBanner}
-        currentAvatar={profile.avatar_url}
-        currentBanner={profile.banner_url}
-        onProfileUpdated={fetchProfile}
-      />
-
       <TitlesDashboard
         visible={titlesVisible}
         onClose={() => setTitlesVisible(false)}
         currentCosmetics={Array.isArray(profile?.cosmetics) ? profile.cosmetics : []}
         onTitlesUpdated={(newCosmetics) => {
-           setProfile(prev => prev ? { ...prev, cosmetics: newCosmetics } : prev);
+           setProfile((prev: any) => prev ? { ...prev, cosmetics: newCosmetics } : prev);
         }}
       />
 
@@ -753,8 +753,8 @@ export default function ProfileScreen() {
             {/* Banner picker */}
             <TouchableOpacity onPress={() => pickImage('banner')} activeOpacity={0.85}>
               <View className="h-32 bg-indigo-900 relative overflow-hidden">
-                {bannerPreview ? (
-                  <Image source={{ uri: bannerPreview }} className="w-full h-full" resizeMode="cover" />
+                {(newBanner?.uri || profile?.banner_url) ? (
+                  <Image source={{ uri: newBanner?.uri || profile?.banner_url }} className="w-full h-full" resizeMode="cover" />
                 ) : (
                   <View className="w-full h-full" style={{ backgroundColor: '#3730a3' }} />
                 )}
@@ -769,8 +769,8 @@ export default function ProfileScreen() {
             <View className="px-5 -mt-10 mb-4">
               <TouchableOpacity onPress={() => pickImage('avatar')} activeOpacity={0.85} className="self-start">
                 <View className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-950 overflow-hidden bg-slate-200 dark:bg-slate-700 shadow-lg justify-center items-center">
-                  {avatarPreview ? (
-                    <Image source={{ uri: avatarPreview }} className="w-full h-full" resizeMode="cover" />
+                  {(newAvatar?.uri || profile?.avatar_url) ? (
+                    <Image source={{ uri: newAvatar?.uri || profile?.avatar_url }} className="w-full h-full" resizeMode="cover" />
                   ) : (
                     <User size={30} color="#94a3b8" />
                   )}
@@ -874,6 +874,6 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }

@@ -192,7 +192,7 @@ export default function CompleteProfileModal() {
               value={username}
               onChangeText={handleUsernameChange}
               placeholder="Username (e.g. shadowwarrior)"
-              className={`w-full pl-10 pr-4 py-4 border-2 rounded-2xl text-[15px] font-bold ${isPreFilled ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-white border-slate-200 text-slate-900'}`}
+              className={`w-full pl-10 pr-4 py-4 border-2 rounded-2xl text-[15px] font-bold ${isPreFilled ? 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'}`}
               autoCapitalize="none"
             />
           </View>
@@ -206,7 +206,7 @@ export default function CompleteProfileModal() {
               value={fullName}
               onChangeText={setFullName}
               placeholder="Full Name"
-              className={`w-full pl-10 pr-4 py-4 border-2 rounded-2xl text-[15px] font-bold ${isPreFilled ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-white border-slate-200 text-slate-900'}`}
+              className={`w-full pl-10 pr-4 py-4 border-2 rounded-2xl text-[15px] font-bold ${isPreFilled ? 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'}`}
             />
           </View>
 
@@ -218,7 +218,7 @@ export default function CompleteProfileModal() {
               value={school}
               onChangeText={setSchool}
               placeholder="School Name (Optional)"
-              className="w-full pl-10 pr-4 py-4 bg-white border-2 border-slate-200 rounded-2xl text-[15px] font-bold text-slate-900"
+              className="w-full pl-10 pr-4 py-4 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-[15px] font-bold text-slate-900 dark:text-white"
             />
           </View>
 
@@ -233,14 +233,14 @@ export default function CompleteProfileModal() {
                 onChangeText={setClassGrade}
                 placeholder="Class Grade (e.g. 10)"
                 keyboardType="number-pad"
-                className={`w-full pl-10 pr-4 py-4 border-2 rounded-2xl text-[15px] font-bold ${isClassLocked ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-white border-slate-200 text-slate-900'}`}
+                className={`w-full pl-10 pr-4 py-4 border-2 rounded-2xl text-[15px] font-bold ${isClassLocked ? 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'}`}
               />
             </View>
           )}
 
           {error ? (
-            <View className="p-3 bg-red-50 rounded-xl mt-4">
-              <Text className="text-red-500 text-center font-bold text-xs">{error}</Text>
+            <View className="p-3 bg-red-50 dark:bg-red-500/10 rounded-xl mt-4">
+              <Text className="text-red-500 dark:text-red-400 text-center font-bold text-xs">{error}</Text>
             </View>
           ) : null}
 

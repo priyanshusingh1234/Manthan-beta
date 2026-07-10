@@ -26,12 +26,25 @@ export default function SignupScreen() {
     setLoading(true);
     setError('');
 
+    // Check if username already exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', username.trim().toLowerCase())
+      .maybeSingle();
+
+    if (existingUser) {
+      setError('Username is already taken');
+      setLoading(false);
+      return;
+    }
+
     const { error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
         data: {
-          username,
+          username: username.trim().toLowerCase(),
           fullName,
         },
       },

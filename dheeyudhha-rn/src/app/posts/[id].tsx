@@ -82,13 +82,13 @@ export default function SinglePostScreen() {
       setComments(commentsData || []);
 
       // Increment views count silently
-      supabase.rpc('increment_post_views', { p_post_id: id }).catch(() => {
-        // Fallback if RPC doesn't exist yet, attempt direct update (might fail due to RLS, but safe to try)
-        if (postData) {
+      (async () => {
+        const { error } = await supabase.rpc('increment_post_views', { p_post_id: id });
+        if (error && postData) {
           const currentViews = Number(postData.views_count) || 0;
-          supabase.from('posts').update({ views_count: currentViews + 1 }).eq('id', id).then().catch();
+          await supabase.from('posts').update({ views_count: currentViews + 1 }).eq('id', id);
         }
-      });
+      })();
     } catch (error) {
       console.error('Error fetching single post:', error);
     } finally {

@@ -23,7 +23,7 @@ export default function ChallengeScreen() {
   }, [id]);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setInterval>;
     if (challenge?.status === 'accepted' && timeLeft !== null && timeLeft > 0) {
       timer = setInterval(() => setTimeLeft(prev => prev! - 1), 1000);
     } else if (timeLeft === 0 && challenge?.status === 'accepted') {

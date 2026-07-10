@@ -891,7 +891,7 @@ export default function ChatRoomScreen() {
                   {contextMsg?.message_type === 'text' && (
                     <TouchableOpacity onPress={async () => {
                       const text = getCleanMessageText(contextMsg.content);
-                      await Clipboard.setStringAsync(text);
+                      Clipboard.setString(text);
                       setShowContextModal(false);
                     }} className="flex-row items-center gap-3 py-3 border-b border-slate-100 dark:border-slate-800/80 active:opacity-70">
                       <Copy size={20} color={isDark ? '#cbd5e1' : '#334155'} />
@@ -914,8 +914,8 @@ export default function ChatRoomScreen() {
 
                   {contextMsg?.sender_id === user?.id && (
                     <TouchableOpacity onPress={async () => {
-                      await supabase.from('chat_messages').delete().eq('id', contextMsg.id);
-                      setMessages(prev => prev.filter(m => m.id !== contextMsg.id));
+                      await supabase.from('chat_messages').delete().eq('id', contextMsg!.id);
+                      setMessages(prev => prev.filter(m => m.id !== contextMsg!.id));
                       setShowContextModal(false);
                     }} className="flex-row items-center gap-3 py-3 active:opacity-70">
                       <Trash2 size={20} color="#ef4444" />

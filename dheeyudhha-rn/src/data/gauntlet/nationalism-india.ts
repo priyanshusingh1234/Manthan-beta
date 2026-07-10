@@ -3,6 +3,8 @@ export type NoteBlock = {
   content?: string;
   title?: string;
   sketchType?: string;
+  hinglishContent?: string;
+  hinglishTitle?: string;
 };
 
 export type Question = {

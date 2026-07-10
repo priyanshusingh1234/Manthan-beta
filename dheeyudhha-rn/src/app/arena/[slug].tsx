@@ -8,6 +8,7 @@ import {
   Alert,
   Share,
   Animated,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -187,7 +188,7 @@ function GauntletLeaderboard({ slug, isDark }: { slug: string; isDark: boolean }
     (async () => {
       try {
         const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
-        const res = await fetch(`${API_URL}/api/test/leaderboard?testId=${slug}`);
+        const res = await fetch(`${API_URL}/api/gauntlet/leaderboard?testId=${slug}`);
         const data = await res.json();
         setEntries(data.leaderboard || []);
       } catch (e) {
@@ -265,6 +266,7 @@ export default function ArenaGauntletScreen() {
   const [correctCount, setCorrectCount] = useState(0);
   const [snapshot, setSnapshot] = useState<AttemptSnapshot[]>([]);
   const [bonusMessage, setBonusMessage] = useState<string | null>(null);
+  const [showRewardModal, setShowRewardModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dbResult, setDbResult] = useState<any>(null);
 
@@ -434,6 +436,7 @@ export default function ArenaGauntletScreen() {
         Alert.alert('Note', result.error);
       } else if (result?.bonusMessage) {
         setBonusMessage(result.bonusMessage);
+        setShowRewardModal(true);
       }
     } catch (e: any) {
       Alert.alert('Network Error', e.message);
@@ -618,6 +621,31 @@ export default function ArenaGauntletScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Reward Modal */}
+        <Modal visible={showRewardModal} transparent animationType="fade">
+          <View className="flex-1 bg-black/60 items-center justify-center p-6">
+            <View className="bg-white dark:bg-slate-900 rounded-3xl p-8 items-center w-full max-w-sm border border-slate-200 dark:border-slate-800 shadow-2xl">
+              <View className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-500/20 items-center justify-center mb-6">
+                <Trophy size={40} color="#10b981" />
+              </View>
+              <Text className="text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white mb-2 text-center">
+                Reward Earned!
+              </Text>
+              <Text className="text-sm font-medium text-slate-600 dark:text-slate-300 text-center mb-8">
+                {bonusMessage}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowRewardModal(false)}
+                className="w-full py-4 bg-indigo-600 rounded-2xl items-center"
+                activeOpacity={0.8}
+              >
+                <Text className="text-white font-black uppercase tracking-widest text-sm">Claim & Continue</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
       </ScrollView>
     );
   }

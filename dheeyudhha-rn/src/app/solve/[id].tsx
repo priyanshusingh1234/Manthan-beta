@@ -506,7 +506,7 @@ export default function SolveQuestionScreen() {
               {question.explanation_image_url && (
                 <View className="mb-3 rounded-xl overflow-hidden bg-white/50 dark:bg-black/20 p-2 items-center justify-center">
                   <Image 
-                    source={{ uri: resolveImageUrl(question.explanation_image_url) }} 
+                    source={{ uri: resolveImageUrl(question.explanation_image_url) || '' }} 
                     className="w-full h-40"
                     resizeMode="contain"
                   />
