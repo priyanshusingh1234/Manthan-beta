@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import QuestionsFeed from '@/components/QuestionsFeed';
 import RecentDuels from '@/components/RecentDuels';
 import DailyGoalCard from '@/components/DailyGoalCard';
+import DailyPuzzleCard from '@/components/DailyPuzzleCard';
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -58,6 +59,9 @@ export default function FeedScreen() {
 
       {/* Daily Goal Card */}
       <DailyGoalCard />
+
+      {/* Daily Puzzle */}
+      <DailyPuzzleCard />
 
       {/* Recent Duels */}
       <View className="mb-8">
