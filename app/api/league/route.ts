@@ -63,32 +63,30 @@ export async function GET(req: NextRequest) {
     const leagueRank = (leagueHigher ?? 0) + 1;
 
     // ── League leaderboard: users in same league, monthly_points + total_points tiebreaker ──
+    // NOTE: We fetch ALL non-teacher users with a full_name, then normalize points on the fly.
+    // Any user whose monthly_points_month != currentWeek is treated as 0 points for this week,
+    // even if they haven't logged in yet. This ensures the leaderboard is always accurate.
+    const { data: rawLeaderboard } = await supabaseAdmin
+      .from('profiles')
+      .select('id, full_name, username, avatar_url, monthly_points, monthly_points_month, total_points')
+      .eq('is_teacher', false)
+      .not('full_name', 'is', null)
+      .order('monthly_points', { ascending: false })
+      .order('total_points', { ascending: false });
+
+    // Normalize: anyone whose week key is stale gets 0 points for this cycle
+    const normalizedAll = (rawLeaderboard || []).map((u: any) => ({
+      ...u,
+      monthly_points: u.monthly_points_month === currentWeek ? (u.monthly_points || 0) : 0,
+    }));
+
+    // Filter to same league as user (based on normalized points)
     const leagueMin = userLeague.min;
     const leagueMax = userLeague.max === Infinity ? 99999 : userLeague.max;
-
-    // Get users whose monthly_points_month matches (active this week) OR who have 0/null (unstarted = Scholar)
-    let leaderboardQuery = supabaseAdmin
-      .from('profiles')
-      .select('id, full_name, username, avatar_url, monthly_points, total_points')
-      .eq('is_teacher', false)
-      .not('full_name', 'is', null);
-
-    if (userLeague.min === 0) {
-      // Scholar: include users active this week, OR users who have 0/null points regardless of week
-      leaderboardQuery = leaderboardQuery
-        .lte('monthly_points', leagueMax)
-        .or(`monthly_points_month.eq.${currentWeek},monthly_points.eq.0,monthly_points.is.null`);
-    } else {
-      leaderboardQuery = leaderboardQuery
-        .eq('monthly_points_month', currentWeek)
-        .gte('monthly_points', leagueMin)
-        .lte('monthly_points', leagueMax);
-    }
-
-    const { data: leaderboard } = await leaderboardQuery
-      .order('monthly_points', { ascending: false })
-      .order('total_points', { ascending: false })
-      .limit(25);
+    const leaderboard = normalizedAll
+      .filter((u: any) => u.monthly_points >= leagueMin && u.monthly_points <= leagueMax)
+      .sort((a: any, b: any) => b.monthly_points - a.monthly_points || b.total_points - a.total_points)
+      .slice(0, 25);
 
     // Friends
     const { data: following } = await supabaseAdmin
@@ -104,9 +102,10 @@ export async function GET(req: NextRequest) {
         .select('id, full_name, username, avatar_url, monthly_points, monthly_points_month, total_points')
         .in('id', friendIds)
         .order('total_points', { ascending: false });
+      // Always normalize friends' points too — stale week = 0
       friends = (data || []).map((f: any) => ({
         ...f,
-        monthly_points: f.monthly_points_month === currentWeek ? (f.monthly_points || 0) : getResetPoints(f.monthly_points || 0),
+        monthly_points: f.monthly_points_month === currentWeek ? (f.monthly_points || 0) : 0,
       }));
     }
 
