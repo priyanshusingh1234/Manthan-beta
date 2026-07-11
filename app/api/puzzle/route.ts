@@ -93,17 +93,26 @@ export async function POST(req: NextRequest) {
       submitted_at: new Date().toISOString(),
     });
 
-    // Award points if correct
+    // Award points + title if correct
     if (is_correct) {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
-        .select('total_points, monthly_points')
+        .select('total_points, monthly_points, cosmetics')
         .eq('id', user.id)
         .single();
+
+      const currentCosmetics: string[] = Array.isArray(profile?.cosmetics) ? profile.cosmetics : [];
+      const crusherTitle = 'puzzle_title:The Crusher';
+
+      // Add title only if not already owned
+      if (!currentCosmetics.includes(crusherTitle)) {
+        currentCosmetics.push(crusherTitle);
+      }
 
       await supabaseAdmin.from('profiles').update({
         total_points: (profile?.total_points || 0) + PUZZLE.reward_correct,
         monthly_points: (profile?.monthly_points || 0) + PUZZLE.reward_correct,
+        cosmetics: currentCosmetics,
       }).eq('id', user.id);
     }
 

@@ -110,18 +110,29 @@ export default function TitlesDashboard({ visible, onClose, currentCosmetics, on
     }
   };
 
-  // Compute unlock status
+  // Compute unlock status for gauntlet titles
   const titleList = gauntlets.map(g => {
     const titleName = g.reward.split('+')[0].trim();
-    // Check if any test result for this gauntlet meets the threshold
     const unlocked = testResults.some(
       tr => tr.test_id === g.slug && (tr.accuracy || 0) >= (g.reward_threshold_percent || 0)
     );
-    return { titleName, unlocked, gauntletTitle: g.title };
+    return { titleName, unlocked, source: g.title, isPuzzle: false };
   });
 
-  // Remove duplicates just in case multiple gauntlets give the same title
-  const uniqueTitles = Array.from(new Map(titleList.map(item => [item.titleName, item])).values());
+  // Also include puzzle titles from cosmetics
+  const puzzleTitles = currentCosmetics
+    .filter(c => typeof c === 'string' && c.startsWith('puzzle_title:'))
+    .map(c => ({
+      titleName: c.replace('puzzle_title:', ''),
+      unlocked: true,
+      source: 'Daily Puzzle 🧩',
+      isPuzzle: true,
+    }));
+
+  // Merge and deduplicate
+  const uniqueTitles = Array.from(
+    new Map([...titleList, ...puzzleTitles].map(item => [item.titleName, item])).values()
+  );
 
   const unlockedCount = uniqueTitles.filter(t => t.unlocked).length;
 
@@ -158,42 +169,85 @@ export default function TitlesDashboard({ visible, onClose, currentCosmetics, on
             <View className="gap-3">
               {uniqueTitles.map((item, index) => {
                 const isSelected = selectedTitles.includes(item.titleName);
-                
+                const isCrusher = item.titleName === 'The Crusher';
+
                 return (
                   <TouchableOpacity
                     key={index}
                     activeOpacity={0.7}
                     onPress={() => item.unlocked ? toggleTitle(item.titleName) : null}
                     disabled={!item.unlocked}
-                    className={`p-4 rounded-2xl flex-row items-center border-2 ${
-                      isSelected 
-                        ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500' 
-                        : item.unlocked
-                          ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                          : 'bg-slate-100 dark:bg-slate-900/50 border-transparent opacity-60'
-                    }`}
+                    style={[
+                      {
+                        padding: 16,
+                        borderRadius: 18,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        borderWidth: 2,
+                        borderColor: isSelected
+                          ? '#6d28d9'
+                          : isCrusher && item.unlocked
+                            ? '#dc2626'
+                            : item.unlocked
+                              ? '#e2e8f0'
+                              : 'transparent',
+                        backgroundColor: isSelected
+                          ? '#ede9fe'
+                          : isCrusher && item.unlocked
+                            ? '#fff1f2'
+                            : item.unlocked
+                              ? '#fff'
+                              : '#f1f5f9',
+                        opacity: item.unlocked ? 1 : 0.5,
+                      }
+                    ]}
                   >
-                    <View className={`w-12 h-12 rounded-full items-center justify-center mr-4 ${
-                      isSelected ? 'bg-indigo-500' : item.unlocked ? 'bg-slate-100 dark:bg-slate-800' : 'bg-slate-200 dark:bg-slate-800'
-                    }`}>
-                      {item.unlocked ? (
-                        <Trophy size={20} color={isSelected ? '#fff' : '#64748b'} />
-                      ) : (
+                    {/* Icon */}
+                    <View style={{
+                      width: 48, height: 48, borderRadius: 24,
+                      alignItems: 'center', justifyContent: 'center',
+                      marginRight: 14,
+                      backgroundColor: isSelected
+                        ? '#7c3aed'
+                        : isCrusher && item.unlocked
+                          ? '#dc2626'
+                          : item.unlocked ? '#f1f5f9' : '#e2e8f0',
+                    }}>
+                      {!item.unlocked ? (
                         <Lock size={20} color="#94a3b8" />
+                      ) : isCrusher ? (
+                        <Text style={{ fontSize: 22 }}>⚡</Text>
+                      ) : item.isPuzzle ? (
+                        <Text style={{ fontSize: 22 }}>🧩</Text>
+                      ) : (
+                        <Trophy size={20} color={isSelected ? '#fff' : '#64748b'} />
                       )}
                     </View>
-                    
-                    <View className="flex-1">
-                      <Text className={`font-black text-base ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-900 dark:text-white'}`}>
-                        {item.titleName}
-                      </Text>
-                      <Text className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                        {item.unlocked ? `From: ${item.gauntletTitle}` : `Locked. Clear '${item.gauntletTitle}' to unlock.`}
+
+                    {/* Text */}
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <Text style={{
+                          fontWeight: '900',
+                          fontSize: 15,
+                          color: isSelected ? '#6d28d9' : isCrusher && item.unlocked ? '#dc2626' : '#0f172a',
+                          letterSpacing: isCrusher ? 0.5 : 0,
+                        }}>
+                          {item.titleName}
+                        </Text>
+                        {isCrusher && item.unlocked && (
+                          <View style={{ backgroundColor: '#dc2626', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
+                            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1 }}>RARE</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '600' }}>
+                        {item.unlocked ? `From: ${item.source}` : `Locked. Solve the Daily Puzzle to unlock.`}
                       </Text>
                     </View>
 
                     {isSelected && (
-                      <View className="w-6 h-6 bg-indigo-500 rounded-full items-center justify-center ml-2">
+                      <View style={{ width: 24, height: 24, backgroundColor: '#7c3aed', borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}>
                         <Check size={14} color="#fff" />
                       </View>
                     )}

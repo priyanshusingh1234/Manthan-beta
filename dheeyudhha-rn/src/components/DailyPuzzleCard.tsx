@@ -155,6 +155,40 @@ export default function DailyPuzzleCard() {
             {puzzle.question}
           </Text>
 
+          {/* Reward Preview — The Crusher Title */}
+          {!alreadyAnswered && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              backgroundColor: isDark ? '#1a0a0a' : '#fff1f2',
+              borderWidth: 1.5, borderColor: '#dc2626',
+              borderRadius: 14, padding: 12, marginBottom: 14,
+            }}>
+              <View style={{
+                width: 40, height: 40, borderRadius: 20,
+                backgroundColor: '#dc2626',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Text style={{ fontSize: 18 }}>⚡</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#dc2626', fontSize: 9, fontWeight: '900', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 2 }}>
+                  Rare Title Reward
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ color: isDark ? '#fca5a5' : '#991b1b', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 }}>
+                    The Crusher
+                  </Text>
+                  <View style={{ backgroundColor: '#dc2626', borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1 }}>
+                    <Text style={{ color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 1 }}>RARE</Text>
+                  </View>
+                </View>
+                <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 10, fontWeight: '600', marginTop: 1 }}>
+                  Answer correctly to unlock this title + 10 pts
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Result or Input */}
           {alreadyAnswered ? (
             <View

@@ -555,6 +555,24 @@ export default function ProfileScreen() {
                 <View className="flex-row flex-wrap gap-2 mt-2.5">
                   {profile.cosmetics.filter((c: any) => typeof c === 'string' && c.startsWith('equipped_title_')).map((c: string, idx: number) => {
                     const titleName = c.split(':')[1];
+                    const isCrusher = titleName === 'The Crusher';
+                    if (isCrusher) {
+                      return (
+                        <View key={idx} style={{
+                          flexDirection: 'row', alignItems: 'center', gap: 4,
+                          backgroundColor: '#dc2626', paddingHorizontal: 10, paddingVertical: 4,
+                          borderRadius: 20,
+                        }}>
+                          <Text style={{ fontSize: 11 }}>⚡</Text>
+                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' }}>
+                            {titleName}
+                          </Text>
+                          <View style={{ backgroundColor: '#fff2', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
+                            <Text style={{ color: '#fca5a5', fontSize: 7, fontWeight: '900', letterSpacing: 1 }}>RARE</Text>
+                          </View>
+                        </View>
+                      );
+                    }
                     return (
                       <View key={idx} className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
                         <Text className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">{titleName}</Text>
