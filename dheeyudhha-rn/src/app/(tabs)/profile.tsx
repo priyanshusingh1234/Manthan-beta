@@ -17,16 +17,17 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Trophy, Target, Zap, Star, User, MapPin, GraduationCap, Edit3, LogOut,
-  Award, BookOpen, Shield, MessageSquare, Search, X, Camera, ChevronRight, PlaySquare, Play, ChevronLeft
+  Award, BookOpen, Shield, MessageSquare, Search, X, Camera, ChevronRight, PlaySquare, Play, ChevronLeft, Settings, Grid, Image as ImageIcon
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import TitlesDashboard from '@/components/TitlesDashboard';
 import PostCard from '@/components/PostCard';
 import BadgedName from '@/components/BadgedName';
+import AnimatedCrusherPill from '@/components/AnimatedCrusherPill';
 
 type TabKey = 'stats' | 'posts' | 'achievements';
 
@@ -557,21 +558,7 @@ export default function ProfileScreen() {
                     const titleName = c.split(':')[1];
                     const isCrusher = titleName === 'The Crusher';
                     if (isCrusher) {
-                      return (
-                        <View key={idx} style={{
-                          flexDirection: 'row', alignItems: 'center', gap: 4,
-                          backgroundColor: '#dc2626', paddingHorizontal: 10, paddingVertical: 4,
-                          borderRadius: 20,
-                        }}>
-                          <Text style={{ fontSize: 11 }}>⚡</Text>
-                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' }}>
-                            {titleName}
-                          </Text>
-                          <View style={{ backgroundColor: '#fff2', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}>
-                            <Text style={{ color: '#fca5a5', fontSize: 7, fontWeight: '900', letterSpacing: 1 }}>RARE</Text>
-                          </View>
-                        </View>
-                      );
+                      return <AnimatedCrusherPill key={idx} />;
                     }
                     return (
                       <View key={idx} className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">

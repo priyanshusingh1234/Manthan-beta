@@ -13,7 +13,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import AnimatedCrusherPill from '@/components/AnimatedCrusherPill';
 import {
   Trophy,
   Target,
@@ -776,6 +777,22 @@ export default function PublicProfileScreen() {
               cosmetics={profile.cosmetics || []}
             />
             <Text className="text-sm font-semibold text-indigo-500 dark:text-indigo-400 mt-0.5">@{profile.username}</Text>
+            
+            {/* Equipped Titles */}
+            {Array.isArray(profile.cosmetics) && profile.cosmetics.filter((c: any) => typeof c === 'string' && c.startsWith('equipped_title_')).length > 0 && (
+              <View className="flex-row flex-wrap gap-2 mt-2">
+                {profile.cosmetics.filter((c: any) => typeof c === 'string' && c.startsWith('equipped_title_')).map((c: string, idx: number) => {
+                  const titleName = c.split(':')[1];
+                  const isCrusher = titleName === 'The Crusher';
+                  if (isCrusher) return <AnimatedCrusherPill key={idx} />;
+                  return (
+                    <View key={idx} className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+                      <Text className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400">{titleName}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
 
           {/* Student Level progress bar */}
