@@ -7,6 +7,7 @@ import QuestionsFeed from '@/components/QuestionsFeed';
 import RecentDuels from '@/components/RecentDuels';
 import DailyGoalCard from '@/components/DailyGoalCard';
 import DailyPuzzleCard from '@/components/DailyPuzzleCard';
+import WelcomeTour from '@/components/WelcomeTour';
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -91,6 +92,7 @@ export default function FeedScreen() {
   return (
     <View className="flex-1 bg-slate-50 dark:bg-slate-950">
       <QuestionsFeed ListHeaderComponent={Header} />
+      <WelcomeTour />
     </View>
   );
 }
