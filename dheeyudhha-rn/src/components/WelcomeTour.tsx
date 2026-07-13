@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, Animated, DeviceEventEmitter } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, Animated, DeviceEventEmitter, Dimensions } from 'react-native';
 import { supabase } from '@/lib/supabaseClient';
-import { PartyPopper, Swords, MessageCircle, Users, CheckCircle, Sparkles, Target } from 'lucide-react-native';
+import { PartyPopper, Swords, MessageCircle, Users, CheckCircle, Sparkles, Target, Trophy, Medal, BrainCircuit, ArrowRight } from 'lucide-react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
+
+const { width } = Dimensions.get('window');
+
+const SLIDES = [
+  { title: "Welcome to the Arena", desc: "Dheeyudhha is the ultimate peer-to-peer learning platform. Let's show you around!", icon: Sparkles, color: "#4f46e5", bg: "bg-indigo-100 dark:bg-indigo-900/30", iconColor: "#4f46e5" },
+  { title: "1v1 Duels", desc: "Challenge your friends to rapid-fire battles and prove your knowledge.", icon: Swords, color: "#d97706", bg: "bg-amber-100 dark:bg-amber-900/30", iconColor: "#d97706" },
+  { title: "Co-op Chat", desc: "Stuck on a question? Tag a friend to jump in and solve it together in real-time.", icon: MessageCircle, color: "#10b981", bg: "bg-emerald-100 dark:bg-emerald-900/30", iconColor: "#10b981" },
+  { title: "Leaderboards", desc: "Earn XP, climb the national ranks, and fight for the top spot on the podium.", icon: Trophy, color: "#f59e0b", bg: "bg-amber-100 dark:bg-amber-900/30", iconColor: "#f59e0b" },
+  { title: "Rare Titles", desc: "Unlock and equip exclusive titles like 'The Crusher' to show off on your profile.", icon: Medal, color: "#e11d48", bg: "bg-rose-100 dark:bg-rose-900/30", iconColor: "#e11d48" },
+  { title: "Daily Puzzles", desc: "Crack the daily riddle every morning to earn massive XP boosts.", icon: BrainCircuit, color: "#06b6d4", bg: "bg-cyan-100 dark:bg-cyan-900/30", iconColor: "#06b6d4" },
+  { title: "Your First Mission", desc: "It's time to begin. Your first task is to solve a question from the feed. Good luck!", icon: Target, color: "#8b5cf6", bg: "bg-violet-100 dark:bg-violet-900/30", iconColor: "#8b5cf6" },
+];
 
 export default function WelcomeTour() {
   const [step, setStep] = useState<number | null>(null);
   const [userName, setUserName] = useState('');
   const [slideAnim] = useState(new Animated.Value(100)); // For floating banner animation
+  const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
     checkTourState();
@@ -27,9 +40,7 @@ export default function WelcomeTour() {
       if (!user) return;
 
       const meta = user.user_metadata || {};
-
-      // If onboarding is not complete, don't show the tour yet.
-      // The CompleteProfileModal will handle onboarding. We only show tour after onboarding.
+      
       if (!meta.has_completed_onboarding) return;
 
       const currentStep = meta.welcome_tour_step || 0;
@@ -76,7 +87,6 @@ export default function WelcomeTour() {
   };
 
   const handleQuestionSolved = async () => {
-    // Re-check user state to ensure we are actually on step 1
     const { data: { user } } = await supabase.auth.getUser();
     const currentStep = user?.user_metadata?.welcome_tour_step;
     if (currentStep === 1 || step === 1) {
@@ -84,68 +94,60 @@ export default function WelcomeTour() {
     }
   };
 
-  if (step === null || step >= 3) return null; // 3 means fully completed and dismissed
+  const handleNextSlide = () => {
+    if (slideIndex < SLIDES.length - 1) {
+      setSlideIndex(prev => prev + 1);
+    } else {
+      advanceStep(1);
+    }
+  };
+
+  if (step === null || step >= 3) return null;
+
+  const currentSlide = SLIDES[slideIndex];
+  const Icon = currentSlide.icon;
 
   return (
     <>
-      {/* Step 0: Welcome Popup */}
+      {/* Step 0: Welcome Carousel Popup */}
       <Modal visible={step === 0} animationType="fade" transparent={true}>
-        <View className="flex-1 justify-center items-center px-6 bg-black/60">
-          <View className="bg-white dark:bg-slate-900 w-full rounded-[32px] p-6 shadow-2xl overflow-hidden">
-            <View className="absolute -top-10 -right-10 opacity-10">
-              <Sparkles size={120} color="#4f46e5" />
+        <View className="flex-1 justify-center items-center px-6 bg-black/80">
+          <View className="bg-white dark:bg-slate-900 w-full rounded-[32px] p-6 shadow-2xl overflow-hidden items-center">
+            
+            {/* Progress Bar */}
+            <View className="flex-row gap-1.5 w-full mb-8 justify-center">
+              {SLIDES.map((_, i) => (
+                <View 
+                  key={i} 
+                  className={`h-1.5 rounded-full flex-1 ${i <= slideIndex ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-800'}`} 
+                />
+              ))}
             </View>
 
-            <View className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl items-center justify-center mb-6">
-              <PartyPopper size={32} color="#4f46e5" />
+            {/* Glowing Icon Graphic */}
+            <View className="relative mb-8 mt-4">
+              <View className={`absolute -inset-8 opacity-20 rounded-full blur-2xl`} style={{ backgroundColor: currentSlide.color }} />
+              <View className={`w-28 h-28 rounded-full items-center justify-center border-4 border-white dark:border-slate-800 shadow-xl ${currentSlide.bg}`}>
+                <Icon size={48} color={currentSlide.iconColor} />
+              </View>
             </View>
-
-            <Text className="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">
-              Hey {userName}! 👋
+            
+            <Text className="text-2xl font-black text-slate-900 dark:text-white mb-3 tracking-tight text-center">
+              {slideIndex === 0 ? `Hey ${userName}!` : currentSlide.title}
             </Text>
-            <Text className="text-base text-slate-500 dark:text-slate-400 font-medium mb-8">
-              Welcome to Dheeyudhha, the ultimate arena for peer-to-peer learning.
+            
+            <Text className="text-base text-slate-500 dark:text-slate-400 font-medium mb-8 text-center px-2 min-h-[60px]">
+              {currentSlide.desc}
             </Text>
 
-            <View className="space-y-5 mb-8">
-              <View className="flex-row items-center gap-4">
-                <View className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl items-center justify-center">
-                  <Swords size={20} color="#d97706" />
-                </View>
-                <View className="flex-1">
-                  <Text className="font-bold text-slate-900 dark:text-white text-base">Challenge Friends</Text>
-                  <Text className="text-slate-500 dark:text-slate-400 text-sm">Duel on questions and prove your skills.</Text>
-                </View>
-              </View>
-
-              <View className="flex-row items-center gap-4">
-                <View className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl items-center justify-center">
-                  <MessageCircle size={20} color="#10b981" />
-                </View>
-                <View className="flex-1">
-                  <Text className="font-bold text-slate-900 dark:text-white text-base">Chat & Collaborate</Text>
-                  <Text className="text-slate-500 dark:text-slate-400 text-sm">Discuss solutions in real-time co-op.</Text>
-                </View>
-              </View>
-
-              <View className="flex-row items-center gap-4">
-                <View className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl items-center justify-center">
-                  <Users size={20} color="#3b82f6" />
-                </View>
-                <View className="flex-1">
-                  <Text className="font-bold text-slate-900 dark:text-white text-base">Follow & Post</Text>
-                  <Text className="text-slate-500 dark:text-slate-400 text-sm">Build your network and share knowledge.</Text>
-                </View>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => advanceStep(1)}
-              className="w-full bg-indigo-600 py-4 rounded-2xl items-center shadow-lg shadow-indigo-600/30 active:scale-95"
+            <TouchableOpacity 
+              onPress={handleNextSlide}
+              className="w-full bg-indigo-600 py-4 rounded-2xl items-center shadow-lg shadow-indigo-600/30 active:scale-95 flex-row justify-center"
             >
-              <Text className="text-white font-black text-base uppercase tracking-widest">
-                Start My Journey
+              <Text className="text-white font-black text-base uppercase tracking-widest mr-2">
+                {slideIndex === SLIDES.length - 1 ? "Accept Mission" : "Next"}
               </Text>
+              {slideIndex !== SLIDES.length - 1 && <ArrowRight size={20} color="white" />}
             </TouchableOpacity>
           </View>
         </View>
@@ -153,14 +155,14 @@ export default function WelcomeTour() {
 
       {/* Step 1: Floating Task Banner */}
       {step === 1 && (
-        <Animated.View
-          style={{
+        <Animated.View 
+          style={{ 
             transform: [{ translateY: slideAnim }],
             position: 'absolute',
             bottom: 20,
             left: 20,
             right: 20,
-            zIndex: 9999, // High z-index to appear over feed
+            zIndex: 9999,
           }}
         >
           <View className="bg-slate-900 dark:bg-slate-800 rounded-2xl p-4 flex-row items-center shadow-2xl border border-indigo-500/30">
@@ -178,14 +180,14 @@ export default function WelcomeTour() {
 
       {/* Step 2: Congrats Popup */}
       <Modal visible={step === 2} animationType="fade" transparent={true}>
-        <View className="flex-1 justify-center items-center px-6 bg-black/70">
+        <View className="flex-1 justify-center items-center px-6 bg-black/80">
           <ConfettiCannon count={150} origin={{ x: -10, y: 0 }} fallSpeed={2500} fadeOut />
-
+          
           <View className="bg-white dark:bg-slate-900 w-full rounded-[32px] p-6 shadow-2xl items-center z-10">
             <View className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/40 rounded-full items-center justify-center mb-6">
               <CheckCircle size={40} color="#10b981" />
             </View>
-
+            
             <Text className="text-3xl font-black text-slate-900 dark:text-white mb-2 text-center tracking-tight">
               Task Complete!
             </Text>
@@ -193,8 +195,8 @@ export default function WelcomeTour() {
               You just solved your first question. The arena is yours now. Climb the leagues, help your peers, and never stop learning.
             </Text>
 
-            <TouchableOpacity
-              onPress={() => advanceStep(3)} // 3 means done
+            <TouchableOpacity 
+              onPress={() => advanceStep(3)}
               className="w-full bg-emerald-500 py-4 rounded-2xl items-center shadow-lg shadow-emerald-500/30 active:scale-95"
             >
               <Text className="text-white font-black text-base uppercase tracking-widest">

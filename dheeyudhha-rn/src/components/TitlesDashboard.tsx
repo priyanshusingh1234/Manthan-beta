@@ -134,6 +134,16 @@ export default function TitlesDashboard({ visible, onClose, currentCosmetics, on
     new Map([...titleList, ...puzzleTitles].map(item => [item.titleName, item])).values()
   );
 
+  // Add 'The Crusher' if it's not already in the list
+  if (!uniqueTitles.some(t => t.titleName === 'The Crusher')) {
+    uniqueTitles.push({
+      titleName: 'The Crusher',
+      unlocked: true, // Allow them to equip it
+      source: 'Special Unlock ⚡',
+      isPuzzle: false,
+    });
+  }
+
   const unlockedCount = uniqueTitles.filter(t => t.unlocked).length;
 
   return (
