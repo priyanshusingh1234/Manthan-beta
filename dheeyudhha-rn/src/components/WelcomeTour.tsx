@@ -27,7 +27,7 @@ export default function WelcomeTour() {
       if (!user) return;
 
       const meta = user.user_metadata || {};
-      
+
       // If onboarding is not complete, don't show the tour yet.
       // The CompleteProfileModal will handle onboarding. We only show tour after onboarding.
       if (!meta.has_completed_onboarding) return;
@@ -95,11 +95,11 @@ export default function WelcomeTour() {
             <View className="absolute -top-10 -right-10 opacity-10">
               <Sparkles size={120} color="#4f46e5" />
             </View>
-            
+
             <View className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl items-center justify-center mb-6">
               <PartyPopper size={32} color="#4f46e5" />
             </View>
-            
+
             <Text className="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">
               Hey {userName}! 👋
             </Text>
@@ -117,7 +117,7 @@ export default function WelcomeTour() {
                   <Text className="text-slate-500 dark:text-slate-400 text-sm">Duel on questions and prove your skills.</Text>
                 </View>
               </View>
-              
+
               <View className="flex-row items-center gap-4">
                 <View className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl items-center justify-center">
                   <MessageCircle size={20} color="#10b981" />
@@ -127,7 +127,7 @@ export default function WelcomeTour() {
                   <Text className="text-slate-500 dark:text-slate-400 text-sm">Discuss solutions in real-time co-op.</Text>
                 </View>
               </View>
-              
+
               <View className="flex-row items-center gap-4">
                 <View className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl items-center justify-center">
                   <Users size={20} color="#3b82f6" />
@@ -139,7 +139,7 @@ export default function WelcomeTour() {
               </View>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => advanceStep(1)}
               className="w-full bg-indigo-600 py-4 rounded-2xl items-center shadow-lg shadow-indigo-600/30 active:scale-95"
             >
@@ -153,8 +153,8 @@ export default function WelcomeTour() {
 
       {/* Step 1: Floating Task Banner */}
       {step === 1 && (
-        <Animated.View 
-          style={{ 
+        <Animated.View
+          style={{
             transform: [{ translateY: slideAnim }],
             position: 'absolute',
             bottom: 20,
@@ -180,12 +180,12 @@ export default function WelcomeTour() {
       <Modal visible={step === 2} animationType="fade" transparent={true}>
         <View className="flex-1 justify-center items-center px-6 bg-black/70">
           <ConfettiCannon count={150} origin={{ x: -10, y: 0 }} fallSpeed={2500} fadeOut />
-          
+
           <View className="bg-white dark:bg-slate-900 w-full rounded-[32px] p-6 shadow-2xl items-center z-10">
             <View className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/40 rounded-full items-center justify-center mb-6">
               <CheckCircle size={40} color="#10b981" />
             </View>
-            
+
             <Text className="text-3xl font-black text-slate-900 dark:text-white mb-2 text-center tracking-tight">
               Task Complete!
             </Text>
@@ -193,7 +193,7 @@ export default function WelcomeTour() {
               You just solved your first question. The arena is yours now. Climb the leagues, help your peers, and never stop learning.
             </Text>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => advanceStep(3)} // 3 means done
               className="w-full bg-emerald-500 py-4 rounded-2xl items-center shadow-lg shadow-emerald-500/30 active:scale-95"
             >

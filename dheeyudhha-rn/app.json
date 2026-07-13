@@ -81,7 +81,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow Manthan to access your photos to upload profile pictures and clips.",
-          "cameraPermission": false
+          "cameraPermission": "Allow Manthan to access your camera to take photos of your written answers."
         }
       ],
       "expo-video",
