@@ -57,6 +57,9 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
+  verification: {
+    google: 'avrkR73RQOAVvrKDWla0Rk6QGr4Pn33fj7ORrHAOMWQ',
+  },
 }
 
 import { ThemeProvider } from '@/components/ThemeProvider'
