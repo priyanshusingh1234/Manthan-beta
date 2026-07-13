@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { Link, useRouter } from 'expo-router';
-import Animated, { FadeInUp, FadeInRight, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
-import { Trophy, Zap, Users, Shield, Swords, BrainCircuit, ArrowRight, Flame, BookOpen, Target, TrendingUp, CheckCircle2, Star } from 'lucide-react-native';
+import Animated, { FadeInUp, FadeInRight } from 'react-native-reanimated';
+import { Trophy, Zap, Users, Shield, Swords, BrainCircuit, ArrowRight, Flame, BookOpen, Target, TrendingUp } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import LottieView from 'lottie-react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -24,28 +25,7 @@ const FEATURES = [
   { icon: Shield, label: 'Verified Teachers', desc: 'All questions curated by certified educators', color: '#60a5fa' },
 ];
 
-function FloatingElement({ children, delay = 0, distance = -8 }: { children: React.ReactNode, delay?: number, distance?: number }) {
-  const offset = useSharedValue(0);
-
-  useEffect(() => {
-    setTimeout(() => {
-      offset.value = withRepeat(
-        withSequence(
-          withTiming(distance, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0, { duration: 1500, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1, // infinite
-        true // reverse
-      );
-    }, delay);
-  }, []);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: offset.value }],
-  }));
-
-  return <Animated.View style={animatedStyle}>{children}</Animated.View>;
-}
+// Replaced FloatingElement with Lottie
 
 export default function LandingPage() {
   const router = useRouter();
@@ -120,84 +100,23 @@ export default function LandingPage() {
         </Animated.View>
       </View>
 
-      {/* Hero Floating Mockup */}
-      <Animated.View entering={FadeInRight.duration(800).delay(700)} className="px-6 py-10 relative items-center">
-        <FloatingElement>
-          <View className="bg-[#13131a] border border-white/10 rounded-3xl p-5 shadow-2xl w-full max-w-sm">
-            {/* Header */}
-            <View className="flex-row items-center mb-4">
-              <View className="w-9 h-9 rounded-full bg-violet-600 items-center justify-center mr-3">
-                <Text className="text-white font-black text-sm">A</Text>
-              </View>
-              <View className="flex-1">
-                <Text className="text-white font-black text-sm">Aarav Sharma</Text>
-                <Text className="text-slate-500 text-xs">Class 10 · Delhi</Text>
-              </View>
-              <View className="flex-row items-center bg-orange-500/15 px-2.5 py-1 rounded-full">
-                <Flame size={12} color="#fb923c" className="mr-1" />
-                <Text className="text-orange-400 text-xs font-black">21</Text>
-              </View>
-            </View>
+      {/* Lottie Hero Animation */}
+      <Animated.View entering={FadeInRight.duration(800).delay(700)} className="px-6 py-6 items-center">
+        <View className="w-full max-w-sm aspect-square bg-[#13131a] border border-violet-500/20 rounded-3xl overflow-hidden shadow-2xl shadow-violet-500/10 items-center justify-center relative">
+          
+          <LottieView
+            source={{ uri: 'https://raw.githubusercontent.com/LottieFiles/lottie-react-native/master/example/assets/LottieLogo1.json' }}
+            autoPlay
+            loop
+            style={{ width: '100%', height: '100%' }}
+          />
 
-            {/* Question Card */}
-            <View className="bg-[#0a0a0f] rounded-2xl p-4 mb-4 border border-white/5">
-              <View className="flex-row items-center justify-between mb-3">
-                <View className="bg-cyan-500/15 px-2 py-0.5 rounded-full">
-                  <Text className="text-cyan-400 text-xs font-black">🔬 Science</Text>
-                </View>
-                <Text className="text-slate-500 text-xs">60s</Text>
-              </View>
-              <Text className="text-white font-semibold text-sm mb-3">The functional unit of the kidney is called the:</Text>
-              
-              <View className="flex-row flex-wrap justify-between">
-                {['Neuron', 'Nephron', 'Alveolus', 'Villus'].map((opt, i) => (
-                  <View key={opt} className={`w-[48%] p-2.5 rounded-xl mb-2 items-center justify-center border ${i === 1 ? 'bg-emerald-500/20 border-emerald-500/50' : 'bg-white/5 border-white/5'}`}>
-                    <Text className={`text-xs font-bold ${i === 1 ? 'text-emerald-300' : 'text-slate-400'}`}>{opt}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            {/* Footer */}
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center">
-                <CheckCircle2 size={16} color="#34d399" className="mr-1.5" />
-                <Text className="text-emerald-400 text-xs font-black">+3 pts earned</Text>
-              </View>
-              <View className="flex-row items-center">
-                <Star size={14} color="#fbbf24" className="mr-1" />
-                <Text className="text-amber-400 text-xs font-black">Rank #142</Text>
-              </View>
-            </View>
+          {/* Decorative overlay text */}
+          <View className="absolute bottom-6 bg-black/60 px-4 py-2 rounded-full border border-white/10 backdrop-blur-md">
+            <Text className="text-white text-xs font-black tracking-widest uppercase">
+              Next-Gen Learning
+            </Text>
           </View>
-        </FloatingElement>
-
-        {/* Floating XP Badge */}
-        <View className="absolute -top-2 right-4 z-10">
-          <FloatingElement delay={1000} distance={-12}>
-            <View className="bg-[#13131a] border border-amber-500/20 rounded-2xl p-3 shadow-xl items-center">
-              <Trophy size={20} color="#fbbf24" className="mb-1" />
-              <Text className="text-white text-xs font-black mb-0.5">Rank Up! 🎉</Text>
-              <Text className="text-amber-400 text-[10px] font-black">+12 XP this week</Text>
-            </View>
-          </FloatingElement>
-        </View>
-
-        {/* Floating Duel Badge */}
-        <View className="absolute -bottom-4 left-4 z-10">
-          <FloatingElement delay={1500} distance={-10}>
-            <View className="bg-[#13131a] border border-rose-500/20 rounded-2xl p-3 shadow-xl">
-              <View className="flex-row items-center mb-1">
-                <Swords size={16} color="#fb7185" className="mr-1.5" />
-                <Text className="text-rose-400 text-xs font-black">1v1 Duel</Text>
-              </View>
-              <View className="flex-row items-center justify-between mt-1">
-                <Text className="text-white text-xs font-bold">You</Text>
-                <Text className="text-slate-500 text-[10px] font-black mx-2">VS</Text>
-                <Text className="text-white text-xs font-bold">Priya M.</Text>
-              </View>
-            </View>
-          </FloatingElement>
         </View>
       </Animated.View>
 
