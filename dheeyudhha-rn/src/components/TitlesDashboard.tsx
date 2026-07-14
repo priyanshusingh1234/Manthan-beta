@@ -164,7 +164,10 @@ export default function TitlesDashboard({ visible, onClose, currentCosmetics, on
             <ActivityIndicator size="large" color="#4f46e5" />
           </View>
         ) : (
-          <ScrollView className="flex-1 px-5 pt-6 pb-24">
+          <ScrollView 
+            className="flex-1"
+            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 100 }}
+          >
             <View className="mb-6 bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-500/20">
               <Text className="text-indigo-800 dark:text-indigo-300 font-bold mb-1">Show off your achievements!</Text>
               <Text className="text-indigo-600/80 dark:text-indigo-400/80 text-sm">
@@ -180,6 +183,33 @@ export default function TitlesDashboard({ visible, onClose, currentCosmetics, on
               {uniqueTitles.map((item, index) => {
                 const isSelected = selectedTitles.includes(item.titleName);
                 const isCrusher = item.titleName === 'The Crusher';
+                
+                let containerClass = "p-4 rounded-[18px] flex-row items-center border-2 ";
+                let iconBgClass = "w-12 h-12 rounded-full items-center justify-center mr-3.5 ";
+                let titleTextClass = "font-black text-[15px] mb-0.5 ";
+                let subtitleClass = "text-[11px] font-semibold ";
+
+                if (isSelected) {
+                  containerClass += "border-purple-600 bg-purple-50 dark:bg-purple-900/40 opacity-100";
+                  iconBgClass += "bg-purple-600";
+                  titleTextClass += "text-purple-700 dark:text-purple-400";
+                  subtitleClass += "text-purple-600/80 dark:text-purple-300/80";
+                } else if (isCrusher && item.unlocked) {
+                  containerClass += "border-red-600 bg-red-50 dark:bg-red-900/40 opacity-100";
+                  iconBgClass += "bg-red-600";
+                  titleTextClass += "text-red-700 dark:text-red-400";
+                  subtitleClass += "text-red-600/80 dark:text-red-300/80";
+                } else if (item.unlocked) {
+                  containerClass += "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 opacity-100";
+                  iconBgClass += "bg-slate-100 dark:bg-slate-700";
+                  titleTextClass += "text-slate-900 dark:text-white";
+                  subtitleClass += "text-slate-500 dark:text-slate-400";
+                } else {
+                  containerClass += "border-transparent bg-slate-100 dark:bg-slate-800/50 opacity-50";
+                  iconBgClass += "bg-slate-200 dark:bg-slate-700";
+                  titleTextClass += "text-slate-900 dark:text-white";
+                  subtitleClass += "text-slate-500 dark:text-slate-400";
+                }
 
                 return (
                   <TouchableOpacity
@@ -187,42 +217,10 @@ export default function TitlesDashboard({ visible, onClose, currentCosmetics, on
                     activeOpacity={0.7}
                     onPress={() => item.unlocked ? toggleTitle(item.titleName) : null}
                     disabled={!item.unlocked}
-                    style={[
-                      {
-                        padding: 16,
-                        borderRadius: 18,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        borderWidth: 2,
-                        borderColor: isSelected
-                          ? '#6d28d9'
-                          : isCrusher && item.unlocked
-                            ? '#dc2626'
-                            : item.unlocked
-                              ? '#e2e8f0'
-                              : 'transparent',
-                        backgroundColor: isSelected
-                          ? '#ede9fe'
-                          : isCrusher && item.unlocked
-                            ? '#fff1f2'
-                            : item.unlocked
-                              ? '#fff'
-                              : '#f1f5f9',
-                        opacity: item.unlocked ? 1 : 0.5,
-                      }
-                    ]}
+                    className={containerClass}
                   >
                     {/* Icon */}
-                    <View style={{
-                      width: 48, height: 48, borderRadius: 24,
-                      alignItems: 'center', justifyContent: 'center',
-                      marginRight: 14,
-                      backgroundColor: isSelected
-                        ? '#7c3aed'
-                        : isCrusher && item.unlocked
-                          ? '#dc2626'
-                          : item.unlocked ? '#f1f5f9' : '#e2e8f0',
-                    }}>
+                    <View className={iconBgClass}>
                       {!item.unlocked ? (
                         <Lock size={20} color="#94a3b8" />
                       ) : isCrusher ? (
@@ -235,29 +233,24 @@ export default function TitlesDashboard({ visible, onClose, currentCosmetics, on
                     </View>
 
                     {/* Text */}
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                        <Text style={{
-                          fontWeight: '900',
-                          fontSize: 15,
-                          color: isSelected ? '#6d28d9' : isCrusher && item.unlocked ? '#dc2626' : '#0f172a',
-                          letterSpacing: isCrusher ? 0.5 : 0,
-                        }}>
+                    <View className="flex-1">
+                      <View className="flex-row items-center gap-1.5 mb-0.5">
+                        <Text className={titleTextClass} style={{ letterSpacing: isCrusher ? 0.5 : 0 }}>
                           {item.titleName}
                         </Text>
                         {isCrusher && item.unlocked && (
-                          <View style={{ backgroundColor: '#dc2626', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
-                            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1 }}>RARE</Text>
+                          <View className="bg-red-600 rounded-md px-1.5 py-0.5">
+                            <Text className="text-white text-[9px] font-black tracking-widest">RARE</Text>
                           </View>
                         )}
                       </View>
-                      <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '600' }}>
+                      <Text className={subtitleClass}>
                         {item.unlocked ? `From: ${item.source}` : `Locked. Solve the Daily Puzzle to unlock.`}
                       </Text>
                     </View>
 
                     {isSelected && (
-                      <View style={{ width: 24, height: 24, backgroundColor: '#7c3aed', borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}>
+                      <View className="w-6 h-6 bg-purple-600 rounded-full items-center justify-center ml-2">
                         <Check size={14} color="#fff" />
                       </View>
                     )}

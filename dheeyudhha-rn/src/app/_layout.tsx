@@ -22,6 +22,7 @@ import StreakFriendToast from '@/components/StreakFriendToast';
 import CoopDuelToast from '@/components/CoopDuelToast';
 import LoginBonusModal from '@/components/LoginBonusModal';
 import LeagueDropModal from '@/components/LeagueDropModal';
+import UpdateManager from '@/components/UpdateManager';
 
 // Prevent splash screen from hiding while fonts load
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -266,6 +267,7 @@ function RootLayout() {
       <LeagueUpModal />
       <LeagueDropModal />
       <LoginBonusModal />
+      <UpdateManager />
     </>
   );
 }
