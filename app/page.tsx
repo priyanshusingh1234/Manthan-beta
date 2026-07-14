@@ -92,22 +92,31 @@ export default function Home() {
         <div className="lg:col-span-2">
           {/* <LiveWarFeed /> */}
 
-          {/* Unit Test Card & Leaderboard */}
-          <div className="mb-6 bg-indigo-600 rounded-2xl p-6 shadow-sm border border-indigo-500">
-            <h2 className="text-white font-black text-xl mb-2">✍️ Live Test: Class 10 Maths</h2>
-            <p className="text-indigo-100 font-medium text-sm leading-relaxed mb-6">
-              The Formative Assessment for Maths is now LIVE!<br/>
-              Check out the rankings to see who scored the highest.
-            </p>
-
-            <div className="bg-indigo-500/50 p-6 rounded-xl border border-indigo-400 flex flex-col items-center">
-              <Link 
-                href="/tests/leaderboard"
-                className="bg-white text-indigo-600 px-8 py-3 rounded-xl font-black text-lg hover:bg-slate-50 transition-transform active:scale-95 shadow-md"
-              >
-                View Ranks
-              </Link>
-            </div>
+          {/* Practice & League Banner */}
+          <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link href="/practice" className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 active:translate-y-0 group">
+              <div className="flex justify-between items-start mb-4">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform">
+                  <span className="text-2xl">📚</span>
+                </div>
+              </div>
+              <h2 className="text-white font-black text-xl mb-1">Practice Mode</h2>
+              <p className="text-indigo-100 font-medium text-sm leading-snug">
+                Master chapters at your own pace without time limits.
+              </p>
+            </Link>
+            
+            <Link href="/league" className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 active:translate-y-0 group">
+              <div className="flex justify-between items-start mb-4">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform">
+                  <span className="text-2xl">🏆</span>
+                </div>
+              </div>
+              <h2 className="text-white font-black text-xl mb-1">Weekly League</h2>
+              <p className="text-amber-100 font-medium text-sm leading-snug">
+                Compete for the top rank and earn your promotion.
+              </p>
+            </Link>
           </div>
 
           {/* Questions feed placed on the home screen */}

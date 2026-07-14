@@ -171,6 +171,8 @@ export default function DesktopSidebar() {
     { label: 'Clips', href: '/clips', icon: PlaySquare },
     { label: 'Community', href: '/posts', icon: MessageSquare },
     { label: 'Chat', href: '/chat', icon: MessageSquare },
+    { label: 'Practice', href: '/practice', icon: BookOpen },
+    { label: 'League', href: '/league', icon: Shield },
     { label: 'My Faction', href: '/my-school', icon: ShieldAlert },
     { label: 'Top Schools', href: '/top-schools', icon: Swords },
     { label: 'Search', href: '/search', icon: Search },
