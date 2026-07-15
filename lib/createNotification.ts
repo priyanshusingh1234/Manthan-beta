@@ -216,6 +216,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         actor_name: params.actorName || '',
                                         actor_avatar: params.actorAvatar || '',
                                         click_action: isDuel ? 'duel_challenge' : (isIncomingCall ? 'incoming_call' : (params.type === 'chat_message' ? 'chat_message' : 'OPEN_APP')),
+                                        categoryId: isDuel ? 'duel_challenge' : (isIncomingCall ? 'incoming_call' : (params.type === 'chat_message' ? 'chat_message' : '')),
                                         // Action buttons (handled by Capacitor PushNotifications listener)
                                         ...actionsData,
                                     },
