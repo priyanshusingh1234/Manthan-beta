@@ -5,6 +5,7 @@ export function useMessageSound() {
 
   const play = () => {
     try {
+      player.seekTo(0);
       player.play();
     } catch (e) {
       console.log('Error playing message sound', e);

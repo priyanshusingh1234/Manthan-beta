@@ -83,6 +83,9 @@ function formatPreview(content: string, type?: string) {
     const replyText = parts.slice(1).join(' ').trim();
     return replyText ? `↩ ${replyText}` : 'Replied to a message';
   }
+  if (text.match(/(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+/i) || text.match(/(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+/i)) {
+    return '🔗 Shared a post';
+  }
   return text;
 }
 
@@ -333,83 +336,85 @@ export default function ChatListPage() {
   }
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View className="flex-1 bg-white dark:bg-slate-950" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <Tabs.Screen options={{ headerShown: false, tabBarStyle: { display: 'none' } }} />
-      {/* Custom Top Header */}
-      <View className="px-5 pt-4 pb-4 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800/80 z-10 shadow-sm">
-        <View className="flex-row items-center justify-between mb-5 mt-1">
-          <Text className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Messages</Text>
-          <TouchableOpacity className="h-10 w-10 bg-indigo-600 rounded-full items-center justify-center active:opacity-80">
-            <MessageCirclePlus size={20} color="white" />
+      
+      {/* Ultra-Premium Minimal Header */}
+      <View className="px-4 pt-2 pb-2 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl z-10">
+        <View className="flex-row items-center justify-between mb-2 mt-2">
+          <Text className="text-[32px] font-bold tracking-tight text-slate-900 dark:text-white">Chats</Text>
+          <TouchableOpacity className="h-9 w-9 bg-slate-100 dark:bg-slate-800 rounded-full items-center justify-center active:opacity-70 transition-opacity">
+            <MessageCirclePlus size={20} color={isDark ? "#e2e8f0" : "#0f172a"} />
           </TouchableOpacity>
         </View>
 
-        {/* Search Input */}
-        <View className="relative flex-row items-center bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-2.5">
-          <Search size={18} color="#94a3b8" />
+        {/* Minimal iOS-Style Search Input */}
+        <View className="flex-row items-center w-full bg-[#E5E5EA] dark:bg-slate-800 rounded-[10px] px-3 py-1.5 min-h-[36px] mb-2 mt-1">
+          <Search size={16} color="#8e8e93" />
           <TextInput
-            placeholder="Search or start a new chat..."
-            placeholderTextColor="#94a3b8"
+            placeholder="Search"
+            placeholderTextColor="#8e8e93"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            className="flex-1 ml-3 text-base text-slate-900 dark:text-white font-medium py-1"
+            className="flex-1 ml-2 text-[17px] text-slate-900 dark:text-white py-1"
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')} className="p-1 bg-slate-200 dark:bg-slate-700 rounded-full">
-              <X size={14} color="#64748b" />
+            <TouchableOpacity onPress={() => setSearchQuery('')} className="p-1 bg-slate-300 dark:bg-slate-600 rounded-full active:opacity-70">
+              <X size={12} color="#ffffff" strokeWidth={3} />
             </TouchableOpacity>
           ) : null}
         </View>
       </View>
 
       <ScrollView
-        className="flex-1 bg-white dark:bg-slate-950"
+        className="flex-1 bg-[#F2F2F7] dark:bg-slate-950"
+        contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4f46e5']} tintColor="#4f46e5" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#fff' : '#6366f1'} />
         }
       >
-        {/* Search Results Drawer */}
+        {/* Search Results */}
         {searchQuery ? (
           isSearching ? (
             <View className="flex-row justify-center py-12">
               <ActivityIndicator color="#4f46e5" />
             </View>
           ) : searchResults.length > 0 ? (
-            <View>
-              <View className="px-4 py-2 bg-indigo-50/50 dark:bg-indigo-950/20">
-                <Text className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Global Results</Text>
+            <View className="mt-4 bg-white dark:bg-slate-950 border-y border-[#E5E5EA] dark:border-slate-800">
+              <View className="px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border-b border-[#E5E5EA] dark:border-slate-800">
+                <Text className="text-[13px] font-semibold text-slate-500 dark:text-slate-400">Global Results</Text>
               </View>
               {searchResults.map(res => (
                 <TouchableOpacity
                   key={res.id}
+                  activeOpacity={0.6}
                   onPress={() => startChat(res.id, res.full_name, res.avatar_url)}
-                  className="flex-row items-center gap-3 px-4 py-3.5 border-b border-slate-100 dark:border-slate-800/50 active:bg-slate-100 dark:active:bg-slate-800/60"
+                  className="flex-row items-center px-4 py-2.5 active:bg-slate-100 dark:active:bg-slate-800/50"
                 >
-                  <View className="h-11 w-11 rounded-full bg-slate-200 dark:bg-slate-850 overflow-hidden items-center justify-center shrink-0">
+                  <View className="h-[52px] w-[52px] rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden items-center justify-center shrink-0 mr-3">
                     {res.avatar_url ? (
                       <Image source={{ uri: res.avatar_url }} style={{ width: '100%', height: '100%', position: 'absolute' }} resizeMode="cover" />
                     ) : (
-                      <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">
+                      <Text className="font-semibold text-slate-400 dark:text-slate-500 text-xl">
                         {(res.full_name || 'S')[0].toUpperCase()}
                       </Text>
                     )}
                   </View>
-                  <View className="flex-1 min-w-0">
+                  <View className="flex-1 border-b border-[#E5E5EA] dark:border-slate-800/60 pb-3 pt-1">
                     <BadgedName
                       name={res.full_name}
                       isTeacher={!!res.is_teacher}
-                      nameClassName="font-bold text-[15px] text-slate-900 dark:text-white"
+                      nameClassName="font-semibold text-[17px] text-slate-900 dark:text-white"
                     />
-                    <Text className="text-xs text-slate-500 dark:text-slate-400 mt-0.5" numberOfLines={1}>@{res.username}</Text>
+                    <Text className="text-[15px] text-slate-500 dark:text-slate-400 mt-0.5" numberOfLines={1}>@{res.username}</Text>
                   </View>
                 </TouchableOpacity>
               ))}
             </View>
           ) : (
-            <View className="flex-1 items-center justify-center py-20 px-8">
-              <Text className="text-slate-500 dark:text-slate-400 font-bold text-sm">No scholars found</Text>
-              <Text className="text-slate-400 dark:text-slate-500 text-xs text-center mt-1">Try typing a different name or username.</Text>
+            <View className="flex-1 items-center justify-center py-12 px-8">
+              <Text className="text-slate-500 dark:text-slate-400 font-medium text-[16px]">No results found</Text>
             </View>
           )
         ) : (
@@ -417,22 +422,23 @@ export default function ChatListPage() {
           <View>
             {filteredRooms.length === 0 ? (
               <View className="flex-1 items-center justify-center py-24 px-8">
-                <View className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 items-center justify-center mb-5">
-                  <MessageSquare size={32} color="#4f46e5" />
-                </View>
-                <Text className="text-base font-bold text-slate-900 dark:text-white mb-1">No conversations yet</Text>
-                <Text className="text-xs text-slate-500 dark:text-slate-400 text-center">Search for a scholar above to start chatting.</Text>
+                <MessageSquare size={48} color="#cbd5e1" strokeWidth={1} className="mb-4" />
+                <Text className="text-xl font-semibold text-slate-900 dark:text-white mb-2">No Chats</Text>
+                <Text className="text-[15px] text-slate-500 dark:text-slate-400 text-center">Tap the icon above to start a new conversation.</Text>
               </View>
             ) : (
-              <View>
-                <View className="px-4 py-2 bg-slate-100/50 dark:bg-slate-900/30">
-                  <Text className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Recent Chats</Text>
-                </View>
-                {filteredRooms.map(room => (
-                  <ChatCard key={room.id} room={room} user={user} onPress={() => router.push({
-                    pathname: '/chat/[roomId]',
-                    params: { roomId: room.id, name: room.participant.full_name, avatar: room.participant.avatar_url || '' }
-                  } as any)} />
+              <View className="bg-white dark:bg-slate-950 border-t border-b border-[#E5E5EA] dark:border-transparent mt-4">
+                {filteredRooms.map((room, index) => (
+                  <ChatCard 
+                    key={room.id} 
+                    room={room} 
+                    user={user} 
+                    isLast={index === filteredRooms.length - 1}
+                    onPress={() => router.push({
+                      pathname: '/chat/[roomId]',
+                      params: { roomId: room.id, name: room.participant.full_name, avatar: room.participant.avatar_url || '' }
+                    } as any)} 
+                  />
                 ))}
               </View>
             )}
@@ -443,68 +449,67 @@ export default function ChatListPage() {
   );
 }
 
-function ChatCard({ room, onPress, user }: { room: ChatRoom; onPress: () => void; user: any }) {
+function ChatCard({ room, onPress, user, isLast }: { room: ChatRoom; onPress: () => void; user: any; isLast?: boolean }) {
   const isUnread = room.last_message && !room.last_message.is_read && room.last_message.sender_id !== user?.id;
   const timeLabel = room.last_message ? formatTimeAgo(room.last_message.created_at) : '';
 
   return (
     <TouchableOpacity
+      activeOpacity={0.6}
       onPress={onPress}
-      className="w-full flex-row items-center gap-3 px-4 py-3.5 border-b border-slate-100 dark:border-slate-800/50 active:bg-slate-100 dark:active:bg-slate-800/60"
+      className="w-full flex-row items-center px-4 py-2 bg-white dark:bg-slate-950 active:bg-slate-100 dark:active:bg-slate-800/50"
     >
       {/* Avatar */}
-      <View className="relative shrink-0">
-        <View className="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-850 overflow-hidden items-center justify-center">
-          {room.participant.avatar_url ? (
-            <Image source={{ uri: room.participant.avatar_url }} style={{ width: '100%', height: '100%', position: 'absolute' }} resizeMode="cover" />
-          ) : (
-            <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">
-              {room.participant.full_name?.[0]?.toUpperCase() || 'U'}
-            </Text>
-          )}
-        </View>
+      <View className="h-[60px] w-[60px] rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden items-center justify-center shrink-0 mr-3.5">
+        {room.participant.avatar_url ? (
+          <Image source={{ uri: room.participant.avatar_url }} style={{ width: '100%', height: '100%', position: 'absolute' }} resizeMode="cover" />
+        ) : (
+          <Text className="font-semibold text-slate-400 dark:text-slate-500 text-2xl">
+            {room.participant.full_name?.[0]?.toUpperCase() || 'U'}
+          </Text>
+        )}
       </View>
 
-      {/* Preview Info */}
-      <View className="flex-1 min-w-0">
+      {/* Content Area with iOS-style bottom border */}
+      <View className={`flex-1 min-w-0 py-3 ${!isLast ? 'border-b border-[#E5E5EA] dark:border-slate-800/80' : ''}`}>
+        
+        {/* Top Row: Name and Time */}
         <View className="flex-row items-center justify-between mb-0.5">
           <BadgedName
             name={room.participant.full_name}
             isTeacher={room.participant.is_teacher}
-            nameClassName={`text-[15px] truncate pr-2 ${
-              isUnread ? 'font-extrabold text-slate-900 dark:text-white' : 'font-semibold text-slate-800 dark:text-slate-200'
-            }`}
+            nameClassName="text-[17px] font-semibold text-slate-900 dark:text-white tracking-tight truncate"
             containerClassName="flex-row items-center gap-1 flex-1 min-w-0 pr-2"
           />
-          <Text className={`text-[11px] font-bold ${isUnread ? 'text-indigo-500' : 'text-slate-400'}`}>
+          <Text className={`text-[14px] shrink-0 ${isUnread ? 'font-semibold text-indigo-500' : 'text-[#8e8e93]'}`}>
             {timeLabel}
           </Text>
         </View>
 
-        <View className="flex-row items-center justify-between gap-2 mt-0.5">
+        {/* Bottom Row: Message Preview & Read Receipt & Badge */}
+        <View className="flex-row items-center gap-1.5 mt-0.5">
+          {room.last_message && room.last_message.sender_id === user?.id && (
+            <View className="shrink-0">
+              {room.last_message.is_read ? (
+                <CheckCheck size={16} color="#34B7F1" strokeWidth={2.5} />
+              ) : (
+                <Check size={16} color="#8e8e93" strokeWidth={2.5} />
+              )}
+            </View>
+          )}
+          
           <Text
-            className={`text-[13px] flex-1 ${
-              isUnread ? 'font-bold text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'
+            className={`text-[15px] flex-1 truncate ${
+              isUnread ? 'font-semibold text-slate-800 dark:text-slate-200' : 'text-[#8e8e93]'
             }`}
-            numberOfLines={1}
+            numberOfLines={2}
           >
             {room.last_message ? formatPreview(room.last_message.content, room.last_message.message_type) : 'Tap to start chatting'}
           </Text>
-          <View className="flex-row items-center gap-1.5 shrink-0">
-            {room.last_message && room.last_message.sender_id === user?.id && (
-              <View className="flex-row items-center gap-0.5">
-                {room.last_message.is_read ? (
-                  <CheckCheck size={14} color="#6366f1" strokeWidth={2.5} />
-                ) : (
-                  <Check size={14} color="#94a3b8" strokeWidth={2.5} />
-                )}
-                <Text className={`text-[9px] font-black uppercase tracking-wider ${room.last_message.is_read ? 'text-indigo-500' : 'text-slate-400'}`}>
-                  {room.last_message.is_read ? 'Seen' : 'Sent'}
-                </Text>
-              </View>
-            )}
-            {isUnread && <View className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />}
-          </View>
+
+          {isUnread && (
+            <View className="h-5 w-5 bg-indigo-500 rounded-full shrink-0 shadow-sm shadow-indigo-500/30" />
+          )}
         </View>
       </View>
     </TouchableOpacity>

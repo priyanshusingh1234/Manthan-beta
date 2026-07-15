@@ -682,7 +682,7 @@ export default function PublicProfileScreen() {
   const userLeague = getLeague(monthlyPoints);
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-white dark:bg-slate-950">
       <Stack.Screen
         options={{
           headerShown: false,
@@ -692,10 +692,10 @@ export default function PublicProfileScreen() {
       {/* Floating Back Button */}
       <TouchableOpacity
         onPress={() => router.back()}
-        style={{ top: Math.max(insets.top, 10) + 10 }}
-        className="absolute left-4 z-50 w-10 h-10 bg-black/45 rounded-full justify-center items-center shadow-md active:scale-95"
+        style={{ top: Math.max(insets.top, 10) }}
+        className="absolute left-4 z-50 w-9 h-9 bg-black/30 rounded-full justify-center items-center backdrop-blur-md active:opacity-70"
       >
-        <ChevronLeft size={24} color="white" />
+        <ChevronLeft size={22} color="white" />
       </TouchableOpacity>
 
       <ScrollView
@@ -706,9 +706,8 @@ export default function PublicProfileScreen() {
         }
       >
         {/* Banner Section */}
-        <View className="h-36 relative overflow-hidden">
+        <View className="h-40 relative overflow-hidden">
           {isTeacher ? (
-            // Carbon fibre styled dark banner
             <View className="absolute inset-0 bg-slate-900">
               <View className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-indigo-950 to-indigo-900 opacity-90" />
               <View className="absolute inset-0 opacity-20" style={{ backgroundColor: '#1e293b' }} />
@@ -716,18 +715,18 @@ export default function PublicProfileScreen() {
           ) : profile.banner_url ? (
             <Image source={{ uri: profile.banner_url }} className="absolute inset-0 w-full h-full" resizeMode="cover" />
           ) : (
-            <View className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-500 opacity-90" />
+            <View className="absolute inset-0 bg-slate-200 dark:bg-slate-800" />
           )}
-          <View className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
+          <View className="absolute inset-0 bg-black/10" />
         </View>
 
-        {/* Profile Card Overlay */}
-        <View className="bg-white dark:bg-slate-900 mx-4 -mt-12 rounded-[2.5rem] shadow-lg border border-slate-100/80 dark:border-slate-800/80 p-5 mb-4 relative z-10">
+        {/* Profile Details (Edge to edge) */}
+        <View className="bg-white dark:bg-slate-950 px-4 pb-4 border-b border-slate-200/50 dark:border-slate-800/50" style={{ overflow: 'visible' }}>
           
           {/* Avatar and Follow Row */}
-          <View className="flex-row items-end justify-between -mt-16 mb-4">
+          <View className="flex-row items-end justify-between -mt-12 mb-4">
             <View className="relative">
-              <View className={`w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 ${Array.isArray(profile.cosmetics) && profile.cosmetics.includes('avatar_glow') ? 'border-indigo-400' : 'border-white dark:border-slate-900'} shadow-md justify-center items-center`}>
+              <View className={`w-[88px] h-[88px] rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-[3px] ${Array.isArray(profile.cosmetics) && profile.cosmetics.includes('avatar_glow') ? 'border-indigo-400' : 'border-white dark:border-slate-950'} justify-center items-center`}>
                 {profile.avatar_url ? (
                   <Image source={{ uri: profile.avatar_url }} className="w-full h-full" resizeMode="cover" />
                 ) : (
@@ -740,30 +739,31 @@ export default function PublicProfileScreen() {
               </View>
               {/* Online status indicator (active in last 3 mins) */}
               {profile.last_seen && (new Date().getTime() - new Date(profile.last_seen).getTime()) < 3 * 60 * 1000 && (
-                <View className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-slate-900" />
+                <View className="absolute bottom-0 right-0 w-[22px] h-[22px] bg-emerald-500 rounded-full border-[3px] border-white dark:border-slate-950" />
               )}
             </View>
 
-
             {/* Follow/Unfollow Button */}
-            {!isMyself && (
-              <TouchableOpacity
-                onPress={handleFollowToggle}
-                className={`px-6 py-2 rounded-full border ${
-                  isFollowing || isRequested
-                    ? 'bg-slate-100 border-slate-200 dark:bg-slate-800 dark:border-slate-700'
-                    : 'bg-indigo-650 border-indigo-650'
-                } active:scale-95`}
-              >
-                <Text
-                  className={`font-black text-xs ${
-                    isFollowing || isRequested ? 'text-slate-700 dark:text-slate-300' : 'text-white'
-                  }`}
+            <View className="flex-row items-center gap-2 mt-12">
+              {!isMyself && (
+                <TouchableOpacity
+                  onPress={handleFollowToggle}
+                  className={`flex-row items-center justify-center h-8 px-4 rounded-full ${
+                    isFollowing || isRequested
+                      ? 'bg-slate-100 dark:bg-slate-800'
+                      : 'bg-indigo-600 dark:bg-indigo-500'
+                  } active:opacity-70`}
                 >
-                  {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
-                </Text>
-              </TouchableOpacity>
-            )}
+                  <Text
+                    className={`text-[13px] font-semibold ${
+                      isFollowing || isRequested ? 'text-slate-900 dark:text-white' : 'text-white'
+                    }`}
+                  >
+                    {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* Name & Verification Badges */}
@@ -876,20 +876,20 @@ export default function PublicProfileScreen() {
           )}
 
           {/* Follow Counts Header */}
-          <View className="flex-row gap-6 border-t border-slate-100 dark:border-slate-800 pt-3">
-            <TouchableOpacity onPress={() => openFollowsModal('followers')} className="active:opacity-70">
-              <Text className="text-base font-bold text-slate-900 dark:text-white">{followersCount}</Text>
-              <Text className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Followers</Text>
+          <View className="flex-row gap-6 mt-1">
+            <TouchableOpacity onPress={() => openFollowsModal('followers')} activeOpacity={0.7} className="flex-row items-center gap-1">
+              <Text className="text-[15px] font-semibold text-slate-900 dark:text-white">{followersCount}</Text>
+              <Text className="text-[15px] text-[#8e8e93]">Followers</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => openFollowsModal('following')} className="active:opacity-70">
-              <Text className="text-base font-bold text-slate-900 dark:text-white">{followingCount}</Text>
-              <Text className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Following</Text>
+            <TouchableOpacity onPress={() => openFollowsModal('following')} activeOpacity={0.7} className="flex-row items-center gap-1">
+              <Text className="text-[15px] font-semibold text-slate-900 dark:text-white">{followingCount}</Text>
+              <Text className="text-[15px] text-[#8e8e93]">Following</Text>
             </TouchableOpacity>
-            <View>
-              <Text className="text-base font-bold text-slate-900 dark:text-white">
+            <View className="flex-row items-center gap-1">
+              <Text className="text-[15px] font-semibold text-slate-900 dark:text-white">
                 {isTeacher ? createdQuestions.length : totalPoints.toLocaleString()}
               </Text>
-              <Text className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+              <Text className="text-[15px] text-[#8e8e93]">
                 {isTeacher ? 'Questions' : 'Points'}
               </Text>
             </View>
@@ -963,7 +963,7 @@ export default function PublicProfileScreen() {
             {/* Learning Insights and Rank Podium Card */}
             <View className="flex-row gap-3">
               {/* Insights */}
-              <View className="flex-1 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-3xl shadow-sm">
+              <View className="flex-1 bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-slate-800 p-4 rounded-3xl shadow-sm">
                 <Text className="text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-400 tracking-wider mb-3">
                   Learning Insights
                 </Text>
@@ -1014,7 +1014,7 @@ export default function PublicProfileScreen() {
         {/* Teacher Specific Impact Metrics */}
         {isTeacher && (
           <View className="px-4 mb-4">
-            <View className="bg-white dark:bg-slate-900 border border-slate-105 dark:border-slate-800 p-5 rounded-3xl shadow-sm">
+            <View className="bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-slate-800 p-5 rounded-3xl shadow-sm">
               <Text className="text-[10px] font-black uppercase text-indigo-500 dark:text-indigo-400 tracking-wider mb-4">
                 Impact Analysis
               </Text>
@@ -1052,7 +1052,7 @@ export default function PublicProfileScreen() {
 
         {/* Dynamic Tabs Selectors */}
         {profile.is_private && !isMyself && !isFollowing ? (
-          <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center mx-4 mb-4 mt-8">
+          <View className="bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center mx-4 mb-4 mt-8">
             <View className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center mb-4">
               <Lock size={24} color={isDark ? '#cbd5e1' : '#475569'} />
             </View>
@@ -1063,90 +1063,75 @@ export default function PublicProfileScreen() {
           </View>
         ) : (
           <>
-            {!isTeacher ? (
-          <View className="flex-row mx-4 mb-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-            {(['stats', 'badges', 'posts'] as StudentTabKey[]).map((tab) => {
-              const isActive = studentTab === tab;
-              const labels = { stats: 'Stats', badges: 'Badges', posts: 'Posts' } as any;
-              const icons = { stats: Award, badges: Shield, posts: Layers } as any;
-              const TabIcon = icons[tab];
-              return (
-                <TouchableOpacity
-                  key={tab}
-                  onPress={() => setStudentTab(tab)}
-                  className={`flex-1 flex-row items-center justify-center py-3 gap-1.5 ${
-                    isActive ? 'bg-indigo-600' : 'bg-transparent'
-                  }`}
-                >
-                  <TabIcon size={14} color={isActive ? 'white' : (isDark ? '#cbd5e1' : '#64748b')} />
-                  <Text
-                    className={`text-[12px] font-bold ${
-                      isActive ? 'text-white' : 'text-slate-650 dark:text-slate-300'
-                    }`}
-                  >
-                    {labels[tab]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ) : (
-          <View className="flex-row mx-4 mb-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-            {(['questions', 'posts'] as TeacherTabKey[]).map((tab) => {
-              const isActive = teacherTab === tab;
-              const labels = { questions: 'Questions', posts: 'Posts' };
-              const icons = { questions: BookOpen, posts: Layers };
-              const TabIcon = icons[tab];
-              return (
-                <TouchableOpacity
-                  key={tab}
-                  onPress={() => setTeacherTab(tab)}
-                  className={`flex-1 flex-row items-center justify-center py-3 gap-1.5 ${
-                    isActive ? 'bg-indigo-600' : 'bg-transparent'
-                  }`}
-                >
-                  <TabIcon size={14} color={isActive ? 'white' : (isDark ? '#cbd5e1' : '#64748b')} />
-                  <Text
-                    className={`text-[12px] font-bold ${
-                      isActive ? 'text-white' : 'text-slate-650 dark:text-slate-300'
-                    }`}
-                  >
-                    {labels[tab]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
+            <View className="px-4 py-3 bg-white dark:bg-slate-950 border-b border-[#E5E5EA] dark:border-slate-800/50">
+              {!isTeacher ? (
+                <View className="flex-row bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-lg">
+                  {(['stats', 'badges', 'posts'] as StudentTabKey[]).map((tab) => {
+                    const isActive = studentTab === tab;
+                    const labels = { stats: 'Stats', badges: 'Badges', posts: 'Posts' } as any;
+                    const icons = { stats: Award, badges: Shield, posts: Layers } as any;
+                    const TabIcon = icons[tab];
+                    return (
+                      <TouchableOpacity
+                        key={tab}
+                        onPress={() => setStudentTab(tab)}
+                        className={`flex-1 flex-row items-center justify-center py-1.5 gap-1.5 rounded-md ${isActive ? 'bg-white dark:bg-[#2C2C2E] shadow-sm' : ''}`}
+                      >
+                        <TabIcon size={14} color={isActive ? (isDark ? '#fff' : '#000') : '#8e8e93'} />
+                        <Text className={`text-[13px] font-semibold ${isActive ? 'text-slate-900 dark:text-white' : 'text-[#8e8e93]'}`}>{labels[tab]}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View className="flex-row bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-lg">
+                  {(['questions', 'posts'] as TeacherTabKey[]).map((tab) => {
+                    const isActive = teacherTab === tab;
+                    const labels = { questions: 'Questions', posts: 'Posts' };
+                    const icons = { questions: BookOpen, posts: Layers };
+                    const TabIcon = icons[tab];
+                    return (
+                      <TouchableOpacity
+                        key={tab}
+                        onPress={() => setTeacherTab(tab)}
+                        className={`flex-1 flex-row items-center justify-center py-1.5 gap-1.5 rounded-md ${isActive ? 'bg-white dark:bg-[#2C2C2E] shadow-sm' : ''}`}
+                      >
+                        <TabIcon size={14} color={isActive ? (isDark ? '#fff' : '#000') : '#8e8e93'} />
+                        <Text className={`text-[13px] font-semibold ${isActive ? 'text-slate-900 dark:text-white' : 'text-[#8e8e93]'}`}>{labels[tab]}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
 
         {/* Student Tab Panel Content */}
         {!isTeacher && studentTab === 'stats' && (
-          <View className="px-4 pb-24 gap-3">
+          <View className="pb-24">
             {/* Stats Grid */}
-            <View className="flex-row flex-wrap gap-3">
+            <View className="flex-row flex-wrap gap-3 px-4 pt-4 mb-3">
               {[
-                { label: 'Battles Won', value: profile.battlesWon || 0, icon: Trophy, color: '#eab308', bg: isDark ? 'rgba(234,179,8,0.1)' : '#fefce8' },
+                { label: 'Battles Won', value: profile.battlesWon || 0, icon: Trophy, color: '#eab308' },
                 {
                   label: 'Win Rate',
                   value: `${profile.battlesAttempted > 0 ? Math.round(((profile.battlesWon || 0) / profile.battlesAttempted) * 100) : 0}%`,
                   icon: Target,
                   color: '#22c55e',
-                  bg: isDark ? 'rgba(34,197,94,0.1)' : '#f0fdf4',
                 },
-                { label: 'Battles', value: profile.battlesAttempted || 0, icon: Zap, color: '#f97316', bg: isDark ? 'rgba(249,115,22,0.1)' : '#fff7ed' },
-                { label: 'Points', value: totalPoints.toLocaleString(), icon: Star, color: '#3b82f6', bg: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff' },
+                { label: 'Battles', value: profile.battlesAttempted || 0, icon: Zap, color: '#f97316' },
+                { label: 'Points', value: totalPoints.toLocaleString(), icon: Star, color: '#3b82f6' },
               ].map((stat) => {
                 const StatIcon = stat.icon;
                 return (
                   <View
                     key={stat.label}
-                    className="flex-1 min-w-[44%] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 px-4 py-4 rounded-3xl shadow-sm"
+                    className="flex-1 min-w-[46%] rounded-[14px] bg-white dark:bg-slate-900 px-4 py-3 border border-[#E5E5EA] dark:border-slate-800"
                   >
-                    <View className="w-9 h-9 rounded-xl items-center justify-center mb-2" style={{ backgroundColor: stat.bg }}>
-                      <StatIcon size={18} color={stat.color} />
+                    <View className="flex-row items-center gap-2 mb-1">
+                      <StatIcon size={16} color={stat.color} />
+                      <Text className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">{stat.label}</Text>
                     </View>
-                    <Text className="text-[20px] font-black text-slate-900 dark:text-white">{stat.value}</Text>
-                    <Text className="text-[11px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">{stat.label}</Text>
+                    <Text className="text-[22px] font-bold text-slate-900 dark:text-white">{stat.value}</Text>
                   </View>
                 );
               })}
@@ -1154,7 +1139,7 @@ export default function PublicProfileScreen() {
 
             {/* Weekly Report Card */}
             {weeklyReport && (
-              <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-3xl shadow-sm mt-1">
+              <View className="bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-slate-800 p-5 rounded-3xl shadow-sm mt-1 mx-4">
                 <View className="flex-row justify-between items-center mb-4">
                   <Text className="text-xs font-black text-slate-800 dark:text-slate-200">Weekly Performance</Text>
                   <View className="bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 rounded-full border border-indigo-100 dark:border-indigo-800/40">
@@ -1175,7 +1160,7 @@ export default function PublicProfileScreen() {
                     </Text>
                     <Text className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mt-1">Attempts</Text>
                   </View>
-                  <View className="items-center flex-1 border-x border-slate-100 dark:border-slate-800">
+                  <View className="items-center flex-1 border-x border-[#E5E5EA] dark:border-slate-800">
                     <Text className="text-base font-black text-slate-900 dark:text-white">
                       {weeklyReport.stats.accuracy}%
                     </Text>
@@ -1219,7 +1204,7 @@ export default function PublicProfileScreen() {
                       setFetchingSource(false);
                     }
                   }}
-                  className="bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/50 p-4 rounded-3xl shadow-sm flex-row items-center gap-3"
+                  className="bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-indigo-900/50 p-4 rounded-3xl shadow-sm flex-row items-center gap-3"
                 >
                   <View className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/20 items-center justify-center">
                     <Trophy size={20} color="#6366f1" />
@@ -1237,7 +1222,7 @@ export default function PublicProfileScreen() {
 
             {/* Champion Badge */}
             {globalRank && globalRank <= 3 && (
-              <View className="bg-white dark:bg-slate-900 border border-amber-250 dark:border-amber-900/50 p-4 rounded-3xl shadow-sm flex-row items-center gap-3">
+              <View className="bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-amber-900/50 p-4 rounded-3xl shadow-sm flex-row items-center gap-3">
                 <View className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/20 items-center justify-center">
                   <Trophy size={20} color="#f59e0b" />
                 </View>
@@ -1254,7 +1239,7 @@ export default function PublicProfileScreen() {
 
             {/* Topper Badge */}
             {totalPoints >= 1500 && (
-              <View className="bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/50 p-4 rounded-3xl shadow-sm flex-row items-center gap-3">
+              <View className="bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-indigo-900/50 p-4 rounded-3xl shadow-sm flex-row items-center gap-3">
                 <View className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/20 items-center justify-center">
                   <Award size={20} color="#4f46e5" />
                 </View>
@@ -1269,7 +1254,7 @@ export default function PublicProfileScreen() {
 
             {/* First Victory Badge */}
             {profile.battlesWon >= 1 && (
-              <View className="bg-white dark:bg-slate-900 border border-green-200 dark:border-green-900/50 p-4 rounded-3xl shadow-sm flex-row items-center gap-3">
+              <View className="bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-green-900/50 p-4 rounded-3xl shadow-sm flex-row items-center gap-3">
                 <View className="w-10 h-10 rounded-2xl bg-green-50 dark:bg-green-950/20 items-center justify-center">
                   <Shield size={20} color="#22c55e" />
                 </View>
@@ -1284,7 +1269,7 @@ export default function PublicProfileScreen() {
 
             {/* Empty State */}
             {totalPoints === 0 && (!globalRank || globalRank > 3) && (
-              <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center">
+              <View className="bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center">
                 <Shield size={36} color={isDark ? '#475569' : '#cbd5e1'} />
                 <Text className="text-slate-500 dark:text-slate-400 font-bold mt-2 text-sm">No badges yet</Text>
                 <Text className="text-[11px] text-slate-450 dark:text-slate-500 text-center mt-1">
@@ -1298,7 +1283,7 @@ export default function PublicProfileScreen() {
         {!isTeacher && studentTab === 'posts' && (
           <View className="px-4 pb-24 gap-3">
             {userPosts.length === 0 ? (
-              <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center">
+              <View className="bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center">
                 <BookOpen size={36} color={isDark ? '#475569' : '#cbd5e1'} />
                 <Text className="text-slate-500 dark:text-slate-400 font-bold mt-2 text-sm">No posts found</Text>
                 <Text className="text-[11px] text-slate-450 dark:text-slate-500 text-center mt-1">
@@ -1321,7 +1306,7 @@ export default function PublicProfileScreen() {
         {isTeacher && teacherTab === 'questions' && (
           <View className="px-4 pb-24 gap-3">
             {createdQuestions.length === 0 ? (
-              <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center">
+              <View className="bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center">
                 <BookOpen size={36} color={isDark ? '#475569' : '#cbd5e1'} />
                 <Text className="text-slate-500 dark:text-slate-400 font-bold mt-2 text-sm">No questions created</Text>
                 <Text className="text-[11px] text-slate-450 dark:text-slate-500 text-center mt-1">
@@ -1348,7 +1333,7 @@ export default function PublicProfileScreen() {
         {isTeacher && teacherTab === 'posts' && (
           <View className="px-4 pb-24 gap-3">
             {userPosts.length === 0 ? (
-              <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center">
+              <View className="bg-white dark:bg-slate-900 border border-[#E5E5EA] dark:border-slate-800 p-8 rounded-3xl shadow-sm items-center">
                 <BookOpen size={36} color={isDark ? '#475569' : '#cbd5e1'} />
                 <Text className="text-slate-500 dark:text-slate-400 font-bold mt-2 text-sm">No posts found</Text>
                 <Text className="text-[11px] text-slate-450 dark:text-slate-500 text-center mt-1">
@@ -1373,7 +1358,7 @@ export default function PublicProfileScreen() {
       {/* Title Details Modal */}
       <Modal visible={!!selectedTitleForPopup} transparent animationType="fade">
         <View className="flex-1 bg-black/60 items-center justify-center px-6">
-          <View className="bg-white dark:bg-slate-900 w-full rounded-[32px] p-8 items-center border border-slate-100 dark:border-slate-800">
+          <View className="bg-white dark:bg-slate-900 w-full rounded-[32px] p-8 items-center border border-[#E5E5EA] dark:border-slate-800">
             {/* Close Button */}
             <TouchableOpacity 
               onPress={() => setSelectedTitleForPopup(null)}
@@ -1426,20 +1411,20 @@ export default function PublicProfileScreen() {
       {/* Followers/Following List Overlay Modal */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white dark:bg-slate-900 rounded-t-[32px] h-[75%] px-5 pt-6 pb-8 shadow-2xl">
+          <View className="bg-[#F2F2F7] dark:bg-slate-900 rounded-t-[32px] h-[75%] px-5 pt-6 pb-8 shadow-2xl">
             {/* Modal Header */}
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-xl font-black text-slate-900 dark:text-white capitalize">{modalType}</Text>
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+                className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 items-center justify-center"
               >
                 <X size={18} color={isDark ? '#cbd5e1' : '#64748b'} />
               </TouchableOpacity>
             </View>
 
             {/* Search Input */}
-            <View className="flex-row items-center bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-2 mb-4">
+            <View className="flex-row items-center bg-white dark:bg-slate-800 rounded-2xl px-4 py-2 mb-4 border border-[#E5E5EA] dark:border-none">
               <Search size={16} color="#94a3b8" />
               <TextInput
                 placeholder="Search users..."
@@ -1474,11 +1459,11 @@ export default function PublicProfileScreen() {
                   <TouchableOpacity
                     key={u.id}
                     onPress={() => handleModalUserClick(u.username)}
-                    className="flex-row items-center justify-between py-3 border-b border-slate-50 dark:border-slate-800/50 active:bg-slate-50 dark:active:bg-slate-800/50"
+                    className="flex-row items-center py-3 border-b border-[#E5E5EA] dark:border-slate-800/50"
                   >
                     <View className="flex-row items-center flex-1 mr-4">
                       {/* Avatar */}
-                      <View className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 justify-center items-center mr-3">
+                      <View className="w-10 h-10 rounded-full overflow-hidden bg-white dark:bg-slate-800 border border-[#E5E5EA] dark:border-slate-700 justify-center items-center mr-3">
                         {u.avatar_url ? (
                           <Image source={{ uri: u.avatar_url }} className="w-full h-full" resizeMode="cover" />
                         ) : (

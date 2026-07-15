@@ -71,13 +71,8 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
       <View 
         className={
           isVip
-            ? "mx-3 mb-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/20 rounded-[24px] shadow-sm border border-amber-300/60 dark:border-amber-700/50 p-4"
-            : "mx-3 mb-4 bg-white dark:bg-slate-900 rounded-[24px] shadow-sm border border-slate-100 dark:border-slate-800/80 p-4"
-        }
-        style={
-          isVip 
-            ? { shadowColor: '#f59e0b', shadowOpacity: 0.15, shadowRadius: 20, shadowOffset: { width: 0, height: 6 }, elevation: 5 }
-            : { shadowColor: '#6366f1', shadowOpacity: 0.04, shadowRadius: 15, shadowOffset: { width: 0, height: 4 }, elevation: 2 }
+            ? "bg-gradient-to-br from-amber-50/50 to-orange-50/30 dark:from-slate-900 dark:to-slate-950 py-4 px-4 border-b border-[#E5E5EA] dark:border-[#1C1C1E]"
+            : "bg-white dark:bg-slate-950 py-4 px-4 border-b border-[#E5E5EA] dark:border-slate-800/50"
         }
       >
         {/* Header */}

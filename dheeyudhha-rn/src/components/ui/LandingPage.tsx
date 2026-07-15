@@ -105,7 +105,7 @@ export default function LandingPage() {
         <View className="w-full max-w-sm aspect-square bg-[#13131a] border border-violet-500/20 rounded-3xl overflow-hidden shadow-2xl shadow-violet-500/10 items-center justify-center relative">
           
           <LottieView
-            source={{ uri: 'https://raw.githubusercontent.com/LottieFiles/lottie-react-native/master/example/assets/LottieLogo1.json' }}
+            source={require('../../../assets/hero-animation.json')}
             autoPlay
             loop
             style={{ width: '100%', height: '100%' }}

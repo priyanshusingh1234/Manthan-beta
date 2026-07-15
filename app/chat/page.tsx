@@ -302,6 +302,9 @@ function formatPreview(content: string, type?: string) {
     const replyText = parts.slice(1).join(' ').trim();
     return replyText ? `↩ ${replyText}` : 'Replied to a message';
   }
+  if (text.match(/(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+/i) || text.match(/(?:\/posts\/|\/questions\/)[a-zA-Z0-9_-]+/i)) {
+    return '🔗 Shared a post';
+  }
   return text;
 }
 

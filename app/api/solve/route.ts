@@ -619,8 +619,8 @@ export async function POST(req: Request) {
                                         bTitle = '⚔️ League Promotion!';
                                         bBody = `${shortName} just advanced to the ${LEAGUES[newLeague]?.name} League!`;
                                     } else if (overtakenFriends && overtakenFriends.length > 0) {
-                                        bTitle = '🚨 Leaderboard Shakeup!';
-                                        bBody = `${shortName} just climbed the ranks! Are they coming for your spot?`;
+                                        bTitle = '🔥 Streak Completed!';
+                                        bBody = `Your friend ${shortName} just completed their streak!`;
                                     } else if (leveledUp) {
                                         bTitle = '📈 Level Up Alert!';
                                         bBody = `${shortName} just reached Level ${newLevel}! Can you beat them?`;

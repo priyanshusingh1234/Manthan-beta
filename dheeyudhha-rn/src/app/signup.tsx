@@ -59,7 +59,7 @@ export default function SignupScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white px-6" style={{ paddingTop: insets.top }}>
+    <ScrollView className="flex-1 bg-[#F2F2F7] dark:bg-slate-950 px-6" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center mt-12 mb-6">
         <TouchableOpacity onPress={() => router.back()} className="mr-4">
           <ArrowLeft size={24} color="#64748b" />
@@ -67,10 +67,10 @@ export default function SignupScreen() {
         <Logo width={40} />
       </View>
 
-      <Text className="text-3xl font-black italic tracking-tighter text-slate-900 mb-2 uppercase">
+      <Text className="text-3xl font-black italic tracking-tighter text-slate-900 dark:text-white mb-2 uppercase">
         Enter The War Room.
       </Text>
-      <Text className="text-sm font-medium text-slate-500 mb-8">
+      <Text className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8">
         Create your account and forge your legacy.
       </Text>
 
@@ -83,8 +83,9 @@ export default function SignupScreen() {
             <User size={20} color="#94a3b8" />
           </View>
           <TextInput
-            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            className="w-full pl-10 pr-4 py-3.5 bg-white dark:bg-[#1C1C1E] border border-[#E5E5EA] dark:border-slate-800 rounded-[10px] text-[17px] text-slate-900 dark:text-white"
             placeholder="Username"
+            placeholderTextColor="#8e8e93"
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
@@ -97,8 +98,9 @@ export default function SignupScreen() {
             <User size={20} color="#94a3b8" />
           </View>
           <TextInput
-            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            className="w-full pl-10 pr-4 py-3.5 bg-white dark:bg-[#1C1C1E] border border-[#E5E5EA] dark:border-slate-800 rounded-[10px] text-[17px] text-slate-900 dark:text-white"
             placeholder="Full Name"
+            placeholderTextColor="#8e8e93"
             value={fullName}
             onChangeText={setFullName}
           />
@@ -110,8 +112,9 @@ export default function SignupScreen() {
             <Mail size={20} color="#94a3b8" />
           </View>
           <TextInput
-            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            className="w-full pl-10 pr-4 py-3.5 bg-white dark:bg-[#1C1C1E] border border-[#E5E5EA] dark:border-slate-800 rounded-[10px] text-[17px] text-slate-900 dark:text-white"
             placeholder="Email address"
+            placeholderTextColor="#8e8e93"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -125,8 +128,9 @@ export default function SignupScreen() {
             <Lock size={20} color="#94a3b8" />
           </View>
           <TextInput
-            className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            className="w-full pl-10 pr-12 py-3.5 bg-white dark:bg-[#1C1C1E] border border-[#E5E5EA] dark:border-slate-800 rounded-[10px] text-[17px] text-slate-900 dark:text-white"
             placeholder="Password"
+            placeholderTextColor="#8e8e93"
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -140,25 +144,25 @@ export default function SignupScreen() {
         </View>
 
         <TouchableOpacity 
-          className="mt-8 bg-indigo-600 py-4 rounded-xl shadow-lg flex-row justify-center items-center"
+          className="mt-8 bg-[#007AFF] py-3.5 rounded-[10px] items-center justify-center active:opacity-80"
           onPress={handleSignup}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text className="text-white text-center font-black uppercase tracking-widest text-sm">Join the Battle</Text>
+            <Text className="text-white text-center font-semibold text-[17px]">Join the Battle</Text>
           )}
         </TouchableOpacity>
 
         <View className="flex-row items-center my-6">
-          <View className="flex-1 h-px bg-slate-200" />
-          <Text className="px-4 text-slate-400 text-sm">Or sign up with</Text>
-          <View className="flex-1 h-px bg-slate-200" />
+          <View className="flex-1 h-px bg-[#E5E5EA] dark:bg-slate-800" />
+          <Text className="px-4 text-[#8e8e93] text-[13px] font-medium">Or sign up with</Text>
+          <View className="flex-1 h-px bg-[#E5E5EA] dark:bg-slate-800" />
         </View>
 
         <TouchableOpacity 
-          className="flex-row items-center justify-center py-3.5 border border-slate-300 rounded-xl bg-white mb-6"
+          className="flex-row items-center justify-center py-3.5 border border-[#E5E5EA] dark:border-slate-800 rounded-[10px] bg-white dark:bg-[#1C1C1E] mb-6 active:opacity-70"
           onPress={async () => {
             if (Platform.OS === 'web') {
               supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
@@ -184,13 +188,13 @@ export default function SignupScreen() {
             }
           }}
         >
-          <Text className="text-slate-700 font-bold">Continue with Google</Text>
+          <Text className="text-slate-900 dark:text-white font-semibold text-[17px]">Continue with Google</Text>
         </TouchableOpacity>
 
         <View className="flex-row justify-center mt-2 mb-12">
-          <Text className="text-slate-500 font-medium">Already a challenger? </Text>
+          <Text className="text-slate-500 dark:text-slate-400 text-[15px]">Already a challenger? </Text>
           <Link href="/login">
-            <Text className="text-indigo-600 font-bold">Sign in</Text>
+            <Text className="text-[#007AFF] font-semibold text-[15px]">Sign in</Text>
           </Link>
         </View>
       </View>

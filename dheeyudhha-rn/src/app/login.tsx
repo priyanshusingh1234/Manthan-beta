@@ -38,13 +38,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white px-6" style={{ paddingTop: insets.top }}>
+    <ScrollView className="flex-1 bg-[#F2F2F7] dark:bg-slate-950 px-6" style={{ paddingTop: insets.top }}>
       <View className="items-center mt-12 mb-8">
         <Logo width={80} showTagline={true} />
       </View>
       
-      <Text className="text-2xl font-extrabold text-slate-900 text-center mb-2">Welcome back, Brain!</Text>
-      <Text className="text-slate-600 text-center mb-8">Ready to continue your knowledge battle?</Text>
+      <Text className="text-2xl font-extrabold text-slate-900 dark:text-white text-center mb-2">Welcome back, Brain!</Text>
+      <Text className="text-slate-500 dark:text-slate-400 text-center mb-8">Ready to continue your knowledge battle?</Text>
 
       {error ? <Text className="text-red-500 mb-4 text-center">{error}</Text> : null}
 
@@ -55,8 +55,9 @@ export default function LoginScreen() {
             <Mail size={20} color="#94a3b8" />
           </View>
           <TextInput
-            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            className="w-full pl-10 pr-4 py-3.5 bg-white dark:bg-[#1C1C1E] border border-[#E5E5EA] dark:border-slate-800 rounded-[10px] text-[17px] text-slate-900 dark:text-white"
             placeholder="Email address"
+            placeholderTextColor="#8e8e93"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -70,8 +71,9 @@ export default function LoginScreen() {
             <Lock size={20} color="#94a3b8" />
           </View>
           <TextInput
-            className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            className="w-full pl-10 pr-12 py-3.5 bg-white dark:bg-[#1C1C1E] border border-[#E5E5EA] dark:border-slate-800 rounded-[10px] text-[17px] text-slate-900 dark:text-white"
             placeholder="Password"
+            placeholderTextColor="#8e8e93"
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -85,25 +87,25 @@ export default function LoginScreen() {
         </View>
 
         <TouchableOpacity 
-          className="mt-6 bg-blue-600 py-3.5 rounded-xl shadow-lg"
+          className="mt-6 bg-[#007AFF] py-3.5 rounded-[10px] items-center justify-center active:opacity-80"
           onPress={handleLogin}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text className="text-white text-center font-bold text-base">Sign in to Dheeyudha</Text>
+            <Text className="text-white text-center font-semibold text-[17px]">Sign in to Dheeyudha</Text>
           )}
         </TouchableOpacity>
 
         <View className="flex-row items-center my-6">
-          <View className="flex-1 h-px bg-slate-200" />
-          <Text className="px-4 text-slate-400 text-sm">Or continue with</Text>
-          <View className="flex-1 h-px bg-slate-200" />
+          <View className="flex-1 h-px bg-[#E5E5EA] dark:bg-slate-800" />
+          <Text className="px-4 text-[#8e8e93] text-[13px] font-medium">Or continue with</Text>
+          <View className="flex-1 h-px bg-[#E5E5EA] dark:bg-slate-800" />
         </View>
 
         <TouchableOpacity 
-          className="flex-row items-center justify-center py-3.5 border border-slate-300 rounded-xl bg-white mb-6"
+          className="flex-row items-center justify-center py-3.5 border border-[#E5E5EA] dark:border-slate-800 rounded-[10px] bg-white dark:bg-[#1C1C1E] mb-6 active:opacity-70"
           onPress={async () => {
             if (Platform.OS === 'web') {
               supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
@@ -129,13 +131,13 @@ export default function LoginScreen() {
             }
           }}
         >
-          <Text className="text-slate-700 font-bold">Continue with Google</Text>
+          <Text className="text-slate-900 dark:text-white font-semibold text-[17px]">Continue with Google</Text>
         </TouchableOpacity>
 
         <View className="flex-row justify-center">
-          <Text className="text-slate-600">Don't have an account? </Text>
+          <Text className="text-slate-500 dark:text-slate-400 text-[15px]">Don't have an account? </Text>
           <Link href="/signup">
-            <Text className="text-blue-600 font-bold">Sign up</Text>
+            <Text className="text-[#007AFF] font-semibold text-[15px]">Sign up</Text>
           </Link>
         </View>
       </View>

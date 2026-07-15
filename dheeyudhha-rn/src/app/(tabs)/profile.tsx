@@ -454,7 +454,7 @@ export default function ProfileScreen() {
   if (!profile) return null;
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-white dark:bg-slate-950">
       <TitlesDashboard
         visible={titlesVisible}
         onClose={() => setTitlesVisible(false)}
@@ -467,73 +467,70 @@ export default function ProfileScreen() {
       {/* Floating Back Button */}
       <TouchableOpacity
         onPress={() => router.back()}
-        style={{ top: Math.max(insets.top, 10) + 10 }}
-        className="absolute left-4 z-50 w-10 h-10 bg-black/45 rounded-full justify-center items-center shadow-md active:scale-95"
+        style={{ top: Math.max(insets.top, 10) }}
+        className="absolute left-4 z-50 w-9 h-9 bg-black/30 rounded-full justify-center items-center backdrop-blur-md active:opacity-70"
       >
-        <ChevronLeft size={24} color="white" />
+        <ChevronLeft size={22} color="white" />
       </TouchableOpacity>
 
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4f46e5']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4f46e5']} tintColor="#4f46e5" />}
       >
         {/* Banner */}
-        <View className="h-36 relative overflow-hidden">
+        <View className="h-40 relative overflow-hidden">
           {profile.banner_url ? (
             <Image source={getBannerSource(profile.banner_url)} className="absolute inset-0 w-full h-full" resizeMode="cover" />
           ) : (
-            <View className="absolute inset-0" style={{ backgroundColor: '#3730a3' }} />
+            <View className="absolute inset-0 bg-slate-200 dark:bg-slate-800" />
           )}
-          <View className="absolute inset-0" style={{ backgroundColor: 'rgba(49,46,129,0.5)' }} />
+          <View className="absolute inset-0 bg-black/10" />
         </View>
 
-        {/* Profile Card */}
-        <View className="bg-white dark:bg-slate-900 mx-4 -mt-16 rounded-3xl shadow-md border border-slate-100 dark:border-slate-800 mb-4" style={{ overflow: 'visible' }}>
-          <View className="px-5 pb-5">
+        {/* Profile Details (Edge to edge) */}
+        <View className="bg-white dark:bg-slate-950 px-4 pb-4 border-b border-slate-200/50 dark:border-slate-800/50" style={{ overflow: 'visible' }}>
+          <View className="pb-2">
             {/* Avatar Row */}
             <View className="flex-row items-end justify-between -mt-12 mb-3">
               <View className="relative">
                 <View 
-                  className={`w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 ${Array.isArray(profile.cosmetics) && profile.cosmetics.includes('avatar_glow') ? 'border-indigo-400' : 'border-white dark:border-slate-900'} justify-center items-center`}
+                  className={`w-[88px] h-[88px] rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-[3px] ${Array.isArray(profile.cosmetics) && profile.cosmetics.includes('avatar_glow') ? 'border-indigo-400' : 'border-white dark:border-slate-950'} justify-center items-center`}
                   style={Array.isArray(profile.cosmetics) && profile.cosmetics.includes('avatar_glow') ? {
                     shadowColor: '#6366f1',
                     shadowOffset: { width: 0, height: 0 },
                     shadowOpacity: 0.8,
                     shadowRadius: 15,
                     elevation: 10,
-                  } : { shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 }}
+                  } : {}}
                 >
                   {profile.avatar_url ? (
                     <Image source={{ uri: profile.avatar_url }} className="w-full h-full" resizeMode="cover" />
                   ) : (
-                    <User size={36} color={isDark ? '#cbd5e1' : '#94a3b8'} />
+                    <User size={32} color={isDark ? '#cbd5e1' : '#94a3b8'} />
                   )}
                 </View>
-                <View className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white dark:border-slate-900" />
+                <View className="absolute bottom-0 right-0 w-[22px] h-[22px] bg-emerald-500 rounded-full border-[3px] border-white dark:border-slate-950" />
               </View>
 
               <View className="flex-row items-center gap-2 mt-12">
-                {/* Manage Titles button */}
                 <TouchableOpacity
                   onPress={() => setTitlesVisible(true)}
-                  className="flex-row items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50"
+                  className="flex-row items-center justify-center h-8 px-3 rounded-full bg-slate-100 dark:bg-slate-800 active:opacity-70"
                 >
-                  <Text className="text-amber-600 dark:text-amber-400 text-[12px] font-bold">🏆 Titles</Text>
+                  <Text className="text-slate-900 dark:text-white text-[13px] font-semibold">Titles</Text>
                 </TouchableOpacity>
-                {/* Edit Profile button */}
                 <TouchableOpacity
                   onPress={() => setEditVisible(true)}
-                  className="flex-row items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800/50"
+                  className="flex-row items-center justify-center h-8 px-4 rounded-full bg-slate-100 dark:bg-slate-800 active:opacity-70"
                 >
-                  <Edit3 size={14} color="#4f46e5" />
-                  <Text className="text-indigo-600 dark:text-indigo-400 text-[12px] font-bold">Edit</Text>
+                  <Text className="text-slate-900 dark:text-white text-[13px] font-semibold">Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleSignOut}
-                  className="w-9 h-9 rounded-full bg-red-50 dark:bg-red-950/20 items-center justify-center border border-red-100 dark:border-red-900/30"
+                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center active:opacity-70"
                 >
-                  <LogOut size={16} color="#ef4444" />
+                  <LogOut size={14} color={isDark ? '#e2e8f0' : '#0f172a'} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -598,53 +595,55 @@ export default function ProfileScreen() {
             </View>
 
             {/* Followers/Following */}
-            <View className="flex-row gap-8 border-t border-slate-100 dark:border-slate-800 pt-3">
-              <TouchableOpacity onPress={() => openFollowsModal('followers')} activeOpacity={0.7}>
-                <Text className="text-[16px] font-bold text-slate-900 dark:text-slate-100">{profile.followers_count}</Text>
-                <Text className="text-[12px] text-slate-500 dark:text-slate-400">Followers</Text>
+            <View className="flex-row gap-6 mt-1">
+              <TouchableOpacity onPress={() => openFollowsModal('followers')} activeOpacity={0.7} className="flex-row items-center gap-1">
+                <Text className="text-[15px] font-semibold text-slate-900 dark:text-white">{profile.followers_count}</Text>
+                <Text className="text-[15px] text-[#8e8e93]">Followers</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => openFollowsModal('following')} activeOpacity={0.7}>
-                <Text className="text-[16px] font-bold text-slate-900 dark:text-slate-100">{profile.following_count}</Text>
-                <Text className="text-[12px] text-slate-500 dark:text-slate-400">Following</Text>
+              <TouchableOpacity onPress={() => openFollowsModal('following')} activeOpacity={0.7} className="flex-row items-center gap-1">
+                <Text className="text-[15px] font-semibold text-slate-900 dark:text-white">{profile.following_count}</Text>
+                <Text className="text-[15px] text-[#8e8e93]">Following</Text>
               </TouchableOpacity>
-              <View>
-                <Text className="text-[16px] font-bold text-slate-900 dark:text-slate-100">{profile.totalPoints.toLocaleString()}</Text>
-                <Text className="text-[12px] text-slate-500 dark:text-slate-400">Points</Text>
+              <View className="flex-row items-center gap-1">
+                <Text className="text-[15px] font-semibold text-slate-900 dark:text-white">{profile.totalPoints.toLocaleString()}</Text>
+                <Text className="text-[15px] text-[#8e8e93]">Points</Text>
               </View>
             </View>
           </View>
         </View>
 
-        {/* Tabs - no remount lag */}
-        <View className="flex-row mx-4 mb-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-          {TABS.map((tab, i) => {
-            const isActive = activeTab === tab.key;
-            const Icon = tab.icon;
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                onPress={() => setActiveTab(tab.key)}
-                className={`flex-1 flex-row items-center justify-center py-3 gap-1.5 ${isActive ? 'bg-indigo-600' : 'bg-white dark:bg-slate-900'} ${i < TABS.length - 1 ? 'border-r border-slate-100 dark:border-slate-800' : ''}`}
-              >
-                <Icon size={14} color={isActive ? 'white' : (isDark ? '#cbd5e1' : '#64748b')} />
-                <Text className={`text-[12px] font-bold ${isActive ? 'text-white' : 'text-slate-600 dark:text-slate-300'}`}>{tab.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
+        {/* iOS segmented style Tabs */}
+        <View className="px-4 py-3 bg-white dark:bg-slate-950 border-b border-slate-200/50 dark:border-slate-800/50">
+          <View className="flex-row bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-lg">
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.key;
+              const Icon = tab.icon;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  onPress={() => setActiveTab(tab.key)}
+                  className={`flex-1 flex-row items-center justify-center py-1.5 gap-1.5 rounded-md ${isActive ? 'bg-white dark:bg-[#2C2C2E] shadow-sm' : ''}`}
+                >
+                  <Icon size={14} color={isActive ? (isDark ? '#fff' : '#000') : '#8e8e93'} />
+                  <Text className={`text-[13px] font-semibold ${isActive ? 'text-slate-900 dark:text-white' : 'text-[#8e8e93]'}`}>{tab.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         {/* ── Stats Tab ── */}
-        <View style={{ display: activeTab === 'stats' ? 'flex' : 'none' }} className="px-4 pb-24">
-          <View className="flex-row flex-wrap gap-3 mb-4">
+        <View style={{ display: activeTab === 'stats' ? 'flex' : 'none' }} className="pb-24">
+          <View className="flex-row flex-wrap px-4 pt-4 gap-3">
             {stats.map((stat) => {
               const Icon = stat.icon;
               return (
-                <View key={stat.label} className="flex-1 min-w-[44%] rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-4 shadow-sm">
-                  <View className="w-9 h-9 rounded-xl items-center justify-center mb-2" style={{ backgroundColor: stat.bg }}>
-                    <Icon size={18} color={stat.color} />
+                <View key={stat.label} className="flex-1 min-w-[46%] rounded-[14px] bg-slate-50 dark:bg-slate-900 px-4 py-3">
+                  <View className="flex-row items-center gap-2 mb-1">
+                    <Icon size={16} color={stat.color} />
+                    <Text className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">{stat.label}</Text>
                   </View>
-                  <Text className="text-[20px] font-bold text-slate-900 dark:text-slate-100">{stat.value}</Text>
-                  <Text className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">{stat.label}</Text>
+                  <Text className="text-[22px] font-bold text-slate-900 dark:text-white">{stat.value}</Text>
                 </View>
               );
             })}
@@ -738,9 +737,9 @@ export default function ProfileScreen() {
 
       {/* ══════════════ Edit Profile Modal ══════════════ */}
       <Modal visible={editVisible} animationType="slide" transparent={false} onRequestClose={() => setEditVisible(false)}>
-        <View className="flex-1 bg-slate-50 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
+        <SafeAreaView className="flex-1 bg-[#F2F2F7] dark:bg-slate-950">
           {/* Header */}
-          <View className="flex-row items-center justify-between px-4 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <View className="flex-row items-center justify-between px-4 py-4 border-b border-[#E5E5EA] dark:border-slate-800 bg-white dark:bg-slate-900">
             <TouchableOpacity onPress={() => { setEditVisible(false); setNewAvatar(null); setNewBanner(null); }}>
               <X size={22} color={isDark ? '#cbd5e1' : '#64748b'} />
             </TouchableOpacity>
@@ -773,14 +772,14 @@ export default function ProfileScreen() {
             {/* Avatar picker */}
             <View className="px-5 -mt-10 mb-4">
               <TouchableOpacity onPress={() => pickImage('avatar')} activeOpacity={0.85} className="self-start">
-                <View className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-950 overflow-hidden bg-slate-200 dark:bg-slate-700 shadow-lg justify-center items-center">
+                <View className="w-20 h-20 rounded-full border-4 border-[#F2F2F7] dark:border-slate-950 overflow-hidden bg-slate-200 dark:bg-slate-700 shadow-lg justify-center items-center">
                   {(newAvatar?.uri || profile?.avatar_url) ? (
                     <Image source={{ uri: newAvatar?.uri || profile?.avatar_url }} className="w-full h-full" resizeMode="cover" />
                   ) : (
                     <User size={30} color="#94a3b8" />
                   )}
                 </View>
-                <View className="absolute bottom-0 right-0 w-6 h-6 bg-indigo-600 rounded-full items-center justify-center border-2 border-white dark:border-slate-950">
+                <View className="absolute bottom-0 right-0 w-6 h-6 bg-indigo-600 rounded-full items-center justify-center border-2 border-[#F2F2F7] dark:border-slate-950">
                   <Camera size={10} color="white" />
                 </View>
               </TouchableOpacity>
@@ -795,7 +794,7 @@ export default function ProfileScreen() {
                 { label: 'School / Institute', key: 'school', placeholder: 'e.g. DPS Noida' },
                 { label: 'Grade / Class', key: 'grade', placeholder: 'e.g. 12' },
               ].map(({ label, key, placeholder }) => (
-                <View key={key} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 px-4 py-3">
+                <View key={key} className="bg-white dark:bg-slate-900 rounded-2xl border border-[#E5E5EA] dark:border-slate-800 px-4 py-3">
                   <Text className="text-[11px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-1">{label}</Text>
                   <TextInput
                     value={editForm[key as keyof typeof editForm]}
@@ -812,20 +811,20 @@ export default function ProfileScreen() {
               ))}
             </View>
           </ScrollView>
-        </View>
+        </SafeAreaView>
       </Modal>
 
       {/* ══════════════ Followers/Following Modal ══════════════ */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white dark:bg-slate-900 rounded-t-[32px] h-[75%] px-5 pt-6 pb-8 shadow-2xl">
+          <View className="bg-[#F2F2F7] dark:bg-slate-900 rounded-t-[32px] h-[75%] px-5 pt-6 pb-8 shadow-2xl">
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-xl font-bold text-slate-900 dark:text-slate-100 capitalize">{modalType}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center">
+              <TouchableOpacity onPress={() => setModalVisible(false)} className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 items-center justify-center">
                 <X size={18} color={isDark ? '#cbd5e1' : '#64748b'} />
               </TouchableOpacity>
             </View>
-            <View className="flex-row items-center bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-2 mb-4">
+            <View className="flex-row items-center bg-white dark:bg-slate-800 rounded-2xl px-4 py-2 mb-4 border border-[#E5E5EA] dark:border-none">
               <Search size={16} color="#94a3b8" />
               <TextInput
                 placeholder="Search users..."
@@ -856,9 +855,9 @@ export default function ProfileScreen() {
                     key={u.id}
                     onPress={() => { setModalVisible(false); router.push(`/user/${u.username}` as any); }}
                     activeOpacity={0.6}
-                    className="flex-row items-center py-3 border-b border-slate-50 dark:border-slate-800/50"
+                    className="flex-row items-center py-3 border-b border-[#E5E5EA] dark:border-slate-800/50"
                   >
-                    <View className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 justify-center items-center mr-3">
+                    <View className="w-10 h-10 rounded-full overflow-hidden bg-white dark:bg-slate-800 border border-[#E5E5EA] dark:border-slate-700 justify-center items-center mr-3">
                       {u.avatar_url ? (
                         <Image source={{ uri: u.avatar_url }} className="w-full h-full" resizeMode="cover" />
                       ) : (
@@ -879,6 +878,6 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }

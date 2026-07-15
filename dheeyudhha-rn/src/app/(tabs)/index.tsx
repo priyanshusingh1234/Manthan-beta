@@ -90,7 +90,7 @@ export default function FeedScreen() {
   );
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950">
+    <View className="flex-1 bg-[#F2F2F7] dark:bg-slate-950">
       <QuestionsFeed ListHeaderComponent={Header} />
       <WelcomeTour />
     </View>

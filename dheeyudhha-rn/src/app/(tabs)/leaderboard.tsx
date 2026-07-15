@@ -78,52 +78,53 @@ export default function LeaderboardScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <View className="flex-1 items-center justify-center bg-white dark:bg-slate-950">
         <ActivityIndicator size="large" color="#4f46e5" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-950 relative">
+    <View className="flex-1 bg-white dark:bg-slate-950 relative">
       <Stack.Screen 
         options={{ 
           title: 'Leaderboard',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} className="mr-4">
-              <ChevronLeft size={24} color={isDark ? '#cbd5e1' : '#0f172a'} />
+            <TouchableOpacity onPress={() => router.back()} className="mr-4 active:opacity-70">
+              <ChevronLeft size={24} color={isDark ? '#fff' : '#000'} />
             </TouchableOpacity>
           ),
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: isDark ? '#0f172a' : '#f8fafc' },
-          headerTintColor: isDark ? '#cbd5e1' : '#0f172a',
+          headerStyle: { backgroundColor: isDark ? '#09090b' : '#F2F2F7' },
+          headerTintColor: isDark ? '#fff' : '#000',
         }} 
       />
-      
-      {/* Background Gradient Effect - Simulated */}
-      <View className="absolute top-0 right-0 w-full h-[300px] bg-indigo-50/50 dark:bg-indigo-950/20" />
 
       {/* Tabs */}
-      <View className="flex-row mx-4 mt-2 mb-4 bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl p-1 z-20">
-        <TouchableOpacity
-          onPress={() => setActiveTab('total')}
-          className={`flex-1 py-3 items-center rounded-xl ${activeTab === 'total' ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}`}
-        >
-          <Text className={`font-bold ${activeTab === 'total' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}>All Time</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setActiveTab('league')}
-          className={`flex-1 py-3 items-center rounded-xl ${activeTab === 'league' ? 'bg-white dark:bg-slate-700 shadow-sm' : ''}`}
-        >
-          <Text className={`font-bold ${activeTab === 'league' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}>League</Text>
-        </TouchableOpacity>
+      <View className="px-4 py-3 bg-[#F2F2F7] dark:bg-slate-950 border-b border-[#E5E5EA] dark:border-slate-800/50 z-20">
+        <View className="flex-row bg-slate-200/50 dark:bg-slate-800/60 p-1 rounded-lg">
+          <TouchableOpacity
+            onPress={() => setActiveTab('total')}
+            activeOpacity={0.7}
+            className={`flex-1 py-1.5 items-center rounded-md ${activeTab === 'total' ? 'bg-white dark:bg-[#2C2C2E] shadow-sm' : ''}`}
+          >
+            <Text className={`text-[13px] font-semibold ${activeTab === 'total' ? 'text-slate-900 dark:text-white' : 'text-[#8e8e93]'}`}>All Time</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setActiveTab('league')}
+            activeOpacity={0.7}
+            className={`flex-1 py-1.5 items-center rounded-md ${activeTab === 'league' ? 'bg-white dark:bg-[#2C2C2E] shadow-sm' : ''}`}
+          >
+            <Text className={`text-[13px] font-semibold ${activeTab === 'league' ? 'text-slate-900 dark:text-white' : 'text-[#8e8e93]'}`}>League</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView className="flex-1 z-10 px-4" contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView className="flex-1 z-10" contentContainerStyle={{ paddingBottom: 100 }}>
         
         {/* Podium Display (Top 3) */}
         {currentList.length >= 3 && (
-          <View className="flex-row justify-center items-end h-56 mb-8 gap-2">
+          <View className="flex-row justify-center items-end h-56 mb-8 gap-3 px-2 mt-4">
             
             {/* 2nd Place */}
             <TouchableOpacity 
@@ -132,23 +133,23 @@ export default function LeaderboardScreen() {
               className="w-[30%] items-center mb-2"
             >
               <View className="relative mb-2 items-center">
-                {renderAvatar(currentList[1], 64, isDark ? 'border-slate-800' : 'border-white')}
-                <View className="absolute -bottom-2 right-0 bg-slate-200 dark:bg-slate-800 w-6 h-6 rounded-full border-2 border-white dark:border-slate-700 items-center justify-center shadow-sm z-20">
+                {renderAvatar(currentList[1], 64, isDark ? 'border-[#1C1C1E]' : 'border-[#F2F2F7]')}
+                <View className="absolute -bottom-2 right-0 bg-slate-300 dark:bg-slate-700 w-6 h-6 rounded-full border-[3px] border-[#F2F2F7] dark:border-slate-950 items-center justify-center z-20">
                   <Text className="text-[10px] font-black text-slate-700 dark:text-slate-300">2</Text>
                 </View>
               </View>
-              <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-xl w-full py-2 px-1 items-center">
+              <View className="bg-white dark:bg-slate-900 rounded-[14px] w-full py-3 px-2 items-center border border-[#E5E5EA] dark:border-none">
                 <BadgedName 
                   name={currentList[1].full_name || currentList[1].username || "Student"}
                   userId={currentList[1].id}
                   isTeacher={currentList[1].is_teacher}
                   isTopper={currentList[1].total_points >= 1500}
                   rank={2}
-                  nameClassName="text-xs font-bold text-slate-800 dark:text-slate-200 text-center"
+                  nameClassName="text-[11px] font-bold text-slate-800 dark:text-slate-200 text-center"
                   containerClassName="flex-row items-center gap-1 justify-center"
                   iconSize={12}
                 />
-                <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-[10px] mt-0.5">
+                <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-[11px] mt-1">
                   {activeTab === 'total' 
                     ? (currentList[1].total_points || 0).toLocaleString()
                     : (currentList[1].monthly_points || 0).toLocaleString()}
@@ -160,26 +161,26 @@ export default function LeaderboardScreen() {
             <TouchableOpacity 
               onPress={() => router.push(`/user/${currentList[0].username}` as any)}
               activeOpacity={0.7}
-              className="w-[35%] items-center -translate-y-6 z-10"
+              className="w-[34%] items-center -translate-y-6 z-10"
             >
               <View className="relative mb-2 items-center">
                 {renderAvatar(currentList[0], 84, 'border-amber-400')}
-                <View className="absolute -bottom-2 right-1 bg-amber-500 w-8 h-8 rounded-full border-2 border-white dark:border-slate-700 items-center justify-center shadow-md z-20">
-                  <Text className="text-xs font-black text-white">1</Text>
+                <View className="absolute -bottom-2 right-1 bg-amber-500 w-8 h-8 rounded-full border-[3px] border-[#F2F2F7] dark:border-slate-950 items-center justify-center z-20">
+                  <Text className="text-[13px] font-black text-white">1</Text>
                 </View>
               </View>
-              <View className="bg-white dark:bg-slate-900 border-t-2 border-amber-400 border-x border-b border-x-amber-100 dark:border-x-slate-800 border-b-amber-100 dark:border-b-slate-800 shadow-md rounded-xl w-full py-3 px-1 items-center">
+              <View className="bg-white dark:bg-amber-900/20 rounded-[14px] w-full py-4 px-2 items-center border border-amber-200 dark:border-none">
                 <BadgedName 
                   name={currentList[0].full_name || currentList[0].username || "Student"}
                   userId={currentList[0].id}
                   isTeacher={currentList[0].is_teacher}
                   isTopper={currentList[0].total_points >= 1500}
                   rank={1}
-                  nameClassName="text-sm font-extrabold text-slate-900 dark:text-slate-100 text-center"
+                  nameClassName="text-sm font-extrabold text-slate-900 dark:text-amber-100 text-center"
                   containerClassName="flex-row items-center gap-1 justify-center"
                   iconSize={14}
                 />
-                <Text className="text-amber-500 font-black text-xs mt-0.5">
+                <Text className="text-amber-500 font-black text-xs mt-1">
                   {activeTab === 'total' 
                     ? (currentList[0].total_points || 0).toLocaleString()
                     : (currentList[0].monthly_points || 0).toLocaleString()}
@@ -194,23 +195,23 @@ export default function LeaderboardScreen() {
               className="w-[30%] items-center mb-2"
             >
               <View className="relative mb-2 items-center">
-                {renderAvatar(currentList[2], 64, isDark ? 'border-slate-800' : 'border-white')}
-                <View className="absolute -bottom-2 right-0 bg-orange-200 dark:bg-orange-900 w-6 h-6 rounded-full border-2 border-white dark:border-slate-700 items-center justify-center shadow-sm z-20">
-                  <Text className="text-[10px] font-black text-orange-800 dark:text-orange-300">3</Text>
+                {renderAvatar(currentList[2], 64, isDark ? 'border-[#1C1C1E]' : 'border-[#F2F2F7]')}
+                <View className="absolute -bottom-2 right-0 bg-orange-300 dark:bg-orange-800 w-6 h-6 rounded-full border-[3px] border-[#F2F2F7] dark:border-slate-950 items-center justify-center z-20">
+                  <Text className="text-[10px] font-black text-orange-900 dark:text-orange-200">3</Text>
                 </View>
               </View>
-              <View className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-xl w-full py-2 px-1 items-center">
+              <View className="bg-white dark:bg-slate-900 rounded-[14px] w-full py-3 px-2 items-center border border-[#E5E5EA] dark:border-none">
                 <BadgedName 
                   name={currentList[2].full_name || currentList[2].username || "Student"}
                   userId={currentList[2].id}
                   isTeacher={currentList[2].is_teacher}
                   isTopper={currentList[2].total_points >= 1500}
                   rank={3}
-                  nameClassName="text-xs font-bold text-slate-800 dark:text-slate-200 text-center"
+                  nameClassName="text-[11px] font-bold text-slate-800 dark:text-slate-200 text-center"
                   containerClassName="flex-row items-center gap-1 justify-center"
                   iconSize={12}
                 />
-                <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-[10px] mt-0.5">
+                <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-[11px] mt-1">
                   {activeTab === 'total' 
                     ? (currentList[2].total_points || 0).toLocaleString()
                     : (currentList[2].monthly_points || 0).toLocaleString()}
@@ -222,7 +223,7 @@ export default function LeaderboardScreen() {
         )}
 
         {/* List Header */}
-        <View className="flex-row items-center justify-between mb-3 px-2">
+        <View className="flex-row items-center justify-between mb-3 px-4">
           <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-lg">Top Players</Text>
           <View className="flex-row items-center gap-2">
             {activeTab === 'league' && (
@@ -237,7 +238,7 @@ export default function LeaderboardScreen() {
         </View>
 
         {/* Scrollable Leaderboard List */}
-        <View className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <View className="bg-white dark:bg-slate-900 mx-4 rounded-[24px] shadow-sm border border-[#E5E5EA] dark:border-slate-800 overflow-hidden mb-6">
           {currentList.length === 0 ? (
             <View className="p-12 items-center justify-center">
               <Award size={48} color={isDark ? '#475569' : '#cbd5e1'} className="mb-3" />
@@ -246,31 +247,32 @@ export default function LeaderboardScreen() {
           ) : (
             currentList.slice(3).map((student, index) => {
               const rank = index + 4;
+              const isLast = index === currentList.slice(3).length - 1;
               return (
                 <TouchableOpacity 
                   key={student.id} 
                   onPress={() => router.push(`/user/${student.username}` as any)}
                   activeOpacity={0.6}
-                  className="flex-row items-center px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 active:bg-slate-50 dark:active:bg-slate-800"
+                  className={`flex-row items-center px-4 py-3 ${!isLast ? 'border-b border-[#E5E5EA] dark:border-slate-800' : ''}`}
                 >
                   
                   <View className="w-8 items-center justify-center">
-                    <Text className="text-sm font-bold text-slate-400 dark:text-slate-500">{rank}</Text>
+                    <Text className="text-[15px] font-bold text-slate-400 dark:text-slate-500">{rank}</Text>
                   </View>
 
-                  <View className="ml-1">
+                  <View className="ml-2">
                     {student.avatar_url ? (
-                      <Image source={{ uri: student.avatar_url }} className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800" />
+                      <Image source={{ uri: student.avatar_url }} className="w-12 h-12 rounded-full object-cover border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800" />
                     ) : (
-                      <View className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-950 border border-indigo-100 dark:border-indigo-900/50 items-center justify-center">
-                        <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-base">
+                      <View className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950 border border-indigo-100 dark:border-indigo-900/50 items-center justify-center">
+                        <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-lg">
                           {getInitial(student.full_name || student.username)}
                         </Text>
                       </View>
                     )}
                   </View>
 
-                  <View className="ml-3 flex-1">
+                  <View className="ml-3 flex-1 justify-center">
                     <BadgedName 
                       name={student.full_name || student.username || "Student"}
                       userId={student.id}
@@ -280,18 +282,18 @@ export default function LeaderboardScreen() {
                       containerClassName="flex-row items-center gap-1 flex-wrap"
                       iconSize={14}
                     />
-                    <View className="flex-row items-center mt-0.5">
+                    <View className="flex-row items-center mt-1">
                       {activeTab === 'total' ? (
                         <>
-                          <MapPin size={12} color={isDark ? '#64748b' : '#64748b'} />
-                          <Text className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1" numberOfLines={1}>
+                          <MapPin size={12} color={isDark ? '#64748b' : '#94a3b8'} />
+                          <Text className="text-[13px] font-medium text-[#8e8e93] ml-1" numberOfLines={1}>
                             {student.school || 'Unknown School'}
                           </Text>
                         </>
                       ) : (
                         <View className="flex-row items-center gap-1.5 mt-0.5">
                           <LeagueBadge name={getLeague(student.monthly_points || 0).name} size={16} />
-                          <Text className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                          <Text className="text-[13px] font-semibold text-[#8e8e93]">
                             {getLeague(student.monthly_points || 0).name}
                           </Text>
                         </View>
@@ -300,13 +302,13 @@ export default function LeaderboardScreen() {
                   </View>
 
                   <View className="items-end pl-2">
-                    <Text className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                    <Text className="font-bold text-slate-900 dark:text-slate-100 text-[15px]">
                       {activeTab === 'total' 
                         ? (student.total_points || 0).toLocaleString()
                         : (student.monthly_points || 0).toLocaleString()}
                     </Text>
-                    <Text className="text-[9px] uppercase font-bold text-indigo-500 dark:text-indigo-400 tracking-wider">
-                      {activeTab === 'total' ? 'Points' : 'League Pts'}
+                    <Text className="text-[11px] font-semibold text-[#8e8e93] tracking-wide mt-0.5">
+                      {activeTab === 'total' ? 'Points' : 'League'}
                     </Text>
                   </View>
 

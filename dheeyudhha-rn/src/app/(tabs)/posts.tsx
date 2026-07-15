@@ -11,7 +11,9 @@ import {
   TouchableOpacity,
   Keyboard,
   Image,
-  StyleSheet
+  StyleSheet,
+  LayoutAnimation,
+  UIManager
 } from 'react-native';
 import { Sparkles, User, Send, Image as ImageIcon, Video as VideoIcon, X, HelpCircle, Edit3 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
@@ -23,6 +25,10 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 function VideoPreviewItem({ uri }: { uri: string }) {
   const player = useVideoPlayer(uri, p => {
@@ -58,6 +64,15 @@ export default function PostsScreen() {
   const [postMode, setPostMode] = useState<'standard' | 'question'>('standard');
   const SUBJECTS = ['Maths', 'Science', 'English', 'SST', 'G.K', 'Hindi'];
   const [selectedSubject, setSelectedSubject] = useState<string>('Maths');
+  const [isComposerExpanded, setIsComposerExpanded] = useState(false);
+
+  const collapseComposer = () => {
+    Keyboard.dismiss();
+    if (!content.trim() && mediaFiles.length === 0) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setIsComposerExpanded(false);
+    }
+  };
 
   const fetchUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -323,6 +338,8 @@ export default function PostsScreen() {
       setSelectedCategory('general');
       setPostMode('standard');
       Keyboard.dismiss();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setIsComposerExpanded(false);
 
       if (videoUrl && newPostData?.post?.id) {
         router.push(`/clips?postId=${newPostData.post.id}` as any);
@@ -340,7 +357,7 @@ export default function PostsScreen() {
     if (!currentUser) return null;
     return (
       <View>
-      <View className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 p-4 mb-3 shadow-sm">
+      <View className="bg-white dark:bg-slate-950 border-b border-slate-200/50 dark:border-slate-800/50 p-4 mb-3">
         <View className="flex-row items-center justify-between mb-3">
           <View className="bg-purple-100 dark:bg-purple-900/30 rounded-full px-2.5 py-1 flex-row items-center">
             <Sparkles size={12} color={isDark ? "#c084fc" : "#9333ea"} />
@@ -369,7 +386,20 @@ export default function PostsScreen() {
               multiline
               className="text-slate-900 dark:text-slate-100 text-[16px] min-h-[40px] pt-1 pb-2"
               editable={!submitting}
+              onFocus={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setIsComposerExpanded(true);
+              }}
+              onBlur={() => {
+                if (!content.trim() && mediaFiles.length === 0) {
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                  setIsComposerExpanded(false);
+                }
+              }}
             />
+
+            {isComposerExpanded && (
+              <View className="overflow-hidden">
 
             {/* Post Mode Toggle */}
             {!submitting && mediaFiles.length === 0 && (
@@ -503,6 +533,8 @@ export default function PostsScreen() {
                 )}
               </TouchableOpacity>
             </View>
+            </View>
+          )}
           </View>
         </View>
       </View>
@@ -534,7 +566,7 @@ export default function PostsScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-slate-50 dark:bg-slate-950 justify-center items-center">
+      <View className="flex-1 bg-white dark:bg-slate-950 justify-center items-center">
         <ActivityIndicator size="large" color="#4f46e5" />
       </View>
     );
@@ -542,7 +574,7 @@ export default function PostsScreen() {
 
   return (
     <KeyboardAvoidingView 
-      className="flex-1 bg-slate-50 dark:bg-slate-950" 
+      className="flex-1 bg-white dark:bg-slate-950" 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <FlatList

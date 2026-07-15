@@ -32,7 +32,7 @@ const PostVideoPlayer = React.memo(({ url }: { url: string }) => {
     p.muted = false;
   });
   return (
-    <View className="w-full h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 mt-3 mb-1">
+    <View className="w-full h-64 bg-slate-100 dark:bg-slate-900 rounded-[18px] overflow-hidden border border-slate-200 dark:border-slate-800 mt-3 mb-1">
       <VideoView
         player={player}
         style={StyleSheet.absoluteFill}
@@ -197,12 +197,12 @@ export default React.memo(function PostCard({
   };
 
   return (
-    <View className={`bg-white dark:bg-slate-900 py-4 border-b border-slate-200 dark:border-slate-800`}>
+    <View className={`bg-white dark:bg-slate-950 py-4 border-b border-slate-200/50 dark:border-slate-800/50`}>
       
       {/* Header */}
       <View className="flex-row items-center mb-3 px-4">
         <TouchableOpacity activeOpacity={0.8} onPress={handleProfilePress}>
-          <View className="w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 mr-3 justify-center items-center">
+          <View className="w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 mr-3 justify-center items-center">
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             ) : (
@@ -272,7 +272,7 @@ export default React.memo(function PostCard({
           {images.length === 1 ? (
             <Pressable 
               onPress={() => onImagePress ? onImagePress(images[0]) : handlePress()} 
-              className={`w-full aspect-[4/5] max-h-[75vh] overflow-hidden bg-slate-100 dark:bg-slate-800`}
+              className={`w-full aspect-[4/5] max-h-[75vh] overflow-hidden bg-slate-100 dark:bg-slate-900`}
             >
               <Image source={{ uri: images[0] }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             </Pressable>
@@ -283,7 +283,7 @@ export default React.memo(function PostCard({
                   <Pressable 
                     key={`img-${idx}`} 
                     onPress={() => onImagePress ? onImagePress(uri) : handlePress()} 
-                    className={`aspect-[4/5] max-h-[75vh] overflow-hidden bg-slate-100 dark:bg-slate-800`}
+                    className={`aspect-[4/5] max-h-[75vh] overflow-hidden bg-slate-100 dark:bg-slate-900`}
                     style={{ width: SCREEN_WIDTH }}
                   >
                     <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
@@ -305,7 +305,7 @@ export default React.memo(function PostCard({
       {/* Render Reposted Content */}
       {hasValidRepost && (
         <Pressable 
-          className="border border-slate-200 dark:border-slate-700 rounded-2xl p-3 mb-3 mx-4 bg-slate-50 dark:bg-slate-800/50"
+          className="border border-slate-200/50 dark:border-slate-800 rounded-2xl p-3 mb-3 mx-4 bg-slate-50 dark:bg-slate-900"
           onPress={() => {
             if (!isSinglePost && repostData?.id) {
               router.push(`/posts/${repostData.id}` as any);
@@ -314,9 +314,9 @@ export default React.memo(function PostCard({
         >
           <View className="flex-row items-center mb-2">
             {repostAuthor?.avatar_url ? (
-              <Image source={{ uri: repostAuthor.avatar_url }} className="w-5 h-5 rounded-full mr-2" />
+              <Image source={{ uri: repostAuthor.avatar_url }} className="w-5 h-5 rounded-full mr-2 border border-slate-200 dark:border-slate-800" />
             ) : (
-              <View className="w-5 h-5 rounded-full mr-2 bg-slate-200 dark:bg-slate-700 items-center justify-center">
+              <View className="w-5 h-5 rounded-full mr-2 bg-slate-200 dark:bg-[#2C2C2E] items-center justify-center border border-slate-200 dark:border-slate-800">
                 <User size={12} color={isDark ? "#94a3b8" : "#64748b"} />
               </View>
             )}

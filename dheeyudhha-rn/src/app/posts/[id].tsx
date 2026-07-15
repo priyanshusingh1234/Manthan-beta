@@ -10,7 +10,9 @@ import {
   Platform,
   Image,
   Keyboard,
-  Modal
+  Modal,
+  LayoutAnimation,
+  UIManager
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
@@ -24,6 +26,10 @@ type ReplyingTo = {
   username: string;
   commentId: string;
 };
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function SinglePostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -110,10 +116,12 @@ export default function SinglePostScreen() {
     });
     // Pre-fill @mention and focus input
     setNewComment(`@${username} `);
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const cancelReply = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setReplyingTo(null);
     setNewComment('');
   };
@@ -138,6 +146,7 @@ export default function SinglePostScreen() {
     setComments(prev => [optimisticComment, ...prev]);
     setPost((prev: any) => ({ ...prev, comments_count: (prev?.comments_count || 0) + 1 }));
     setNewComment('');
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setReplyingTo(null);
     Keyboard.dismiss();
 
@@ -212,14 +221,14 @@ export default function SinglePostScreen() {
     const isCurrentUser = currentUser?.id === author.id;
 
     return (
-      <View className="flex-row px-4 py-3 border-b border-slate-50 dark:border-slate-800/60">
+      <View className="flex-row px-4 py-3 border-b border-slate-200/50 dark:border-slate-800/50 bg-white dark:bg-slate-950">
         {/* Avatar */}
         <View className="mr-3 shrink-0">
-          <View className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 justify-center items-center">
+          <View className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 justify-center items-center">
             {author.avatar_url ? (
               <Image source={{ uri: author.avatar_url }} className="w-full h-full" />
             ) : (
-              <User size={18} color="#94a3b8" />
+              <User size={18} color={isDark ? "#94a3b8" : "#cbd5e1"} />
             )}
           </View>
         </View>
@@ -286,7 +295,6 @@ export default function SinglePostScreen() {
               onImagePress={(uri) => setFullscreenImage(uri)}
               onUpdate={() => router.back()}
             />
-            <View className="h-2 bg-slate-50 dark:bg-slate-900" />
             {comments.length === 0 && !loading && (
               <View className="items-center py-10">
                 <Text className="text-slate-400 dark:text-slate-500 text-sm">No comments yet. Be the first!</Text>
@@ -300,7 +308,7 @@ export default function SinglePostScreen() {
       {/* Comment Input Area */}
       {currentUser && (
         <View
-          className="border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950"
+          className="border-t border-slate-200/50 dark:border-slate-800/50 bg-white dark:bg-slate-950"
           style={{ paddingBottom: Math.max(insets.bottom, 12) }}
         >
           {/* Replying to banner */}
@@ -321,15 +329,15 @@ export default function SinglePostScreen() {
           {/* Input row */}
           <View className="flex-row items-end px-4 pt-2">
             {/* Current user avatar */}
-            <View className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 justify-center items-center mr-2 mb-1 shrink-0">
+            <View className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 justify-center items-center mr-2 mb-1 shrink-0">
               {currentUser.avatar_url ? (
                 <Image source={{ uri: currentUser.avatar_url }} className="w-full h-full" />
               ) : (
-                <User size={14} color="#94a3b8" />
+                <User size={14} color={isDark ? "#94a3b8" : "#cbd5e1"} />
               )}
             </View>
 
-            <View className="flex-1 flex-row items-center bg-slate-100 dark:bg-slate-800 rounded-3xl px-4 py-1 min-h-[44px]">
+            <View className="flex-1 flex-row items-center bg-slate-100 dark:bg-slate-900 border border-transparent dark:border-slate-800 rounded-[20px] px-4 py-1 min-h-[44px]">
               <TextInput
                 ref={inputRef}
                 value={newComment}

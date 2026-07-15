@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 
 const TAB_HEIGHT = 62;
-const CENTER_RISE = 24; // px the center button floats above the nav bar
+const CENTER_RISE = 20;
 
 const TAB_CONFIG = [
   { name: 'index',       icon: Home,          label: 'Home' },
@@ -33,6 +33,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const bottomPad = insets.bottom || (Platform.OS === 'ios' ? 16 : 8);
   const [streakCount, setStreakCount] = useState(0);
   const [goalMet, setGoalMet] = useState(false);
+  const [unreadChats, setUnreadChats] = useState(0);
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
@@ -42,16 +43,69 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session || cancelled) return;
+      
+      // Load Streak
       const { data } = await supabase
         .from('profiles')
         .select('streak_count, daily_solve_count, daily_solve_date')
         .eq('id', session.user.id)
         .single();
-      if (!data || cancelled) return;
-      const today = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      setStreakCount(Number(data.streak_count) || 0);
-      setGoalMet(data.daily_solve_date === today && (Number(data.daily_solve_count) || 0) >= 2);
+      
+      if (data && !cancelled) {
+        const today = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        setStreakCount(Number(data.streak_count) || 0);
+        setGoalMet(data.daily_solve_date === today && (Number(data.daily_solve_count) || 0) >= 2);
+      }
+
+      // Load Unread Chats
+      const fetchUnreadChats = async () => {
+        const { data: rooms } = await supabase
+          .from('chat_participants')
+          .select('room_id')
+          .eq('user_id', session.user.id);
+
+        if (rooms && rooms.length > 0) {
+          const roomIds = rooms.map(r => r.room_id);
+          const { data: allMessages } = await supabase
+            .from('chat_messages')
+            .select('room_id, is_read, sender_id')
+            .in('room_id', roomIds)
+            .order('created_at', { ascending: false });
+          
+          if (!cancelled && allMessages) {
+            const lastMsgMap = new Map();
+            allMessages.forEach(m => {
+              if (!lastMsgMap.has(m.room_id)) lastMsgMap.set(m.room_id, m);
+            });
+            let unreadCount = 0;
+            lastMsgMap.forEach(m => {
+              if (!m.is_read && m.sender_id !== session.user.id) {
+                unreadCount++;
+              }
+            });
+            setUnreadChats(unreadCount);
+          }
+        }
+      };
+
+      fetchUnreadChats();
+
+      // Realtime listener for chat messages
+      const chatSub = supabase
+        .channel('tabbar-chats')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, () => {
+          fetchUnreadChats();
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, () => {
+          fetchUnreadChats();
+        })
+        .subscribe();
+
+      if (cancelled) {
+        supabase.removeChannel(chatSub);
+      }
     };
+    
     load();
 
     const sub = DeviceEventEmitter.addListener('streak_earned', (event) => {
@@ -78,12 +132,14 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
     }
   };
 
-  const glassBgColor = isDark ? 'rgba(15,23,42,0.96)' : 'rgba(255,255,255,0.94)';
-  const borderTopColor = isDark ? '#1e293b' : '#e2e8f0';
-  const activePillBg = isDark ? 'rgba(37,99,235,0.15)' : '#eff6ff';
-  const activePillBorder = isDark ? 'rgba(37,99,235,0.3)' : 'rgba(37,99,235,0.15)';
-  const centerBtnBorder = isDark ? '#0f172a' : '#f8fafc';
-  const tabLabelColor = isDark ? '#cbd5e1' : '#94a3b8';
+  const glassBgColor = isDark ? 'rgba(9,9,11,0.96)' : 'rgba(255,255,255,0.96)';
+  const borderTopColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  
+  const activeColor = isDark ? '#ffffff' : '#000000';
+  const inactiveColor = isDark ? '#8e8e93' : '#999999';
+
+  const centerBtnBg = isDark ? '#1C1C1E' : '#000000';
+  const centerBtnBorder = isDark ? '#09090b' : '#ffffff';
 
   const activeRouteName = state.routes[state.index]?.name;
 
@@ -104,6 +160,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
           const isActive = state.index === routeIdx;
           const Icon = tab.icon;
           const isHome = tab.name === 'index';
+          const isChat = tab.name === 'chat';
 
           if (tab.isCenter) {
             return (
@@ -113,19 +170,14 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
                   activeOpacity={0.82}
                   style={[
                     styles.centerBtn,
-                    { marginTop: -CENTER_RISE, borderColor: centerBtnBorder },
+                    { marginTop: -CENTER_RISE, borderColor: centerBtnBorder, backgroundColor: centerBtnBg },
                     isActive && styles.centerBtnActive,
                   ]}
                 >
                   <View style={styles.centerBtnInner}>
-                    <Icon size={26} color="white" strokeWidth={2.2} />
+                    <Icon size={24} color="#ffffff" strokeWidth={2.5} />
                   </View>
-                  <View style={styles.centerRing} />
                 </TouchableOpacity>
-
-                <Text style={[styles.centerLabel, isActive && styles.centerLabelActive, !isActive && { color: isDark ? '#a855f7' : '#9333ea', opacity: isDark ? 0.8 : 0.65 }]}>
-                  {tab.label}
-                </Text>
               </View>
             );
           }
@@ -137,30 +189,34 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
               activeOpacity={0.7}
               style={styles.tab}
             >
-              {isHome && streakCount > 0 && (
-                <TouchableOpacity onPress={() => router.push('/streaks' as any)} style={[styles.streakBadge, goalMet ? styles.streakOn : styles.streakOff]} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <Flame size={8} color={goalMet ? 'white' : (isDark ? '#cbd5e1' : '#94a3b8')} fill={goalMet ? 'white' : 'none'} />
-                  <Text style={[styles.streakNum, goalMet ? styles.streakNumOn : styles.streakNumOff, !goalMet && { color: isDark ? '#cbd5e1' : '#94a3b8' }]}>
-                    {streakCount}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              <View style={styles.iconContainer}>
+                {isHome && streakCount > 0 && (
+                  <TouchableOpacity onPress={() => router.push('/streaks' as any)} style={[styles.streakBadge, goalMet ? styles.streakOn : styles.streakOff]} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Flame size={8} color={goalMet ? 'white' : (isDark ? '#cbd5e1' : '#94a3b8')} fill={goalMet ? 'white' : 'none'} />
+                    <Text style={[styles.streakNum, goalMet ? styles.streakNumOn : styles.streakNumOff, !goalMet && { color: isDark ? '#cbd5e1' : '#94a3b8' }]}>
+                      {streakCount}
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
-              {isActive && <View style={[styles.activePill, { backgroundColor: activePillBg, borderColor: activePillBorder }]} />}
+                {isChat && unreadChats > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadText}>{unreadChats > 99 ? '99+' : unreadChats}</Text>
+                  </View>
+                )}
 
-              <View style={[styles.iconBox, isActive && styles.iconBoxActive]}>
-                <Icon
-                  size={isActive ? 23 : 21}
-                  color={isActive ? '#2563eb' : (isDark ? '#cbd5e1' : '#94a3b8')}
-                  strokeWidth={isActive ? 2.5 : 2}
-                />
+                <View style={[styles.iconBox, isActive && styles.iconBoxActive]}>
+                  <Icon
+                    size={24}
+                    color={isActive ? activeColor : inactiveColor}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
+                </View>
               </View>
 
-              <Text style={[styles.label, isActive ? styles.labelOn : [styles.labelOff, { color: tabLabelColor }]]}>
+              <Text style={[styles.label, { color: isActive ? activeColor : inactiveColor }, isActive && styles.labelOn]}>
                 {tab.label}
               </Text>
-
-              {isActive && <View style={styles.activeDot} />}
             </TouchableOpacity>
           );
         })}
@@ -197,7 +253,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     overflow: 'visible',
-    paddingBottom: 4,
+    paddingBottom: 6,
   },
   tab: {
     flex: 1,
@@ -206,49 +262,48 @@ const styles = StyleSheet.create({
     height: TAB_HEIGHT,
     position: 'relative',
   },
+  iconContainer: {
+    position: 'relative',
+  },
   iconBox: {
-    padding: 5,
-    borderRadius: 12,
+    padding: 2,
+    marginBottom: 4,
   },
   iconBoxActive: {
-    transform: [{ translateY: -3 }],
+    transform: [{ scale: 1.05 }],
   },
   label: {
     fontSize: 10,
-    lineHeight: 13,
+    fontWeight: '500',
+    letterSpacing: -0.1,
   },
   labelOn: {
-    color: '#2563eb',
     fontWeight: '700',
   },
-  labelOff: {
-    fontWeight: '500',
-    opacity: 0.75,
-  },
-  activePill: {
+  unreadBadge: {
     position: 'absolute',
-    top: 8,
-    width: 42,
-    height: 34,
-    borderRadius: 12,
-    borderWidth: 1,
+    top: -4,
+    right: -8,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    zIndex: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
-  activeDot: {
-    position: 'absolute',
-    bottom: 2,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#2563eb',
-    shadowColor: '#2563eb',
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 0 },
+  unreadText: {
+    color: 'white',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
   streakBadge: {
     position: 'absolute',
-    top: 4,
-    right: 6,
+    top: -8,
+    right: -12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 4,
@@ -266,54 +321,26 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     overflow: 'visible',
-    justifyContent: 'flex-end',
-    paddingBottom: 2,
+    justifyContent: 'center',
   },
   centerBtn: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: '#9333ea',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 5,
-    shadowColor: '#a855f7',
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 12,
-    overflow: 'hidden',
+    borderWidth: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
   centerBtnActive: {
-    shadowOpacity: 0.7,
-    shadowRadius: 20,
-    transform: [{ scale: 1.06 }],
+    transform: [{ scale: 0.95 }],
   },
   centerBtnInner: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  centerRing: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    borderRadius: 31,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-  },
-  centerLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    marginTop: 6,
-    letterSpacing: 0.3,
-  },
-  centerLabelActive: {
-    fontWeight: '800',
-    opacity: 1,
   },
 });

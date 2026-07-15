@@ -248,16 +248,16 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
       )}
 
       {loading ? (
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false} className="bg-[#F2F2F7] dark:bg-slate-950">
           {ListHeaderComponent}
-          <View className="mb-4">
+          <View className="mb-4 bg-white dark:bg-slate-950 py-3 border-y border-[#E5E5EA] dark:border-slate-800">
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, paddingHorizontal: 24 }}
+              contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}
             >
               {SUBJECTS.map((sub) => (
-                <View key={sub.label} className="px-4 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 opacity-50 border border-slate-200 dark:border-slate-800">
+                <View key={sub.label} className="px-4 py-2 rounded-full bg-[#F2F2F7] dark:bg-slate-900 opacity-50 border border-[#E5E5EA] dark:border-slate-800">
                   <Text className="text-transparent font-bold">{sub.emoji} {sub.label}</Text>
                 </View>
               ))}
@@ -273,11 +273,11 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
           ListHeaderComponent={
             <View>
               {ListHeaderComponent}
-              <View className="mb-4">
+              <View className="mb-4 bg-white dark:bg-slate-950 py-3 border-y border-[#E5E5EA] dark:border-slate-800">
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ gap: 8, paddingHorizontal: 24 }}
+                  contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}
                 >
                   {SUBJECTS.map((sub) => {
                     const isActive = subjectFilter === sub.value;
@@ -294,10 +294,10 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
                           setVisibleCount(PAGE_SIZE);
                           clearCache();
                         }}
-                        className={`flex-row items-center gap-1.5 px-4 py-2.5 rounded-full border ${
+                        className={`flex-row items-center gap-1.5 px-4 py-2 rounded-full border ${
                           isActive
                             ? 'bg-indigo-600 border-indigo-600'
-                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                            : 'bg-white dark:bg-slate-900 border-[#E5E5EA] dark:border-slate-800'
                         }`}
                       >
                         <Text className={isActive ? 'text-white' : 'text-slate-700 dark:text-slate-200'}>{sub.emoji}</Text>

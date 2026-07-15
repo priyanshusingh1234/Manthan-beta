@@ -39,6 +39,8 @@ import {
   MessageSquare,
   Phone,
   Video,
+  Plus,
+  ArrowUp,
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import BadgedName from '@/components/BadgedName';
@@ -289,7 +291,7 @@ const MessageItem = memo(({
               </View>
             ) : null}
 
-            <View className={`rounded-2xl overflow-hidden shadow-sm ${isMe ? 'bg-indigo-600 rounded-br-sm' : 'bg-white dark:bg-slate-800 rounded-bl-sm border border-slate-100 dark:border-slate-700/50'
+            <View className={`rounded-[18px] px-0.5 py-0.5 overflow-hidden ${isMe ? 'bg-indigo-600 dark:bg-indigo-500 rounded-br-[4px]' : 'bg-[#E5E5EA] dark:bg-[#2C2C2E] rounded-bl-[4px]'
               }`}>
               {msg.message_type === 'image_once' ? (
                 <TouchableOpacity
@@ -316,9 +318,9 @@ const MessageItem = memo(({
                 </TouchableOpacity>
               ) : (
                 <View className="px-3.5 py-2.5 min-w-[75px] justify-between">
-                  <Text className={`text-[15px] leading-5 ${isMe ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+                  <Text className={`text-[16px] leading-[22px] ${isMe ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
                     {mainContent}
-                    {meta.edited && <Text className={`text-[10px] italic ${isMe ? 'text-white/70' : 'text-slate-500'}`}> (edited)</Text>}
+                    {meta.edited && <Text className={`text-[11px] italic ${isMe ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'}`}> (edited)</Text>}
                   </Text>
 
                   {(() => {
@@ -329,15 +331,15 @@ const MessageItem = memo(({
                     ) : null;
                   })()}
 
-                  <View className="flex-row items-center justify-end gap-1 mt-1">
-                    <Text className={`text-[9px] font-semibold ${isMe ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <View className="flex-row items-center justify-end gap-1 mt-0.5">
+                    <Text className={`text-[11px] font-medium ${isMe ? 'text-white/70' : 'text-[#8e8e93]'}`}>
                       {timeStr}
                     </Text>
                     {isMe && (
                       msg.is_read ? (
-                        <CheckCheck size={11} color="#38bdf8" strokeWidth={2.5} />
+                        <CheckCheck size={14} color="#34B7F1" strokeWidth={2.5} />
                       ) : (
-                        <Check size={11} color="#c7d2fe" strokeWidth={2.5} />
+                        <Check size={14} color="rgba(255,255,255,0.7)" strokeWidth={2.5} />
                       )
                     )}
                   </View>
@@ -400,13 +402,18 @@ export default function ChatRoomScreen() {
 
   const syncBlockStatus = useCallback(async (myId: string, partnerId: string) => {
     try {
-      const [{ data: me }, { data: targetProfile }] = await Promise.all([
-        supabase.from('profiles').select('id, blocked_users').eq('id', myId).maybeSingle(),
-        supabase.rpc('get_public_profile_metadata', { target_user_id: partnerId })
-      ]);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, blocked_users')
+        .in('id', [myId, partnerId]);
+
+      if (!profiles) return;
+      
+      const me = profiles.find(p => p.id === myId);
+      const partner = profiles.find(p => p.id === partnerId);
 
       const myBlockedList = Array.isArray(me?.blocked_users) ? me.blocked_users.map(String) : [];
-      const theirBlockedList = Array.isArray(targetProfile?.blockedUserIds) ? targetProfile.blockedUserIds.map(String) : [];
+      const theirBlockedList = Array.isArray(partner?.blocked_users) ? partner.blocked_users.map(String) : [];
 
       setIsBlocked(myBlockedList.includes(partnerId) || theirBlockedList.includes(myId));
     } catch (err) {
@@ -445,11 +452,7 @@ export default function ChatRoomScreen() {
       if (user?.id && list && !loadMore) {
         const unreadIds = list.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id);
         if (unreadIds.length > 0) {
-          fetch(`${WEB_URL}/api/chat/read`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messageIds: unreadIds })
-          }).catch(null);
+          supabase.from('chat_messages').update({ is_read: true }).in('id', unreadIds).then();
         }
       }
     } catch (e) {
@@ -524,11 +527,7 @@ export default function ChatRoomScreen() {
           });
 
           if (msg.sender_id !== user.id) {
-            fetch(`${WEB_URL}/api/chat/read`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ messageIds: [msg.id] })
-            }).catch(null);
+            supabase.from('chat_messages').update({ is_read: true }).eq('id', msg.id).then();
             Vibration.vibrate(40);
             playMessageSound();
           }
@@ -780,29 +779,31 @@ export default function ChatRoomScreen() {
 
   return (
     <KeyboardAvoidingView
+      className="flex-1 bg-[#F2F2F7] dark:bg-slate-950"
       behavior="padding"
-      className="flex-1 bg-slate-50 dark:bg-slate-950"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
     >
-      <View className="flex-1" style={{ paddingTop: insets.top }}>
-        {/* Header bar */}
-        <View className="flex-row items-center justify-between px-3 h-14 bg-white dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800/60 z-30">
+      {/* ─── iOS Style Fixed Header ─── */}
+      <View
+        className="flex-row items-center px-4 pt-4 pb-3 bg-white/95 dark:bg-slate-950/95 border-b border-[#E5E5EA] dark:border-slate-800/80 z-20"
+        style={{ paddingTop: insets.top || 16 }}
+      >
           <View className="flex-row items-center flex-1 pr-2">
-            <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-1 rounded-full active:bg-slate-100 dark:active:bg-slate-800">
-              <ArrowLeft size={20} color={isDark ? '#cbd5e1' : '#334155'} />
+            <TouchableOpacity onPress={() => router.back()} className="p-1.5 -ml-1 flex-row items-center active:opacity-70">
+              <ArrowLeft size={24} color="#6366f1" />
             </TouchableOpacity>
 
-            <TouchableOpacity className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden items-center justify-center ml-1">
+            <TouchableOpacity className="h-[40px] w-[40px] rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden items-center justify-center ml-2">
               {participant?.avatar_url ? (
                 <Image source={{ uri: participant.avatar_url }} style={{ width: '100%', height: '100%', position: 'absolute' }} contentFit="cover" />
               ) : (
-                <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-base">{displayName[0]?.toUpperCase()}</Text>
+                <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">{displayName[0]?.toUpperCase()}</Text>
               )}
             </TouchableOpacity>
 
             <View className="flex-1 min-w-0 ml-3">
-              <BadgedName name={displayName} isTeacher={participant?.is_teacher} nameClassName="font-bold text-[15px] text-slate-900 dark:text-white leading-tight truncate" />
-              {isOnline && <Text className="text-[11px] text-emerald-500 font-semibold mt-0.5">Online</Text>}
+              <BadgedName name={displayName} isTeacher={participant?.is_teacher} nameClassName="font-semibold text-[17px] text-slate-900 dark:text-white leading-tight truncate" />
+              {isOnline ? <Text className="text-[13px] text-[#8e8e93] font-medium mt-0.5">Online</Text> : <Text className="text-[13px] text-[#8e8e93] font-medium mt-0.5">Tap here for info</Text>}
             </View>
           </View>
 
@@ -844,7 +845,7 @@ export default function ChatRoomScreen() {
             initialNumToRender={20}
             maxToRenderPerBatch={10}
             windowSize={5}
-            removeClippedSubviews={true}
+            removeClippedSubviews={false}
             renderItem={({ item: msg, index }) => (
               <MessageItem
                 msg={msg}
@@ -865,9 +866,7 @@ export default function ChatRoomScreen() {
                   className="py-6 items-center justify-center"
                 >
                   {loadingMore ? <ActivityIndicator color="#6366f1" /> : (
-                    <View className="bg-slate-200 dark:bg-slate-800 px-4 py-2 rounded-full">
-                      <Text className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Load Older Messages</Text>
-                    </View>
+                    <View className="bg-[#E5E5EA] dark:bg-[#2C2C2E] w-[1px] h-14" />
                   )}
                 </TouchableOpacity>
               ) : null
@@ -983,65 +982,61 @@ export default function ChatRoomScreen() {
             )}
           </View>
         ) : (
-          <View
-            className="bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800/60 px-3 pt-2 z-20"
-            style={{ paddingBottom: Math.max(insets.bottom, 12) }}
-          >
+          <View className="bg-white dark:bg-slate-950 border-t border-[#E5E5EA] dark:border-slate-800" style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
             {replyingTo && (
-              <View className="mb-2 bg-slate-100 dark:bg-slate-800 rounded-xl p-3 flex-row justify-between items-center border-l-4 border-indigo-500">
+              <View className="px-4 py-2 border-b border-[#E5E5EA] dark:border-slate-800 flex-row items-center justify-between bg-slate-50 dark:bg-slate-900">
                 <View className="flex-1">
-                  <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-xs mb-0.5">
+                  <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-[13px] mb-0.5">
                     Replying to {replyingTo.sender_id === user?.id ? 'Yourself' : participant?.full_name}
                   </Text>
-                  <Text className="text-slate-600 dark:text-slate-300 text-xs" numberOfLines={1}>
+                  <Text className="text-slate-600 dark:text-slate-300 text-[14px]" numberOfLines={1}>
                     {getCleanMessageText(replyingTo.content)}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setReplyingTo(null)} className="p-1 rounded-full bg-slate-200 dark:bg-slate-700">
-                  <X size={14} color={isDark ? '#cbd5e1' : '#475569'} />
+                <TouchableOpacity onPress={() => setReplyingTo(null)} className="p-1.5 rounded-full bg-slate-200 dark:bg-slate-700">
+                  <X size={16} color={isDark ? '#cbd5e1' : '#475569'} />
                 </TouchableOpacity>
               </View>
             )}
 
             {editingMsg && (
-              <View className="mb-2 bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 flex-row justify-between items-center border-l-4 border-orange-500">
+              <View className="mb-2 bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 flex-row justify-between items-center mx-2 border-l-4 border-orange-500">
                 <View className="flex-1">
-                  <Text className="text-orange-600 dark:text-orange-400 font-bold text-xs mb-0.5">Editing Message</Text>
+                  <Text className="text-orange-600 dark:text-orange-400 font-bold text-[13px] mb-0.5">Editing Message</Text>
                 </View>
-                <TouchableOpacity onPress={() => { setEditingMsg(null); setNewMessage(''); }} className="p-1 rounded-full bg-orange-200 dark:bg-orange-800/50">
-                  <X size={14} color={isDark ? '#fdba74' : '#c2410c'} />
+                <TouchableOpacity onPress={() => { setEditingMsg(null); setNewMessage(''); }} className="p-1.5 rounded-full bg-orange-200 dark:bg-orange-800/50">
+                  <X size={16} color={isDark ? '#fdba74' : '#c2410c'} />
                 </TouchableOpacity>
               </View>
             )}
 
-            <View className="flex-row items-end gap-2">
-              <TouchableOpacity onPress={handleImagePick} disabled={uploadingImage} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center mb-0.5">
-                {uploadingImage ? <ActivityIndicator size="small" color="#6366f1" /> : <ImageIcon size={20} color={isDark ? '#cbd5e1' : '#64748b'} />}
+            <View className="flex-row items-end gap-2 px-1">
+              <TouchableOpacity onPress={handleImagePick} disabled={uploadingImage} className="w-[36px] h-[36px] rounded-full items-center justify-center mb-1 active:opacity-70 bg-slate-100 dark:bg-slate-800 border border-[#E5E5EA] dark:border-slate-800">
+                {uploadingImage ? <ActivityIndicator size="small" color="#6366f1" /> : <Plus size={20} color="#8e8e93" />}
               </TouchableOpacity>
 
-              <View className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-3xl flex-row items-end px-4 py-1.5 border border-slate-200 dark:border-slate-700">
+              <View className="flex-1 bg-white dark:bg-[#1C1C1E] rounded-[20px] flex-row items-end px-4 py-1 border border-[#E5E5EA] dark:border-[#2C2C2E] mb-1">
                 <TextInput
                   ref={inputRef}
                   value={newMessage}
                   onChangeText={setNewMessage}
-                  placeholder={isBlocked ? "You blocked this user" : "Type a message..."}
-                  placeholderTextColor={isDark ? '#64748b' : '#94a3b8'}
+                  placeholder={isBlocked ? "Blocked" : "iMessage"}
+                  placeholderTextColor="#8e8e93"
                   multiline
                   maxLength={3000}
                   editable={!isBlocked}
-                  className="flex-1 max-h-32 text-base text-slate-900 dark:text-slate-50 pt-2 pb-2 min-h-[38px]"
+                  className="flex-1 max-h-32 text-[17px] leading-snug text-slate-900 dark:text-slate-50 pt-2.5 pb-2.5 min-h-[40px]"
                 />
               </View>
 
               {newMessage.trim().length > 0 && (
-                <TouchableOpacity onPress={handleSend} disabled={sending} className="w-10 h-10 rounded-full bg-indigo-600 items-center justify-center mb-0.5 active:scale-95 shadow-sm shadow-indigo-200 dark:shadow-none">
-                  {sending ? <ActivityIndicator size="small" color="white" /> : <Send size={18} color="white" style={{ marginLeft: 2 }} />}
+                <TouchableOpacity onPress={handleSend} disabled={sending} className="w-[36px] h-[36px] rounded-full bg-blue-500 items-center justify-center mb-1 active:opacity-80">
+                  {sending ? <ActivityIndicator size="small" color="white" /> : <ArrowUp size={20} color="white" />}
                 </TouchableOpacity>
               )}
             </View>
           </View>
         )}
-      </View>
     </KeyboardAvoidingView>
   );
 }
