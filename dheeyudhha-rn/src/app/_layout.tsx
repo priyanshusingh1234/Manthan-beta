@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import '../global.css';
+import '@/lib/backgroundTask'; // Ensure headless tasks register immediately
 import * as Sentry from '@sentry/react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -126,42 +127,7 @@ function RootLayout() {
         if (actionId === 'decline_duel') return;
       }
 
-      // Handle inline chat reply
-      if (actionId === 'reply' && response.userText) {
-        const roomId = data?.roomId;
-        if (roomId && session?.user?.id) {
-          try {
-            const content = response.userText.trim();
-            // Insert directly into Supabase (optimistic)
-            await supabase.from('chat_messages').insert({
-              room_id: roomId,
-              sender_id: session.user.id,
-              content,
-              message_type: 'text'
-            });
 
-            // Also hit the notify API if you want the other person to be notified
-            const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
-            await fetch(`${API_URL}/api/chat/notify`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                receiverId: data?.callerId || '', // The original sender of the push is callerId
-                senderId: session.user.id,
-                roomId,
-                content: content.substring(0, 50)
-              })
-            }).catch(() => null);
-
-          } catch (e) {
-            console.error('[Push] Failed to send inline reply', e);
-          }
-        }
-        // Don't route if it was a background reply
-        if (!response.notification.request.content.data?.opensAppToForeground) {
-          return;
-        }
-      }
 
       if (!href) return;
 

@@ -781,7 +781,7 @@ export default function ChatRoomScreen() {
     <KeyboardAvoidingView
       className="flex-1 bg-[#F2F2F7] dark:bg-slate-950"
       behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       {/* ─── iOS Style Fixed Header ─── */}
       <View

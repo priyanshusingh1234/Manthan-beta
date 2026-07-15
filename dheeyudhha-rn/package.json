@@ -1,7 +1,7 @@
 {
   "name": "dheeyudhha-rn",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo/ui": "~56.0.16",
@@ -23,12 +23,14 @@
     "expo-image-picker": "~56.0.16",
     "expo-linear-gradient": "~56.0.4",
     "expo-linking": "~56.0.13",
+    "expo-media-library": "~56.0.9",
     "expo-notifications": "~56.0.16",
     "expo-router": "~56.2.9",
     "expo-splash-screen": "~56.0.10",
     "expo-status-bar": "~56.0.4",
     "expo-symbols": "~56.0.6",
     "expo-system-ui": "~56.0.5",
+    "expo-task-manager": "~56.0.21",
     "expo-updates": "~56.0.18",
     "expo-video": "~56.1.2",
     "expo-web-browser": "~56.0.5",

@@ -2,7 +2,7 @@
   "expo": {
     "name": "dheeyudha",
     "slug": "dheeyudhha-rn",
-    "version": "1.1.9",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/manthan-logo.png",
     "scheme": "dheeyudhharn",
@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "com.dheeyudha.app",
-      "versionCode": 119,
+      "versionCode": 120,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
