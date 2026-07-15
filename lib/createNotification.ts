@@ -191,11 +191,11 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                 await firebaseAdmin.messaging().send({
                                     token: sub.endpoint,
 
-                                    // Calls: data-only so IncomingCallKit native service can
                                     // intercept and show the full-screen call UI in background.
+                                    // Chat: data-only so Expo Notifications can attach the native Reply Input category.
                                     // Duels & others: include notification block so Android
                                     // auto-shows a notification when app is in background.
-                                    notification: isIncomingCall ? undefined : {
+                                    notification: (isIncomingCall || params.type === 'chat_message') ? undefined : {
                                         title: params.title,
                                         body: params.body,
                                     },
@@ -219,6 +219,8 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         categoryId: isDuel ? 'duel_challenge' : (isIncomingCall ? 'incoming_call' : (params.type === 'chat_message' ? 'chat_message' : '')),
                                         // Action buttons (handled by Capacitor PushNotifications listener)
                                         ...actionsData,
+                                        // explicitly add message for Expo data-only handler
+                                        message: params.body,
                                     },
 
                                     android: {
@@ -230,7 +232,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             : channelId,
                                         // Time-to-live: calls expire after 45s, others after 4 hours
                                         ttl: isIncomingCall ? 45000 : 14400000,
-                                        notification: isIncomingCall ? undefined : {
+                                        notification: (isIncomingCall || params.type === 'chat_message') ? undefined : {
                                             channelId,
                                             color,
                                             icon: 'ic_notification',
