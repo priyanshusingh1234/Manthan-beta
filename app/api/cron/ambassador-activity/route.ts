@@ -3,9 +3,8 @@ import supabaseAdmin from '@/lib/supabaseAdmin';
 import { createNotification } from '@/lib/createNotification';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize Gemini AI
+// Initialize Gemini API Key
 const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -36,8 +35,6 @@ export async function GET(req: NextRequest) {
         if (postsError || !posts || posts.length === 0) {
             return NextResponse.json({ message: 'No eligible posts found to engage with.' });
         }
-
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
         const results = [];
         const debugErrors: any[] = [];
@@ -70,8 +67,26 @@ Post Content: "${post.content || 'I love studying!'}"`;
 
             let commentContent = "That's awesome! Keep it up 🔥";
             try {
-                const result = await model.generateContent(prompt);
-                const responseText = result.response.text().trim().replace(/^"|"$/g, '');
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: prompt }]
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Gemini API Error: ${response.status} ${errorText}`);
+                }
+
+                const data = await response.json();
+                const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().replace(/^"|"$/g, '');
+                
                 if (responseText) {
                     commentContent = responseText;
                 }
