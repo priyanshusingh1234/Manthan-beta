@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { createNotification } from '@/lib/createNotification';
-import { GoogleGenAI } from '@google/genai';
+import OpenAI from "openai";
 
-const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || '';
+// Azure AI Foundry / OpenAI details
+const apiKey = process.env.AZURE_OPENAI_KEY || "";
+const baseURL = process.env.AZURE_OPENAI_ENDPOINT || "";
+const deployment = process.env.AZURE_OPENAI_DEPLOYMENT || "dheeyudha";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -18,11 +21,15 @@ const AMBASSADOR_UUIDS = AMBASSADORS.map(a => a.id);
 export async function GET(req: NextRequest) {
     try {
         if (!apiKey) {
-            console.error('[Ambassador] No Gemini API key found.');
+            console.error('[Ambassador] No Azure OpenAI API key found.');
             return NextResponse.json({ error: 'No API Key configured' }, { status: 500 });
         }
 
-        const client = new GoogleGenAI({ apiKey });
+        const client = new OpenAI({
+            apiKey: apiKey,
+            baseURL: baseURL,
+            defaultHeaders: { 'api-key': apiKey }
+        });
         const debugErrors: any[] = [];
         const results = [];
 
@@ -74,11 +81,11 @@ Keep it under 2 sentences. Do NOT reveal you are an AI. Do NOT use hashtags.`;
 
                 let postContent = "";
                 try {
-                    const response = await client.models.generateContent({
-                        model: "gemini-2.5-flash",
-                        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                    const response = await client.chat.completions.create({
+                        model: deployment,
+                        messages: [{ role: "user", content: prompt }]
                     });
-                    postContent = (response.text || "").trim().replace(/^"|"$/g, '');
+                    postContent = (response.choices[0]?.message?.content || "").trim().replace(/^"|"$/g, '');
                 } catch (e: any) {
                     debugErrors.push({ step: 'post_generation', error: e.message, ambassador: ambassador.name });
                 }
@@ -92,7 +99,7 @@ Keep it under 2 sentences. Do NOT reveal you are an AI. Do NOT use hashtags.`;
                             image_url: postImageUrl,
                             comments_count: 0
                         });
-                    
+
                     if (postError) debugErrors.push({ step: 'post_insert', error: postError.message });
                     else results.push({ type: 'created_post', ambassador: ambassador.name, content: postContent });
                 }
@@ -125,13 +132,13 @@ Keep it under 2 sentences. Do NOT reveal you are an AI. Do NOT use hashtags.`;
                     for (const comment of realUserComments) {
                         const { data: profile } = await supabaseAdmin.from('profiles').select('username').eq('id', comment.author_id).single();
                         if (!profile || !profile.username) continue;
-                        
+
                         // Fix reply logic: simpler check if ambassador has replied after this comment, or mentioned their username
-                        const alreadyReplied = myReplies.some(ac => 
-                            ac.content.toLowerCase().includes(profile.username.toLowerCase()) && 
+                        const alreadyReplied = myReplies.some(ac =>
+                            ac.content.toLowerCase().includes(profile.username.toLowerCase()) &&
                             new Date(ac.created_at) > new Date(comment.created_at)
                         );
-                        
+
                         if (!alreadyReplied && usersToReply.size < 3) { // limit 3 replies per post per run
                             usersToReply.set(comment.author_id, { comment, username: profile.username });
                         }
@@ -150,11 +157,11 @@ Keep it under 2 sentences. Do NOT reveal you are an AI. Do NOT use hashtags.`;
 
                         let replyContent = "";
                         try {
-                            const response = await client.models.generateContent({
-                                model: "gemini-2.5-flash",
-                                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                            const response = await client.chat.completions.create({
+                                model: deployment,
+                                messages: [{ role: "user", content: prompt }]
                             });
-                            replyContent = (response.text || "").trim().replace(/^"|"$/g, '');
+                            replyContent = (response.choices[0]?.message?.content || "").trim().replace(/^"|"$/g, '');
                         } catch (e: any) {
                             debugErrors.push({ step: 'reply_generation', error: e.message });
                         }
@@ -212,11 +219,11 @@ Keep it under 2 sentences. Do NOT reveal you are an AI. Do NOT use hashtags.`;
 
                         let commentContent = "Keep it up 🔥";
                         try {
-                            const response = await client.models.generateContent({
-                                model: "gemini-2.5-flash",
-                                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                            const response = await client.chat.completions.create({
+                                model: deployment,
+                                messages: [{ role: "user", content: prompt }]
                             });
-                            const responseText = (response.text || "").trim().replace(/^"|"$/g, '');
+                            const responseText = (response.choices[0]?.message?.content || "").trim().replace(/^"|"$/g, '');
                             if (responseText) commentContent = responseText;
                         } catch (e: any) {
                             debugErrors.push({ step: 'comment_generation', error: e.message });
@@ -247,7 +254,7 @@ Keep it under 2 sentences. Do NOT reveal you are an AI. Do NOT use hashtags.`;
         } // end ambassador loop
 
         return NextResponse.json({ message: 'Ambassador loop completed', results, debugErrors });
-        
+
     } catch (err: any) {
         console.error('[Ambassador Error]', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
