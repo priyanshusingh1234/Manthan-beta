@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
         const client = new AzureOpenAI({
             apiKey: apiKey,
             endpoint: baseURL,
-            apiVersion: "2024-05-01-preview",
+            apiVersion: "2024-06-01",
             deployment: deployment
         });
         const debugErrors: any[] = [];
