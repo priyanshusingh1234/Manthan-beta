@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ message: 'No eligible posts found to engage with.' });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
         const results = [];
         const debugErrors: any[] = [];
