@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const results = [];
+        const debugErrors: any[] = [];
 
         for (const post of posts) {
             // Pick a random ambassador
@@ -74,8 +75,9 @@ Post Content: "${post.content || 'I love studying!'}"`;
                 if (responseText) {
                     commentContent = responseText;
                 }
-            } catch (aiError) {
+            } catch (aiError: any) {
                 console.error('[Ambassador AI Error]', aiError);
+                debugErrors.push({ step: 'ai_generation', error: aiError.message });
                 continue; // Skip this post if AI fails
             }
 
@@ -89,6 +91,10 @@ Post Content: "${post.content || 'I love studying!'}"`;
                 })
                 .select()
                 .single();
+
+            if (commentError) {
+                 debugErrors.push({ step: 'db_insert', error: commentError.message });
+            }
 
             if (!commentError && comment) {
                 // Update comments count on the post
@@ -115,7 +121,7 @@ Post Content: "${post.content || 'I love studying!'}"`;
             }
         }
 
-        return NextResponse.json({ message: 'Ambassador activity completed successfully', results });
+        return NextResponse.json({ message: 'Ambassador activity completed successfully', results, debugErrors });
     } catch (err: any) {
         console.error('[Ambassador] Fatal Error:', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
