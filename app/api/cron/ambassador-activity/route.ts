@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { createNotification } from '@/lib/createNotification';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+
 
 // Initialize Gemini API Key
 const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
