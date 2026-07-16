@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { createNotification } from '@/lib/createNotification';
-
+import { GoogleGenAI } from '@google/genai';
 
 // Initialize Gemini API Key
-const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
+const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || '';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -23,6 +23,8 @@ export async function GET(req: NextRequest) {
             console.error('[Ambassador] No Gemini API key found.');
             return NextResponse.json({ error: 'No API Key configured' }, { status: 500 });
         }
+
+        const client = new GoogleGenAI({ apiKey });
 
         // 1. Fetch recent posts that have very few or 0 comments to keep engagement high
         const { data: posts, error: postsError } = await supabaseAdmin
@@ -67,25 +69,13 @@ Post Content: "${post.content || 'I love studying!'}"`;
 
             let commentContent = "That's awesome! Keep it up 🔥";
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{ text: prompt }]
-                        }]
-                    })
+                const response = await client.models.generateContent({
+                    model: "gemini-2.5-flash",
+                    contents: [{ role: 'user', parts: [{ text: prompt }] }],
                 });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Gemini API Error: ${response.status} ${errorText}`);
-                }
-
-                const data = await response.json();
-                const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().replace(/^"|"$/g, '');
+                
+                let responseText = response.text || "";
+                responseText = responseText.trim().replace(/^"|"$/g, '');
                 
                 if (responseText) {
                     commentContent = responseText;
