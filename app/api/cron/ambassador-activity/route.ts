@@ -39,18 +39,40 @@ export async function GET(req: NextRequest) {
         
         // --- PHASE 1: Proactive Posting (30% chance) ---
         if (actionRoll < 0.3) {
-            const prompt = `You are a friendly, highly engaging 15-year-old student from India on a social learning app.
-Create a highly engaging, relatable short text post for the community feed.
+            let postImageUrl = null;
+            let formatChoice = Math.floor(Math.random() * 3); // 0 = Meme, 1 = Question, 2 = News
+            let prompt = "";
 
+            if (formatChoice === 0) {
+                // Fetch a real meme image
+                try {
+                    const memeRes = await fetch('https://meme-api.com/gimme/wholesomememes');
+                    if (memeRes.ok) {
+                        const memeData = await memeRes.json();
+                        postImageUrl = memeData.url;
+                    }
+                } catch (e) {
+                    console.error('[Ambassador] Failed to fetch meme', e);
+                }
+                
+                prompt = `You are a friendly, highly engaging 15-year-old student from India on a social learning app.
+You are posting a funny student meme. Write a highly engaging, relatable short caption for it.
 CRITICAL RULE: You MUST write in conversational "Hinglish" (a mix of Hindi and English written in the English alphabet).
-Make it highly engaging so other students want to comment on it.
-
-Pick ONE of these 3 formats randomly:
-1. A relatable student joke/meme text (e.g., "Maths exam ne rula diya bhai 😭 kya karu?")
-2. An engaging question to the community (e.g., "Sab log raat me padhte ho ya subah jaldi? Need tips! 📚")
-3. A quick piece of student/tech news or hype (e.g., "Suna hai JEE ki dates aane wali hain? 😱")
-
+Example: "Maths exam ne rula diya bhai 😭 kya karu?"
 Do NOT use hashtags. Keep it under 2 sentences. Do NOT reveal you are an AI.`;
+            } else if (formatChoice === 1) {
+                prompt = `You are a friendly, highly engaging 15-year-old student from India on a social learning app.
+You are asking an engaging question to the community.
+CRITICAL RULE: You MUST write in conversational "Hinglish" (a mix of Hindi and English written in the English alphabet).
+Example: "Sab log raat me padhte ho ya subah jaldi? Need tips! 📚"
+Do NOT use hashtags. Keep it under 2 sentences. Do NOT reveal you are an AI.`;
+            } else {
+                prompt = `You are a friendly, highly engaging 15-year-old student from India on a social learning app.
+You are sharing a quick piece of student/tech news or hype.
+CRITICAL RULE: You MUST write in conversational "Hinglish" (a mix of Hindi and English written in the English alphabet).
+Example: "Suna hai JEE ki dates aane wali hain? 😱"
+Do NOT use hashtags. Keep it under 2 sentences. Do NOT reveal you are an AI.`;
+            }
 
             let postContent = "";
             try {
@@ -69,11 +91,12 @@ Do NOT use hashtags. Keep it under 2 sentences. Do NOT reveal you are an AI.`;
                     .insert({
                         author_id: ambassadorId,
                         content: postContent,
+                        image_url: postImageUrl,
                         comments_count: 0
                     });
                 
                 if (postError) debugErrors.push({ step: 'post_insert', error: postError.message });
-                else results.push({ type: 'created_post', content: postContent });
+                else results.push({ type: 'created_post', content: postContent, imageUrl: postImageUrl });
                 
                 return NextResponse.json({ message: 'Ambassador created a post', results, debugErrors });
             }
