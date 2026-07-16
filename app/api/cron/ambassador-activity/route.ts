@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import supabaseAdmin from '@/lib/supabaseAdmin';
 import { createNotification } from '@/lib/createNotification';
-import OpenAI from "openai";
+import { AzureOpenAI } from "openai";
 
 // Azure AI Foundry / OpenAI details
 const apiKey = process.env.AZURE_OPENAI_KEY || "";
@@ -25,10 +25,11 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'No API Key configured' }, { status: 500 });
         }
 
-        const client = new OpenAI({
+        const client = new AzureOpenAI({
             apiKey: apiKey,
-            baseURL: baseURL,
-            defaultHeaders: { 'api-key': apiKey }
+            endpoint: baseURL,
+            apiVersion: "2024-02-15-preview",
+            deployment: deployment
         });
         const debugErrors: any[] = [];
         const results = [];
