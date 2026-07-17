@@ -127,8 +127,6 @@ function RootLayout() {
         if (actionId === 'decline_duel') return;
       }
 
-
-
       if (!href) return;
 
       // Translate web hrefs to mobile routes

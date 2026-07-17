@@ -138,9 +138,19 @@ export default function TitlesDashboard({ visible, onClose, currentCosmetics, on
   if (!uniqueTitles.some(t => t.titleName === 'The Crusher')) {
     uniqueTitles.push({
       titleName: 'The Crusher',
-      unlocked: true, // Allow them to equip it
+      unlocked: false, // Locked by default unless they actually earned it
       source: 'Special Unlock ⚡',
       isPuzzle: false,
+    });
+  }
+
+  // Add 'Slow & Steady' if it's not already in the list
+  if (!uniqueTitles.some(t => t.titleName === 'Slow & Steady')) {
+    uniqueTitles.push({
+      titleName: 'Slow & Steady',
+      unlocked: false,
+      source: 'Daily Puzzle 🧩',
+      isPuzzle: true,
     });
   }
 

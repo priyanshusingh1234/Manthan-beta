@@ -6,11 +6,11 @@ export const dynamic = 'force-dynamic';
 
 // ── The Puzzle ──────────────────────────────────────────────────────────────
 const PUZZLE = {
-  id: 'village-census-v1',
-  title: 'The Village Census 🏡',
-  question: `In a village of 60 families, 35 have a cow 🐄 and 30 have a goat 🐐. Every family has at least one animal. How many families have BOTH a cow and a goat?`,
-  hint: 'Think: Cow + Goat families exceed total families. The overlap is the answer.',
-  answer: 5,
+  id: 'snail-well-v1',
+  title: 'The Snail in the Well 🐌',
+  question: `A snail is at the bottom of a 20-foot well. Each day it climbs up 5 feet, but each night it slides back down 4 feet. How many days will it take for the snail to reach the top?`,
+  hint: `The snail doesn't slide back down on the day it finally reaches the top!`,
+  answer: 16,
   reward_correct: 10,
   reward_wrong: 0,
 };
@@ -102,11 +102,11 @@ export async function POST(req: NextRequest) {
         .single();
 
       const currentCosmetics: string[] = Array.isArray(profile?.cosmetics) ? profile.cosmetics : [];
-      const crusherTitle = 'puzzle_title:The Crusher';
+      const newTitle = 'puzzle_title:Slow & Steady';
 
       // Add title only if not already owned
-      if (!currentCosmetics.includes(crusherTitle)) {
-        currentCosmetics.push(crusherTitle);
+      if (!currentCosmetics.includes(newTitle)) {
+        currentCosmetics.push(newTitle);
       }
 
       await supabaseAdmin.from('profiles').update({

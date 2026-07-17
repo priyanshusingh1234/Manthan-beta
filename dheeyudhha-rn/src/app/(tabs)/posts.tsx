@@ -391,10 +391,13 @@ export default function PostsScreen() {
                 setIsComposerExpanded(true);
               }}
               onBlur={() => {
-                if (!content.trim() && mediaFiles.length === 0) {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                  setIsComposerExpanded(false);
-                }
+                // Delay shrinking so that onPress events on buttons have time to fire
+                setTimeout(() => {
+                  if (!content.trim() && mediaFiles.length === 0) {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setIsComposerExpanded(false);
+                  }
+                }, 150);
               }}
             />
 
@@ -579,6 +582,7 @@ export default function PostsScreen() {
     >
       <FlatList
         data={posts}
+        keyboardShouldPersistTaps="handled"
         keyExtractor={(item) => String(item.id)}
         renderItem={renderPostItem}
         ListHeaderComponent={renderComposer()}

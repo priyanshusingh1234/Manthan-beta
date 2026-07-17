@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ActivityIndicator, Animated, Vibration,
+  ActivityIndicator, Animated, Vibration, Modal
 } from 'react-native';
 import { supabase } from '@/lib/supabaseClient';
-import { Lightbulb, CheckCircle2, XCircle, Lock } from 'lucide-react-native';
+import { Lightbulb, CheckCircle2, XCircle, Lock, PartyPopper } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
@@ -20,9 +20,11 @@ export default function DailyPuzzleCard() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ is_correct: boolean; correct_answer: number; reward: number } | null>(null);
   const [showHint, setShowHint] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const unlockScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => { fetchPuzzle(); }, []);
 
@@ -70,9 +72,17 @@ export default function DailyPuzzleCard() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setResult(data);
+      
+      const wasFirstAttempt = !attempt;
       setAttempt({ user_answer: num, is_correct: data.is_correct });
       triggerPop();
-      if (data.is_correct) Vibration.vibrate([0, 80, 60, 80]);
+      if (data.is_correct) {
+        Vibration.vibrate([0, 80, 60, 80]);
+        if (wasFirstAttempt) {
+          setShowUnlockModal(true);
+          Animated.spring(unlockScale, { toValue: 1, friction: 4, tension: 40, useNativeDriver: true }).start();
+        }
+      }
     } catch (e: any) {
       console.error(e.message);
     } finally {
@@ -165,20 +175,20 @@ export default function DailyPuzzleCard() {
             }}>
               <View style={{
                 width: 40, height: 40, borderRadius: 20,
-                backgroundColor: '#dc2626',
+                backgroundColor: '#d97706',
                 alignItems: 'center', justifyContent: 'center',
               }}>
-                <Text style={{ fontSize: 18 }}>⚡</Text>
+                <Text style={{ fontSize: 18 }}>🐌</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#dc2626', fontSize: 9, fontWeight: '900', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 2 }}>
+                <Text style={{ color: '#d97706', fontSize: 9, fontWeight: '900', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 2 }}>
                   Rare Title Reward
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ color: isDark ? '#fca5a5' : '#991b1b', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 }}>
-                    The Crusher
+                  <Text style={{ color: isDark ? '#fcd34d' : '#b45309', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 }}>
+                    Slow & Steady
                   </Text>
-                  <View style={{ backgroundColor: '#dc2626', borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1 }}>
+                  <View style={{ backgroundColor: '#d97706', borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1 }}>
                     <Text style={{ color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 1 }}>RARE</Text>
                   </View>
                 </View>
@@ -298,6 +308,37 @@ export default function DailyPuzzleCard() {
           )}
         </View>
       </View>
+      
+      <Modal visible={showUnlockModal} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' }}>
+          <Animated.View style={{ 
+            transform: [{ scale: unlockScale }], 
+            alignItems: 'center', 
+            backgroundColor: isDark ? '#2a1a00' : '#fffbeb', 
+            padding: 30, 
+            borderRadius: 24, 
+            borderWidth: 2, 
+            borderColor: '#d97706', 
+            width: '80%',
+            shadowColor: '#d97706', shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }
+          }}>
+            <PartyPopper size={48} color="#d97706" style={{ marginBottom: 15 }} />
+            <Text style={{ color: '#d97706', fontSize: 24, fontWeight: '900', letterSpacing: 1, textAlign: 'center', marginBottom: 5 }}>TITLE UNLOCKED!</Text>
+            <Text style={{ color: isDark ? '#fcd34d' : '#b45309', fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 20 }}>Slow & Steady 🐌</Text>
+            
+            <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 13, fontWeight: '600', textAlign: 'center', marginBottom: 25 }}>
+              You can now equip this rare title from the Titles Dashboard!
+            </Text>
+
+            <TouchableOpacity 
+              onPress={() => setShowUnlockModal(false)}
+              style={{ backgroundColor: '#d97706', paddingHorizontal: 30, paddingVertical: 14, borderRadius: 14, width: '100%', alignItems: 'center' }}
+            >
+              <Text style={{ color: 'white', fontWeight: '900', fontSize: 16 }}>Awesome!</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </Animated.View>
   );
 }
