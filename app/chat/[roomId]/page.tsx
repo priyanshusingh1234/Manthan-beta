@@ -161,9 +161,22 @@ const MessageItem = memo(function MessageItem({
 
     return (
       <div className="flex justify-center my-2 px-4">
-        <div className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-semibold px-4 py-1.5 rounded-full flex items-center gap-1.5">
+        <div className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-semibold px-4 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
           {type === 'video' ? <Video className="w-3 h-3" /> : <Phone className="w-3 h-3" />}
           <span className="capitalize">{text}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Theme change message
+  if (msg.content.startsWith('__THEME_CHANGE__:')) {
+    const themeName = msg.content.split(':')[1] || 'doodle';
+    const text = isMe ? `You changed the chat theme to ${themeName}` : `${participant?.full_name || 'They'} changed the chat theme to ${themeName}`;
+    return (
+      <div className="flex justify-center my-3 px-4">
+        <div className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[11px] font-bold px-4 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm border border-indigo-100 dark:border-indigo-800/50">
+          <span className="capitalize">✨ {text}</span>
         </div>
       </div>
     );
@@ -359,6 +372,8 @@ function ChatRoomContent() {
   const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
+  const [theme, setTheme] = useState('doodle');
+  const [showThemeModal, setShowThemeModal] = useState(false);
   // Incoming call banner — shown when the OTHER party starts a call while we are
   // already on this chat page (GlobalCallListener skips this room in that case)
   const [incomingCallBanner, setIncomingCallBanner] = useState<{ type: 'voice' | 'video', callerId: string } | null>(null);
@@ -546,11 +561,12 @@ function ChatRoomContent() {
         const [pRes, mRes, rRes] = await Promise.all([
           supabase.from('chat_participants').select('user_id').eq('room_id', roomId).neq('user_id', u.id),
           supabase.from('chat_messages').select('*').eq('room_id', roomId).order('created_at', { ascending: false }).limit(80),
-          supabase.from('chat_rooms').select('status, created_by').eq('id', roomId).single(),
+          supabase.from('chat_rooms').select('status, created_by, theme').eq('id', roomId).single(),
         ]);
 
         if (rRes.data) {
           let finalStatus = rRes.data;
+          setTheme(rRes.data.theme || 'doodle');
           if (rRes.data.status === 'pending' && pRes.data?.[0]?.user_id) {
             const { data: followData } = await supabase
               .from('follows')
@@ -756,6 +772,10 @@ function ChatRoomContent() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
         const upd = payload.new as Message;
         setMessages(prev => prev.map(m => m.id === upd.id ? { ...m, ...upd } : m));
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_rooms', filter: `id=eq.${roomId}` }, (payload) => {
+        const upd = payload.new as any;
+        if (upd.theme) setTheme(upd.theme);
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` }, (payload) => {
         const delId = (payload.old as any)?.id;
@@ -1037,14 +1057,43 @@ function ChatRoomContent() {
 
 
 
+  const changeTheme = async (newTheme: string) => {
+    setTheme(newTheme);
+    setShowThemeModal(false);
+    
+    // Update the room
+    await supabase.from('chat_rooms').update({ theme: newTheme }).eq('id', roomId);
+    
+    // Insert system message
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      fetch('/api/chat/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ roomId, content: `__THEME_CHANGE__:${newTheme}`, messageType: 'text' }),
+      }).catch(() => {});
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden"
       onClick={() => { if (showHeaderMenu) setShowHeaderMenu(false); }}
     >
+      <div 
+        className="absolute inset-0 z-0 opacity-100 pointer-events-none transition-all duration-500"
+        style={{
+          backgroundImage: `url('/assets/images/chat_bg_${theme}.jpg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      />
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header
-        className="shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 z-30"
+        className="shrink-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 z-30 transition-all"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         {isSelectionMode ? (
@@ -1120,6 +1169,13 @@ function ChatRoomContent() {
                   <button onClick={() => { setShowHeaderMenu(false); setIsSelectionMode(true); }}
                     className="w-full text-left px-4 py-3.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 active:bg-slate-100">
                     Select Messages
+                  </button>
+                  <button onClick={() => { setShowHeaderMenu(false); setShowThemeModal(true); }}
+                    className="w-full text-left px-4 py-3.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between active:bg-slate-100">
+                    <div className="flex items-center gap-3">
+                      <ImageIcon className="w-4 h-4" /> Background
+                    </div>
+                    <span className="text-[9px] font-black bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-transparent bg-clip-text">NEW</span>
                   </button>
                   <button
                     onClick={() => { setShowHeaderMenu(false); setShowClearChatConfirm(true); }}
@@ -1615,6 +1671,45 @@ function ChatRoomContent() {
             </button>
             <button
               onClick={() => setShowClearChatConfirm(false)}
+              className="w-full py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-base active:scale-95 transition-transform"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Theme Modal ─────────────────────────────────────────────────── */}
+      {showThemeModal && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowThemeModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 w-full max-w-md rounded-t-3xl p-6 pb-10 shadow-2xl animate-in slide-in-from-bottom duration-200"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-center text-lg font-black text-slate-900 dark:text-white mb-6">Choose Background</h3>
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              {[
+                { id: 'doodle', label: 'Doodle', url: '/assets/images/chat_bg_doodle.jpg' },
+                { id: 'geometric', label: 'Geometric', url: '/assets/images/chat_bg_geometric.jpg' },
+                { id: 'blur', label: 'Blur', url: '/assets/images/chat_bg_blur.jpg' }
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => changeTheme(t.id)}
+                  className={`flex flex-col items-center gap-2 ${theme === t.id ? 'opacity-100' : 'opacity-60'} active:scale-95 transition-all`}
+                >
+                  <div className={`w-full aspect-[9/16] rounded-xl overflow-hidden border-2 ${theme === t.id ? 'border-indigo-500 shadow-md shadow-indigo-500/20' : 'border-transparent'}`}>
+                    <Image src={t.url} alt={t.label} width={100} height={180} className="w-full h-full object-cover" unoptimized />
+                  </div>
+                  <span className={`text-[11px] font-bold ${theme === t.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>{t.label}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowThemeModal(false)}
               className="w-full py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-base active:scale-95 transition-transform"
             >
               Cancel

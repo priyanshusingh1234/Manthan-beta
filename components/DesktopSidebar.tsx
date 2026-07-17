@@ -173,8 +173,6 @@ export default function DesktopSidebar() {
     { label: 'Chat', href: '/chat', icon: MessageSquare },
     { label: 'Practice', href: '/practice', icon: BookOpen },
     { label: 'League', href: '/league', icon: Shield },
-    { label: 'My Faction', href: '/my-school', icon: ShieldAlert },
-    { label: 'Top Schools', href: '/top-schools', icon: Swords },
     { label: 'Search', href: '/search', icon: Search },
     { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
     { label: 'Arena', href: '/tests', icon: Zap },
