@@ -1,6 +1,6 @@
 {
   "name": "dheeyudhha-rn",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "version": "1.2.0",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

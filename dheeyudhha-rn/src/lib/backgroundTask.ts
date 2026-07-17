@@ -128,3 +128,8 @@ Notifications.addNotificationResponseReceivedListener(async (response) => {
     }
   }
 });
+ 
+// Register the background task with the OS immediately
+Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK).catch(e => {
+  console.log('[Push] TaskManager background registration skipped (expected in web):', e.message);
+});

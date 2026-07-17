@@ -35,11 +35,6 @@ Notifications.setNotificationHandler({
   },
 });
 
-// Ensure the task is registered with the OS immediately when this file is evaluated in headless mode
-Notifications.registerTaskAsync('BACKGROUND-NOTIFICATION-TASK').catch(e => {
-  console.log('[Push] TaskManager background registration skipped (expected in web):', e.message);
-});
-
 /**
  * Register for push notifications and save the FCM token to push_subscriptions.
  * 
