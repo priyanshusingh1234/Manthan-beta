@@ -229,7 +229,32 @@ const MessageItem = memo(({
     );
   }
 
-
+  // Theme change message
+  if (msg.content.startsWith('__THEME_CHANGE__:')) {
+    const theme = msg.content.replace('__THEME_CHANGE__:', '').trim();
+    const themeName = theme === 'doodle' ? 'Doodle' : theme === 'geometric' ? 'Geometric' : theme === 'blur' ? 'Blur' : 'Default (Solid)';
+    const text = `${isMe ? 'You' : (participant?.full_name || 'Scholar')} changed the chat theme to ${themeName}`;
+ 
+    return (
+      <View className="w-full mb-1">
+        {showDate && (
+          <View className="items-center my-3">
+            <View className="px-3 py-1 bg-slate-200 dark:bg-slate-800 rounded-lg">
+              <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                {formatDateBanner(msgDate)}
+              </Text>
+            </View>
+          </View>
+        )}
+        <View className="items-center my-2 px-4">
+          <View className="bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-1.5 flex-row items-center gap-1.5">
+            <ImageIcon size={12} color={isDark ? '#94a3b8' : '#64748b'} />
+            <Text className="text-slate-500 dark:text-slate-400 text-xs font-semibold capitalize">{text}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View className="w-full mb-1">
@@ -459,6 +484,17 @@ export default function ChatRoomScreen() {
       }
 
       if (user?.id && list && !loadMore) {
+        const themeMsg = list.find(m => m.content.startsWith('__THEME_CHANGE__:'));
+        if (themeMsg) {
+          const theme = themeMsg.content.replace('__THEME_CHANGE__:', '').trim() || null;
+          const bgPref = await AsyncStorage.getItem(`chat_bg_${roomId}`);
+          if (bgPref !== theme) {
+            setSelectedBg(theme);
+            if (theme) await AsyncStorage.setItem(`chat_bg_${roomId}`, theme);
+            else await AsyncStorage.removeItem(`chat_bg_${roomId}`);
+          }
+        }
+ 
         const unreadIds = list.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id);
         if (unreadIds.length > 0) {
           supabase.from('chat_messages').update({ is_read: true }).in('id', unreadIds).then();
@@ -530,6 +566,13 @@ export default function ChatRoomScreen() {
           const deletedIdsStr = await AsyncStorage.getItem(roomDeletedKey);
           const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
           if (deletedIds.includes(msg.id)) return;
+
+          if (msg.content.startsWith('__THEME_CHANGE__:')) {
+            const newTheme = msg.content.replace('__THEME_CHANGE__:', '').trim() || null;
+            setSelectedBg(newTheme);
+            if (newTheme) await AsyncStorage.setItem(`chat_bg_${roomId}`, newTheme);
+            else await AsyncStorage.removeItem(`chat_bg_${roomId}`);
+          }
 
           setMessages(prev => {
             if (prev.some(m => m.id === msg.id)) return prev;
@@ -780,6 +823,16 @@ export default function ChatRoomScreen() {
       }
       setSelectedBg(bg);
       setShowBgModal(false);
+ 
+      if (user) {
+        await supabase.from('chat_messages').insert({
+          room_id: roomId,
+          sender_id: user.id,
+          content: `__THEME_CHANGE__:${bg || ''}`,
+          message_type: 'text',
+          is_read: true
+        });
+      }
     } catch (err) {
       console.warn('Failed to save background preference', err);
     }
