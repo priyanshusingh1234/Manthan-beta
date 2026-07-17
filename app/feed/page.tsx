@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import QuestionCard from '@/components/QuestionCard';
 import PostCard from '@/components/PostCard';
+import ArenaBattleCard from '@/components/ArenaBattleCard';
+import VipQuestionCard from '@/components/VipQuestionCard';
 import { Filter, SlidersHorizontal, BookOpen, Layers, Target, ChevronDown, Info, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
@@ -258,6 +260,10 @@ export default function FeedPage() {
                                     )}
                                     {q.type === 'post' ? (
                                         <PostCard post={q} currentUserId={currentUserId} showTags={true} />
+                                    ) : q.type === 'gauntlet' ? (
+                                        <ArenaBattleCard gauntlet={q} />
+                                    ) : q.is_vip ? (
+                                        <VipQuestionCard q={q} />
                                     ) : (
                                         <QuestionCard q={q} />
                                     )}
