@@ -50,6 +50,16 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error, execu
 
         } catch (e) {
           console.error('[BackgroundTask] Failed to send inline reply', e);
+        } finally {
+          // ALWAYS dismiss the notification so the Android UI stops showing the loading spinner!
+          if (notification?.request?.identifier) {
+            await Notifications.dismissNotificationAsync(notification.request.identifier);
+          }
+        }
+      } else {
+        // If no session, still dismiss to stop hanging
+        if (notification?.request?.identifier) {
+          await Notifications.dismissNotificationAsync(notification.request.identifier);
         }
       }
     }
@@ -98,6 +108,14 @@ Notifications.addNotificationResponseReceivedListener(async (response) => {
         console.log('[GlobalPush] Successfully sent headless inline reply.');
       } catch (e) {
         console.error('[GlobalPush] Failed to send inline reply', e);
+      } finally {
+        if (response?.notification?.request?.identifier) {
+          await Notifications.dismissNotificationAsync(response.notification.request.identifier);
+        }
+      }
+    } else {
+      if (response?.notification?.request?.identifier) {
+        await Notifications.dismissNotificationAsync(response.notification.request.identifier);
       }
     }
   }
