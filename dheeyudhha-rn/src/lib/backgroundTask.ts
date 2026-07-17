@@ -16,7 +16,11 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error, execu
     // Handle inline chat replies from the notification tray (when app is killed or backgrounded)
     if (actionIdentifier === 'reply' && userText) {
       const payload = notification?.request?.content?.data as any;
-      const roomId = payload?.roomId;
+      let roomId = payload?.roomId;
+      if (!roomId) {
+        const href = payload?.href || payload?.url || payload?.deep_link || '';
+        roomId = href.split('/chat/')[1]?.split('?')[0];
+      }
       
       // Attempt to retrieve the session securely since this is a headless execution
       const { data: { session } } = await supabase.auth.getSession();
@@ -76,7 +80,11 @@ Notifications.addNotificationResponseReceivedListener(async (response) => {
 
   // Handle inline chat replies when app is completely closed or backgrounded
   if (actionId === 'reply' && userText) {
-    const roomId = data?.roomId;
+    let roomId = data?.roomId;
+    if (!roomId) {
+      const href = data?.href || data?.url || data?.deep_link || '';
+      roomId = href.split('/chat/')[1]?.split('?')[0];
+    }
     
     // In global scope, the app might be headless.
     // Try to get session. Since it's AsyncStorage, it might take a moment.
