@@ -20,7 +20,8 @@ import {
   TouchableWithoutFeedback,
   Clipboard,
   FlatList,
-  Linking
+  Linking,
+  ImageBackground
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -75,6 +76,12 @@ interface Participant {
   username: string;
   is_teacher?: boolean;
 }
+
+const BG_MAP: Record<string, any> = {
+  doodle: require('../../../assets/images/chat_bg_doodle.png'),
+  geometric: require('../../../assets/images/chat_bg_geometric.png'),
+  blur: require('../../../assets/images/chat_bg_blur.png'),
+};
 
 // ─── Helper for Dates ──────────────────────────────────────────────
 const isToday = (date: Date) => {
@@ -380,6 +387,9 @@ export default function ChatRoomScreen() {
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [roomStatus, setRoomStatus] = useState<{ status: string, created_by: string } | null>(null);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [showBgModal, setShowBgModal] = useState(false);
+  const [selectedBg, setSelectedBg] = useState<string | null>(null);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   const [hasMore, setHasMore] = useState(true);
@@ -389,7 +399,6 @@ export default function ChatRoomScreen() {
   // Modals
   const [contextMsg, setContextMsg] = useState<Message | null>(null);
   const [showContextModal, setShowContextModal] = useState(false);
-  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<any>(null);
@@ -499,6 +508,9 @@ export default function ChatRoomScreen() {
           }
           setRoomStatus(finalStatus);
         }
+
+        const bgPref = await AsyncStorage.getItem(`chat_bg_${roomId}`);
+        if (bgPref) setSelectedBg(bgPref);
 
         await fetchMessages();
       } catch (e) {
@@ -759,6 +771,20 @@ export default function ChatRoomScreen() {
     );
   };
 
+  const changeBackground = async (bg: string | null) => {
+    try {
+      if (bg) {
+        await AsyncStorage.setItem(`chat_bg_${roomId}`, bg);
+      } else {
+        await AsyncStorage.removeItem(`chat_bg_${roomId}`);
+      }
+      setSelectedBg(bg);
+      setShowBgModal(false);
+    } catch (err) {
+      console.warn('Failed to save background preference', err);
+    }
+  };
+
   const handleLongPress = useCallback((msg: Message) => {
     Vibration.vibrate(30);
     setContextMsg(msg);
@@ -826,52 +852,124 @@ export default function ChatRoomScreen() {
                     <Ban size={18} color="#f97316" />
                     <Text className="text-orange-500 font-semibold text-sm">{isBlocked ? 'Unblock Scholar' : 'Block Scholar'}</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setShowHeaderMenu(false); setShowBgModal(true); }} className="flex-row items-center gap-3 px-4 py-3.5 border-t border-slate-100 dark:border-slate-800/50">
+                    <ImageIcon size={18} color={isDark ? '#cbd5e1' : '#334155'} />
+                    <Text className="text-slate-700 dark:text-slate-300 font-semibold text-sm">Background</Text>
+                  </TouchableOpacity>
                 </View>
               </TouchableWithoutFeedback>
             </View>
           </TouchableWithoutFeedback>
         </Modal>
 
+        {/* Background Selection Modal */}
+        <Modal visible={showBgModal} animationType="slide" transparent onRequestClose={() => setShowBgModal(false)}>
+          <View className="flex-1 justify-end bg-black/40">
+            <View className="bg-white dark:bg-slate-900 rounded-t-3xl pt-5 pb-8 px-6 shadow-2xl h-[60%]">
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-xl font-bold text-slate-900 dark:text-white">Chat Background</Text>
+                <TouchableOpacity onPress={() => setShowBgModal(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full">
+                  <X size={20} color={isDark ? '#cbd5e1' : '#475569'} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                <View className="flex-row flex-wrap justify-between gap-y-4">
+                  <TouchableOpacity onPress={() => changeBackground(null)} className={`w-[48%] aspect-[9/16] rounded-2xl border-4 overflow-hidden items-center justify-center bg-[#F2F2F7] dark:bg-slate-950 ${selectedBg === null ? 'border-indigo-500' : 'border-transparent'}`}>
+                    <Text className="text-slate-500 dark:text-slate-400 font-semibold">Default (Solid)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => changeBackground('doodle')} className={`w-[48%] aspect-[9/16] rounded-2xl border-4 overflow-hidden ${selectedBg === 'doodle' ? 'border-indigo-500' : 'border-transparent'}`}>
+                    <ImageBackground source={BG_MAP.doodle} style={{ width: '100%', height: '100%' }} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => changeBackground('geometric')} className={`w-[48%] aspect-[9/16] rounded-2xl border-4 overflow-hidden ${selectedBg === 'geometric' ? 'border-indigo-500' : 'border-transparent'}`}>
+                    <ImageBackground source={BG_MAP.geometric} style={{ width: '100%', height: '100%' }} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => changeBackground('blur')} className={`w-[48%] aspect-[9/16] rounded-2xl border-4 overflow-hidden ${selectedBg === 'blur' ? 'border-indigo-500' : 'border-transparent'}`}>
+                    <ImageBackground source={BG_MAP.blur} style={{ width: '100%', height: '100%' }} />
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
         {loading ? (
           <View className="flex-1 items-center justify-center"><ActivityIndicator color="#6366f1" size="large" /></View>
         ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            inverted={true}
-            keyExtractor={item => item.id}
-            contentContainerStyle={{ paddingVertical: 16 }}
-            keyboardShouldPersistTaps="handled"
-            initialNumToRender={20}
-            maxToRenderPerBatch={10}
-            windowSize={5}
-            removeClippedSubviews={false}
-            renderItem={({ item: msg, index }) => (
-              <MessageItem
-                msg={msg}
-                user={user}
-                participant={participant}
-                prevMsg={index < messages.length - 1 ? messages[index + 1] : null}
-                onLongPress={handleLongPress}
-                onReply={handleReply}
-                onImageClick={handleImageClick}
-                isDark={isDark}
+          <View className="flex-1">
+            {selectedBg ? (
+              <ImageBackground source={BG_MAP[selectedBg]} style={{ flex: 1 }} resizeMode="cover">
+                <FlatList
+                  ref={flatListRef}
+                  data={messages}
+                  inverted={true}
+                  keyExtractor={item => item.id}
+                  contentContainerStyle={{ paddingVertical: 16 }}
+                  keyboardShouldPersistTaps="handled"
+                  initialNumToRender={20}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  removeClippedSubviews={false}
+                  renderItem={({ item: msg, index }) => (
+                    <MessageItem
+                      msg={msg}
+                      user={user}
+                      participant={participant}
+                      onLongPress={handleLongPress}
+                      onReply={handleReply}
+                      prevMsg={messages[index + 1]}
+                      onImageClick={handleImageClick}
+                      isDark={isDark}
+                    />
+                  )}
+                  onEndReached={() => {
+                    if (hasMore && !loadingMore && messages.length > 0) {
+                      fetchMessages(true);
+                    }
+                  }}
+                  onEndReachedThreshold={0.5}
+                  ListFooterComponent={loadingMore ? <ActivityIndicator color="#6366f1" style={{ marginVertical: 16 }} /> : null}
+                />
+              </ImageBackground>
+            ) : (
+              <FlatList
+                ref={flatListRef}
+                data={messages}
+                inverted={true}
+                keyExtractor={item => item.id}
+                contentContainerStyle={{ paddingVertical: 16 }}
+                keyboardShouldPersistTaps="handled"
+                initialNumToRender={20}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                removeClippedSubviews={false}
+                renderItem={({ item: msg, index }) => (
+                  <MessageItem
+                    msg={msg}
+                    user={user}
+                    participant={participant}
+                    prevMsg={index < messages.length - 1 ? messages[index + 1] : null}
+                    onLongPress={handleLongPress}
+                    onReply={handleReply}
+                    onImageClick={handleImageClick}
+                    isDark={isDark}
+                  />
+                )}
+                ListFooterComponent={() => (
+                  hasMore ? (
+                    <TouchableOpacity
+                      onPress={() => fetchMessages(true)}
+                      disabled={loadingMore}
+                      className="py-6 items-center justify-center"
+                    >
+                      {loadingMore ? <ActivityIndicator color="#6366f1" /> : (
+                        <View className="bg-[#E5E5EA] dark:bg-[#2C2C2E] w-[1px] h-14" />
+                      )}
+                    </TouchableOpacity>
+                  ) : null
+                )}
               />
             )}
-            ListFooterComponent={() => (
-              hasMore ? (
-                <TouchableOpacity
-                  onPress={() => fetchMessages(true)}
-                  disabled={loadingMore}
-                  className="py-6 items-center justify-center"
-                >
-                  {loadingMore ? <ActivityIndicator color="#6366f1" /> : (
-                    <View className="bg-[#E5E5EA] dark:bg-[#2C2C2E] w-[1px] h-14" />
-                  )}
-                </TouchableOpacity>
-              ) : null
-            )}
-          />
+          </View>
         )}
 
         {/* Context Menu Modal */}
