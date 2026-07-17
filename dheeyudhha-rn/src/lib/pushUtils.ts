@@ -35,6 +35,11 @@ Notifications.setNotificationHandler({
   },
 });
 
+// Ensure the task is registered with the OS immediately when this file is evaluated in headless mode
+Notifications.registerTaskAsync('BACKGROUND-NOTIFICATION-TASK').catch(e => {
+  console.log('[Push] TaskManager background registration skipped (expected in web):', e.message);
+});
+
 /**
  * Register for push notifications and save the FCM token to push_subscriptions.
  * 
@@ -89,13 +94,6 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
         },
       },
     ]);
-
-    // Register background task handler for headless notification processing
-    try {
-      await Notifications.registerTaskAsync('BACKGROUND-NOTIFICATION-TASK');
-    } catch (e) {
-      console.log('[Push] TaskManager not available for background tasks in this environment');
-    }
 
     // 2. Get the native device push token (raw FCM token on Android, APNs on iOS)
     // This is the token the web firebase-admin SDK sends to directly.

@@ -852,9 +852,14 @@ export default function ChatRoomScreen() {
                     <Ban size={18} color="#f97316" />
                     <Text className="text-orange-500 font-semibold text-sm">{isBlocked ? 'Unblock Scholar' : 'Block Scholar'}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => { setShowHeaderMenu(false); setShowBgModal(true); }} className="flex-row items-center gap-3 px-4 py-3.5 border-t border-slate-100 dark:border-slate-800/50">
-                    <ImageIcon size={18} color={isDark ? '#cbd5e1' : '#334155'} />
-                    <Text className="text-slate-700 dark:text-slate-300 font-semibold text-sm">Background</Text>
+                  <TouchableOpacity onPress={() => { setShowHeaderMenu(false); setShowBgModal(true); }} className="flex-row items-center justify-between px-4 py-3.5 border-t border-slate-100 dark:border-slate-800/50 bg-indigo-50/50 dark:bg-indigo-900/20 active:opacity-70">
+                    <View className="flex-row items-center gap-3">
+                      <ImageIcon size={18} color="#6366f1" />
+                      <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-sm">Background</Text>
+                    </View>
+                    <View className="bg-indigo-500 rounded-full px-2 py-0.5">
+                      <Text className="text-[9px] font-black text-white tracking-wider">NEW</Text>
+                    </View>
                   </TouchableOpacity>
                 </View>
               </TouchableWithoutFeedback>
