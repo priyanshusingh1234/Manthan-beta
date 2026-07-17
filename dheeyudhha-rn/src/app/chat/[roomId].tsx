@@ -78,9 +78,9 @@ interface Participant {
 }
 
 const BG_MAP: Record<string, any> = {
-  doodle: require('../../../assets/images/chat_bg_doodle.png'),
-  geometric: require('../../../assets/images/chat_bg_geometric.png'),
-  blur: require('../../../assets/images/chat_bg_blur.png'),
+  doodle: require('../../../assets/images/chat_bg_doodle.jpg'),
+  geometric: require('../../../assets/images/chat_bg_geometric.jpg'),
+  blur: require('../../../assets/images/chat_bg_blur.jpg'),
 };
 
 // ─── Helper for Dates ──────────────────────────────────────────────
