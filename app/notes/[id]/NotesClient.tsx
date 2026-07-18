@@ -12,7 +12,7 @@ import Header from '@/components/Header';
 import DesktopSidebar from '@/components/DesktopSidebar';
 
 // Initialize PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 type Stroke = {
     points: number[][];
@@ -197,27 +197,27 @@ export default function NotesClient({ post }: { post: any }) {
     const activeStrokes = annotations[pageNumber] || [];
 
     return (
-        <div className="flex h-screen overflow-hidden bg-slate-900 text-slate-100">
+        <div className="flex h-screen overflow-hidden bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
             {/* Desktop Sidebar */}
-            <div className="hidden lg:block w-72 shrink-0 border-r border-slate-800 bg-slate-950">
+            <div className="hidden lg:block w-72 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
                 <DesktopSidebar />
             </div>
 
             <div className="flex-1 flex flex-col min-w-0 h-full relative">
                 {/* Mobile Topbar */}
-                <div className="lg:hidden shrink-0 border-b border-slate-800 bg-slate-950">
+                <div className="lg:hidden shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <Header />
                 </div>
 
                 {/* Toolbar */}
-                <div className="shrink-0 h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20 shadow-sm">
+                <div className="shrink-0 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 z-20 shadow-sm">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+                        <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                         <div>
                             <h1 className="font-bold text-sm truncate max-w-[200px] sm:max-w-md">{post.author?.name}'s Note</h1>
-                            <div className="flex items-center gap-2 text-xs text-slate-400">
+                            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                                 {isSaving ? (
                                     <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Saving...</span>
                                 ) : lastSaved ? (
@@ -231,52 +231,52 @@ export default function NotesClient({ post }: { post: any }) {
 
                     <div className="flex items-center gap-1 sm:gap-2">
                         {/* Tools */}
-                        <div className="flex bg-slate-800 p-1 rounded-xl">
+                        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
                             <button
                                 onClick={() => setMode('read')}
-                                className={`p-2 rounded-lg transition-colors ${mode === 'read' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                className={`p-2 rounded-lg transition-colors ${mode === 'read' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
                                 title="Read Mode"
                             >
                                 <MousePointer2 className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={() => setMode('draw')}
-                                className={`p-2 rounded-lg transition-colors ${mode === 'draw' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                className={`p-2 rounded-lg transition-colors ${mode === 'draw' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
                                 title="Draw"
                             >
                                 <Pen className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={() => setMode('erase')}
-                                className={`p-2 rounded-lg transition-colors ${mode === 'erase' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                                className={`p-2 rounded-lg transition-colors ${mode === 'erase' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
                                 title="Erase"
                             >
                                 <Eraser className="w-4 h-4" />
                             </button>
                         </div>
                         
-                        <div className="w-px h-6 bg-slate-800 mx-1"></div>
+                        <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1"></div>
 
-                        <button onClick={undo} className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors" title="Undo">
+                        <button onClick={undo} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Undo">
                             <Undo className="w-4 h-4" />
                         </button>
 
                         <div className="flex items-center gap-2 ml-2">
-                            <button onClick={() => setScale(s => Math.max(0.5, s - 0.2))} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"><ZoomOut className="w-4 h-4" /></button>
+                            <button onClick={() => setScale(s => Math.max(0.5, s - 0.2))} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><ZoomOut className="w-4 h-4" /></button>
                             <span className="text-xs font-mono w-10 text-center">{Math.round(scale * 100)}%</span>
-                            <button onClick={() => setScale(s => Math.min(3, s + 0.2))} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"><ZoomIn className="w-4 h-4" /></button>
+                            <button onClick={() => setScale(s => Math.min(3, s + 0.2))} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><ZoomIn className="w-4 h-4" /></button>
                         </div>
                     </div>
                 </div>
 
                 {/* Sub-toolbar for colors (if drawing) */}
-                <div className={`shrink-0 overflow-hidden transition-all duration-300 ${mode === 'draw' ? 'h-12 border-b border-slate-800' : 'h-0'}`}>
-                    <div className="h-12 flex items-center px-6 gap-4 bg-slate-900/50">
+                <div className={`shrink-0 overflow-hidden transition-all duration-300 ${mode === 'draw' ? 'h-12 border-b border-slate-200 dark:border-slate-800' : 'h-0'}`}>
+                    <div className="h-12 flex items-center px-6 gap-4 bg-slate-50/80 dark:bg-slate-900/50 backdrop-blur-sm">
                         {['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#000000', '#ffffff'].map(c => (
                             <button
                                 key={c}
                                 onClick={() => setColor(c)}
-                                className={`w-6 h-6 rounded-full border-2 transition-transform ${color === c ? 'scale-125 border-white shadow-md' : 'border-transparent scale-100'}`}
+                                className={`w-6 h-6 rounded-full border-2 transition-transform ${color === c ? 'scale-125 border-slate-400 dark:border-white shadow-md' : 'border-slate-200 dark:border-transparent scale-100'}`}
                                 style={{ backgroundColor: c }}
                             />
                         ))}
@@ -284,7 +284,7 @@ export default function NotesClient({ post }: { post: any }) {
                 </div>
 
                 {/* PDF Viewer */}
-                <div className="flex-1 overflow-auto bg-slate-950 relative" ref={containerRef}>
+                <div className="flex-1 overflow-auto bg-slate-100 dark:bg-slate-950 relative" ref={containerRef}>
                     <div className="min-h-full flex items-center justify-center p-4 sm:p-8">
                         {isLoading ? (
                             <div className="flex flex-col items-center text-slate-500">
@@ -297,7 +297,7 @@ export default function NotesClient({ post }: { post: any }) {
                                     file={post.document_url}
                                     onLoadSuccess={onDocumentLoadSuccess}
                                     loading={
-                                        <div className="w-[600px] h-[800px] bg-slate-900 animate-pulse flex items-center justify-center text-slate-500">
+                                        <div className="w-[600px] h-[800px] bg-white dark:bg-slate-900 animate-pulse flex items-center justify-center text-slate-500 rounded-lg border border-slate-200 dark:border-slate-800">
                                             Loading PDF...
                                         </div>
                                     }
@@ -306,7 +306,7 @@ export default function NotesClient({ post }: { post: any }) {
                                         pageNumber={pageNumber} 
                                         renderTextLayer={mode === 'read'}
                                         renderAnnotationLayer={false}
-                                        className="bg-white"
+                                        className="bg-white shadow-sm"
                                     />
                                 </Document>
 
@@ -342,23 +342,23 @@ export default function NotesClient({ post }: { post: any }) {
                 </div>
 
                 {/* Pagination Footer */}
-                <div className="shrink-0 h-16 bg-slate-900 border-t border-slate-800 flex items-center justify-center gap-6 z-20">
+                <div className="shrink-0 h-16 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-center gap-6 z-20">
                     <button
                         disabled={pageNumber <= 1}
                         onClick={() => setPageNumber(p => p - 1)}
-                        className="p-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-800 rounded-full transition-colors"
+                        className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-100 dark:disabled:hover:bg-slate-800 rounded-full transition-colors"
                     >
-                        <ChevronLeft className="w-5 h-5 text-white" />
+                        <ChevronLeft className="w-5 h-5 text-slate-700 dark:text-white" />
                     </button>
-                    <span className="font-bold text-sm tracking-widest">
+                    <span className="font-bold text-sm tracking-widest text-slate-700 dark:text-white">
                         PAGE {pageNumber} OF {numPages || '--'}
                     </span>
                     <button
                         disabled={!numPages || pageNumber >= numPages}
                         onClick={() => setPageNumber(p => p + 1)}
-                        className="p-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-800 rounded-full transition-colors"
+                        className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-100 dark:disabled:hover:bg-slate-800 rounded-full transition-colors"
                     >
-                        <ChevronRight className="w-5 h-5 text-white" />
+                        <ChevronRight className="w-5 h-5 text-slate-700 dark:text-white" />
                     </button>
                 </div>
             </div>
