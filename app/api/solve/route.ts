@@ -590,9 +590,57 @@ export async function POST(req: Request) {
                         .gte('monthly_points', currentMonthlyPts)
                         .lt('monthly_points', newMonthlyPts);
 
+                    const oldLeague = LEAGUES.findIndex(l => currentMonthlyPts >= l.min && currentMonthlyPts <= l.max);
+                    const newLeague = LEAGUES.findIndex(l => newMonthlyPts >= l.min && newMonthlyPts <= l.max);
+                    const promotedInLeague = newLeague > oldLeague && oldLeague !== -1;
+
+                    let solverProfileData = null;
+
+                    // 1. Broadcast true milestones (Leagues & Level Ups) to all followers
+                    if (leveledUp || promotedInLeague) {
+                        try {
+                            const { data: solverProfile } = await supabaseAdmin.from('profiles').select('full_name, avatar_url, username').eq('id', userId).single();
+                            solverProfileData = solverProfile;
+                            
+                            const { data: followerRows } = await supabaseAdmin.from('follows').select('follower_id').eq('following_id', userId);
+                            if (followerRows && followerRows.length > 0) {
+                                const shortName = solverProfile?.full_name?.split(' ')[0] || 'Your friend';
+                                let bTitle = '🏆 Milestone Reached!';
+                                let bBody = `${shortName} just hit a new milestone!`;
+                                
+                                if (promotedInLeague) {
+                                    bTitle = '⚔️ League Promotion!';
+                                    bBody = `${shortName} just advanced to the ${LEAGUES[newLeague]?.name} League!`;
+                                } else if (leveledUp) {
+                                    bTitle = '📈 Level Up Alert!';
+                                    bBody = `${shortName} just reached Level ${newLevel}! Can you beat them?`;
+                                }
+
+                                await Promise.allSettled(followerRows.map((f: any) =>
+                                    createNotification({
+                                        userId: f.follower_id,
+                                        type: 'friend_milestone',
+                                        title: bTitle,
+                                        body: bBody,
+                                        href: `/user/${solverProfile?.username ? encodeURIComponent(solverProfile.username) : userId}`,
+                                        actorId: userId,
+                                        actorName: solverProfile?.full_name || 'Friend',
+                                        actorAvatar: solverProfile?.avatar_url,
+                                    })
+                                ));
+                            }
+                        } catch (e) {
+                            console.error('[solve] broadcast error:', e);
+                        }
+                    }
+
+                    // 2. Direct notification to overtaken friends
                     if (overtakenFriends && overtakenFriends.length > 0) {
-                        const { data: solverProfile } = await supabaseAdmin.from('profiles').select('full_name, avatar_url, username').eq('id', userId).single();
-                        const solverName = solverProfile?.full_name || 'Your friend';
+                        if (!solverProfileData) {
+                            const { data: sp } = await supabaseAdmin.from('profiles').select('full_name, avatar_url, username').eq('id', userId).single();
+                            solverProfileData = sp;
+                        }
+                        const solverName = solverProfileData?.full_name || 'Your friend';
 
                         // Tell the frontend we surpassed someone! (20% chance to avoid spam)
                         if (Math.random() < 0.2) {
@@ -600,48 +648,6 @@ export async function POST(req: Request) {
                                 type: 'surpassed',
                                 target: overtakenFriends[0].full_name?.split(' ')[0] || 'a friend'
                             };
-                        }
-
-                        // Broadcast to ALL followers that we climbed the ranks or leveled up or got promoted!
-                        const oldLeague = LEAGUES.findIndex(l => currentMonthlyPts >= l.min && currentMonthlyPts <= l.max);
-                        const newLeague = LEAGUES.findIndex(l => newMonthlyPts >= l.min && newMonthlyPts <= l.max);
-                        const promotedInLeague = newLeague > oldLeague && oldLeague !== -1;
-                        
-                        if (leveledUp || promotedInLeague || (overtakenFriends && overtakenFriends.length > 0)) {
-                            try {
-                                const { data: followerRows } = await supabaseAdmin.from('follows').select('follower_id').eq('following_id', userId);
-                                if (followerRows && followerRows.length > 0) {
-                                    const shortName = solverProfile?.full_name?.split(' ')[0] || 'Your friend';
-                                    let bTitle = '🏆 Milestone Reached!';
-                                    let bBody = `${shortName} just hit a new milestone!`;
-                                    
-                                    if (promotedInLeague) {
-                                        bTitle = '⚔️ League Promotion!';
-                                        bBody = `${shortName} just advanced to the ${LEAGUES[newLeague]?.name} League!`;
-                                    } else if (overtakenFriends && overtakenFriends.length > 0) {
-                                        bTitle = '🚀 Moving Up!';
-                                        bBody = `Your friend ${shortName} just climbed the leaderboard!`;
-                                    } else if (leveledUp) {
-                                        bTitle = '📈 Level Up Alert!';
-                                        bBody = `${shortName} just reached Level ${newLevel}! Can you beat them?`;
-                                    }
-
-                                    await Promise.allSettled(followerRows.map((f: any) =>
-                                        createNotification({
-                                            userId: f.follower_id,
-                                            type: 'friend_milestone',
-                                            title: bTitle,
-                                            body: bBody,
-                                            href: `/user/${solverProfile?.username ? encodeURIComponent(solverProfile.username) : userId}`,
-                                            actorId: userId,
-                                            actorName: solverProfile?.full_name || 'Friend',
-                                            actorAvatar: solverProfile?.avatar_url,
-                                        })
-                                    ));
-                                }
-                            } catch (e) {
-                                console.error('[solve] broadcast error:', e);
-                            }
                         }
 
                         // Original logic to notify the exact person we overtook
@@ -654,7 +660,7 @@ export async function POST(req: Request) {
                                 href: '/league',
                                 actorId: userId,
                                 actorName: solverName,
-                                actorAvatar: solverProfile?.avatar_url,
+                                actorAvatar: solverProfileData?.avatar_url,
                             })
                         ));
                     } else {
