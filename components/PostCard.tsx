@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Clock, User, MoreVertical, Trash2, X, ArrowLeft, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
@@ -628,6 +628,21 @@ export default function PostCard({
                                 </>
                             )}
                         </div>
+                    )}
+
+                    {/* Post Document (Notes) */}
+                    {post.document_url && (
+                        <Link href={`/notes/${post.id}`} className="block mb-3 sm:mb-4">
+                            <div className="flex items-center gap-4 p-4 rounded-2xl border border-rose-200 dark:border-rose-800/40 bg-rose-50/50 dark:bg-rose-900/10 hover:bg-rose-100/50 dark:hover:bg-rose-900/20 transition-colors shadow-sm group">
+                                <div className="w-12 h-12 rounded-xl bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform">
+                                    <FileText className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">Note Document</h4>
+                                    <p className="text-xs text-rose-500 font-bold mt-0.5">Click to view & annotate PDF</p>
+                                </div>
+                            </div>
+                        </Link>
                     )}
 
                     {/* Link Preview (SEO metadata) */}

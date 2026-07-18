@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
 
         // 2. Fetch posts - Mixed 50/50 Recent & Trending
         const cachedPostsData = await (async () => {
-            const selectFields = 'id, author_id, content, image_url, image_urls, video_url, video_thumbnail, likes_count, comments_count, created_at, post_likes ( user_id ), repost_id';
+            const selectFields = 'id, author_id, content, image_url, image_urls, video_url, video_thumbnail, document_url, likes_count, comments_count, created_at, post_likes ( user_id ), repost_id';
             
             let recentQuery = supabaseAdmin
                 .from('posts')
@@ -280,10 +280,10 @@ export async function POST(req: NextRequest) {
         const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
         if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { content, imageUrl, imageUrls, videoUrl, videoThumbnail, repost_id } = await req.json();
+        const { content, imageUrl, imageUrls, videoUrl, videoThumbnail, repost_id, documentUrl } = await req.json();
 
-        if (!content?.trim() && !videoUrl && !repost_id) {
-            return NextResponse.json({ error: 'Post must contain text, a video, or be a repost.' }, { status: 400 });
+        if (!content?.trim() && !videoUrl && !repost_id && !documentUrl) {
+            return NextResponse.json({ error: 'Post must contain text, a video, a document, or be a repost.' }, { status: 400 });
         }
 
         const { data: post, error } = await supabaseAdmin
@@ -295,6 +295,7 @@ export async function POST(req: NextRequest) {
                 image_urls: imageUrls || [],
                 video_url: videoUrl || null,
                 video_thumbnail: videoThumbnail || null,
+                document_url: documentUrl || null,
                 repost_id: repost_id || null,
             })
             .select()

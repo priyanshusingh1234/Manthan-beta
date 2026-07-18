@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import PostCard from '@/components/PostCard';
 import SuggestedUsersCard from '@/components/SuggestedUsersCard';
-import { ImageIcon, X, Sparkles, User, Send, Video, Loader2, ArrowUp } from 'lucide-react';
+import { ImageIcon, X, Sparkles, User, Send, Video, Loader2, ArrowUp, FileText } from 'lucide-react';
 import Image from 'next/image';
 import { compressImage } from '@/utils/compressImage';
 import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL } from '@/lib/uploadLimits';
@@ -50,6 +50,8 @@ function SocialFeedContent() {
     const [videoFile, setVideoFile] = useState<File | null>(null);
     const [videoPreview, setVideoPreview] = useState<string | null>(null);
     const [videoUploadProgress, setVideoUploadProgress] = useState(0); // 0-100
+    // Document state
+    const [documentFile, setDocumentFile] = useState<File | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [postError, setPostError] = useState('');
     const [focused, setFocused] = useState(false);
@@ -59,9 +61,10 @@ function SocialFeedContent() {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
+    const documentInputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
 
-    const CATEGORIES = ['education', 'lifestyle', 'news', 'funny', 'general'];
+    const CATEGORIES = ['education', 'lifestyle', 'news', 'funny', 'notes', 'general'];
     const [selectedCategory, setSelectedCategory] = useState<string>('general');
 
 
@@ -416,6 +419,33 @@ function SocialFeedContent() {
         setVideoUploadProgress(0);
     };
 
+    // ── Document handling ───────────────────────────────────────────────────
+    const handleDocumentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.type !== 'application/pdf') { setPostError('Please select a PDF file.'); return; }
+        if (file.size > 20 * 1024 * 1024) { setPostError('Document exceeds 20MB.'); return; }
+
+        setPostError('');
+        setDocumentFile(file);
+        setSelectedCategory('notes');
+
+        // Clear images and videos
+        imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
+        setImageFiles([]);
+        setImagePreviews([]);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        removeVideo();
+        if (documentInputRef.current) documentInputRef.current.value = '';
+    };
+
+    const removeDocument = () => {
+        setDocumentFile(null);
+        if (documentInputRef.current) documentInputRef.current.value = '';
+        setSelectedCategory('general');
+    };
+
     const uploadVideoToCloudinary = async (token: string): Promise<{ videoUrl: string; thumbnailUrl: string }> => {
         if (!videoFile) throw new Error('No video file');
 
@@ -491,7 +521,7 @@ function SocialFeedContent() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!content.trim() && imageFiles.length === 0 && !videoFile) return;
+        if (!content.trim() && imageFiles.length === 0 && !videoFile && !documentFile) return;
         if (!session) return;
         setSubmitting(true);
         setPostError('');
@@ -500,6 +530,7 @@ function SocialFeedContent() {
             let imageUrls: string[] = [];
             let videoUrl = null;
             let videoThumbnail = null;
+            let documentUrl = null;
 
             // Upload images if present
             if (imageFiles.length > 0) {
@@ -538,7 +569,24 @@ function SocialFeedContent() {
                 videoThumbnail = result.thumbnailUrl;
             }
 
-            const finalContent = (content.trim() + (videoFile && selectedCategory !== 'general' ? ` #${selectedCategory}` : '')).trim();
+            // Upload document if present
+            if (documentFile) {
+                const form = new FormData();
+                form.append('file', documentFile, `note-${Date.now()}.pdf`);
+                const up = await fetch('/api/posts/upload', {
+                    method: 'POST',
+                    headers: { Authorization: 'Bearer ' + session.access_token },
+                    body: form,
+                });
+                if (!up.ok) {
+                    const upData = await up.json().catch(() => ({}));
+                    throw new Error(upData.error || `Upload failed (${up.status})`);
+                }
+                const upData = await up.json();
+                documentUrl = upData.url;
+            }
+
+            const finalContent = (content.trim() + ((videoFile || documentFile) && selectedCategory !== 'general' ? ` #${selectedCategory}` : '')).trim();
 
             const res = await fetch('/api/posts', {
                 method: 'POST',
@@ -546,7 +594,7 @@ function SocialFeedContent() {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${session.access_token}`,
                 },
-                body: JSON.stringify({ content: finalContent, imageUrl, imageUrls, videoUrl, videoThumbnail }),
+                body: JSON.stringify({ content: finalContent, imageUrl, imageUrls, videoUrl, videoThumbnail, documentUrl }),
             });
             if (!res.ok) throw new Error((await res.json()).error || 'Failed');
             const newPostRaw = await res.json();
@@ -562,6 +610,7 @@ function SocialFeedContent() {
                 image_urls: imageUrls,
                 video_url: videoUrl,
                 video_thumbnail: videoThumbnail,
+                document_url: documentUrl,
                 likes_count: 0,
                 comments_count: 0,
                 created_at: newPostRaw.created_at || new Date().toISOString(),
@@ -584,6 +633,7 @@ function SocialFeedContent() {
             setImagePreviews([]);
             if (fileInputRef.current) fileInputRef.current.value = '';
             removeVideo();
+            removeDocument();
             setSelectedCategory('general');
             setFocused(false);
             if (textareaRef.current) textareaRef.current.style.height = 'auto';
@@ -772,10 +822,10 @@ function SocialFeedContent() {
                                     </div>
                                 )}
                                 
-                                {/* Category Selection for Video Clips */}
-                                {videoPreview && !submitting && (
+                                {/* Category Selection for Video Clips or Documents */}
+                                {(videoPreview || documentFile) && !submitting && (
                                     <div className="mx-4 mb-3">
-                                        <p className="text-xs font-bold text-slate-500 mb-2">Category for this clip:</p>
+                                        <p className="text-xs font-bold text-slate-500 mb-2">Category for this post:</p>
                                         <div className="flex flex-wrap gap-2">
                                             {CATEGORIES.map(cat => (
                                                 <button
@@ -792,6 +842,29 @@ function SocialFeedContent() {
                                                 </button>
                                             ))}
                                         </div>
+                                    </div>
+                                )}
+
+                                {/* Document Preview */}
+                                {documentFile && (
+                                    <div className="mx-4 mb-3 p-3 rounded-2xl border border-rose-200 dark:border-rose-800/40 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <div className="w-10 h-10 shrink-0 rounded-xl bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-rose-500">
+                                                <FileText className="w-5 h-5" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{documentFile.name}</p>
+                                                <p className="text-xs text-slate-500 font-medium">{(documentFile.size / 1024 / 1024).toFixed(2)} MB PDF</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={removeDocument}
+                                            disabled={submitting}
+                                            className="p-2 ml-2 bg-slate-200 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-500/20 hover:text-rose-600 dark:hover:text-rose-400 text-slate-500 rounded-full transition-colors"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 )}
 
@@ -821,11 +894,23 @@ function SocialFeedContent() {
                                             <button
                                                 type="button"
                                                 onClick={() => videoInputRef.current?.click()}
-                                                disabled={submitting || imageFiles.length > 0}
+                                                disabled={submitting || imageFiles.length > 0 || !!documentFile}
                                                 className="p-2 rounded-full text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors disabled:opacity-40"
                                                 title="Add 30s clip"
                                             >
                                                 <Video className="w-5 h-5" />
+                                            </button>
+
+                                            {/* Document (Notes) attach */}
+                                            <input ref={documentInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleDocumentChange} aria-label="Upload PDF note" />
+                                            <button
+                                                type="button"
+                                                onClick={() => documentInputRef.current?.click()}
+                                                disabled={submitting || imageFiles.length > 0 || !!videoFile}
+                                                className="p-2 rounded-full text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors disabled:opacity-40"
+                                                title="Upload PDF Notes"
+                                            >
+                                                <FileText className="w-5 h-5" />
                                             </button>
                                         </div>
 
