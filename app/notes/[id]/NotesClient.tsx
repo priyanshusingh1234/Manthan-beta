@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 import { ArrowLeft, ChevronLeft, ChevronRight, Pen, Eraser, MousePointer2, ZoomIn, ZoomOut, Save, Share2, Loader2, Undo } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import getStroke from 'perfect-freehand';
-import Topbar from '@/components/Topbar';
+import Header from '@/components/Header';
 import DesktopSidebar from '@/components/DesktopSidebar';
 
 // Initialize PDF.js worker
@@ -206,7 +206,7 @@ export default function NotesClient({ post }: { post: any }) {
             <div className="flex-1 flex flex-col min-w-0 h-full relative">
                 {/* Mobile Topbar */}
                 <div className="lg:hidden shrink-0 border-b border-slate-800 bg-slate-950">
-                    <Topbar />
+                    <Header />
                 </div>
 
                 {/* Toolbar */}
