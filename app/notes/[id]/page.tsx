@@ -53,15 +53,16 @@ export async function generateMetadata({ params }: Props): Promise<any> {
 }
 
 export default async function NotePage({ params }: Props) {
-    const { data: post } = await supabaseAdmin
+    const { data: post, error } = await supabaseAdmin
         .from('posts')
         .select(`
             *,
-            post_likes ( user_id ),
-            author:profiles!posts_author_id_fkey ( id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics )
+            post_likes ( user_id )
         `)
         .eq('id', params.id)
         .maybeSingle();
+
+    if (error) console.error("NotePage fetch error:", error);
 
     if (!post || !post.document_url) {
         return (
@@ -77,19 +78,27 @@ export default async function NotePage({ params }: Props) {
         );
     }
 
-    // Format author object for client
-    const author = Array.isArray(post.author) ? post.author[0] : post.author;
-    const authorData = author ? {
-        id: author.id,
-        name: author.full_name || 'Anonymous',
-        username: author.username,
-        avatar_url: author.avatar_url,
-        school: author.school,
-        isTeacher: author.is_teacher,
-        totalPoints: author.total_points,
-        is_ghost: author.is_ghost,
-        cosmetics: author.cosmetics
-    } : null;
+    // Fetch author profile separately to avoid FK join errors
+    let authorData = null;
+    const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, username, avatar_url, school, is_teacher, total_points, is_ghost, cosmetics')
+        .eq('id', post.author_id)
+        .maybeSingle();
+
+    if (profile) {
+        authorData = {
+            id: profile.id,
+            name: profile.full_name || 'Anonymous',
+            username: profile.username,
+            avatar_url: profile.avatar_url,
+            school: profile.school,
+            isTeacher: profile.is_teacher,
+            totalPoints: profile.total_points,
+            is_ghost: profile.is_ghost,
+            cosmetics: profile.cosmetics
+        };
+    }
 
     const formattedPost = {
         ...post,
