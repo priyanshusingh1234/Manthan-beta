@@ -220,14 +220,24 @@ export default function NotesScreen() {
     );
   }
 
+  const rawPdfUrl = post.document_url || post.documentUrl;
+  const pdfUri = rawPdfUrl ? encodeURI(rawPdfUrl) : '';
+
   return (
     <View className="flex-1 bg-[#f8fafc] dark:bg-[#09090b]">
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       
       <View className="absolute inset-0 z-0 pt-20">
-        <Pdf
-          trustAllCerts={false}
-          source={{ uri: post.document_url || post.documentUrl, cache: true }}
+        {!pdfUri ? (
+          <View className="flex-1 items-center justify-center">
+            <Text className="text-slate-500 font-bold tracking-widest text-center">
+              No Document URL found.{"\n"}Make sure Vercel finished deploying!
+            </Text>
+          </View>
+        ) : (
+          <Pdf
+            trustAllCerts={false}
+            source={{ uri: pdfUri, cache: false }}
           onLoadComplete={(numberOfPages) => setNumPages(numberOfPages)}
           onPageChanged={(page) => setPageNumber(page)}
           onError={(error) => {
@@ -246,6 +256,7 @@ export default function NotesScreen() {
             backgroundColor: 'transparent'
           }}
         />
+        )}
 
         {/* Drawing Overlay inside the exact container */}
         <View 
