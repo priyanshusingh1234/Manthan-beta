@@ -90,6 +90,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             image_urls: post.image_urls || [],
             video_url: post.video_url || null,
             video_thumbnail: post.video_thumbnail || null,
+            document_url: post.document_url || null,
             likes_count: likesCount,
             comments_count: post.comments_count || 0,
             created_at: post.created_at,

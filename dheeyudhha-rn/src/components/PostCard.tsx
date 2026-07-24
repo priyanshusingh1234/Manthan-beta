@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Image, Pressable, ScrollView, Dimensions, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
-import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles, Trash2 } from 'lucide-react-native';
+import { Heart, MessageCircle, Share2, MoreVertical, User, Sparkles, Trash2, FileText } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
@@ -75,6 +75,7 @@ export default React.memo(function PostCard({
   const images = Array.isArray(post?.image_urls) && post.image_urls.length > 0 
     ? post.image_urls 
     : (post?.image_url ? [post.image_url] : []);
+  const documentUrl = post?.document_url || post?.documentUrl || null;
 
   const [isLiked, setIsLiked] = useState<boolean>(!!post?.is_liked_by_me);
   const [likesCount, setLikesCount] = useState<number>(Number(post?.likes_count) || 0);
@@ -300,6 +301,23 @@ export default React.memo(function PostCard({
             </View>
           )}
         </View>
+      ) : null}
+
+      {/* Note Document UI */}
+      {documentUrl ? (
+        <TouchableOpacity 
+          activeOpacity={0.7}
+          onPress={() => router.push(`/notes/${post.id}` as any)}
+          className="flex-row items-center p-4 rounded-2xl mx-4 mb-3 border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-900/10"
+        >
+          <View className="w-12 h-12 rounded-xl bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center mr-4">
+            <FileText size={24} color="#f43f5e" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-sm font-bold text-slate-900 dark:text-white" numberOfLines={1}>Note Document</Text>
+            <Text className="text-xs text-rose-500 font-bold mt-0.5">Tap to view & annotate PDF</Text>
+          </View>
+        </TouchableOpacity>
       ) : null}
 
       {/* Render Reposted Content */}
