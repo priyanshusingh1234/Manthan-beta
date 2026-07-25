@@ -71,8 +71,8 @@ export async function GET(req: NextRequest) {
             }
 
             if (category === 'educational') {
-                recentQuery = recentQuery.ilike('content', '%#educational%');
-                trendingQuery = trendingQuery.ilike('content', '%#educational%');
+                recentQuery = recentQuery.or('content.ilike.%#educational%,document_url.not.is.null');
+                trendingQuery = trendingQuery.or('content.ilike.%#educational%,document_url.not.is.null');
                 
                 if (userData?.grade) {
                     const gradeTag = `%#Class${userData.grade.replace(/\s+/g, '')}%`;
@@ -205,6 +205,23 @@ export async function GET(req: NextRequest) {
         const userSchool = userData?.school || null;
         const followingIds = userData?.followingIds || [];
 
+        // ── Class-Based Note Filtering ───────────────
+        if (userGrade) {
+            const userGradeStr = userGrade.replace(/\s+/g, '');
+            const expectedTag = `#Class${userGradeStr}`;
+            
+            cachedPostsData = cachedPostsData.filter(p => {
+                if (p.document_url) {
+                    // It's a note. We enforce that it MUST match the user's class.
+                    const contentStr = (p.content || '').toLowerCase();
+                    const hasTag = contentStr.includes(expectedTag.toLowerCase());
+                    const authorMatch = p.author?.grade === userGrade;
+                    return hasTag || authorMatch;
+                }
+                return true; // Not a note, let it through
+            });
+        }
+
         // ── Personalize and Score ───────────────
         const enriched = cachedPostsData.map(p => {
             const postObj = {
@@ -215,6 +232,7 @@ export async function GET(req: NextRequest) {
                 image_urls: p.image_urls,
                 video_url: p.video_url,
                 video_thumbnail: p.video_thumbnail,
+                document_url: p.document_url,
                 likes_count: p.likes_count,
                 comments_count: p.comments_count,
                 created_at: p.created_at,
@@ -237,6 +255,12 @@ export async function GET(req: NextRequest) {
                 if (followingIds.includes(p.author_id)) score *= 2.5;
                 if (userSchool && p.author.school === userSchool) score += 50;
                 if (userGrade && p.author.grade === userGrade) score += 30; // Assuming author.grade is available if needed
+                
+                // Massive priority boost for Notes
+                if (p.document_url) {
+                    score += 500;
+                }
+
                 score += Math.floor((p.author.totalPoints || 0) / 100);
             }
             postObj._feedScore = score;
@@ -244,6 +268,8 @@ export async function GET(req: NextRequest) {
             // Assign tags based on algorithm
             if (p.is_pinned) {
                 postObj._feedLabel = '📌 Pinned by Admin';
+            } else if (p.document_url) {
+                postObj._feedLabel = '📚 Top Educational Note';
             } else if (followingIds.includes(p.author_id) || (userSchool && p.author.school === userSchool)) {
                 postObj._feedLabel = followingIds.includes(p.author_id) ? '👤 Post from Peer You Follow' : '🏫 Trending at Your School';
             } else if (score > 60) {
