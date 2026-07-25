@@ -71,8 +71,9 @@ export async function GET(req: NextRequest) {
             }
 
             if (category === 'educational') {
-                recentQuery = recentQuery.or('content.ilike.%#educational%,document_url.not.is.null');
-                trendingQuery = trendingQuery.or('content.ilike.%#educational%,document_url.not.is.null');
+                // Safely use .ilike.%/% because the JS client parser struggles with .not.is.null inside an .or() string
+                recentQuery = recentQuery.or('content.ilike.%#educational%,document_url.ilike.%/%');
+                trendingQuery = trendingQuery.or('content.ilike.%#educational%,document_url.ilike.%/%');
                 
                 if (userData?.grade) {
                     const gradeTag = `%#Class${userData.grade.replace(/\s+/g, '')}%`;

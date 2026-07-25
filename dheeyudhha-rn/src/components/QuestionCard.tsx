@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { Play, Clock, Users, Zap, Swords, Award, CheckCircle } from 'lucide-react-native';
+import { Play, Clock, Users, Zap, Swords, Award, CheckCircle, FileText } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import DuelChallengeModal from './DuelChallengeModal';
@@ -65,6 +65,7 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
 
   const showDuelButton = currentUserId && !isTeacher && Array.isArray(q.options) && q.options.length > 0 && !q.hasAttempted;
   const isVip = q?.is_vip;
+  const documentUrl = q?.document_url || q?.documentUrl || null;
 
   return (
     <>
@@ -148,6 +149,23 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
           ) : (
              <View className="mb-2" />
           )}
+
+          {/* Note Document UI */}
+          {documentUrl ? (
+            <TouchableOpacity 
+              activeOpacity={0.7}
+              onPress={() => router.push(`/notes/${q.id}` as any)}
+              className="flex-row items-center p-3 rounded-xl mb-4 border border-rose-200 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-900/10"
+            >
+              <View className="w-10 h-10 rounded-lg bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center mr-3">
+                <FileText size={20} color="#f43f5e" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-bold text-slate-900 dark:text-white" numberOfLines={1}>Educational Note</Text>
+                <Text className="text-xs text-rose-500 font-bold mt-0.5">Tap to view PDF</Text>
+              </View>
+            </TouchableOpacity>
+          ) : null}
 
           {/* Media Attachment */}
           {imageUrl && (
