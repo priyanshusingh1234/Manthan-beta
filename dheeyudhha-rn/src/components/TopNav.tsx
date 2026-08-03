@@ -6,6 +6,8 @@ import { Flame, Trophy, BookOpen, Swords, Zap, Search, PlaySquare, Compass, Shie
 import NotificationBell from '@/components/ui/NotificationBell';
 import { supabase } from '@/lib/supabaseClient';
 import { useColorScheme } from 'nativewind';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { useScrollContext } from '@/context/ScrollContext';
 
 const NAV_LINKS = [
   { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
@@ -28,6 +30,15 @@ export default function TopNav() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isTeacher, setIsTeacher] = useState<boolean>(false);
   const { colorScheme } = useColorScheme();
+  
+  const isScrollableScreen = pathname === '/' || pathname === '/posts';
+
+  const { headerTranslation } = useScrollContext();
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: isScrollableScreen ? headerTranslation.value : 0 }],
+    };
+  });
 
   // Safe area padding for the status bar
   const paddingTop = Platform.OS === 'android' ? Math.max(insets.top, 16) : insets.top;
@@ -52,9 +63,13 @@ export default function TopNav() {
   }, []);
 
   return (
-    <View
+    <Animated.View
       className="bg-white/95 dark:bg-slate-950/95 border-b border-slate-100 dark:border-slate-800 z-50 pb-3"
-      style={{ paddingTop }}
+      style={[
+        { paddingTop },
+        isScrollableScreen ? { position: 'absolute', top: 0, left: 0, right: 0 } : {},
+        animatedStyle
+      ]}
     >
       {/* Top Row: Title & Actions */}
       <View className="flex-row items-center justify-between px-4 mt-2">
@@ -110,6 +125,6 @@ export default function TopNav() {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </Animated.View>
   );
 }

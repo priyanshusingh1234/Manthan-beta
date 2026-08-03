@@ -6,12 +6,12 @@ export const dynamic = 'force-dynamic';
 
 // ── The Puzzle ──────────────────────────────────────────────────────────────
 const PUZZLE = {
-  id: 'snail-well-v1',
-  title: 'The Snail in the Well 🐌',
-  question: `A snail is at the bottom of a 20-foot well. Each day it climbs up 5 feet, but each night it slides back down 4 feet. How many days will it take for the snail to reach the top?`,
-  hint: `The snail doesn't slide back down on the day it finally reaches the top!`,
-  answer: 16,
-  reward_correct: 10,
+  id: 'lily-pad-v1',
+  title: 'The Lily Pad Problem 🪷',
+  question: `There is a lily pad in a pond. Every day, the lily pad doubles in size. If it takes 48 days for the lily pad to cover the entire pond, how many days would it take to cover half of the pond?`,
+  hint: `If it doubles every day, what was its size the day before it covered the whole pond?`,
+  answer: 47,
+  reward_correct: 15,
   reward_wrong: 0,
 };
 
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
         .single();
 
       const currentCosmetics: string[] = Array.isArray(profile?.cosmetics) ? profile.cosmetics : [];
-      const newTitle = 'puzzle_title:Slow & Steady';
+      const newTitle = 'puzzle_title:Lily Pad Logic';
 
       // Add title only if not already owned
       if (!currentCosmetics.includes(newTitle)) {

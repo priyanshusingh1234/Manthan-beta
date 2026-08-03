@@ -14,8 +14,10 @@ import { Home, MessageSquare, Trophy, MessageCircle, Settings, Flame, Play } fro
 import { supabase } from '@/lib/supabaseClient';
 import StreakCompletedOverlay from './StreakCompletedOverlay';
 import LeaderboardToastOverlay from './LeaderboardToastOverlay';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useColorScheme } from 'nativewind';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { useScrollContext } from '@/context/ScrollContext';
 
 const TAB_HEIGHT = 62;
 const CENTER_RISE = 20;
@@ -37,6 +39,16 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
+  const pathname = usePathname();
+  
+  const isScrollableScreen = pathname === '/' || pathname === '/posts';
+  
+  const { footerTranslation } = useScrollContext();
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: isScrollableScreen ? footerTranslation.value : 0 }],
+    };
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -147,9 +159,14 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   if (activeRouteName === 'clips') return null;
 
   return (
-    <View
+    <Animated.View
       pointerEvents="box-none"
-      style={[styles.outerWrapper, { paddingBottom: bottomPad }]}
+      style={[
+        styles.outerWrapper, 
+        { paddingBottom: bottomPad },
+        isScrollableScreen ? { position: 'absolute', bottom: 0, left: 0, right: 0 } : {},
+        animatedStyle
+      ]}
     >
       <View style={[styles.glassBackground, { backgroundColor: glassBgColor }]} />
       <View style={[styles.borderTop, { backgroundColor: borderTopColor }]} />
@@ -223,7 +240,7 @@ export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         <StreakCompletedOverlay />
         <LeaderboardToastOverlay />
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

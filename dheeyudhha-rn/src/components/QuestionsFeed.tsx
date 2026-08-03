@@ -8,6 +8,8 @@ import {
   RefreshControl,
   FlatList,
 } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useScrollContext } from '@/context/ScrollContext';
 import { fetchFeed } from '@/lib/feedService';
 import QuestionCard from './QuestionCard';
 import PostCard from './PostCard';
@@ -41,6 +43,39 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [subjectFilter, setSubjectFilter] = useState('');
+  
+  // Reanimated Scroll Context
+  let headerTranslation: any, footerTranslation: any;
+  try {
+    const context = useScrollContext();
+    headerTranslation = context.headerTranslation;
+    footerTranslation = context.footerTranslation;
+  } catch (e) {
+    headerTranslation = useSharedValue(0);
+    footerTranslation = useSharedValue(0);
+  }
+
+  const lastContentOffset = useSharedValue(0);
+  const isScrolling = useSharedValue(false);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      if (lastContentOffset.value > event.contentOffset.y && isScrolling.value) {
+        headerTranslation.value = withTiming(0, { duration: 250 });
+        footerTranslation.value = withTiming(0, { duration: 250 });
+      } else if (lastContentOffset.value < event.contentOffset.y && isScrolling.value && event.contentOffset.y > 50) {
+        headerTranslation.value = withTiming(-150, { duration: 250 }); 
+        footerTranslation.value = withTiming(100, { duration: 250 });  
+      }
+      lastContentOffset.value = event.contentOffset.y;
+    },
+    onBeginDrag: () => {
+      isScrolling.value = true;
+    },
+    onEndDrag: () => {
+      isScrolling.value = false;
+    }
+  });
   const [chapterFilter, setChapterFilter] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -266,8 +301,10 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
           <FeedSkeleton />
         </ScrollView>
       ) : (
-        <FlatList
+        <Animated.FlatList
           data={visibleData}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           ListHeaderComponent={
@@ -325,7 +362,7 @@ export default function QuestionsFeed({ ListHeaderComponent }: { ListHeaderCompo
               </View>
             ) : null
           }
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingTop: 100, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl

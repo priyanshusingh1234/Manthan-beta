@@ -554,8 +554,17 @@ export default function ProfileScreen() {
                   {profile.cosmetics.filter((c: any) => typeof c === 'string' && c.startsWith('equipped_title_')).map((c: string, idx: number) => {
                     const titleName = c.split(':')[1];
                     const isCrusher = titleName === 'The Crusher';
+                    const isLilyPad = titleName === 'Lily Pad Logic';
+                    
                     if (isCrusher) {
                       return <AnimatedCrusherPill key={idx} />;
+                    }
+                    if (isLilyPad) {
+                      return (
+                        <View key={idx} className="bg-yellow-100 dark:bg-yellow-900/40 px-3 py-1 rounded-full border border-yellow-400 dark:border-yellow-600 shadow-sm" style={{ shadowColor: '#facc15', shadowOpacity: 0.8, shadowRadius: 8, elevation: 5 }}>
+                          <Text className="text-[10px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-400">{titleName} 🪷</Text>
+                        </View>
+                      );
                     }
                     return (
                       <View key={idx} className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">

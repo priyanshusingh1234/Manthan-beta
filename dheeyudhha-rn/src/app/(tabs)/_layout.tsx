@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import Logo from '@/components/ui/Logo';
 import NotificationBell from '@/components/ui/NotificationBell';
 import CustomTabBar from '@/components/CustomTabBar';
+import { ScrollProvider } from '@/context/ScrollContext';
 
 import TopNav from '@/components/TopNav';
 import DailyEggDrop from '@/components/DailyEggDrop';
@@ -11,7 +12,7 @@ import CompleteProfileModal from '@/components/CompleteProfileModal';
 
 export default function TabsLayout() {
   return (
-    <>
+    <ScrollProvider>
       <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
@@ -19,8 +20,8 @@ export default function TabsLayout() {
         sceneStyle: { paddingBottom: 85 },
       }}
     >
-      <Tabs.Screen name="index"    options={{ title: 'Home' }} />
-      <Tabs.Screen name="posts"    options={{ title: 'Community' }} />
+      <Tabs.Screen name="index"    options={{ title: 'Home', sceneStyle: { paddingBottom: 0 } }} />
+      <Tabs.Screen name="posts"    options={{ title: 'Community', sceneStyle: { paddingBottom: 0 } }} />
       <Tabs.Screen name="clips"       options={{ title: 'Clips', headerShown: false, sceneStyle: { paddingBottom: 0 } }} />
       <Tabs.Screen name="chat"     options={{ title: 'Chat' }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
@@ -32,6 +33,6 @@ export default function TabsLayout() {
     </Tabs>
       <DailyEggDrop />
       <CompleteProfileModal />
-    </>
+    </ScrollProvider>
   );
 }

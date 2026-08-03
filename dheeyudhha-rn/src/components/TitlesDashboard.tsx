@@ -154,6 +154,16 @@ export default function TitlesDashboard({ visible, onClose, currentCosmetics, on
     });
   }
 
+  // Add 'Lily Pad Logic' if it's not already in the list
+  if (!uniqueTitles.some(t => t.titleName === 'Lily Pad Logic')) {
+    uniqueTitles.push({
+      titleName: 'Lily Pad Logic',
+      unlocked: false,
+      source: 'Daily Puzzle 🧩',
+      isPuzzle: true,
+    });
+  }
+
   const unlockedCount = uniqueTitles.filter(t => t.unlocked).length;
 
   return (
@@ -210,10 +220,18 @@ export default function TitlesDashboard({ visible, onClose, currentCosmetics, on
                   titleTextClass += "text-red-700 dark:text-red-400";
                   subtitleClass += "text-red-600/80 dark:text-red-300/80";
                 } else if (item.unlocked) {
-                  containerClass += "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 opacity-100";
-                  iconBgClass += "bg-slate-100 dark:bg-slate-700";
-                  titleTextClass += "text-slate-900 dark:text-white";
-                  subtitleClass += "text-slate-500 dark:text-slate-400";
+                  const isLilyPad = item.titleName === 'Lily Pad Logic';
+                  if (isLilyPad && isSelected) {
+                    containerClass += "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/40 opacity-100";
+                    iconBgClass += "bg-yellow-500";
+                    titleTextClass += "text-yellow-700 dark:text-yellow-400";
+                    subtitleClass += "text-yellow-600/80 dark:text-yellow-300/80";
+                  } else {
+                    containerClass += "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 opacity-100";
+                    iconBgClass += "bg-slate-100 dark:bg-slate-700";
+                    titleTextClass += "text-slate-900 dark:text-white";
+                    subtitleClass += "text-slate-500 dark:text-slate-400";
+                  }
                 } else {
                   containerClass += "border-transparent bg-slate-100 dark:bg-slate-800/50 opacity-50";
                   iconBgClass += "bg-slate-200 dark:bg-slate-700";
