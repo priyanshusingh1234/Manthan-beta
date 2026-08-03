@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
         }
 
         // 2. Fetch posts - Mixed 50/50 Recent & Trending
-        const cachedPostsData = await (async () => {
+        let cachedPostsData = await (async () => {
             const selectFields = 'id, author_id, content, image_url, image_urls, video_url, video_thumbnail, document_url, likes_count, comments_count, created_at, post_likes ( user_id ), repost_id';
             
             let recentQuery = supabaseAdmin
