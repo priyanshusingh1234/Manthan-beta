@@ -25,6 +25,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, { useAnimatedScrollHandler, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useScrollContext } from '@/context/ScrollContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -43,6 +45,32 @@ function VideoPreviewItem({ uri }: { uri: string }) {
 }
 
 export default function PostsScreen() {
+  const context = useScrollContext();
+  const headerTranslation = context.headerTranslation;
+  const footerTranslation = context.footerTranslation;
+
+  const lastContentOffset = useSharedValue(0);
+  const isScrolling = useSharedValue(false);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      if (lastContentOffset.value > event.contentOffset.y && isScrolling.value) {
+        headerTranslation.value = withTiming(0, { duration: 250 });
+        footerTranslation.value = withTiming(0, { duration: 250 });
+      } else if (lastContentOffset.value < event.contentOffset.y && isScrolling.value && event.contentOffset.y > 50) {
+        headerTranslation.value = withTiming(-150, { duration: 250 }); 
+        footerTranslation.value = withTiming(100, { duration: 250 });  
+      }
+      lastContentOffset.value = event.contentOffset.y;
+    },
+    onBeginDrag: () => {
+      isScrolling.value = true;
+    },
+    onEndDrag: () => {
+      isScrolling.value = false;
+    }
+  });
+
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -580,13 +608,15 @@ export default function PostsScreen() {
       className="flex-1 bg-white dark:bg-slate-950" 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <FlatList
+      <Animated.FlatList
         data={posts}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
         keyExtractor={(item) => String(item.id)}
         renderItem={renderPostItem}
         ListHeaderComponent={renderComposer()}
-        contentContainerStyle={{ paddingBottom: 100, paddingTop: 0 }}
+        contentContainerStyle={{ paddingBottom: 100, paddingTop: 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4f46e5']} tintColor={isDark ? '#4f46e5' : undefined} />
         }
