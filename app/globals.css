@@ -344,6 +344,11 @@ input, textarea {
   -webkit-user-select: text;
 }
 
+textarea {
+  position: relative;
+  z-index: 1;
+}
+
 /* Hide ALL scrollbars – feels native */
 * {
   scrollbar-width: none;
