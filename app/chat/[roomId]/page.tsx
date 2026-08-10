@@ -1581,8 +1581,8 @@ function ChatRoomContent() {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
               }}
               placeholder="Message..."
-              className="w-full bg-transparent text-[15px] text-slate-900 dark:text-white placeholder:text-slate-400 outline-none resize-none leading-[1.4]"
-              style={{ overflowY: 'hidden' }}
+              className="w-full bg-transparent text-[15px] !text-slate-900 dark:!text-white placeholder:text-slate-400 caret-slate-900 dark:caret-white outline-none resize-none leading-[1.4]"
+              style={{ overflowY: 'hidden', WebkitTextFillColor: 'currentColor', opacity: 1 }}
             />
           </div>
 
