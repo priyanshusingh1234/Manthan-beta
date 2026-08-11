@@ -164,6 +164,10 @@ export async function GET(req: NextRequest) {
                     .gte('created_at', daysAgo(30))
                     .order('created_at', { ascending: false })
                     .limit(60),
+                supabaseAdmin.from('posts').select('*, post_likes(user_id)')
+                    .not('document_url', 'is', null)
+                    .order('created_at', { ascending: false })
+                    .limit(10),
             ])
             : Promise.resolve(null);
 
@@ -411,8 +415,8 @@ export async function GET(req: NextRequest) {
 
         // Layer 7 — Posts (data already fetched in parallel)
         if (postsRaw) {
-            const [pinnedRes, recentRes] = postsRaw as any[];
-            const allRawPosts = [...(pinnedRes?.data || []), ...(recentRes?.data || [])];
+            const [pinnedRes, recentRes, notesRes] = postsRaw as any[];
+            const allRawPosts = [...(pinnedRes?.data || []), ...(recentRes?.data || []), ...(notesRes?.data || [])];
             const uniqueRawPosts = Array.from(new Map(allRawPosts.map(item => [item.id, item])).values());
 
             if (uniqueRawPosts.length > 0) {
@@ -441,6 +445,10 @@ export async function GET(req: NextRequest) {
 
                     if ((post as any).is_pinned) {
                         pool.push(post);
+                    } else if (post.document_url || (post as any).documentUrl) {
+                        post._feedLabel = '📝 Community Note';
+                        post._feedScore = 90;
+                        bucketA.push(post);
                     } else if (isFollowed || isSchoolmate) {
                         post._feedLabel = isFollowed ? '👤 Post from Peer You Follow' : '🏫 Trending at Your School';
                         post._feedScore = isFollowed ? 95 : 85;
@@ -466,7 +474,11 @@ export async function GET(req: NextRequest) {
                     const inPool = new Set(pool.filter(p => p.type === 'post').map(p => p.id));
                     for (const post of scoredPosts) {
                         if (!inPool.has(post.id) && !(post as any).is_pinned) {
-                            post._feedLabel = '💡 Community Post'; post._feedScore = 60; pool.push(post);
+                            if (post.document_url || (post as any).documentUrl) {
+                                post._feedLabel = '📝 Community Note'; post._feedScore = 65; pool.push(post);
+                            } else {
+                                post._feedLabel = '💡 Community Post'; post._feedScore = 60; pool.push(post);
+                            }
                         }
                     }
                 }
