@@ -431,6 +431,9 @@ export default function ChatRoomScreen() {
   const fetchMessages = useCallback(async (loadMore = false) => {
     if (loadMore) setLoadingMore(true);
     try {
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUserId = authData?.user?.id || user?.id;
+
       const currentLength = loadMore ? messages.length : 0;
       const { data: list, error } = await supabase
         .from('chat_messages')
@@ -456,8 +459,8 @@ export default function ChatRoomScreen() {
         setLoading(false);
       }
 
-      if (user?.id && list && !loadMore) {
-        const unreadIds = list.filter(m => !m.is_read && m.sender_id !== user.id).map(m => m.id);
+      if (currentUserId && list && !loadMore) {
+        const unreadIds = list.filter(m => !m.is_read && m.sender_id !== currentUserId).map(m => m.id);
         if (unreadIds.length > 0) {
           supabase.from('chat_messages').update({ is_read: true }).in('id', unreadIds).then();
         }
