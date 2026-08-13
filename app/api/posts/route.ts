@@ -180,6 +180,7 @@ export async function GET(req: NextRequest) {
                         image_urls: p.image_urls || [],
                         video_url: p.video_url || null,
                         video_thumbnail: p.video_thumbnail || null,
+                        document_url: p.document_url || null,
                         likes_count: likesCount,
                         comments_count: p.comments_count || 0,
                         created_at: p.created_at,
