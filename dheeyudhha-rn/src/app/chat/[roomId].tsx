@@ -42,6 +42,8 @@ import {
   Video,
   Plus,
   ArrowUp,
+  User,
+  ChevronRight,
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
 import BadgedName from '@/components/BadgedName';
@@ -397,6 +399,7 @@ export default function ChatRoomScreen() {
   // Modals
   const [contextMsg, setContextMsg] = useState<Message | null>(null);
   const [showContextModal, setShowContextModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<any>(null);
@@ -834,18 +837,20 @@ export default function ChatRoomScreen() {
               <ArrowLeft size={24} color="#6366f1" />
             </TouchableOpacity>
 
-            <TouchableOpacity className="h-[40px] w-[40px] rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden items-center justify-center ml-2">
-              {participant?.avatar_url ? (
-                <Image source={{ uri: participant.avatar_url }} style={{ width: '100%', height: '100%', position: 'absolute' }} contentFit="cover" />
-              ) : (
-                <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">{displayName[0]?.toUpperCase()}</Text>
-              )}
-            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowProfileModal(true)} className="flex-row items-center flex-1 active:opacity-70 ml-2">
+              <View className="h-[40px] w-[40px] rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden items-center justify-center shrink-0">
+                {participant?.avatar_url ? (
+                  <Image source={{ uri: participant.avatar_url }} style={{ width: '100%', height: '100%', position: 'absolute' }} contentFit="cover" />
+                ) : (
+                  <Text className="font-bold text-indigo-600 dark:text-indigo-400 text-lg">{displayName[0]?.toUpperCase()}</Text>
+                )}
+              </View>
 
-            <View className="flex-1 min-w-0 ml-3">
-              <BadgedName name={displayName} isTeacher={participant?.is_teacher} nameClassName="font-semibold text-[17px] text-slate-900 dark:text-white leading-tight truncate" />
-              {isOnline ? <Text className="text-[13px] text-[#8e8e93] font-medium mt-0.5">Online</Text> : <Text className="text-[13px] text-[#8e8e93] font-medium mt-0.5">Tap here for info</Text>}
-            </View>
+              <View className="flex-1 min-w-0 ml-3">
+                <BadgedName name={displayName} isTeacher={participant?.is_teacher} nameClassName="font-semibold text-[17px] text-slate-900 dark:text-white leading-tight truncate" />
+                {isOnline ? <Text className="text-[13px] text-[#8e8e93] font-medium mt-0.5">Online</Text> : <Text className="text-[13px] text-[#8e8e93] font-medium mt-0.5">Tap here for info</Text>}
+              </View>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity onPress={() => setShowHeaderMenu(true)} className="p-2 -mr-1 rounded-full active:bg-slate-100 dark:active:bg-slate-800">
@@ -1155,6 +1160,47 @@ export default function ChatRoomScreen() {
             </View>
           </View>
         )}
+
+      {/* ─── Profile Details Modal ─── */}
+      <Modal visible={showProfileModal} animationType="slide" transparent>
+        <View className="flex-1 justify-end bg-black/40">
+          <TouchableOpacity activeOpacity={1} className="absolute inset-0" onPress={() => setShowProfileModal(false)} />
+          <View className="bg-white dark:bg-slate-900 rounded-t-3xl p-6 pb-12 shadow-xl border-t border-slate-200/50 dark:border-slate-800">
+            <View className="items-center mb-6">
+              <View className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mb-6" />
+              <View className="w-24 h-24 rounded-full bg-indigo-100 dark:bg-indigo-900/30 items-center justify-center mb-4 overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
+                {participant?.avatar_url ? (
+                  <Image source={{ uri: participant.avatar_url }} style={{ width: '100%', height: '100%', position: 'absolute' }} contentFit="cover" />
+                ) : (
+                  <User size={40} color="#6366f1" />
+                )}
+              </View>
+              <BadgedName name={displayName} isTeacher={participant?.is_teacher} nameClassName="text-2xl font-black text-slate-900 dark:text-white" containerClassName="mb-1" />
+              <Text className="text-slate-500 dark:text-slate-400 font-medium">@{participant?.username || 'scholar'}</Text>
+            </View>
+
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              onPress={() => {
+                setShowProfileModal(false);
+                router.push(`/profiles/${participant?.user_id}` as any);
+              }}
+              className="bg-indigo-600 dark:bg-indigo-500 py-4 rounded-2xl shadow-md shadow-indigo-500/30 flex-row items-center justify-center mb-3"
+            >
+              <Text className="text-white font-bold text-lg mr-2">See Full Profile</Text>
+              <ChevronRight size={20} color="white" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              activeOpacity={0.7}
+              onPress={() => setShowProfileModal(false)}
+              className="py-3 items-center"
+            >
+              <Text className="text-slate-500 font-semibold text-[15px]">Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
