@@ -187,6 +187,16 @@ const ProfilePreviewModal = ({ isOpen, onClose, item, userProfile }: any) => {
                 <CheckCircle2 size={20} color="#6366f1" />
               </View>
               <Text className="text-indigo-500 font-medium">@{userProfile.username || 'student'}</Text>
+              
+              {item.id === 'title_tiranga' && (
+                <View className="flex-row justify-center mt-2">
+                  <View className="bg-orange-100 dark:bg-orange-900/30 px-3 py-1 rounded-full border border-green-500 shadow-sm" style={{ shadowColor: '#f97316', shadowOpacity: 0.5, shadowRadius: 5 }}>
+                    <Text className="text-orange-600 dark:text-orange-400 font-black text-xs tracking-wider">
+                      Tiranga 🇮🇳
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
             
             <View className="mt-6 flex-row items-center justify-center">
