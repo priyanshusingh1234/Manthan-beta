@@ -68,6 +68,8 @@ export default React.memo(function PostCard({
   const username = author.username || 'scholar';
   const avatarUrl = (author.avatar_url && !author.avatar_url.includes('googleusercontent.com')) ? author.avatar_url : null;
   const isTeacher = !!(author.isTeacher || author.is_teacher);
+  const cosmetics = author.cosmetics || [];
+  const hasTirangaTitle = Array.isArray(cosmetics) && cosmetics.includes('equipped_title_:Tiranga 🇮🇳');
   
   const content = post?.content || '';
   const videoUrl = post?.video_url || post?.videoUrl || null;
@@ -198,7 +200,7 @@ export default React.memo(function PostCard({
   };
 
   return (
-    <View className={`bg-white dark:bg-slate-950 py-4 border-b border-slate-200/50 dark:border-slate-800/50`}>
+    <View className={`bg-white dark:bg-slate-950 py-4 ${hasTirangaTitle ? 'border border-orange-500 mx-1 my-1.5 rounded-2xl shadow-sm' : 'border-b border-slate-200/50 dark:border-slate-800/50'}`}>
       
       {/* Header */}
       <View className="flex-row items-center mb-3 px-4">

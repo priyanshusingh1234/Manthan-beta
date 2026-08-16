@@ -26,7 +26,7 @@ const STORE_ITEMS: StoreItem[] = [
   {
     id: 'title_tiranga',
     name: 'Tiranga 🇮🇳',
-    description: 'Show your patriotism with a glowing Indian flag title on your profile.',
+    description: 'Show your patriotism with a glowing Indian flag title on your profile, and a special ORANGE BORDER around all your community posts!',
     type: 'title',
     price: 500,
   },
