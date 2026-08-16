@@ -119,8 +119,14 @@ export function normalizePost(p: FeedPost, profilesMap: Map<string, any>, curren
 export function calculatePostScore(post: FeedPost, followingIds: string[], userSchool: string | null, userGrade: string | null): number {
     if (post.is_pinned) return 1_000_000;
     let score = 100;
-    if (post.is_trending) score += 50000;
     const ageHours = (Date.now() - new Date(post.created_at).getTime()) / (1000 * 60 * 60);
+    
+    // Trending posts get a massive boost for the first 24 hours, a smaller boost up to 48 hours, then return to normal
+    if (post.is_trending) {
+        if (ageHours < 24) score += 50000;
+        else if (ageHours < 48) score += 10000;
+    }
+
     score = score / Math.pow(ageHours + 2, 1.2);
     score += (post.likes_count || 0) * 10;
     score += (post.comments_count || 0) * 25;
