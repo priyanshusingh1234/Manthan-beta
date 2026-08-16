@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
 
         // 2. Fetch posts - Mixed 50/50 Recent & Trending
         let cachedPostsData = await (async () => {
-            const selectFields = 'id, author_id, content, image_url, image_urls, video_url, video_thumbnail, document_url, likes_count, comments_count, created_at, post_likes ( user_id ), repost_id';
+            const selectFields = 'id, author_id, content, image_url, image_urls, video_url, video_thumbnail, document_url, likes_count, comments_count, created_at, post_likes ( user_id ), repost_id, is_trending';
             
             let recentQuery = supabaseAdmin
                 .from('posts')
@@ -185,6 +185,7 @@ export async function GET(req: NextRequest) {
                         comments_count: p.comments_count || 0,
                         created_at: p.created_at,
                         is_pinned: isPinned,
+                        is_trending: !!p.is_trending,
                         _likeUserIds: (p.post_likes || []).map((l: any) => l.user_id) as string[],
                         repost: formattedRepost,
                         author: {

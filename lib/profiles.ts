@@ -26,6 +26,7 @@ export interface Profile {
     total_points: number;
     xp: number;
     username: string | null;
+    class_grade?: string | null;
     updated_at: string;
     cosmetics?: string[] | null;
     is_ghost?: boolean;
@@ -104,6 +105,7 @@ export async function upsertProfile(userId: string, meta: Record<string, any>, p
         total_points: preserveDBPoints && dbPoints !== undefined ? dbPoints : (Number(meta.totalPoints) || 0),
         xp: Number(meta.xp) || 0,
         username: sanitizedUsername || null,
+        class_grade: meta.classGrade?.toString() || meta.grade?.toString() || null,
         updated_at: new Date().toISOString(),
         cosmetics: meta.cosmetics || [],
         login_bonus_day: Number(meta.loginBonusDay) || 0,

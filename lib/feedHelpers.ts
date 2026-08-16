@@ -29,6 +29,7 @@ export interface FeedPost {
     id: string | number;
     author_id: string;
     content?: string;
+    is_trending?: boolean;
     document_url?: string;
     image_url?: string;
     image_urls?: string[];
@@ -98,7 +99,7 @@ export function normalizePost(p: FeedPost, profilesMap: Map<string, any>, curren
         video_url: p.video_url, video_thumbnail: p.video_thumbnail,
         document_url: p.document_url, documentUrl: p.document_url,
         likes_count: likesCount, comments_count: p.comments_count || 0,
-        created_at: p.created_at, is_pinned: isPinned,
+        created_at: p.created_at, is_pinned: isPinned, is_trending: !!p.is_trending,
         is_liked_by_me: currentUserId ? (p.post_likes || []).some((l: any) => l.user_id === currentUserId) : false,
         author: {
             id: p.author_id,
@@ -118,6 +119,7 @@ export function normalizePost(p: FeedPost, profilesMap: Map<string, any>, curren
 export function calculatePostScore(post: FeedPost, followingIds: string[], userSchool: string | null, userGrade: string | null): number {
     if (post.is_pinned) return 1_000_000;
     let score = 100;
+    if (post.is_trending) score += 50000;
     const ageHours = (Date.now() - new Date(post.created_at).getTime()) / (1000 * 60 * 60);
     score = score / Math.pow(ageHours + 2, 1.2);
     score += (post.likes_count || 0) * 10;

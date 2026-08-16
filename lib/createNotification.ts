@@ -35,7 +35,8 @@ export type NotificationType =
     | 'league_overtake'
     | 'league_taunt'
     | 'dynamic_challenge'
-    | 'dynamic_challenge_result';
+    | 'dynamic_challenge_result'
+    | 'trending_post';
 
 interface CreateNotificationParams {
     userId: string;          // who receives the notification
