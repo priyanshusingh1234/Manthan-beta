@@ -1183,7 +1183,7 @@ export default function ChatRoomScreen() {
               activeOpacity={0.8}
               onPress={() => {
                 setShowProfileModal(false);
-                router.push(`/profiles/${participant?.user_id}` as any);
+                router.push(`/user/${participant?.username}` as any);
               }}
               className="bg-indigo-600 dark:bg-indigo-500 py-4 rounded-2xl shadow-md shadow-indigo-500/30 flex-row items-center justify-center mb-3"
             >
