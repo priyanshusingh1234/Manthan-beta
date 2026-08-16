@@ -144,6 +144,16 @@ export default function TitlesDashboard({ visible, onClose, currentCosmetics, on
     });
   }
 
+  // Add 'Tiranga 🇮🇳' if purchased
+  if (!uniqueTitles.some(t => t.titleName === 'Tiranga 🇮🇳')) {
+    uniqueTitles.push({
+      titleName: 'Tiranga 🇮🇳',
+      unlocked: currentCosmetics.includes('title_tiranga'),
+      source: 'Store (500 Points)',
+      isPuzzle: false,
+    });
+  }
+
   // Add 'Slow & Steady' if it's not already in the list
   if (!uniqueTitles.some(t => t.titleName === 'Slow & Steady')) {
     uniqueTitles.push({

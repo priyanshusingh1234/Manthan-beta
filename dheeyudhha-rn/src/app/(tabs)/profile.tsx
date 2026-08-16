@@ -555,9 +555,17 @@ export default function ProfileScreen() {
                     const titleName = c.split(':')[1];
                     const isCrusher = titleName === 'The Crusher';
                     const isLilyPad = titleName === 'Lily Pad Logic';
+                    const isTiranga = titleName === 'Tiranga 🇮🇳';
                     
                     if (isCrusher) {
                       return <AnimatedCrusherPill key={idx} />;
+                    }
+                    if (isTiranga) {
+                      return (
+                        <View key={idx} className="bg-orange-100 dark:bg-orange-900/40 px-3 py-1 rounded-full border border-green-500 dark:border-green-600 shadow-sm" style={{ shadowColor: '#22c55e', shadowOpacity: 0.8, shadowRadius: 8, elevation: 5 }}>
+                          <Text className="text-[10px] font-black uppercase tracking-widest text-orange-600 dark:text-orange-400">{titleName}</Text>
+                        </View>
+                      );
                     }
                     if (isLilyPad) {
                       return (

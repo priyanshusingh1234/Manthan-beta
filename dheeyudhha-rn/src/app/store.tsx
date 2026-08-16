@@ -24,6 +24,13 @@ const getBannerSource = (bannerUrl: string | null) => {
 
 const STORE_ITEMS: StoreItem[] = [
   {
+    id: 'title_tiranga',
+    name: 'Tiranga 🇮🇳',
+    description: 'Show your patriotism with a glowing Indian flag title on your profile.',
+    type: 'title',
+    price: 500,
+  },
+  {
     id: 'streak_freeze',
     name: 'Streak Freeze',
     description: 'Forgot to practice? This automatically protects your streak from breaking for one missed day.',
