@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { Play, Clock, Users, Zap, Swords, Award, CheckCircle, FileText } from 'lucide-react-native';
+import { Play, Clock, Users, Zap, Swords, Award, CheckCircle, FileText, Share2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
 import DuelChallengeModal from './DuelChallengeModal';
 import BadgedName from './BadgedName';
+import ShareModal from './ShareModal';
 
 interface Props {
   q: any;
@@ -13,6 +14,7 @@ interface Props {
 const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
   const router = useRouter();
   const [duelOpen, setDuelOpen] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isTeacher, setIsTeacher] = useState(false);
 
@@ -247,6 +249,13 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
                 </TouchableOpacity>
               )}
 
+              <TouchableOpacity
+                onPress={() => setShowShareModal(true)}
+                className="bg-slate-100 dark:bg-slate-700/50 p-2 rounded-xl active:opacity-70"
+              >
+                <Share2 size={16} color="#64748b" />
+              </TouchableOpacity>
+
               <TouchableOpacity 
                 onPress={() => router.push(`/solve/${q.id}` as any)}
                 className={`${q.hasAttempted ? 'bg-emerald-500 dark:bg-emerald-600' : 'bg-slate-900 dark:bg-indigo-500'} flex-row items-center gap-1.5 px-4 py-1.5 rounded-xl active:opacity-70 shadow-sm`}
@@ -274,6 +283,12 @@ const QuestionCard = React.memo(function QuestionCard({ q }: Props) {
           currentUserId={currentUserId}
         />
       )}
+
+      <ShareModal 
+        url={`${process.env.EXPO_PUBLIC_API_URL}/questions/${q.id}`}
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+      />
     </>
   );
 });
