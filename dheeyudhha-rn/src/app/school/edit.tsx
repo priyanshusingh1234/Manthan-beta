@@ -19,6 +19,7 @@ export default function EditSchoolScreen() {
   const [schoolName, setSchoolName] = useState('');
   const [description, setDescription] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [usi, setUsi] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function EditSchoolScreen() {
           setSchoolName(data.school.name || '');
           setDescription(data.school.description || '');
           setIsPrivate(data.school.is_private || false);
+          setUsi(data.school.usi || '');
         }
       }
     } catch (e) {
@@ -193,6 +195,23 @@ export default function EditSchoolScreen() {
               thumbColor={'#ffffff'}
             />
           </View>
+
+          {usi ? (
+            <View className="bg-amber-50 dark:bg-amber-950/20 p-5 rounded-2xl border border-amber-200 dark:border-amber-900/40 shadow-sm mt-2">
+              <Text className="text-sm font-black text-amber-800 dark:text-amber-500 mb-1">
+                Unique School ID (USI)
+              </Text>
+              <Text className="text-xs text-amber-700/80 dark:text-amber-400/80 mb-3 leading-relaxed">
+                This is your confidential ID used for B2B features and integrations. Keep it secure and only share it with trusted partners.
+              </Text>
+              <TextInput
+                value={usi}
+                editable={false}
+                selectTextOnFocus={true}
+                className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800/50 rounded-xl px-4 py-3 text-amber-900 dark:text-amber-100 font-mono font-bold text-center tracking-widest text-lg"
+              />
+            </View>
+          ) : null}
         </View>
 
         {errorMsg ? (

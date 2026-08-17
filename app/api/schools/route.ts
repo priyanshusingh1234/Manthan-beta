@@ -1,6 +1,7 @@
 import supabaseAdmin from "@/lib/supabaseAdmin";
 import { getProfile, upsertProfile } from "@/lib/profiles";
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 
 export const dynamic = 'force-dynamic';
 
@@ -156,10 +157,13 @@ export async function POST(req: NextRequest) {
             .maybeSingle();
         if (existingMember) return NextResponse.json({ error: 'You are already a member of a school.' }, { status: 400 });
 
+        // Generate USI
+        const usi = 'USI-' + crypto.randomUUID().split('-')[0].toUpperCase() + crypto.randomUUID().split('-')[1].toUpperCase();
+
         // Create school
         const { data: school, error: schoolError } = await supabaseAdmin
             .from('schools')
-            .insert({ name: cleanedName, is_private: isPrivate })
+            .insert({ name: cleanedName, is_private: isPrivate, usi })
             .select()
             .single();
         if (schoolError) throw schoolError;
