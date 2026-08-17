@@ -974,6 +974,23 @@ export default function SettingsScreen() {
               <ChevronRight size={18} color={isDarkMode ? '#475569' : '#94a3b8'} />
             </TouchableOpacity>
 
+            {/* What's New */}
+            <TouchableOpacity
+              onPress={() => router.push('/updates' as any)}
+              className="flex-row items-center px-4 py-4 active:bg-slate-50 dark:active:bg-slate-800 justify-between"
+            >
+              <View className="flex-row items-center">
+                <View className="p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl mr-4">
+                  <Info size={18} color={isDarkMode ? '#818cf8' : '#4f46e5'} />
+                </View>
+                <View>
+                  <Text className="text-slate-800 dark:text-slate-200 font-bold text-[14px]">What's New</Text>
+                  <Text className="text-slate-500 dark:text-slate-400 text-[10px] mt-0.5">App updates and changelog</Text>
+                </View>
+              </View>
+              <ChevronRight size={18} color={isDarkMode ? '#475569' : '#94a3b8'} />
+            </TouchableOpacity>
+
             {/* Child Safety */}
             <TouchableOpacity
               onPress={() => setCurrentScreen('child-safety')}
