@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
             if (user.user_metadata?.isTeacher) {
                 return NextResponse.json({ error: 'Teachers cannot join schools.' }, { status: 403 });
             }
+
             // Student requests to join a school
             const { data: existingMember } = await supabaseAdmin
                 .from('school_members')
@@ -31,6 +32,37 @@ export async function POST(req: NextRequest) {
                 .maybeSingle();
             if (existingMember) return NextResponse.json({ error: 'You already belong to a school. Leave first.' }, { status: 400 });
 
+            // Check if school is private
+            const { data: schoolData, error: schError } = await supabaseAdmin
+                .from('schools')
+                .select('id, name, is_private')
+                .eq('id', schoolId)
+                .single();
+            if (schError || !schoolData) return NextResponse.json({ error: 'School not found.' }, { status: 404 });
+
+            const { data: squadData } = await supabaseAdmin
+                .from('squads')
+                .select('id, general_id')
+                .eq('school_id', schoolId)
+                .single();
+
+            // If public, join instantly
+            if (!schoolData.is_private && squadData) {
+                // Add to school_members
+                await supabaseAdmin.from('school_members').insert({ school_id: schoolId, user_id: user.id, is_general: false });
+                
+                // Add to squad_members
+                await supabaseAdmin.from('squad_members').insert({ squad_id: squadData.id, user_id: user.id });
+
+                // Update user metadata
+                const updatedMeta = { ...user.user_metadata, school: schoolData.name, school_id: schoolId };
+                await supabaseAdmin.auth.admin.updateUserById(user.id, { user_metadata: updatedMeta });
+                await upsertProfile(user.id, updatedMeta, true);
+
+                return NextResponse.json({ success: true, message: `Successfully joined ${schoolData.name}!` });
+            }
+
+            // If private, handle request
             const { data: existingReq } = await supabaseAdmin
                 .from('school_join_requests')
                 .select('id, status')
@@ -38,22 +70,43 @@ export async function POST(req: NextRequest) {
                 .eq('user_id', user.id)
                 .maybeSingle();
 
+            let pendingReqId = null;
+
             if (existingReq) {
                 if (existingReq.status === 'pending') return NextResponse.json({ error: 'You already have a pending request for this school.' }, { status: 400 });
                 if (existingReq.status === 'approved') return NextResponse.json({ error: 'You are already in this school.' }, { status: 400 });
+                
                 // If rejected, allow re-request
                 await supabaseAdmin
                     .from('school_join_requests')
                     .update({ status: 'pending', requested_at: new Date().toISOString(), reviewed_at: null })
                     .eq('id', existingReq.id);
-                return NextResponse.json({ success: true, message: 'Request re-sent!' });
+                pendingReqId = existingReq.id;
+            } else {
+                const { data: newReq, error: insertError } = await supabaseAdmin
+                    .from('school_join_requests')
+                    .insert({ school_id: schoolId, user_id: user.id, status: 'pending' })
+                    .select('id')
+                    .single();
+
+                if (insertError) throw insertError;
+                pendingReqId = newReq.id;
             }
 
-            const { error: insertError } = await supabaseAdmin
-                .from('school_join_requests')
-                .insert({ school_id: schoolId, user_id: user.id, status: 'pending' });
+            // Notify General
+            if (squadData && pendingReqId) {
+                await supabaseAdmin.from('notifications').insert({
+                    user_id: squadData.general_id,
+                    type: 'school_join_request',
+                    title: 'New Join Request',
+                    body: `${user.user_metadata?.full_name || 'A student'} wants to join your faction.`,
+                    actor_id: user.id,
+                    actor_name: user.user_metadata?.full_name || 'Student',
+                    actor_avatar: user.user_metadata?.avatar_url || null,
+                    href: `req:${pendingReqId}`
+                });
+            }
 
-            if (insertError) throw insertError;
             return NextResponse.json({ success: true, message: 'Join request sent! Await the General\'s approval.' });
         }
 

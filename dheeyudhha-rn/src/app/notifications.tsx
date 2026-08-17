@@ -307,6 +307,39 @@ export default function NotificationsScreen() {
         });
     };
 
+    const handleSchoolJoinResponse = async (notif: Notification, action: 'approve' | 'reject') => {
+        if (!token || !notif.href) return;
+        
+        const requestId = notif.href.replace('req:', '');
+        
+        // Optimistic UI updates
+        setNotifications(n => n.filter(x => x.id !== notif.id));
+        if (!notif.read) setUnreadCount(c => Math.max(0, c - 1));
+
+        const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
+        
+        // Delete notification
+        fetch(`${API_URL}/api/notifications`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notificationId: notif.id, delete: true })
+        });
+
+        // Submit approve/reject action
+        const res = await fetch(`${API_URL}/api/schools/join`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, requestId })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) {
+            Alert.alert("Error", data.error || "Failed to process request.");
+        } else if (action === 'approve') {
+            Alert.alert("Success", "Student added to faction!");
+        }
+    };
+
     const filtered = notifications.filter(n => {
         if (activeFilter === 'Unread') return !n.read;
         if (activeFilter === 'Help') return n.type === 'coop_challenge';
@@ -423,6 +456,65 @@ export default function NotificationsScreen() {
                         const isStreakFriend = notif.type === 'streak_friend';
                         const isStreakExtended = notif.type === 'streak_extended';
                         const isFollowRequest = notif.type === 'follow_request';
+                        const isSchoolJoinRequest = notif.type === 'school_join_request';
+
+                        if (isSchoolJoinRequest) {
+                            return (
+                                <View key={notif.id} className="mb-4">
+                                    <View className={`p-4 rounded-3xl border relative ${
+                                        !notif.read 
+                                            ? 'bg-indigo-50/30 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-900/40' 
+                                            : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
+                                    }`}>
+                                        {!notif.read && <View className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500" />}
+                                        <View className="flex-row gap-4 items-start">
+                                            <View className="relative shrink-0">
+                                                {notif.actor_avatar ? (
+                                                    <View>
+                                                        <Image source={{ uri: notif.actor_avatar }} className="w-12 h-12 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-sm" />
+                                                    </View>
+                                                ) : (
+                                                    <View className="w-12 h-12 rounded-2xl items-center justify-center bg-indigo-100 dark:bg-indigo-950/30">
+                                                        <Text className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                                                            {(notif.actor_name || '?').charAt(0).toUpperCase()}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </View>
+
+                                            <View className="flex-1 min-w-0">
+                                                <View className="flex-row justify-between items-baseline gap-1 mb-0.5">
+                                                    <Text className={`text-xs truncate flex-1 ${
+                                                        !notif.read ? 'font-black text-slate-900 dark:text-white' : 'font-bold text-slate-600 dark:text-slate-400'
+                                                    }`}>
+                                                        {notif.title}
+                                                    </Text>
+                                                    <Text className="text-[9px] text-slate-400 font-bold shrink-0">{timeAgo(notif.created_at)}</Text>
+                                                </View>
+                                                <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal mb-3" numberOfLines={2}>
+                                                    {notif.body}
+                                                </Text>
+                                                
+                                                <View className="flex-row gap-2">
+                                                    <TouchableOpacity 
+                                                        onPress={() => handleSchoolJoinResponse(notif, 'approve')}
+                                                        className="px-4 py-2 bg-indigo-600 rounded-xl shadow-sm"
+                                                    >
+                                                        <Text className="text-white text-[10px] font-black uppercase">Approve</Text>
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity 
+                                                        onPress={() => handleSchoolJoinResponse(notif, 'reject')}
+                                                        className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700"
+                                                    >
+                                                        <Text className="text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase">Reject</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    </View>
+                                </View>
+                            );
+                        }
 
                         if (isDuelChallenge) {
                             return (

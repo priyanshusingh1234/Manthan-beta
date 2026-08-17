@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
         if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const body = await req.json();
-        const { name } = body;
+        const { name, isPrivate = false } = body;
         if (!name?.trim()) return NextResponse.json({ error: 'School name is required' }, { status: 400 });
 
         const cleanedName = name.trim().replace(/\s+/g, ' ');
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
         // Create school
         const { data: school, error: schoolError } = await supabaseAdmin
             .from('schools')
-            .insert({ name: cleanedName })
+            .insert({ name: cleanedName, is_private: isPrivate })
             .select()
             .single();
         if (schoolError) throw schoolError;

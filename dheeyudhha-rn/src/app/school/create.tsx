@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Switch } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, ShieldCheck, AlertCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ export default function CreateSchoolScreen() {
   const isDarkMode = colorScheme === 'dark';
 
   const [schoolName, setSchoolName] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -40,7 +41,7 @@ export default function CreateSchoolScreen() {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name: schoolName.trim() })
+        body: JSON.stringify({ name: schoolName.trim(), isPrivate })
       });
 
       const data = await res.json();
@@ -120,6 +121,21 @@ export default function CreateSchoolScreen() {
           <Text className="text-xs text-slate-400 dark:text-slate-500 mt-2 ml-1">
             If your school already exists, please append your specific branch name (e.g. "Branch Name").
           </Text>
+        </View>
+
+        <View className="bg-white dark:bg-slate-900 mt-4 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex-row items-center justify-between">
+          <View className="flex-1 pr-4">
+            <Text className="text-base font-bold text-slate-800 dark:text-slate-100">Private Faction</Text>
+            <Text className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Require new students to send a join request for your approval.
+            </Text>
+          </View>
+          <Switch
+            value={isPrivate}
+            onValueChange={setIsPrivate}
+            trackColor={{ false: isDarkMode ? '#334155' : '#e2e8f0', true: '#10b981' }}
+            thumbColor={'#ffffff'}
+          />
         </View>
 
         {errorMsg ? (

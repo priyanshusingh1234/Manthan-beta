@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
         const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
         if (userError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { avatarUrl, description, name } = await req.json();
+        const { avatarUrl, description, name, isPrivate } = await req.json();
 
         if (description && description.split(' ').length > 200) {
             return NextResponse.json({ error: 'Description must be under 200 words.' }, { status: 400 });
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
 
         if (avatarUrl !== undefined) updates.avatar_url = avatarUrl;
         if (description !== undefined) updates.description = description;
+        if (isPrivate !== undefined) updates.is_private = isPrivate;
 
         // Process name update if provided and different
         if (name && typeof name === 'string') {

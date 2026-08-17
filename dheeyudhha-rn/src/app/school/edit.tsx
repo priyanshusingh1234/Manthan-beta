@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Switch } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Settings, AlertCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +18,7 @@ export default function EditSchoolScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [schoolName, setSchoolName] = useState('');
   const [description, setDescription] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function EditSchoolScreen() {
         if (data?.school) {
           setSchoolName(data.school.name || '');
           setDescription(data.school.description || '');
+          setIsPrivate(data.school.is_private || false);
         }
       }
     } catch (e) {
@@ -71,7 +73,8 @@ export default function EditSchoolScreen() {
         },
         body: JSON.stringify({ 
           name: schoolName.trim(),
-          description: description.trim()
+          description: description.trim(),
+          isPrivate
         })
       });
 
@@ -173,6 +176,21 @@ export default function EditSchoolScreen() {
               className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-4 text-slate-900 dark:text-slate-100 font-medium text-base h-32"
               multiline
               textAlignVertical="top"
+            />
+          </View>
+
+          <View className="bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex-row items-center justify-between">
+            <View className="flex-1 pr-4">
+              <Text className="text-base font-bold text-slate-800 dark:text-slate-100">Private Faction</Text>
+              <Text className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Require new students to send a join request for your approval.
+              </Text>
+            </View>
+            <Switch
+              value={isPrivate}
+              onValueChange={setIsPrivate}
+              trackColor={{ false: isDarkMode ? '#334155' : '#e2e8f0', true: '#10b981' }}
+              thumbColor={'#ffffff'}
             />
           </View>
         </View>
