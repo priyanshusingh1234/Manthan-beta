@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { Stack, useRouter } from 'react-native-router-flux'; // wait, it's expo-router
-import { useRouter as useExpoRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, ShieldCheck, AlertCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
@@ -10,7 +9,7 @@ import { supabase } from '@/lib/supabaseClient';
 const API_URL = 'https://manthan-beta-c975.vercel.app';
 
 export default function CreateSchoolScreen() {
-  const router = useExpoRouter();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
