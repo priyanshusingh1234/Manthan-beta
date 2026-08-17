@@ -58,7 +58,9 @@ export default function SearchSchoolScreen() {
       const data = await res.json();
       
       if (res.ok) {
-        Alert.alert("Request Sent!", data.message || "Your request has been sent to the General.");
+        await supabase.auth.refreshSession();
+        Alert.alert("Success!", data.message || "Request processed.");
+        router.back();
       } else {
         Alert.alert("Notice", data.error || "Failed to send request.");
       }
@@ -117,7 +119,9 @@ export default function SearchSchoolScreen() {
         {requestingId === item.id ? (
           <ActivityIndicator color={isDarkMode ? '#94a3b8' : '#64748b'} size="small" />
         ) : (
-          <Text className="text-white font-bold text-base">Request to Join</Text>
+          <Text className="text-white font-bold text-base">
+            {item.isPrivate ? 'Request to Join' : 'Join Faction'}
+          </Text>
         )}
       </TouchableOpacity>
     </View>

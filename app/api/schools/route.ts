@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
         let query = supabaseAdmin
             .from('schools')
-            .select('id, name, total_war_points, created_at')
+            .select('id, name, total_war_points, created_at, is_private')
             .neq('name', 'Ghost School')
             .order('total_war_points', { ascending: false });
 
@@ -78,6 +78,7 @@ export async function GET(req: NextRequest) {
                 hasSquad: !!squadData,
                 activeWars: warCount || 0,
                 createdAt: school.created_at,
+                isPrivate: school.is_private || false,
             };
         }));
 
