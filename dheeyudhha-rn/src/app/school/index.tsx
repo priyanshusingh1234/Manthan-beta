@@ -95,16 +95,27 @@ export default function SchoolDashboard() {
       
       {/* Header */}
       <View 
-        className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center gap-4 shadow-sm" 
+        className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center justify-between shadow-sm" 
         style={{ paddingTop: Math.max(insets.top, 16) }}
       >
-        <TouchableOpacity 
-          onPress={() => router.back()} 
-          className="p-2 -ml-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800"
-        >
-          <ArrowLeft size={24} color={isDarkMode ? '#cbd5e1' : '#334155'} />
-        </TouchableOpacity>
-        <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">School Faction</Text>
+        <View className="flex-row items-center gap-4">
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            className="p-2 -ml-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800"
+          >
+            <ArrowLeft size={24} color={isDarkMode ? '#cbd5e1' : '#334155'} />
+          </TouchableOpacity>
+          <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">School Faction</Text>
+        </View>
+
+        {squadData && squadData.members?.find((m: any) => m.isMe)?.role === 'General' && (
+          <TouchableOpacity 
+            onPress={() => router.push('/school/edit' as any)}
+            className="p-2 -mr-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800"
+          >
+            <Text className="text-indigo-600 dark:text-indigo-400 font-bold text-base">Edit</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView 
