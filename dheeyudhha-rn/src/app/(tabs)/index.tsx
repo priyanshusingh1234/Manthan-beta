@@ -8,6 +8,7 @@ import RecentDuels from '@/components/RecentDuels';
 import DailyGoalCard from '@/components/DailyGoalCard';
 import DailyPuzzleCard from '@/components/DailyPuzzleCard';
 import WelcomeTour from '@/components/WelcomeTour';
+import SchoolBanner from '@/components/SchoolBanner';
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -31,6 +32,9 @@ export default function FeedScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* School Banner */}
+      <SchoolBanner />
 
       {/* Practice Mode Entry */}
       <TouchableOpacity

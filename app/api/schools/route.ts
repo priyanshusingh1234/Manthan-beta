@@ -4,13 +4,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
-// ⏸️  PAUSED — Schools feature is temporarily disabled.
-// Remove this block to re-enable.
-const PAUSED = true;
+// Schools feature is enabled.
+const PAUSED = false;
 const pausedResponse = () => NextResponse.json(
     { error: 'Schools feature is temporarily unavailable. Check back soon!', paused: true },
     { status: 503, headers: { 'Retry-After': '3600' } }
 );
+
+const BANNED_WORDS = ['sex', 'porn', 'fuck', 'shit', 'bitch', 'asshole', 'dick', 'pussy', 'slut'];
+
 
 const normalizeSchoolName = (value: string) =>
     value.toLowerCase().trim().replace(/\s+/g, ' ');
@@ -109,6 +111,12 @@ export async function POST(req: NextRequest) {
 
         if (cleanedName.length > 90) {
             return NextResponse.json({ error: 'School name must be under 90 characters.' }, { status: 400 });
+        }
+
+        // Profanity Check
+        const hasProfanity = BANNED_WORDS.some(word => cleanedName.toLowerCase().includes(word));
+        if (hasProfanity) {
+            return NextResponse.json({ error: 'Inappropriate school name. Please choose another name.' }, { status: 400 });
         }
 
         // Check exact case-insensitive duplicate first (fast path)

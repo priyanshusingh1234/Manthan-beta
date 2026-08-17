@@ -8,7 +8,7 @@ import { useColorScheme } from 'nativewind';
 const updates = [
   {
     version: 'v1.4.0',
-    date: 'August 17, 2026',
+    date: 'Jan 17, 2026',
     title: 'The Virality Update 🔥',
     features: [
       { type: 'new', text: 'Added automated Twitter-style Trending system for viral posts' },
@@ -18,7 +18,7 @@ const updates = [
   },
   {
     version: 'v1.3.0',
-    date: 'August 10, 2026',
+    date: 'Feb 10, 2026',
     title: 'The Competitive Update ⚔️',
     features: [
       { type: 'new', text: 'Introduced live 1v1 Arena Duels' },
@@ -46,14 +46,14 @@ export default function UpdatesScreen() {
   return (
     <View className="flex-1 bg-slate-50 dark:bg-slate-950">
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       {/* Header */}
-      <View 
-        className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center gap-4" 
+      <View
+        className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 flex-row items-center gap-4"
         style={{ paddingTop: Math.max(insets.top, 16) }}
       >
-        <TouchableOpacity 
-          onPress={() => router.back()} 
+        <TouchableOpacity
+          onPress={() => router.back()}
           className="p-2 -ml-2 rounded-xl active:bg-slate-100 dark:active:bg-slate-800"
         >
           <ArrowLeft size={24} color={isDarkMode ? '#cbd5e1' : '#334155'} />
@@ -78,20 +78,19 @@ export default function UpdatesScreen() {
                 </View>
                 <Text className="text-slate-400 dark:text-slate-500 font-bold text-xs">{update.date}</Text>
               </View>
-              
+
               <Text className="text-lg font-black text-slate-800 dark:text-slate-100 mb-4">{update.title}</Text>
-              
+
               <View className="gap-3">
                 {update.features.map((feature, fIndex) => (
                   <View key={fIndex} className="flex-row items-start gap-3">
-                    <View className={`mt-0.5 p-1.5 rounded-lg ${
-                      feature.type === 'new' ? 'bg-emerald-100 dark:bg-emerald-900/30' : 
-                      feature.type === 'fix' ? 'bg-rose-100 dark:bg-rose-900/30' : 
-                      'bg-amber-100 dark:bg-amber-900/30'
-                    }`}>
+                    <View className={`mt-0.5 p-1.5 rounded-lg ${feature.type === 'new' ? 'bg-emerald-100 dark:bg-emerald-900/30' :
+                        feature.type === 'fix' ? 'bg-rose-100 dark:bg-rose-900/30' :
+                          'bg-amber-100 dark:bg-amber-900/30'
+                      }`}>
                       {feature.type === 'new' ? <Rocket size={14} color={isDarkMode ? '#34d399' : '#10b981'} /> :
-                       feature.type === 'fix' ? <Bug size={14} color={isDarkMode ? '#fb7185' : '#f43f5e'} /> :
-                       <Sparkles size={14} color={isDarkMode ? '#fbbf24' : '#f59e0b'} />}
+                        feature.type === 'fix' ? <Bug size={14} color={isDarkMode ? '#fb7185' : '#f43f5e'} /> :
+                          <Sparkles size={14} color={isDarkMode ? '#fbbf24' : '#f59e0b'} />}
                     </View>
                     <Text className="flex-1 text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
                       {feature.text}
