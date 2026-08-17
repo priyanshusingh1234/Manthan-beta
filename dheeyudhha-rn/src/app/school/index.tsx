@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { ArrowLeft, Shield, Users, LogOut, Plus, Search } from 'lucide-react-native';
+import { ArrowLeft, Shield, Users, LogOut, Plus, Search, Trophy, Medal, Crown, Star } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { supabase } from '@/lib/supabaseClient';
@@ -127,32 +127,105 @@ export default function SchoolDashboard() {
       >
         {squadData ? (
           /* User is IN a school */
-          <View>
-            <View className="items-center bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm mb-6">
-              <View className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full items-center justify-center mb-4 border border-indigo-200 dark:border-indigo-800">
-                <Shield size={36} color="#4f46e5" />
+          <View className="flex-1">
+            {/* Clan Header Card */}
+            <View className="bg-slate-900 dark:bg-black rounded-3xl p-6 border border-slate-800 shadow-lg mb-6 overflow-hidden relative">
+              <View className="absolute -right-10 -top-10 opacity-10">
+                <Shield size={160} color="#6366f1" />
               </View>
-              <Text className="text-2xl font-black text-slate-900 dark:text-white text-center mb-1">
-                {squadData.school.name}
-              </Text>
-              <Text className="text-slate-500 font-bold mb-4">
-                Total War Points: {squadData.school.total_war_points || 0}
-              </Text>
               
-              <View className="w-full flex-row items-center bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl">
-                <Users size={20} color={isDarkMode ? '#94a3b8' : '#64748b'} />
-                <Text className="text-slate-700 dark:text-slate-300 font-bold ml-3 flex-1">
-                  Faction Members
+              <View className="flex-row items-center mb-4">
+                <View className="w-20 h-20 bg-indigo-500/20 rounded-2xl items-center justify-center mr-4 border border-indigo-500/50">
+                  <Shield size={40} color="#818cf8" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-2xl font-black text-white mb-1 tracking-tight" numberOfLines={2}>
+                    {squadData.school.name}
+                  </Text>
+                  {squadData.schoolLeaderboard?.find((s: any) => s.isMe)?.rank && (
+                    <View className="flex-row items-center">
+                      <Medal size={16} color="#fbbf24" />
+                      <Text className="text-amber-400 font-bold ml-1 text-sm">
+                        Rank #{squadData.schoolLeaderboard.find((s: any) => s.isMe)?.rank} Global
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {squadData.school.description ? (
+                <Text className="text-slate-400 font-medium leading-relaxed mb-4">
+                  {squadData.school.description}
                 </Text>
-                <Text className="text-indigo-600 dark:text-indigo-400 font-black">
-                  {squadData.members?.length || 0}
-                </Text>
+              ) : null}
+
+              <View className="flex-row items-center justify-between bg-black/40 p-4 rounded-2xl border border-slate-800">
+                <View className="items-center flex-1">
+                  <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Members</Text>
+                  <View className="flex-row items-center">
+                    <Users size={16} color="#94a3b8" />
+                    <Text className="text-white font-black text-lg ml-1.5">{squadData.members?.length || 0}</Text>
+                  </View>
+                </View>
+                <View className="w-[1px] h-full bg-slate-800 mx-2" />
+                <View className="items-center flex-1">
+                  <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">War Points</Text>
+                  <View className="flex-row items-center">
+                    <Trophy size={16} color="#fbbf24" />
+                    <Text className="text-white font-black text-lg ml-1.5">{squadData.school.total_war_points || 0}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Members Roster */}
+            <View className="mb-6">
+              <Text className="text-lg font-black text-slate-800 dark:text-slate-100 mb-4 px-2">Faction Roster</Text>
+              <View className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                {squadData.members?.map((member: any, index: number) => (
+                  <View 
+                    key={member.id} 
+                    className={`flex-row items-center p-4 ${index !== squadData.members.length - 1 ? 'border-b border-slate-100 dark:border-slate-800/60' : ''} ${member.isMe ? 'bg-indigo-50/50 dark:bg-indigo-900/20' : ''}`}
+                  >
+                    <Text className="text-slate-400 dark:text-slate-500 font-black text-base w-6 text-center mr-2">
+                      {index + 1}
+                    </Text>
+                    <View className="flex-1">
+                      <View className="flex-row items-center">
+                        <Text className={`font-bold text-base ${member.isMe ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                          {member.name}
+                        </Text>
+                        {member.isMe && (
+                          <View className="ml-2 bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 rounded-full">
+                            <Text className="text-[10px] font-black text-indigo-600 dark:text-indigo-400">YOU</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View className="flex-row items-center mt-1">
+                        {member.role === 'General' ? (
+                          <Crown size={12} color="#fbbf24" />
+                        ) : (
+                          <Star size={12} color="#94a3b8" />
+                        )}
+                        <Text className={`text-xs font-bold ml-1 ${member.role === 'General' ? 'text-amber-500 dark:text-amber-400' : 'text-slate-500'}`}>
+                          {member.role}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="flex-row items-center bg-slate-50 dark:bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <Trophy size={14} color="#64748b" />
+                      <Text className="text-slate-700 dark:text-slate-300 font-bold ml-1.5">
+                        {member.points}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
               </View>
             </View>
 
             <TouchableOpacity
               onPress={handleLeaveSchool}
-              className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-4 rounded-2xl flex-row items-center justify-center"
+              className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-4 rounded-2xl flex-row items-center justify-center mb-8"
             >
               <LogOut size={20} color={isDarkMode ? '#f87171' : '#dc2626'} />
               <Text className="text-red-600 dark:text-red-400 font-bold text-lg ml-2">Leave Faction</Text>
