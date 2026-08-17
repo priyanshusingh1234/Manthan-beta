@@ -72,21 +72,36 @@ export default function SchoolBanner() {
 
   // If user does not have a school
   return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={() => router.push('/school' as any)}
-      className="mx-6 mb-5 rounded-2xl overflow-hidden bg-indigo-600 dark:bg-indigo-500 shadow-md shadow-indigo-500/30 flex-row items-center p-4"
-    >
-      <View className="w-12 h-12 rounded-xl bg-white/20 items-center justify-center mr-4">
-        <GraduationCap size={24} color="#ffffff" />
-      </View>
-      <View className="flex-1">
-        <Text className="text-white font-black text-base">Join a School</Text>
-        <Text className="text-indigo-100 text-xs font-medium mt-0.5">Create your own or join a faction</Text>
-      </View>
-      <View className="w-8 h-8 rounded-full bg-white/20 items-center justify-center">
-        <Plus size={18} color="#ffffff" />
-      </View>
-    </TouchableOpacity>
+    <View className="mx-6 mb-5 gap-3">
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => router.push('/school/create' as any)}
+        className="rounded-2xl overflow-hidden bg-indigo-600 dark:bg-indigo-500 shadow-md shadow-indigo-500/30 flex-row items-center p-4"
+      >
+        <View className="w-12 h-12 rounded-xl bg-white/20 items-center justify-center mr-4">
+          <Plus size={24} color="#ffffff" />
+        </View>
+        <View className="flex-1">
+          <Text className="text-white font-black text-base">Create Faction</Text>
+          <Text className="text-indigo-100 text-xs font-medium mt-0.5">Lead your own school</Text>
+        </View>
+        <ChevronRight size={20} color="#ffffff" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => router.push('/school/search' as any)}
+        className="rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex-row items-center p-4"
+      >
+        <View className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 items-center justify-center mr-4">
+          <GraduationCap size={24} color="#64748b" />
+        </View>
+        <View className="flex-1">
+          <Text className="text-slate-800 dark:text-slate-100 font-black text-base">Join Top Factions</Text>
+          <Text className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-0.5">Request to join existing schools</Text>
+        </View>
+        <ChevronRight size={20} color="#94a3b8" />
+      </TouchableOpacity>
+    </View>
   );
 }
