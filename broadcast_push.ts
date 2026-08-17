@@ -30,10 +30,10 @@ async function broadcast() {
     for (const user of users) {
         await createNotification({
             userId: user.id,
-            type: 'points_earned',
-            title: 'New Profile Banners Available! 🌌',
-            body: 'Head to the Store to check out the new Cyberpunk, Ancient Library, and Galactic Arena banners!',
-            href: '/store'
+            type: 'points_earned', // Reusing an existing type so it renders nicely
+            title: 'The Factions Update 🛡️',
+            body: 'You can now create Public and Private Factions! Check out what\'s new in v1.5.0.',
+            href: '/updates'
         });
         sent++;
         if (sent % 10 === 0) console.log(`Sent ${sent}/${users.length}`);

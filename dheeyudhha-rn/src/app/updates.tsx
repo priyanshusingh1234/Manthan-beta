@@ -7,6 +7,17 @@ import { useColorScheme } from 'nativewind';
 
 const updates = [
   {
+    version: 'v1.5.0',
+    date: 'August 17, 2026',
+    title: 'The Factions Update 🛡️',
+    features: [
+      { type: 'new', text: 'Create and lead your own Public or Private Factions' },
+      { type: 'new', text: 'Generals can manage join requests directly from their Notification inbox' },
+      { type: 'new', text: 'Unique School IDs (USI) added for B2B partnerships' },
+      { type: 'improvement', text: 'Brand new CoC-style Faction Dashboards with global rankings' },
+    ]
+  },
+  {
     version: 'v1.4.0',
     date: 'Jan 17, 2026',
     title: 'The Virality Update 🔥',
