@@ -61,7 +61,13 @@ export default function UpdatesScreen() {
         <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">What's New</Text>
       </View>
 
-      <ScrollView className="flex-1 p-5">
+      <ScrollView 
+        className="flex-1"
+        contentContainerStyle={{ 
+          padding: 20, 
+          paddingBottom: Math.max(insets.bottom, 40) 
+        }}
+      >
         <View className="mb-8">
           <Text className="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">App Updates</Text>
           <Text className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">

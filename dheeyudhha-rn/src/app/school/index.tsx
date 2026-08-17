@@ -107,7 +107,13 @@ export default function SchoolDashboard() {
         <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">School Faction</Text>
       </View>
 
-      <ScrollView className="flex-1 p-5">
+      <ScrollView 
+        className="flex-1"
+        contentContainerStyle={{ 
+          padding: 20, 
+          paddingBottom: Math.max(insets.bottom, 20) 
+        }}
+      >
         {squadData ? (
           /* User is IN a school */
           <View>

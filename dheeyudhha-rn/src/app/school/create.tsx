@@ -83,7 +83,14 @@ export default function CreateSchoolScreen() {
         <Text className="text-xl font-bold text-slate-800 dark:text-slate-100">Create Faction</Text>
       </View>
 
-      <ScrollView className="flex-1 p-5" keyboardShouldPersistTaps="handled">
+      <ScrollView 
+        className="flex-1" 
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ 
+          padding: 20, 
+          paddingBottom: Math.max(insets.bottom, 40) 
+        }}
+      >
         <View className="mb-6 items-center mt-4">
           <View className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full items-center justify-center mb-4 border border-emerald-200 dark:border-emerald-800">
             <ShieldCheck size={36} color="#10b981" />
