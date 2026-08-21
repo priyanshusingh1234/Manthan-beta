@@ -40,10 +40,7 @@ export async function POST(req: Request) {
         explanation,
         question_type,
         match_pairs,
-        profiles (
-          full_name,
-          username
-        )
+        created_by
       `)
       .eq('id', questionId)
       .single();
@@ -53,8 +50,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Failed to retrieve question context' }, { status: 500 });
     }
 
-    // Extract teacher name
-    const teacherName = question.profiles?.full_name || question.profiles?.username || 'the teacher';
+    // Extract teacher name in a separate query if needed
+    let teacherName = 'the teacher';
+    if (question.created_by) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, username')
+        .eq('id', question.created_by)
+        .single();
+      
+      if (profile) {
+        teacherName = profile.full_name || profile.username || 'the teacher';
+      }
+    }
 
     // Build the specific context string based on question type
     let contextData = `Title: ${question.title || 'N/A'}\nBody: ${question.body || 'N/A'}\n`;
