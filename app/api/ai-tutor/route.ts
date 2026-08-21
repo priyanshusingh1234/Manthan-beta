@@ -102,7 +102,6 @@ ${contextData}
     const response = await openai.chat.completions.create({
       model: process.env.AZURE_OPENAI_DEPLOYMENT!, // Azure OpenAI uses the deployment name instead of model
       messages: apiMessages,
-      temperature: 0.7,
       stream: true,
     });
 
