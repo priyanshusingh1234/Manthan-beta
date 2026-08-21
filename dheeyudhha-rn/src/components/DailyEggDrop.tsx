@@ -18,7 +18,7 @@ export default function DailyEggDrop() {
   const [question, setQuestion] = useState<any>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [result, setResult] = useState<'won' | 'lost' | null>(null);
-  
+
   const heroX = useRef(new Animated.Value(-100)).current;
   const eggScale = useRef(new Animated.Value(0)).current;
   const eggY = useRef(new Animated.Value(-100)).current;
@@ -32,7 +32,7 @@ export default function DailyEggDrop() {
       const hour = now.getHours();
       // Only eligible after 6 PM
       if (hour < 18) return;
-      
+
       const dateStr = now.toISOString().split('T')[0];
       const { data: { user } } = await supabase.auth.getUser();
       if (user && user.user_metadata?.last_egg_claim_date !== dateStr) {
@@ -46,11 +46,11 @@ export default function DailyEggDrop() {
 
   useEffect(() => {
     if (!isEligible || phase !== 'idle') return;
-    
+
     // Wait 3s then start the fly-in
     const t = setTimeout(() => {
       setPhase('flying');
-      
+
       Animated.timing(heroX, {
         toValue: SCREEN_WIDTH + 100,
         duration: 3200,
@@ -98,7 +98,7 @@ export default function DailyEggDrop() {
   const handleEggTap = async () => {
     if (phase !== 'landed') return;
     setPhase('cracking');
-    
+
     // Play the chime/boom sound effect!
     player.play();
 
@@ -118,9 +118,9 @@ export default function DailyEggDrop() {
     // Fetch question based on class
     let query = supabase.from('questions').select('id');
     if (userClass) query = query.eq('class_grade', userClass);
-    
+
     let { data: idsData } = await query.limit(500);
-    
+
     // Fallback if no questions for user's class
     if (!idsData || idsData.length === 0) {
       const fallback = await supabase.from('questions').select('id').limit(500);
@@ -139,21 +139,21 @@ export default function DailyEggDrop() {
   const submitAnswer = async (index: number) => {
     if (!question || selectedOption !== null) return;
     setSelectedOption(index);
-    
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    
+
     try {
       const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/daily-egg/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ questionId: question.id, selectedOptionIndex: index })
       });
-      
+
       if (res.ok) {
         const json = await res.json();
         setResult(json.isCorrect ? 'won' : 'lost');
-        
+
         setTimeout(() => {
           dismiss();
         }, 2500);
@@ -191,9 +191,9 @@ export default function DailyEggDrop() {
           </Animated.View>
 
           {/* Egg */}
-          <Animated.View 
-            style={{ 
-              position: 'absolute', 
+          <Animated.View
+            style={{
+              position: 'absolute',
               left: SCREEN_WIDTH / 2 - 40,
               transform: [{ translateY: eggY }, { scale: eggScale }, { rotate: rotateInterpolate }],
               alignItems: 'center',
@@ -229,7 +229,7 @@ export default function DailyEggDrop() {
       <Modal visible={phase === 'question'} transparent animationType="slide">
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-white dark:bg-slate-900 rounded-t-3xl p-6 pb-12 shadow-2xl max-h-[85%]">
-            
+
             {/* Handle bar */}
             <View className="w-10 h-1 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-5" />
 
@@ -276,7 +276,7 @@ export default function DailyEggDrop() {
 
                       let bgClass = 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
                       let textClass = 'text-slate-700 dark:text-slate-300';
-                      
+
                       if (revealed) {
                         if (isCorrect) {
                           bgClass = 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-400';

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Vibration, ScrollView, StyleSheet, DeviceEventEmitter, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabaseClient';
-import { Clock, Zap, CheckCircle2, XCircle, ArrowLeft, Trophy, Users, Star, Lightbulb, Send } from 'lucide-react-native';
+import { Clock, Zap, CheckCircle2, XCircle, ArrowLeft, Trophy, Users, Star, Lightbulb, Send, Bot } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import ConfettiCannon from 'react-native-confetti-cannon';
@@ -15,6 +15,7 @@ import IndiaMapArena from '@/components/IndiaMapArena';
 import BadgedName from '@/components/BadgedName';
 import { useCorrectSound } from '@/hooks/useCorrectSound';
 import LiveActivityTicker from '@/components/LiveActivityTicker';
+import AITutorChat from '@/components/AITutorChat';
 
 export default function SolveQuestionScreen() {
   const { id, challenge } = useLocalSearchParams<{ id: string; challenge?: string }>();
@@ -36,12 +37,13 @@ export default function SolveQuestionScreen() {
   const [currentActivity, setCurrentActivity] = useState<any>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const playCorrectSound = useCorrectSound();
-  
+
   // Rich features
   const [purchasedHint, setPurchasedHint] = useState<string | null>(null);
   const [isPurchasingHint, setIsPurchasingHint] = useState(false);
   const [rating, setRating] = useState(0);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [isAITutorOpen, setIsAITutorOpen] = useState(false);
 
   const [startedAt] = useState(() => new Date().toISOString());
 
@@ -83,7 +85,7 @@ export default function SolveQuestionScreen() {
             q.profiles = tp;
           }
         }
-        
+
         setQuestion(q);
         setTimeLeft(q.time_limit * 60);
         setCurrentUserId(user.id);
@@ -91,14 +93,14 @@ export default function SolveQuestionScreen() {
         // Check if user is the coop partner
         let isCoopPartner = false;
         if (challenge) {
-            const { data: challengeInfo } = await supabase
-                .from("coop_challenges")
-                .select("partner_id, status")
-                .eq("id", challenge)
-                .maybeSingle();
-            if (challengeInfo && challengeInfo.partner_id === user.id && (challengeInfo.status === 'pending' || challengeInfo.status === 'active')) {
-                isCoopPartner = true;
-            }
+          const { data: challengeInfo } = await supabase
+            .from("coop_challenges")
+            .select("partner_id, status")
+            .eq("id", challenge)
+            .maybeSingle();
+          if (challengeInfo && challengeInfo.partner_id === user.id && (challengeInfo.status === 'pending' || challengeInfo.status === 'active')) {
+            isCoopPartner = true;
+          }
         }
 
         // Check if already attempted
@@ -173,13 +175,13 @@ export default function SolveQuestionScreen() {
   const handleSubmit = useCallback(async (forcedOption?: number | null, forcedIsCorrect?: boolean) => {
     if (isSubmitting || result || alreadyAttempted) return;
     setIsSubmitting(true);
-    
+
     const optionToSend = forcedOption !== undefined ? forcedOption : selectedOption;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      
+
       // Update this URL to point to your live Next.js backend!
       const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
 
@@ -361,7 +363,7 @@ export default function SolveQuestionScreen() {
               <XCircle size={40} color="#dc2626" />
             </View>
           )}
-          
+
           <Text className="text-3xl font-black text-slate-900 dark:text-slate-100 text-center mb-2">
             Already Attempted
           </Text>
@@ -395,7 +397,7 @@ export default function SolveQuestionScreen() {
             )}
 
             {!alreadyAttempted.is_correct && !challenge && !recoveredViaCoop && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setIsChallengeModalOpen(true)}
                 className="bg-indigo-600 flex-row items-center justify-center py-4 rounded-xl mb-3 shadow-sm"
               >
@@ -404,7 +406,7 @@ export default function SolveQuestionScreen() {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => router.replace('/')}
               className={`py-4 rounded-xl items-center border ${alreadyAttempted.is_correct ? 'bg-slate-900 dark:bg-white border-slate-900 dark:border-white' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`}
             >
@@ -485,7 +487,7 @@ export default function SolveQuestionScreen() {
                 {result.pointsChange > 0 ? `+${result.pointsChange}` : `${result.pointsChange}`} Points
               </Text>
             </View>
-            
+
             {result.xpGained > 0 && (
               <View className="bg-indigo-100 dark:bg-indigo-900/40 px-4 py-2 rounded-xl flex-row items-center gap-2">
                 <Zap size={16} color="#4f46e5" fill="#4f46e5" />
@@ -505,8 +507,8 @@ export default function SolveQuestionScreen() {
               </Text>
               {question.explanation_image_url && (
                 <View className="mb-3 rounded-xl overflow-hidden bg-white/50 dark:bg-black/20 p-2 items-center justify-center">
-                  <Image 
-                    source={{ uri: resolveImageUrl(question.explanation_image_url) || '' }} 
+                  <Image
+                    source={{ uri: resolveImageUrl(question.explanation_image_url) || '' }}
                     className="w-full h-40"
                     resizeMode="contain"
                   />
@@ -555,10 +557,10 @@ export default function SolveQuestionScreen() {
                 <View className="flex-row items-center gap-2 mb-4">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                      <Star 
-                        size={32} 
-                        color={star <= rating ? "#f59e0b" : "#cbd5e1"} 
-                        fill={star <= rating ? "#f59e0b" : "transparent"} 
+                      <Star
+                        size={32}
+                        color={star <= rating ? "#f59e0b" : "#cbd5e1"}
+                        fill={star <= rating ? "#f59e0b" : "transparent"}
                       />
                     </TouchableOpacity>
                   ))}
@@ -581,7 +583,7 @@ export default function SolveQuestionScreen() {
           </View>
 
           {/* Continue / Back to coop button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => challenge ? router.replace(`/coop/${challenge}` as any) : router.back()}
             className="bg-slate-900 dark:bg-white px-8 py-4 rounded-xl w-full items-center shadow-sm mb-4"
           >
@@ -589,9 +591,9 @@ export default function SolveQuestionScreen() {
               {challenge ? 'View Co-op Status →' : 'Continue'}
             </Text>
           </TouchableOpacity>
-          
+
           {!result.isCorrect && !challenge && !recoveredViaCoop && (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setIsChallengeModalOpen(true)}
               className="bg-indigo-600 flex-row items-center justify-center py-4 rounded-xl w-full shadow-sm mb-4"
             >
@@ -620,7 +622,7 @@ export default function SolveQuestionScreen() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <TouchableOpacity onPress={() => router.back()} className="p-2">
-        <ArrowLeft size={24} color={isDark ? '#cbd5e1' : '#0f172a'} />
+          <ArrowLeft size={24} color={isDark ? '#cbd5e1' : '#0f172a'} />
         </TouchableOpacity>
         <View className="bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full flex-row items-center gap-2">
           <Clock size={16} color={timeLeft <= 10 ? "#dc2626" : "#64748b"} />
@@ -652,7 +654,7 @@ export default function SolveQuestionScreen() {
               <Text className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
                 Posted By
               </Text>
-              <BadgedName 
+              <BadgedName
                 name={question.profiles.full_name || question.profiles.username || "Verified Teacher"}
                 userId={question.profiles.id}
                 isTeacher={question.profiles.is_teacher}
@@ -685,7 +687,7 @@ export default function SolveQuestionScreen() {
         )}
 
         <Text className="text-2xl font-black text-slate-900 dark:text-slate-100 mb-2">{question.title}</Text>
-        
+
         {/* Friends who solved this */}
         {socialPresence?.solvedFriends && socialPresence.solvedFriends.length > 0 && (
           <View className="flex-row items-center mb-4">
@@ -707,10 +709,10 @@ export default function SolveQuestionScreen() {
             </Text>
           </View>
         )}
-        
+
         {imageUrl && (
-          <Image 
-            source={{ uri: imageUrl }} 
+          <Image
+            source={{ uri: imageUrl }}
             className="w-full h-48 rounded-2xl bg-slate-200 dark:bg-slate-800 mb-4"
             resizeMode="contain"
           />
@@ -721,12 +723,12 @@ export default function SolveQuestionScreen() {
         )}
 
         {question.hint && (
-          <View className="mb-6">
+          <View className="mb-6 flex-row gap-2">
             {!purchasedHint ? (
               <TouchableOpacity
                 onPress={handlePurchaseHint}
                 disabled={isPurchasingHint}
-                className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-xl p-4 flex-row items-center justify-between"
+                className="flex-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-xl p-4 flex-row items-center justify-between"
               >
                 <View className="flex-row items-center">
                   <Lightbulb size={20} color="#d97706" />
@@ -741,7 +743,7 @@ export default function SolveQuestionScreen() {
                 )}
               </TouchableOpacity>
             ) : (
-              <View className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-xl p-4">
+              <View className="flex-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-xl p-4">
                 <View className="flex-row items-center mb-1">
                   <Lightbulb size={16} color="#d97706" />
                   <Text className="font-bold text-amber-700 dark:text-amber-400 ml-1">Unlocked Hint:</Text>
@@ -749,14 +751,22 @@ export default function SolveQuestionScreen() {
                 <Text className="text-amber-900 dark:text-amber-200">{purchasedHint}</Text>
               </View>
             )}
+
+            <TouchableOpacity 
+              onPress={() => setIsAITutorOpen(true)}
+              className="bg-indigo-600 rounded-xl p-4 flex-row items-center justify-center gap-2"
+            >
+              <Bot size={20} color="white" />
+              <Text className="text-white font-bold">AI Tutor</Text>
+            </TouchableOpacity>
           </View>
         )}
 
         {question.question_type === 'match' ? (
           <View className="mt-4">
-            <MatchArena 
-              question={question} 
-              onAttempt={(isCorrect) => handleSubmit(-1, isCorrect)} 
+            <MatchArena
+              question={question}
+              onAttempt={(isCorrect) => handleSubmit(-1, isCorrect)}
               disabled={isSubmitting || !!result}
               isSubmitting={isSubmitting}
             />
@@ -787,15 +797,13 @@ export default function SolveQuestionScreen() {
                   key={index}
                   onPress={() => setSelectedOption(index)}
                   activeOpacity={0.7}
-                  className={`w-full p-4 rounded-2xl border-2 mb-3 flex-row items-center ${
-                    isSelected 
-                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' 
+                  className={`w-full p-4 rounded-2xl border-2 mb-3 flex-row items-center ${isSelected
+                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
                       : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
-                  }`}
+                    }`}
                 >
-                  <View className={`w-6 h-6 rounded-full border-2 items-center justify-center mr-3 ${
-                    isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 dark:border-slate-600'
-                  }`}>
+                  <View className={`w-6 h-6 rounded-full border-2 items-center justify-center mr-3 ${isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300 dark:border-slate-600'
+                    }`}>
                     {isSelected && <View className="w-2.5 h-2.5 bg-white rounded-full" />}
                   </View>
                   <Text className={`flex-1 text-lg ${isSelected ? 'text-indigo-900 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300 font-medium'}`}>
@@ -814,9 +822,8 @@ export default function SolveQuestionScreen() {
           <TouchableOpacity
             onPress={() => handleSubmit()}
             disabled={selectedOption === null || isSubmitting}
-            className={`w-full py-4 rounded-xl items-center flex-row justify-center ${
-              selectedOption === null ? 'bg-slate-200 dark:bg-slate-800' : 'bg-indigo-600'
-            }`}
+            className={`w-full py-4 rounded-xl items-center flex-row justify-center ${selectedOption === null ? 'bg-slate-200 dark:bg-slate-800' : 'bg-indigo-600'
+              }`}
           >
             {isSubmitting ? (
               <ActivityIndicator color="white" />
@@ -828,6 +835,12 @@ export default function SolveQuestionScreen() {
           </TouchableOpacity>
         </View>
       )}
+      
+      <AITutorChat 
+        visible={isAITutorOpen} 
+        onClose={() => setIsAITutorOpen(false)} 
+        questionId={question.id} 
+      />
     </View>
   );
 }
