@@ -840,6 +840,7 @@ export default function SolveQuestionScreen() {
         visible={isAITutorOpen} 
         onClose={() => setIsAITutorOpen(false)} 
         questionId={question.id} 
+        userId={currentUserId}
       />
     </View>
   );

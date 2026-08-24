@@ -12,9 +12,10 @@ interface AITutorChatProps {
   visible: boolean;
   onClose: () => void;
   questionId: string;
+  userId?: string | null;
 }
 
-export default function AITutorChat({ visible, onClose, questionId }: AITutorChatProps) {
+export default function AITutorChat({ visible, onClose, questionId, userId }: AITutorChatProps) {
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: "Hi! I'm your AI Tutor. I'm here to help you understand this question step-by-step. Where are you getting stuck?" }
@@ -46,6 +47,7 @@ export default function AITutorChat({ visible, onClose, questionId }: AITutorCha
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           questionId,
+          userId,
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
         }),
       });
@@ -62,6 +64,62 @@ export default function AITutorChat({ visible, onClose, questionId }: AITutorCha
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const renderMessageContent = (content: string, role: string) => {
+    // Check if there is a [CHART] tag
+    const chartRegex = /\[CHART\]([\s\S]*?)\[\/CHART\]/g;
+    const match = chartRegex.exec(content);
+
+    if (match) {
+      const textBefore = content.substring(0, match.index).trim();
+      const textAfter = content.substring(match.index + match[0].length).trim();
+      let chartData = null;
+      try {
+        chartData = JSON.parse(match[1].trim());
+      } catch (e) {
+        console.error('Failed to parse chart data:', e);
+      }
+
+      return (
+        <View>
+          {!!textBefore && <Text className={`text-base mb-3 ${role === 'user' ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>{textBefore}</Text>}
+          
+          {chartData && chartData.data && (
+            <View className="bg-white dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-700 my-2 shadow-sm w-full min-w-[200px]">
+              {chartData.title && <Text className="font-bold text-slate-800 dark:text-slate-200 mb-3 text-center">{chartData.title}</Text>}
+              {chartData.data.map((item: any, i: number) => {
+                // Determine max value for relative bar width
+                const maxVal = Math.max(...chartData.data.map((d: any) => d.value), 1);
+                const widthPct = Math.min((item.value / maxVal) * 100, 100);
+                return (
+                  <View key={i} className="mb-2">
+                    <View className="flex-row justify-between mb-1">
+                      <Text className="text-xs font-medium text-slate-600 dark:text-slate-400">{item.label}</Text>
+                      <Text className="text-xs font-bold text-slate-800 dark:text-slate-200">{item.value}</Text>
+                    </View>
+                    <View className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden w-full">
+                      <View 
+                        className="h-full bg-indigo-500 rounded-full" 
+                        style={{ width: `${widthPct}%` }}
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {!!textAfter && <Text className={`text-base mt-2 ${role === 'user' ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>{textAfter}</Text>}
+        </View>
+      );
+    }
+
+    return (
+      <Text className={`text-base ${role === 'user' ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
+        {content}
+      </Text>
+    );
   };
 
   return (
@@ -120,9 +178,7 @@ export default function AITutorChat({ visible, onClose, questionId }: AITutorCha
                         : 'bg-slate-100 dark:bg-slate-800 rounded-tl-sm border border-slate-200 dark:border-slate-700'
                     }`}
                   >
-                    <Text className={`text-base ${msg.role === 'user' ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
-                      {msg.content}
-                    </Text>
+                    {renderMessageContent(msg.content, msg.role)}
                   </View>
                   
                   {msg.role === 'user' && (

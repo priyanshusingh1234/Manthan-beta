@@ -19,7 +19,7 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { messages, questionId } = await req.json();
+    const { messages, questionId, userId } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'Missing or invalid messages' }, { status: 400 });
@@ -74,20 +74,63 @@ export async function POST(req: Request) {
     contextData += `Teacher's Hint: ${question.hint || 'None provided'}\n`;
     contextData += `Teacher's Private Explanation / Model Answer: ${question.explanation || 'None provided'}`;
 
+    // Fetch user stats if userId is provided
+    let userContextStr = "";
+    if (userId) {
+      try {
+        const [authRes, profileRes, followsRes] = await Promise.all([
+          supabase.auth.admin.getUserById(userId),
+          supabase.from('profiles').select('*').eq('id', userId).single(),
+          supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', userId)
+        ]);
+
+        const userMeta = authRes.data?.user?.user_metadata || {};
+        const profileData = profileRes.data || {};
+        const name = profileData.full_name || userMeta.fullName || 'Student';
+        const points = Math.max(Number(profileData.total_points) || 0, Number(userMeta.totalPoints) || 0);
+        const xp = Number(profileData.xp) || Number(userMeta.xp) || 0;
+        
+        const battlesAttempted = Number(userMeta.battlesAttempted) || 0;
+        const battlesWon = Number(userMeta.battlesWon) || 0;
+        const winRate = battlesAttempted > 0 ? Math.round((battlesWon / battlesAttempted) * 100) : 0;
+        
+        const friendsCount = followsRes.count || 0;
+
+        userContextStr = `
+# Student Context
+- Name: ${name}
+- Total Points: ${points}
+- XP / Level Progress: ${xp}
+- Win Rate: ${winRate}% (${battlesWon} wins / ${battlesAttempted} battles)
+- Followers/Friends: ${friendsCount}
+- Class/Grade: ${profileData.class_grade || 'Unknown'}
+
+Use this information to personalize your responses. If they ask for their stats, progress, or name, use this data!`;
+      } catch (e) {
+        console.error('Error fetching user stats:', e);
+      }
+    }
+
     // 2. Construct the Socratic Tutor Prompt
     const systemPrompt = `You are the expert, personalized AI Tutor for Dheeyudhha, a competitive educational app.
 The student is currently attempting to solve a specific question created by ${teacherName}.
-Your job is to guide the student toward the correct answer using the Socratic method (asking guiding questions).
+Your job is to guide the student toward the correct answer using the Socratic method.
+${userContextStr}
 
 # Question Context
 ${contextData}
 
 # Guidelines:
-1. STRICTLY base your guidance on the Teacher's Private Explanation and Hint. Do not hallucinate outside chemistry/physics logic if it contradicts the teacher.
+1. STRICTLY base your guidance on the Teacher's Private Explanation and Hint. Do not hallucinate logic.
 2. DO NOT give away the final answer immediately. Lead them to it step-by-step.
 3. Keep responses VERY concise, conversational, and encouraging (max 2-3 short sentences per reply).
-4. If the student asks for the direct answer, kindly decline and give them a small conceptual hint instead.
-5. If the student gets it right in their chat, congratulate them and encourage them to select the right option on their screen.`;
+4. Personalize your response! Use the student's name occasionally, encourage them based on their win rate or points.
+5. If the student asks to track their progress, see their stats, or wants a graph, you MUST output a chart!
+
+# Chart Generation Rule:
+You have a special capability to render native UI charts. To show a graph, embed EXACTLY this JSON block format anywhere in your message:
+[CHART] {"title": "Your Progress", "data": [{"label": "Wins", "value": 15}, {"label": "Losses", "value": 5}]} [/CHART]
+Always ensure the JSON is valid and the array contains 'label' and 'value' (number) keys. Do not use Markdown codeblocks (\`\`\`) inside the [CHART] tags.`;
 
     // Prepend the system prompt to the user's message history
     const apiMessages = [
