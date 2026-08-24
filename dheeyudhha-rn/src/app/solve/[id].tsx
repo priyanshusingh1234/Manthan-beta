@@ -37,45 +37,7 @@ export default function SolveQuestionScreen() {
   const [currentActivity, setCurrentActivity] = useState<any>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const playCorrectSound = useCorrectSound();
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Vibration, ScrollView, StyleSheet, DeviceEventEmitter, Image } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabaseClient';
-import { Clock, Zap, CheckCircle2, XCircle, ArrowLeft, Trophy, Users, Star, Lightbulb, Send, Bot } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColorScheme } from 'nativewind';
-import ConfettiCannon from 'react-native-confetti-cannon';
-import ChallengeFriendModal from '@/components/ChallengeFriendModal';
-import WrittenSolveClient from '@/components/WrittenSolveClient';
-import { getRandomMessage } from '@/lib/feedbackMessages';
-import MatchArena from '@/components/MatchArena';
-import HotspotArena from '@/components/HotspotArena';
-import IndiaMapArena from '@/components/IndiaMapArena';
-import BadgedName from '@/components/BadgedName';
-import { useCorrectSound } from '@/hooks/useCorrectSound';
-import LiveActivityTicker from '@/components/LiveActivityTicker';
-import AITutorChat from '@/components/AITutorChat';
 
-export default function SolveQuestionScreen() {
-  const { id, challenge } = useLocalSearchParams<{ id: string; challenge?: string }>();
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
-
-  const [question, setQuestion] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number>(0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [alreadyAttempted, setAlreadyAttempted] = useState<any>(null);
-  const [recoveredViaCoop, setRecoveredViaCoop] = useState(false);
-  const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
-  const [socialPresence, setSocialPresence] = useState<any>(null);
-  const [currentActivity, setCurrentActivity] = useState<any>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const playCorrectSound = useCorrectSound();
 
   // Rich features
   const [purchasedHint, setPurchasedHint] = useState<string | null>(null);
