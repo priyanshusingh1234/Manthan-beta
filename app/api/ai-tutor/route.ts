@@ -19,7 +19,7 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { messages, questionId, userId } = await req.json();
+    const { messages, questionId, userId, userStats } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'Missing or invalid messages' }, { status: 400 });
@@ -74,41 +74,24 @@ export async function POST(req: Request) {
     contextData += `Teacher's Hint: ${question.hint || 'None provided'}\n`;
     contextData += `Teacher's Private Explanation / Model Answer: ${question.explanation || 'None provided'}`;
 
-    // Fetch user stats if userId is provided
+    // Extract user stats directly from frontend request to save DB credits
     let userContextStr = "";
-    if (userId) {
-      try {
-        const [authRes, profileRes, followsRes] = await Promise.all([
-          supabase.auth.admin.getUserById(userId),
-          supabase.from('profiles').select('*').eq('id', userId).single(),
-          supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', userId)
-        ]);
-
-        const userMeta = authRes.data?.user?.user_metadata || {};
-        const profileData = profileRes.data || {};
-        const name = profileData.full_name || userMeta.fullName || 'Student';
-        const points = Math.max(Number(profileData.total_points) || 0, Number(userMeta.totalPoints) || 0);
-        const xp = Number(profileData.xp) || Number(userMeta.xp) || 0;
-        
-        const battlesAttempted = Number(userMeta.battlesAttempted) || 0;
-        const battlesWon = Number(userMeta.battlesWon) || 0;
-        const winRate = battlesAttempted > 0 ? Math.round((battlesWon / battlesAttempted) * 100) : 0;
-        
-        const friendsCount = followsRes.count || 0;
-
-        userContextStr = `
+    if (userStats) {
+      const name = userStats.name || 'Student';
+      const points = userStats.points || 0;
+      const xp = userStats.xp || 0;
+      const battlesAttempted = Number(userStats.battlesAttempted) || 0;
+      const battlesWon = Number(userStats.battlesWon) || 0;
+      const winRate = battlesAttempted > 0 ? Math.round((battlesWon / battlesAttempted) * 100) : 0;
+      
+      userContextStr = `
 # Student Context
 - Name: ${name}
 - Total Points: ${points}
 - XP / Level Progress: ${xp}
 - Win Rate: ${winRate}% (${battlesWon} wins / ${battlesAttempted} battles)
-- Followers/Friends: ${friendsCount}
-- Class/Grade: ${profileData.class_grade || 'Unknown'}
 
 Use this information to personalize your responses. If they ask for their stats, progress, or name, use this data!`;
-      } catch (e) {
-        console.error('Error fetching user stats:', e);
-      }
     }
 
     // 2. Construct the Socratic Tutor Prompt

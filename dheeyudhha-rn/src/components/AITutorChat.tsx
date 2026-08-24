@@ -13,9 +13,10 @@ interface AITutorChatProps {
   onClose: () => void;
   questionId: string;
   userId?: string | null;
+  userStats?: any;
 }
 
-export default function AITutorChat({ visible, onClose, questionId, userId }: AITutorChatProps) {
+export default function AITutorChat({ visible, onClose, questionId, userId, userStats }: AITutorChatProps) {
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: "Hi! I'm your AI Tutor. I'm here to help you understand this question step-by-step. Where are you getting stuck?" }
@@ -48,6 +49,7 @@ export default function AITutorChat({ visible, onClose, questionId, userId }: AI
         body: JSON.stringify({
           questionId,
           userId,
+          userStats,
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
         }),
       });

@@ -216,8 +216,8 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                         // Actor info — used by the app to show avatar in notification
                                         actor_name: params.actorName || '',
                                         actor_avatar: params.actorAvatar || '',
-                                        click_action: isDuel ? 'duel_challenge' : (isIncomingCall ? 'incoming_call' : (params.type === 'chat_message' ? 'chat_message' : 'OPEN_APP')),
-                                        categoryId: isDuel ? 'duel_challenge' : (isIncomingCall ? 'incoming_call' : (params.type === 'chat_message' ? 'chat_message' : '')),
+                                        click_action: isDuel ? 'duel_challenge' : (isIncomingCall ? 'incoming_call' : (params.type === 'chat_message' ? 'chat_message' : undefined)),
+                                        categoryId: isDuel ? 'duel_challenge' : (isIncomingCall ? 'incoming_call' : (params.type === 'chat_message' ? 'chat_message' : undefined)),
                                         // Action buttons (handled by Capacitor PushNotifications listener)
                                         ...actionsData,
                                         // explicitly add message for Expo data-only handler
@@ -240,7 +240,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
                                             ...(params.actorAvatar ? { imageUrl: params.actorAvatar } : {}),
                                             body: params.body,
                                             title: params.title,
-                                            clickAction: isDuel ? 'duel_challenge' : (params.type === 'chat_message' ? 'chat_message' : 'OPEN_APP'),
+                                            clickAction: isDuel ? 'duel_challenge' : (params.type === 'chat_message' ? 'chat_message' : undefined),
                                             sound: channelId === 'duels' ? 'default' : 'default',
                                             defaultSound: true,
                                             defaultVibrateTimings: true,

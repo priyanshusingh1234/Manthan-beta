@@ -141,11 +141,13 @@ function RootLayout() {
         targetRoute = href; // chat route
       }
 
-      try {
-        router.push(targetRoute as any);
-      } catch (e) {
-        console.warn('[Push] Could not navigate to:', targetRoute);
-      }
+      setTimeout(() => {
+        try {
+          router.push(targetRoute as any);
+        } catch (e) {
+          console.warn('[Push] Could not navigate to:', targetRoute);
+        }
+      }, 500);
     };
 
     // Handle notification TAPS (user tapped notification from tray while app running)
