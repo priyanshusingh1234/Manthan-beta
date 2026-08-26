@@ -66,6 +66,11 @@ async function handle(req: NextRequest, { params }: { params: { path: string[] }
 
         // Buffer the response body fully to avoid partial-read issues on slow connections
         const responseBody = await response.arrayBuffer();
+        
+        // CRITICAL: Update Content-Length to match the DECOMPRESSED body size!
+        // `fetch` auto-decompresses gzip, so the original Content-Length from Supabase
+        // will be smaller than the actual uncompressed body, causing browsers to truncate the JSON!
+        outHeaders.set('content-length', String(responseBody.byteLength));
 
         return new Response(responseBody, {
             status: response.status,
