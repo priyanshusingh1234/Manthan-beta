@@ -25,7 +25,11 @@ function SocialFeedContent() {
     const [currentUserData, setCurrentUserData] = useState<any>(() => {
         if (typeof window !== 'undefined') {
             try {
+            try {
                 return JSON.parse(localStorage.getItem('dheeyudha_user_meta_cache') || 'null');
+            } catch {
+                return null;
+            }
             } catch {}
         }
         return null;
@@ -205,7 +209,13 @@ function SocialFeedContent() {
 
                 try {
                     const cached = localStorage.getItem('dheeyudha_user_meta_cache');
-                    if (cached) setCurrentUserData(JSON.parse(cached));
+                    if (cached) {
+                        try {
+                            setCurrentUserData(JSON.parse(cached));
+                        } catch {
+                            localStorage.removeItem('dheeyudha_user_meta_cache');
+                        }
+                    }
                 } catch {}
 
                 fetchFeed(true);
@@ -230,8 +240,12 @@ function SocialFeedContent() {
 
         const handleUpdate = () => {
             try {
-                const cached = localStorage.getItem('dheeyudha_user_meta_cache');
-                if (cached) setCurrentUserData(JSON.parse(cached));
+                try {
+                    const cached = localStorage.getItem('dheeyudha_user_meta_cache');
+                    if (cached) setCurrentUserData(JSON.parse(cached));
+                } catch (e) {
+                    localStorage.removeItem('dheeyudha_user_meta_cache');
+                }
             } catch {}
         };
         window.addEventListener('user_metadata_updated', handleUpdate);

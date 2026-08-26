@@ -76,8 +76,12 @@ export default function DesktopSidebar() {
         try {
           const cachedMeta = localStorage.getItem('dheeyudha_user_meta_cache');
           if (cachedMeta) {
-            const parsed = JSON.parse(cachedMeta);
-            finalUser = { ...finalUser, user_metadata: { ...finalUser.user_metadata, ...parsed } };
+            try {
+                const parsed = JSON.parse(cachedMeta);
+                finalUser = { ...finalUser, user_metadata: { ...finalUser.user_metadata, ...parsed } };
+            } catch (e) {
+                localStorage.removeItem('dheeyudha_user_meta_cache');
+            }
           }
         } catch { /* ignore parse errors */ }
       }

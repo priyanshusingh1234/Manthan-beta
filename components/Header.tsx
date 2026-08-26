@@ -122,7 +122,15 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
         if (mounted && user) {
           if (typeof window !== 'undefined') {
               const cachedMeta = localStorage.getItem('dheeyudha_user_meta_cache');
-              const finalMeta = cachedMeta ? { ...user.user_metadata, ...JSON.parse(cachedMeta) } : user.user_metadata;
+              let finalMeta = user.user_metadata;
+              if (cachedMeta) {
+                  try {
+                      finalMeta = { ...user.user_metadata, ...JSON.parse(cachedMeta) };
+                  } catch (e) {
+                      console.warn("Corrupted meta cache, clearing it", e);
+                      localStorage.removeItem('dheeyudha_user_meta_cache');
+                  }
+              }
               setUser({ ...user, user_metadata: finalMeta });
           } else {
               setUser(user);
@@ -231,7 +239,13 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
     const [cachedMeta, setCachedMeta] = useState<any>(() => {
         if (typeof window !== 'undefined') {
             const c = localStorage.getItem('dheeyudha_user_meta_cache');
-            return c ? JSON.parse(c) : null;
+            if (c) {
+                try {
+                    return JSON.parse(c);
+                } catch (e) {
+                    localStorage.removeItem('dheeyudha_user_meta_cache');
+                }
+            }
         }
         return null;
     });
@@ -239,7 +253,13 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
     useEffect(() => {
         const h = () => {
             const c = localStorage.getItem('dheeyudha_user_meta_cache');
-            if (c) setCachedMeta(JSON.parse(c));
+            if (c) {
+                try {
+                    setCachedMeta(JSON.parse(c));
+                } catch (e) {
+                    localStorage.removeItem('dheeyudha_user_meta_cache');
+                }
+            }
         };
         window.addEventListener('user_metadata_updated', h);
         return () => window.removeEventListener('user_metadata_updated', h);

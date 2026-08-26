@@ -333,9 +333,14 @@ const StudentProfile: React.FC = () => {
 
           if (guaranteedAvatar) {
             if (typeof window !== 'undefined') {
-              const currentCache = JSON.parse(localStorage.getItem('dheeyudha_user_meta_cache') || '{}');
-              localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify({ ...currentCache, ...freshMeta, avatar_url: guaranteedAvatar }));
-              window.dispatchEvent(new Event('user_metadata_updated'));
+              try {
+                const currentCache = JSON.parse(localStorage.getItem('dheeyudha_user_meta_cache') || '{}');
+                localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify({ ...currentCache, ...freshMeta, avatar_url: guaranteedAvatar }));
+                window.dispatchEvent(new Event('user_metadata_updated'));
+              } catch (e) {
+                console.warn("Cleared corrupted cache", e);
+                localStorage.removeItem('dheeyudha_user_meta_cache');
+              }
             }
           }
         }

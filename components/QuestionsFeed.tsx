@@ -134,7 +134,14 @@ export default function QuestionsFeed() {
     const handleUpdate = () => {
       try {
         const cached = localStorage.getItem('dheeyudha_user_meta_cache');
-        if (cached) setCurrentUserData(JSON.parse(cached));
+        if (cached) {
+            try {
+                setCurrentUserData(JSON.parse(cached));
+            } catch (e) {
+                console.warn('Corrupted meta cache in feed', e);
+                localStorage.removeItem('dheeyudha_user_meta_cache');
+            }
+        }
       } catch { }
     };
     window.addEventListener('user_metadata_updated', handleUpdate);
@@ -176,16 +183,20 @@ export default function QuestionsFeed() {
             const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim());
             const meta = data?.user?.user_metadata || {};
             const effectiveAvatar = meta.avatar_url || meta.picture || null;
-            const userData = { ...meta, avatar_url: effectiveAvatar, _isAdmin: adminEmails.includes(data?.user?.email || '') };
-            setCurrentUserData(userData);
+            const metaToPatch = { ...meta, avatar_url: effectiveAvatar, _isAdmin: adminEmails.includes(data?.user?.email || '') };
+            setCurrentUserData(metaToPatch);
             if (typeof window !== 'undefined' && effectiveAvatar) {
               try {
                 const cached = localStorage.getItem('dheeyudha_user_meta_cache');
                 const parsed = cached ? JSON.parse(cached) : {};
-                if (effectiveAvatar !== parsed.avatar_url) {
-                  localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify({ ...parsed, ...meta, avatar_url: effectiveAvatar }));
-                }
-              } catch { }
+                setCurrentUserData({ ...parsed, ...metaToPatch });
+                localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify({ ...parsed, ...metaToPatch }));
+            } catch (e) {
+                console.warn('Corrupted meta cache in avatar update', e);
+                localStorage.removeItem('dheeyudha_user_meta_cache');
+                setCurrentUserData(metaToPatch);
+                localStorage.setItem('dheeyudha_user_meta_cache', JSON.stringify(metaToPatch));
+            }
             }
           });
         } else {
