@@ -29,7 +29,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="leaderboard" options={{ href: null, title: 'Leaderboard' }} />
       <Tabs.Screen name="profile" options={{ href: null, title: 'Profile' }} />
       <Tabs.Screen name="arena" options={{ href: null, title: 'Arena' }} />
-      <Tabs.Screen name="checker-feed" options={{ href: null, title: 'Checker Feed' }} />
+
     </Tabs>
       <DailyEggDrop />
       <CompleteProfileModal />

@@ -378,7 +378,6 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false }) => {
               { label: 'Search', href: '/search', icon: Search },
               { label: 'Clips', href: '/clips', icon: PlaySquare },
               { label: 'Feed', href: '/feed', icon: Compass },
-              { label: 'Checker', href: '/checker-feed', icon: Shield },
               { label: 'Solved', href: '/solved', icon: CheckSquare },
               { label: 'Docs', href: '/docs', icon: HelpCircle },
               { label: 'Support', href: '/contact', icon: Mail },

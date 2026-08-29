@@ -2,9 +2,9 @@ import { GoogleGenAI } from "@google/genai";
 
 
 
-export type AIVerdict = { isCorrect: boolean; breakdown: string; raw: string };
+export type AIVerdict = { isCorrect: boolean; isPartiallyCorrect?: boolean; breakdown: string; raw: string };
 
-export async function verifyWithGemini(userImageUrl: string, questionText: string, modelAnswerUrl: string | null): Promise<AIVerdict | null> {
+export async function verifyWithGemini(userImageUrl: string, questionText: string, modelAnswerUrl: string | null, userStats?: any): Promise<AIVerdict | null> {
     try {
         let studentImagePart: any = undefined;
         try {
@@ -58,20 +58,26 @@ export async function verifyWithGemini(userImageUrl: string, questionText: strin
             }
         }
 
-        const prompt = `You are a teacher grading a student's answer. 
+        const prompt = `You are a strict but encouraging teacher grading a student's handwritten answer according to formal board examination patterns (e.g., CBSE/ICSE step-marking).
 Question Text: ${questionText}
 ${teacherImagePart ? "Teacher's Model Answer is provided as an image reference. " : ""}
 Student's Answer is provided as an image.
+${userStats ? `Context about this student: They have ${userStats.totalPoints || 0} points and have won ${userStats.battlesWon || 0} battles. Tailor your encouragement level accordingly.` : ""}
 
 Task:
-Determine if the student's actual final answer is correct. They do not need to perfectly show every step exactly as the teacher if their main conclusion and technique are right. 
+Determine if the student's actual final answer is correct and evaluate their steps. They do not need to perfectly show every step exactly as the teacher if their main conclusion and technique are right, but for full points, the logic must be sound.
 IMPORTANT LIMITATION: Do not blindly fail a student for using alternative math formulas or different problem-solving techniques. Check their work intelligently to see if it is mathematically and logically sound on its own merit.
 CRITICAL CHEAT DETECTION: Check if the student's image is a screenshot (e.g., showing a mobile UI, status bar, or digital text) or a photograph of a digital screen instead of handwritten work. If it is a screenshot or a photo of a screen, you MUST mark it as "wrong" and explicitly state that uploading screenshots/digital text is considered cheating and unfair means.
 
+Grading Rules:
+- "correct": The answer is completely right and logically sound. (Full points)
+- "partially_correct": The student has the right approach or most of the steps right, but made a calculation error, missed a final unit, or left it incomplete. (Half points)
+- "wrong": The approach is fundamentally flawed, the answer is completely incorrect, or they cheated (screenshot). (Penalty)
+
 Respond ONLY with a valid JSON object matching this schema (no markdown formatting):
 {
-  "verdict": "correct" or "wrong",
-  "breakdown": "A clear, encouraging 3-4 sentence explanation addressing the student directly. Explain exactly where their math/logic fails, or why it was graded correctly despite using a different format. If they cheated by using a screenshot, firmly explain that unfair means are not allowed."
+  "verdict": "correct", "partially_correct", or "wrong",
+  "breakdown": "A clear, encouraging 3-4 sentence explanation addressing the student directly. Explain exactly where their math/logic fails, or why it was graded correctly/partially. If wrong, show the correction in a corrected way. If they cheated by using a screenshot, firmly explain that unfair means are not allowed."
 }`;
 
         const contents = [];
@@ -102,6 +108,7 @@ Respond ONLY with a valid JSON object matching this schema (no markdown formatti
 
         return {
             isCorrect: json.verdict?.toLowerCase() === "correct",
+            isPartiallyCorrect: json.verdict?.toLowerCase() === "partially_correct",
             breakdown: json.breakdown || "No detailed breakdown was provided.",
             raw: text
         };

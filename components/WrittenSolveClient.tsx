@@ -50,7 +50,7 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
 
     // Self-mark
     const [selfMarked, setSelfMarked] = useState(false);
-    const [selfMarkResult, setSelfMarkResult] = useState<{ pointsAwarded: number; newTotal: number; checkerDeadline: string } | null>(null);
+    const [selfMarkResult, setSelfMarkResult] = useState<{ pointsAwarded: number; newTotal: number; breakdown?: string } | null>(null);
     const [selfMarkError, setSelfMarkError] = useState<string | null>(null);
 
     const activeSubmission = existingSubmission || uploadedSubmission;
@@ -255,7 +255,7 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
             const data = await res.json();
             if (!res.ok) { setSelfMarkError(data.error || "Failed to self-mark"); return; }
             setSelfMarked(true);
-            setSelfMarkResult({ pointsAwarded: data.pointsAwarded, newTotal: data.newTotal, checkerDeadline: data.checkerDeadline });
+            setSelfMarkResult({ pointsAwarded: data.pointsAwarded, newTotal: data.newTotal, breakdown: data.breakdown });
         } catch (err: unknown) {
             setSelfMarkError("Network error: " + (err instanceof Error ? err.message : String(err)));
         } finally {
@@ -297,9 +297,11 @@ export default function WrittenSolveClient({ question }: { question: WrittenQues
     const getStatusInfo = (status: string) => {
         switch (status) {
             case "pending_check": return { label: "In Checker Queue", color: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50", icon: <Shield className="w-4 h-4" /> };
-            case "points_given": return { label: "Points Awarded ✓ — Still open for peer review", color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50", icon: <CheckCircle2 className="w-4 h-4" /> };
+            case "ai_confirmed_correct": return { label: "Verified by AI ✓", color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50", icon: <CheckCircle2 className="w-4 h-4" /> };
+            case "ai_confirmed_partial": return { label: "Partially Correct (AI)", color: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50", icon: <CheckCircle2 className="w-4 h-4" /> };
+            case "ai_confirmed_wrong": return { label: "Incorrect (AI)", color: "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50", icon: <Shield className="w-4 h-4" /> };
             case "auto_approved": return { label: "Auto-Approved ✓", color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50", icon: <CheckCircle2 className="w-4 h-4" /> };
-            default: return { label: "Uploaded — Not Yet Marked", color: "text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700", icon: <Clock className="w-4 h-4" /> };
+            default: return { label: "Uploaded — Ready for Grading", color: "text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700", icon: <Clock className="w-4 h-4" /> };
         }
     };
 

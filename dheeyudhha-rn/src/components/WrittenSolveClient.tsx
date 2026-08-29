@@ -40,6 +40,7 @@ function StatusBanner({ status }: { status: string }) {
     points_given:  { label: 'Points Awarded ✓ — Peer review open', color: 'bg-emerald-50 border-emerald-200', icon: <CheckCircle2 size={16} color="#059669" /> },
     auto_approved: { label: 'Auto-Approved ✓', color: 'bg-emerald-50 border-emerald-200', icon: <CheckCircle2 size={16} color="#059669" /> },
     ai_confirmed_correct: { label: 'AI Verified Correct ✓', color: 'bg-emerald-50 border-emerald-200', icon: <CheckCircle2 size={16} color="#059669" /> },
+    ai_confirmed_partial: { label: 'Partially Correct (AI)', color: 'bg-amber-50 border-amber-200', icon: <CheckCircle2 size={16} color="#d97706" /> },
     ai_confirmed_wrong:   { label: 'AI Confirmed Incorrect ✗', color: 'bg-red-50 border-red-200', icon: <XCircle size={16} color="#dc2626" /> },
   };
   const info = cfg[status] || { label: 'Uploaded — Not Yet Marked', color: 'bg-slate-50 border-slate-200', icon: <Clock size={16} color="#64748b" /> };
@@ -227,8 +228,8 @@ export default function WrittenSolveClient({ question, challengeId }: { question
     }
   };
 
-  // ── Self-Mark: I Got It RIGHT ──
-  const handleSelfMarkCorrect = async () => {
+  // ── Self-Mark: Live AI Grading ──
+  const handleSelfMark = async () => {
     if (!activeSubmission || !token) return;
     setSubmitting(true);
     try {
@@ -238,14 +239,15 @@ export default function WrittenSolveClient({ question, challengeId }: { question
         body: JSON.stringify({ submissionId: activeSubmission.id }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to self mark');
+      if (!res.ok) throw new Error(data.error || 'Failed to grade answer');
       setSelfMarked(true);
       setSelfMarkResult(data);
       if (data?.streak?.streakEarnedToday) {
         DeviceEventEmitter.emit('streak_earned', { streak: data.streak.current });
       }
-      setExistingSubmission((prev: any) => prev ? { ...prev, status: 'pending_check' } : prev);
-      setUploadedSubmission((prev: any) => prev ? { ...prev, status: 'pending_check' } : prev);
+      // Update local status so the UI switches to the result view instantly
+      setExistingSubmission((prev: any) => prev ? { ...prev, status: data.status } : prev);
+      setUploadedSubmission((prev: any) => prev ? { ...prev, status: data.status } : prev);
     } catch (err: any) {
       Alert.alert('Error', err.message);
     } finally {
@@ -375,10 +377,10 @@ export default function WrittenSolveClient({ question, challengeId }: { question
               {[
                 'Solve on paper, take a clear photo',
                 'Upload within the time limit',
-                'Compare with teacher\'s model answer',
-                'Tap "I Got It Right" to earn points instantly',
-                'Community members will verify your answer',
-                'False claims = point loss + 3 extra penalty points',
+                'Tap "Live AI Grade My Answer"',
+                'Our AI Tutor checks your logic and steps',
+                'Earn full, partial, or penalty points instantly',
+                'Do not upload screenshots (results in penalty)',
               ].map((step, i) => (
                 <Text key={i} className="text-violet-700 dark:text-violet-400 text-sm mb-0.5">{i + 1}. {step}</Text>
               ))}
@@ -501,135 +503,152 @@ export default function WrittenSolveClient({ question, challengeId }: { question
             {/* ── Self-mark form (status=pending, not yet marked) ── */}
             {currentStatus === 'pending' && !selfMarked && (
               <View className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 border border-slate-100 dark:border-slate-800 shadow-sm">
-                <Text className="text-xl font-black text-slate-900 dark:text-slate-100 mb-1">Did you get it right?</Text>
+                <Text className="text-xl font-black text-slate-900 dark:text-slate-100 mb-1">Grade My Answer</Text>
                 <Text className="text-slate-500 dark:text-slate-400 text-sm mb-4">
-                  Compare honestly with the model answer above. Claim your{' '}
+                  Ready to see how you did? Our AI Tutor will evaluate your work step-by-step. Get{' '}
                   <Text className="font-black text-violet-600 dark:text-violet-400">{question.points} points</Text>{' '}
-                  if you're correct.
+                  for a perfect answer, or partial credit for correct steps!
                 </Text>
 
-                <View className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 flex-row gap-3 mb-5">
-                  <AlertTriangle size={16} color="#d97706" style={{ marginTop: 2 }} />
-                  <Text className="flex-1 text-sm text-amber-800 dark:text-amber-300">
-                    <Text className="font-bold">Warning: </Text>
-                    The community will review your claim. If 2 peers flag it as wrong, an AI Verifier checks it.
-                    False claims = {question.points} pts lost + 3 extra penalty points.
+                <View className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/50 rounded-xl p-4 flex-row gap-3 mb-5">
+                  <Info size={16} color="#6366f1" style={{ marginTop: 2 }} />
+                  <Text className="flex-1 text-sm text-indigo-800 dark:text-indigo-300">
+                    <Text className="font-bold">Note: </Text>
+                    Grading takes ~5-10 seconds. Do not upload screenshots or typed text.
                   </Text>
                 </View>
 
-                {/* ✅ I Got It RIGHT */}
+                {/* ✅ Live AI Grade */}
                 <TouchableOpacity
-                  onPress={handleSelfMarkCorrect}
+                  onPress={handleSelfMark}
                   disabled={submitting || deleting}
-                  className="w-full bg-emerald-600 flex-row justify-center items-center py-4 rounded-2xl mb-3 gap-2"
+                  className="w-full bg-violet-600 flex-row justify-center items-center py-4 rounded-2xl mb-3 gap-2"
                   style={{ opacity: (submitting || deleting) ? 0.6 : 1 }}
                 >
                   {submitting ? (
                     <ActivityIndicator color="#fff" size="small" />
                   ) : (
                     <>
-                      <ThumbsUp size={18} color="#fff" />
-                      <Text className="text-white font-bold text-base">I Got It Right — Claim {question.points} Points</Text>
+                      <Zap size={18} color="#fff" fill="#fff" />
+                      <Text className="text-white font-bold text-base">Live AI Grade My Answer</Text>
                     </>
                   )}
                 </TouchableOpacity>
 
-                {/* ❌ I Got It WRONG */}
+                {/* ❌ Discard */}
                 <TouchableOpacity
                   onPress={handleDelete}
                   disabled={submitting || deleting}
-                  className="w-full bg-slate-100 dark:bg-slate-800 flex-row justify-center items-center py-4 rounded-2xl mb-3 gap-2"
+                  className="w-full bg-slate-100 dark:bg-slate-800 flex-row justify-center items-center py-3.5 rounded-2xl mb-3 gap-2"
                   style={{ opacity: (submitting || deleting) ? 0.6 : 1 }}
                 >
                   {deleting ? (
                     <ActivityIndicator color="#64748b" size="small" />
                   ) : (
-                    <>
-                      <XCircle size={18} color="#64748b" />
-                      <Text className="text-slate-700 dark:text-slate-300 font-bold text-base">I Got It Wrong — Try Again</Text>
-                    </>
+                    <Text className="text-slate-500 dark:text-slate-400 font-bold text-sm">Discard answer and try again</Text>
                   )}
                 </TouchableOpacity>
-
-                <Text className="text-xs text-center text-slate-400 px-4">
-                  "I Got It Wrong" discards this upload so you can try again alone.
-                </Text>
               </View>
             )}
 
-            {/* ── Points awarded confirmation ── */}
-            {(selfMarked || (activeSubmission.self_marked_correct && currentStatus === 'pending_check')) && (
-              <View className="bg-white dark:bg-slate-900 rounded-[2rem] p-5 border border-emerald-100 dark:border-emerald-800/50 shadow-sm">
-                <View className="flex-row items-center gap-4 mb-4">
-                  <View className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/40 rounded-2xl items-center justify-center">
-                    <CheckCircle2 size={28} color="#059669" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-lg font-black text-slate-900 dark:text-slate-100">Points Awarded!</Text>
-                    <Text className="text-slate-500 text-sm">
-                      +{selfMarkResult?.pointsAwarded ?? activeSubmission.points_awarded} pts added provisionally
+            {/* ── AI Confirmed Correct (Full Points) ── */}
+            {(currentStatus === 'auto_approved' || currentStatus === 'ai_confirmed_correct') && (
+              <View className="bg-emerald-50 dark:bg-emerald-900/20 rounded-[2rem] border border-emerald-200 dark:border-emerald-800/50 p-6 items-center shadow-sm">
+                <View className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/40 rounded-full items-center justify-center mb-3">
+                  <CheckCircle2 size={32} color="#059669" />
+                </View>
+                <Text className="text-xl font-black text-emerald-700 dark:text-emerald-300 mb-2">
+                  Perfect Answer! ✓
+                </Text>
+                <Text className="text-emerald-600 dark:text-emerald-400 text-sm font-bold text-center mb-4">
+                  +{selfMarkResult?.pointsAwarded ?? question.points} points added to your score.
+                </Text>
+                
+                {selfMarkResult?.breakdown && (
+                  <View className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-emerald-100 dark:border-emerald-800/50 mb-5 w-full shadow-sm text-left">
+                    <View className="flex-row items-center gap-2 mb-2">
+                      <Shield size={14} color="#059669" />
+                      <Text className="text-sm font-bold text-slate-800 dark:text-slate-200">AI Feedback</Text>
+                    </View>
+                    <Text className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+                      {selfMarkResult.breakdown}
                     </Text>
-                  </View>
-                </View>
-
-                <View className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 mb-4">
-                  <View className="flex-row items-center gap-2 mb-1">
-                    <Shield size={14} color="#7c3aed" />
-                    <Text className="font-semibold text-slate-700 dark:text-slate-200 text-sm">Community Verification Active</Text>
-                  </View>
-                  <Text className="text-slate-500 text-xs">Your peers are verifying your answer right now.</Text>
-                </View>
-
-                {selfMarkResult?.newTotal !== undefined && (
-                  <View className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 rounded-xl p-4 flex-row items-center justify-between mb-4">
-                    <Text className="text-sm text-emerald-700 dark:text-emerald-400 font-semibold">Your total points</Text>
-                    <Text className="text-2xl font-black text-emerald-700 dark:text-emerald-400">{selfMarkResult.newTotal}</Text>
                   </View>
                 )}
 
                 <TouchableOpacity
                   onPress={() => router.replace('/')}
-                  className="w-full bg-slate-900 dark:bg-slate-100 py-4 rounded-2xl items-center"
+                  className="bg-slate-900 dark:bg-slate-100 w-full py-4 rounded-2xl items-center"
                 >
                   <Text className="text-white dark:text-slate-900 font-bold">Back to Dashboard</Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* ── AI confirmed wrong ── */}
+            {/* ── AI Confirmed Partial (Half Points) ── */}
+            {currentStatus === 'ai_confirmed_partial' && (
+              <View className="bg-amber-50 dark:bg-amber-900/20 rounded-[2rem] border border-amber-200 dark:border-amber-800/50 p-6 items-center shadow-sm">
+                <View className="w-16 h-16 bg-amber-100 dark:bg-amber-900/40 rounded-full items-center justify-center mb-3">
+                  <ThumbsUp size={32} color="#d97706" />
+                </View>
+                <Text className="text-xl font-black text-amber-700 dark:text-amber-300 mb-2">
+                  Partially Correct
+                </Text>
+                <Text className="text-amber-600 dark:text-amber-400 text-sm font-bold text-center mb-4">
+                  +{selfMarkResult?.pointsAwarded ?? Math.ceil(question.points / 2)} points added for effort.
+                </Text>
+                
+                {selfMarkResult?.breakdown && (
+                  <View className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-amber-100 dark:border-amber-800/50 mb-5 w-full shadow-sm text-left">
+                    <View className="flex-row items-center gap-2 mb-2">
+                      <Info size={14} color="#d97706" />
+                      <Text className="text-sm font-bold text-slate-800 dark:text-slate-200">AI Feedback</Text>
+                    </View>
+                    <Text className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+                      {selfMarkResult.breakdown}
+                    </Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  onPress={() => router.replace('/')}
+                  className="bg-slate-900 dark:bg-slate-100 w-full py-4 rounded-2xl items-center"
+                >
+                  <Text className="text-white dark:text-slate-900 font-bold">Back to Dashboard</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* ── AI Confirmed Wrong (Penalty) ── */}
             {currentStatus === 'ai_confirmed_wrong' && (
-              <View className="bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-800/50 p-6 items-center">
-                <XCircle size={48} color="#dc2626" />
-                <Text className="text-xl font-black text-red-700 dark:text-red-300 mt-3 mb-2">Answer Confirmed Incorrect</Text>
-                <Text className="text-red-600 dark:text-red-400 text-sm text-center mb-4">
-                  Points + {question.points >= 15 ? '3-point penalty' : 'penalty'} have been deducted.
+              <View className="bg-red-50 dark:bg-red-900/20 rounded-[2rem] border border-red-200 dark:border-red-800/50 p-6 items-center shadow-sm">
+                <View className="w-16 h-16 bg-red-100 dark:bg-red-900/40 rounded-full items-center justify-center mb-3">
+                  <XCircle size={32} color="#dc2626" />
+                </View>
+                <Text className="text-xl font-black text-red-700 dark:text-red-300 mb-2">
+                  Incorrect
                 </Text>
-                <TouchableOpacity
-                  onPress={() => router.replace('/')}
-                  className="bg-slate-900 dark:bg-slate-100 px-8 py-3 rounded-xl"
-                >
-                  <Text className="text-white dark:text-slate-900 font-bold">Back to Dashboard</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+                <Text className="text-red-600 dark:text-red-400 text-sm font-bold text-center mb-4">
+                  Standard penalty applied ({selfMarkResult?.pointsAwarded ?? `-${Math.floor(question.points / 5)}`} pts).
+                </Text>
+                
+                {selfMarkResult?.breakdown && (
+                  <View className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-red-100 dark:border-red-800/50 mb-5 w-full shadow-sm text-left">
+                    <View className="flex-row items-center gap-2 mb-2">
+                      <Shield size={14} color="#dc2626" />
+                      <Text className="text-sm font-bold text-slate-800 dark:text-slate-200">AI Correction</Text>
+                    </View>
+                    <Text className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+                      {selfMarkResult.breakdown}
+                    </Text>
+                  </View>
+                )}
 
-            {/* ── Auto approved / AI confirmed correct ── */}
-            {(currentStatus === 'auto_approved' || currentStatus === 'ai_confirmed_correct') && (
-              <View className="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800/50 p-6 items-center">
-                <CheckCircle2 size={48} color="#059669" />
-                <Text className="text-xl font-black text-emerald-700 dark:text-emerald-300 mt-3 mb-2">
-                  {currentStatus === 'auto_approved' ? 'Auto-Approved! ✓' : 'Verified by AI! ✓'}
-                </Text>
-                <Text className="text-emerald-600 dark:text-emerald-400 text-sm text-center mb-4">
-                  {currentStatus === 'auto_approved'
-                    ? 'Two peers marked your answer correct. Points permanently secured!'
-                    : 'AI verified your answer is absolutely correct. Well done!'}
-                </Text>
                 <TouchableOpacity
                   onPress={() => router.replace('/')}
-                  className="bg-emerald-600 px-8 py-3 rounded-xl"
+                  className="bg-slate-900 dark:bg-slate-100 w-full py-4 rounded-2xl items-center"
                 >
-                  <Text className="text-white font-bold">Back to Dashboard</Text>
+                  <Text className="text-white dark:text-slate-900 font-bold">Return to Dashboard</Text>
                 </TouchableOpacity>
               </View>
             )}

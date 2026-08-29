@@ -181,7 +181,6 @@ export default function DesktopSidebar() {
     { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
     { label: 'Arena', href: '/tests', icon: Zap },
     { label: 'Gauntlet', href: '/gauntlet', icon: BookOpen },
-    { label: 'Checker Feed', href: '/checker-feed', icon: Shield },
     { label: 'Solved', href: '/solved', icon: CheckSquare },
     { label: 'Notifications', href: '/notifications', icon: Bell, badge: unreadCount },
   ];

@@ -165,7 +165,7 @@ export async function POST(req: Request) {
     }
 }
 
-// PATCH: Student self-marks their answer as correct
+// PATCH: Student triggers Live AI Grading
 export async function PATCH(req: Request) {
     try {
         const auth = req.headers.get("authorization");
@@ -179,10 +179,10 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: "Missing submissionId" }, { status: 400 });
         }
 
-        // Get the submission
+        // Get the submission and user stats
         const { data: sub, error: subErr } = await supabaseAdmin
             .from("written_submissions")
-            .select("*, questions(points)")
+            .select("*, questions(points, body, title)")
             .eq("id", submissionId)
             .eq("student_id", userId)
             .single();
@@ -196,16 +196,83 @@ export async function PATCH(req: Request) {
         }
 
         const questionPoints = (sub.questions as any)?.points || 0;
-        const pointsToAward = sub.challenge_id ? Math.ceil(questionPoints / 2) : questionPoints;
-
-        // Award points provisionally
         const { data: userResp } = await supabaseAdmin.auth.admin.getUserById(userId);
         const userMeta = userResp?.user?.user_metadata || {};
         const currentPoints = Number(userMeta.totalPoints) || 0;
-        const newTotal = currentPoints + pointsToAward;
         const battlesAttempted = (Number(userMeta.battlesAttempted) || 0) + 1;
-        const battlesWon = (Number(userMeta.battlesWon) || 0) + 1;
+        let battlesWon = Number(userMeta.battlesWon) || 0;
 
+        // Fetch teacher solution
+        const { data: teacherSol } = await supabaseAdmin
+            .from("teacher_solutions")
+            .select("solution_url")
+            .eq("question_id", sub.question_id)
+            .maybeSingle();
+
+        const questionText = (sub.questions as any)?.body || (sub.questions as any)?.title || "Solve this.";
+
+        let aiResult: AIVerdict | null = null;
+        try {
+            // Strict 9.0s timeout to prevent Vercel 504 Gateway Timeout on Hobby Plan (10s max)
+            aiResult = await Promise.race([
+                verifyWithGemini(sub.submission_url, questionText, teacherSol?.solution_url || null, userMeta),
+                new Promise<AIVerdict | null>((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 9000))
+            ]);
+        } catch (err: any) {
+            console.error("Live AI Error:", err);
+            if (err.message === "AI_TIMEOUT") {
+                return NextResponse.json({ error: "AI took too long to respond. Please try grading again." }, { status: 408 });
+            }
+            return NextResponse.json({ error: "AI grading failed: " + err.message }, { status: 500 });
+        }
+
+        if (!aiResult) {
+            return NextResponse.json({ error: "AI returned no result." }, { status: 500 });
+        }
+
+        // Save the AI breakdown to storage
+        try {
+            const breakdownBuf = Buffer.from(JSON.stringify({
+                verdict: aiResult.isCorrect ? "correct" : aiResult.isPartiallyCorrect ? "partially_correct" : "wrong",
+                breakdown: aiResult.breakdown,
+                raw: aiResult.raw,
+                timestamp: new Date().toISOString()
+            }), "utf8");
+            await supabaseAdmin.storage
+                .from("written-answers")
+                .upload(`ai-reviews/${submissionId}.json`, breakdownBuf, {
+                    contentType: "application/json",
+                    upsert: true
+                });
+        } catch (uploadErr) {
+            console.error("Failed to upload AI breakdown to tracking bucket:", uploadErr);
+        }
+
+        let finalStatus = "ai_confirmed_wrong";
+        let pointsAwarded = 0;
+        let penalty = 0;
+        let isWin = false;
+
+        if (aiResult.isCorrect) {
+            finalStatus = "ai_confirmed_correct";
+            pointsAwarded = sub.challenge_id ? Math.ceil(questionPoints / 2) : questionPoints;
+            isWin = true;
+        } else if (aiResult.isPartiallyCorrect) {
+            finalStatus = "ai_confirmed_partial";
+            pointsAwarded = sub.challenge_id ? Math.ceil(questionPoints / 4) : Math.ceil(questionPoints / 2);
+            isWin = true; // partial counts as a win for streak/battles
+        } else {
+            // Wrong
+            finalStatus = "ai_confirmed_wrong";
+            pointsAwarded = 0;
+            penalty = Math.floor(questionPoints / 5);
+        }
+
+        if (isWin) battlesWon += 1;
+
+        const newTotal = Math.max(0, currentPoints + pointsAwarded - penalty);
+
+        // Update User
         await supabaseAdmin.auth.admin.updateUserById(userId, {
             user_metadata: {
                 ...userMeta,
@@ -215,155 +282,53 @@ export async function PATCH(req: Request) {
             },
         });
 
-        // Sync profiles table so leaderboard stays accurate
         const { upsertProfile } = await import("@/lib/profiles");
         await upsertProfile(userId, { ...userMeta, totalPoints: newTotal, battlesAttempted, battlesWon });
+        leaderboardCache.invalidate();
 
-        leaderboardCache.invalidate(); // reflect new points in TopBrains immediately
-
-        // Update submission status to pending_check
+        // Update Submission
         await supabaseAdmin
             .from("written_submissions")
             .update({
-                self_marked_correct: true,
-                status: "pending_check",
-                points_awarded: pointsToAward,
-                checker_deadline: null, // Legacy, no longer used
+                self_marked_correct: true, // legacy flag for compatibility
+                status: finalStatus,
+                points_awarded: pointsAwarded > 0 ? pointsAwarded : -penalty,
+                checker_deadline: null,
                 updated_at: new Date().toISOString(),
             })
             .eq("id", submissionId);
 
-        if (sub.challenge_id) {
-            // 🚀 FAST-TRACK AI FOR CO-OP CHALLENGES
-            const { data: teacherSol } = await supabaseAdmin
-                .from("teacher_solutions")
-                .select("solution_url")
-                .eq("question_id", sub.question_id)
-                .maybeSingle();
-
-            const questionText = (sub.questions as any)?.body || (sub.questions as any)?.title || "Solve this.";
-
-            let aiResult: AIVerdict | null = null;
-            try {
-                aiResult = await Promise.race([
-                    verifyWithGemini(sub.submission_url, questionText, teacherSol?.solution_url || null),
-                    new Promise<AIVerdict | null>((_, reject) => setTimeout(() => reject(new Error("AI Verification Timeout")), 30000))
-                ]);
-            } catch (err) {
-                console.error("Co-op Fast-Track AI Error:", err);
-                aiResult = null;
-            }
-
-            if (!aiResult) {
-                // Fallback: leave as pending_check if AI is overloaded
-                await supabaseAdmin.from("written_submissions").update({ status: "pending_check" }).eq("id", submissionId);
-                return NextResponse.json({ success: true, pointsAwarded: pointsToAward, newTotal, message: "AI overloaded, queued for check." });
-            }
-
-            // Save the AI breakdown to storage
-            try {
-                const breakdownBuf = Buffer.from(JSON.stringify({
-                    verdict: aiResult.isCorrect ? "correct" : "wrong",
-                    breakdown: aiResult.breakdown,
-                    raw: aiResult.raw,
-                    timestamp: new Date().toISOString()
-                }), "utf8");
-                await supabaseAdmin.storage
-                    .from("written-answers")
-                    .upload(`ai-reviews/${submissionId}.json`, breakdownBuf, {
-                        contentType: "application/json",
-                        upsert: true
-                    });
-            } catch (uploadErr) {
-                console.error("Failed to upload AI breakdown to tracking bucket:", uploadErr);
-            }
-
-            if (aiResult.isCorrect) {
-                // ✅ AI says it's correct!
-                await supabaseAdmin
-                    .from("written_submissions")
-                    .update({ status: "auto_approved", updated_at: new Date().toISOString() })
-                    .eq("id", submissionId);
-
-                await createNotification({
-                    userId: userId,
-                    type: 'ai_confirmed_correct',
-                    title: '✅ AI confirmed your answer is correct!',
-                    body: `Your written answer was verified by AI and marked correct. Points are secured!`,
-                    href: `/submission/${submissionId}/ai-review`,
-                    actorAvatar: sub.submission_url || undefined,
-                });
-
-                await processCoopWin(sub);
-
-                return NextResponse.json({
-                    success: true,
-                    pointsAwarded: pointsToAward,
-                    newTotal,
-                    message: "Fast-Track AI verified correct!",
-                });
-            } else {
-                // ❌ AI says it's wrong!
-                await supabaseAdmin
-                    .from("written_submissions")
-                    .update({ status: "ai_confirmed_wrong", updated_at: new Date().toISOString() })
-                    .eq("id", submissionId);
-
-                // Revert the points + 20% penalty
-                const standardPenalty = Math.floor(questionPoints / 5);
-                const totalDeduction = pointsToAward + standardPenalty;
-                const newStudentTotal = Math.max(0, currentPoints - totalDeduction);
-                const updatedBattlesWon = Math.max(0, battlesWon - 1);
-
-                await supabaseAdmin.auth.admin.updateUserById(userId, {
-                    user_metadata: {
-                        ...userMeta,
-                        totalPoints: newStudentTotal,
-                        battlesWon: updatedBattlesWon,
-                    },
-                });
-
-                // Sync profiles table (revert)
-                const { upsertProfile: upsertProfileRevert } = await import("@/lib/profiles");
-                await upsertProfileRevert(userId, { ...userMeta, totalPoints: newStudentTotal, battlesWon: updatedBattlesWon });
-
-                leaderboardCache.invalidate();
-
-                await createNotification({
-                    userId: userId,
-                    type: 'ai_confirmed_wrong',
-                    title: '❌ AI reviewed your answer — it was wrong',
-                    body: `During fast-track AI review, your answer was determined incorrect. Standard penalty applied.`,
-                    href: `/submission/${submissionId}/ai-review`,
-                    actorAvatar: sub.submission_url || undefined,
-                });
-
-                await processCoopLoss(sub);
-
-                return NextResponse.json({
-                    success: true,
-                    pointsAwarded: -standardPenalty,
-                    newTotal: newStudentTotal,
-                    message: "Fast-Track AI verified wrong.",
-                });
-            }
-        } else {
-            // STANDARD Flow (Community verification)
-            // 🔔 Notify student they earned points
+        // Notifications & Coop
+        if (isWin) {
             await createNotification({
                 userId: userId,
-                type: 'points_earned',
-                title: `+${pointsToAward} points earned!`,
-                body: `Your answer was submitted for community verification. You've earned ${pointsToAward} points provisionally.`,
+                type: 'ai_confirmed_correct',
+                title: aiResult.isCorrect ? '✅ AI Graded: Full Points!' : '⚠️ AI Graded: Partial Points',
+                body: `You've earned ${pointsAwarded} points for your written answer.`,
                 href: `/submission/${submissionId}/ai-review`,
+                actorAvatar: sub.submission_url || undefined,
             });
-
-            return NextResponse.json({
-                success: true,
-                pointsAwarded: pointsToAward,
-                newTotal,
+            if (sub.challenge_id) await processCoopWin(sub);
+        } else {
+            await createNotification({
+                userId: userId,
+                type: 'ai_confirmed_wrong',
+                title: '❌ AI Graded: Incorrect',
+                body: `Your answer was incorrect. Standard penalty of ${penalty} applied.`,
+                href: `/submission/${submissionId}/ai-review`,
+                actorAvatar: sub.submission_url || undefined,
             });
+            if (sub.challenge_id) await processCoopLoss(sub);
         }
+
+        return NextResponse.json({
+            success: true,
+            status: finalStatus,
+            pointsAwarded: pointsAwarded > 0 ? pointsAwarded : -penalty,
+            newTotal,
+            breakdown: aiResult.breakdown,
+        });
+
     } catch (err: any) {
         console.error(err);
         return NextResponse.json({ error: err.message || "Server error" }, { status: 500 });

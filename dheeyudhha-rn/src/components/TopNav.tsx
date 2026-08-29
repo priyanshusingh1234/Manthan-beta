@@ -11,9 +11,7 @@ import { useScrollContext } from '@/context/ScrollContext';
 
 const NAV_LINKS = [
   { label: 'Leaderboard', href: '/leaderboard', icon: Trophy },
-  { label: 'Streak 🔥', href: '/streaks', icon: Flame },
-  { label: 'Checker', href: '/(tabs)/checker-feed', icon: CheckSquare },
-  { label: 'BOSS 💀', href: '/(tabs)/boss', icon: Skull },
+  { label: 'Solved', href: '/(tabs)/solved', icon: CheckSquare },
   { label: 'Gauntlet 📖', href: '/gauntlet', icon: BookOpen },
   { label: 'Duels ⚔️', href: '/duels', icon: Swords },
   { label: 'Arena', href: '/(tabs)/arena', icon: Zap },
