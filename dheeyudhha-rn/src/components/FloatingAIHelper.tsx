@@ -101,8 +101,8 @@ export default function FloatingAIHelper() {
             {!isVisible && (
                 <TouchableOpacity 
                     onPress={() => setIsVisible(true)}
-                    className="absolute bottom-6 right-6 w-14 h-14 bg-indigo-600 rounded-full items-center justify-center shadow-lg"
-                    style={{ shadowColor: '#4f46e5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 }}
+                    className="absolute bottom-24 right-6 w-14 h-14 bg-indigo-600 rounded-full items-center justify-center shadow-lg"
+                    style={{ position: 'absolute', bottom: 96, right: 24, zIndex: 9999, shadowColor: '#4f46e5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 10 }}
                 >
                     <Sparkles size={24} color="white" />
                 </TouchableOpacity>
