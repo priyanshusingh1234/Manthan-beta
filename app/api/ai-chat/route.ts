@@ -1,7 +1,14 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import supabaseAdmin from "@/lib/supabaseAdmin";
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import { AI_HELPER_CONTEXT } from "@/lib/aiHelperContext";
+
+const openai = new OpenAI({
+  apiKey: process.env.AZURE_OPENAI_KEY,
+  baseURL: `${process.env.AZURE_OPENAI_ENDPOINT}openai/deployments/${process.env.AZURE_OPENAI_DEPLOYMENT}`,
+  defaultQuery: { 'api-version': '2023-05-15' },
+  defaultHeaders: { 'api-key': process.env.AZURE_OPENAI_KEY },
+});
 
 async function getVerifiedUserId(authHeader?: string | null): Promise<string | null> {
     if (!authHeader) return null;
@@ -42,7 +49,7 @@ export async function POST(req: Request) {
             .order("created_at", { ascending: true })
             .limit(20);
 
-        const contents = [];
+        const apiMessages: any[] = [];
         const systemInstruction = `${AI_HELPER_CONTEXT}
         
 CURRENT USER CONTEXT:
@@ -52,18 +59,17 @@ CURRENT USER CONTEXT:
 - Battles Attempted: ${userMeta.battlesAttempted || 0}
 `;
         
+        apiMessages.push({ role: 'system', content: systemInstruction });
+
         if (historyRows && historyRows.length > 0) {
             for (const row of historyRows) {
-                contents.push({ role: row.role, parts: [{ text: row.content }] });
+                // OpenAI roles are typically 'user' or 'assistant'. Gemini used 'model'.
+                const role = row.role === 'model' ? 'assistant' : 'user';
+                apiMessages.push({ role, content: row.content });
             }
         }
         
-        contents.push({ role: 'user', parts: [{ text: userMessage }] });
-
-        const GEMINI_KEY = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || "";
-        if (!GEMINI_KEY) {
-            return NextResponse.json({ error: "Gemini API Key missing" }, { status: 500 });
-        }
+        apiMessages.push({ role: 'user', content: userMessage });
 
         // Save User Message to DB immediately
         await supabaseAdmin.from("ai_chat_history").insert({
@@ -72,19 +78,15 @@ CURRENT USER CONTEXT:
             content: userMessage
         }).catch(err => console.error("Failed to save user msg:", err));
 
-        const client = new GoogleGenAI({ apiKey: GEMINI_KEY });
-        const response = await client.models.generateContent({
-            model: "gemini-3.6-flash",
-            contents: contents,
-            config: {
-                systemInstruction: systemInstruction,
-                temperature: 0.7
-            }
+        const response = await openai.chat.completions.create({
+            model: process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4',
+            messages: apiMessages,
+            temperature: 0.7
         });
 
-        const reply = response.text || "I'm not sure how to respond to that right now, but keep up the great work!";
+        const reply = response.choices[0]?.message?.content || "I'm not sure how to respond to that right now, but keep up the great work!";
 
-        // Save Model Reply to DB
+        // Save Model Reply to DB (storing role as 'model' to keep consistency with history DB schema)
         await supabaseAdmin.from("ai_chat_history").insert({
             user_id: userId,
             role: "model",
