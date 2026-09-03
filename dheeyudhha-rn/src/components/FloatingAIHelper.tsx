@@ -5,12 +5,10 @@ import {
   SafeAreaView
 } from 'react-native';
 import { Sparkles, X, MessageCircle, Send } from 'lucide-react-native';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import Constants from 'expo-constants';
 
-const API_BASE_URL = Constants.expoConfig?.hostUri 
-    ? `http://${Constants.expoConfig.hostUri.split(':')[0]}:3000` 
-    : 'https://dheeyudhha.com'; // Replace with actual production URL if needed
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
 
 type Message = {
     id: string;
