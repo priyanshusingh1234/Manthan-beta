@@ -25,7 +25,7 @@ import LoginBonusModal from '@/components/LoginBonusModal';
 import LeagueDropModal from '@/components/LeagueDropModal';
 import UpdateManager from '@/components/UpdateManager';
 
-import FloatingAIHelper from '@/components/FloatingAIHelper';
+
 
 // Prevent splash screen from hiding while fonts load
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -236,7 +236,7 @@ function RootLayout() {
       <LeagueDropModal />
       <LoginBonusModal />
       <UpdateManager />
-      {session && <FloatingAIHelper />}
+
     </>
   );
 }

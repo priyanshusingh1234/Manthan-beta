@@ -9,6 +9,7 @@ import { ScrollProvider } from '@/context/ScrollContext';
 import TopNav from '@/components/TopNav';
 import DailyEggDrop from '@/components/DailyEggDrop';
 import CompleteProfileModal from '@/components/CompleteProfileModal';
+import FloatingAIHelper from '@/components/FloatingAIHelper';
 
 export default function TabsLayout() {
   return (
@@ -33,6 +34,7 @@ export default function TabsLayout() {
     </Tabs>
       <DailyEggDrop />
       <CompleteProfileModal />
+      <FloatingAIHelper />
     </ScrollProvider>
   );
 }
