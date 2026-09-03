@@ -1,10 +1,10 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TouchableOpacity, Modal, TextInput, 
   FlatList, KeyboardAvoidingView, Platform, ActivityIndicator,
   SafeAreaView
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Sparkles, X, MessageCircle, Send } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 import Constants from 'expo-constants';
 
@@ -106,7 +106,7 @@ export default function FloatingAIHelper() {
                     className="absolute bottom-6 right-6 w-14 h-14 bg-indigo-600 rounded-full items-center justify-center shadow-lg"
                     style={{ shadowColor: '#4f46e5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 }}
                 >
-                    <Ionicons name="sparkles" size={24} color="white" />
+                    <Sparkles size={24} color="white" />
                 </TouchableOpacity>
             )}
 
@@ -117,12 +117,12 @@ export default function FloatingAIHelper() {
                     <View className="flex-row items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                         <View className="flex-row items-center space-x-2">
                             <View className="w-8 h-8 bg-indigo-100 rounded-full items-center justify-center">
-                                <Ionicons name="sparkles" size={16} color="#4f46e5" />
+                                <Sparkles size={16} color="#4f46e5" />
                             </View>
                             <Text className="text-lg font-bold text-slate-800 dark:text-white">Dheeyudha AI Coach</Text>
                         </View>
                         <TouchableOpacity onPress={() => setIsVisible(false)} className="p-2">
-                            <Ionicons name="close" size={24} color="#64748b" />
+                            <X size={24} color="#64748b" />
                         </TouchableOpacity>
                     </View>
 
@@ -154,7 +154,7 @@ export default function FloatingAIHelper() {
                                 }}
                                 ListEmptyComponent={() => (
                                     <View className="items-center justify-center py-10 mt-10">
-                                        <Ionicons name="chatbubbles-outline" size={48} color="#cbd5e1" />
+                                        <MessageCircle size={48} color="#cbd5e1" />
                                         <Text className="text-slate-400 mt-4 text-center px-8">Ask me anything about your points, battles, or how the app works!</Text>
                                     </View>
                                 )}
@@ -181,7 +181,7 @@ export default function FloatingAIHelper() {
                                 {isLoading ? (
                                     <ActivityIndicator color="white" />
                                 ) : (
-                                    <Ionicons name="send" size={18} color="white" style={{ marginLeft: 2 }} />
+                                    <Send size={18} color="white" style={{ marginLeft: 2 }} />
                                 )}
                             </TouchableOpacity>
                         </View>
