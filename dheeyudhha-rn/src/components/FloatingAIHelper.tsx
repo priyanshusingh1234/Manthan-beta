@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TouchableOpacity, Modal, TextInput, 
-  FlatList, KeyboardAvoidingView, Platform, ActivityIndicator,
-  SafeAreaView
+  FlatList, KeyboardAvoidingView, Platform, ActivityIndicator
 } from 'react-native';
 import { Sparkles, X, MessageCircle, Send } from 'lucide-react-native';
 import { supabase } from '@/lib/supabaseClient';
-import Constants from 'expo-constants';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://manthan-beta-c975.vercel.app';
 
@@ -23,6 +22,7 @@ export default function FloatingAIHelper() {
     const [isLoading, setIsLoading] = useState(false);
     const [isFetchingHistory, setIsFetchingHistory] = useState(false);
     const flatListRef = useRef<FlatList>(null);
+    const insets = useSafeAreaInsets();
 
     // Fetch History when modal opens
     useEffect(() => {
@@ -84,11 +84,11 @@ export default function FloatingAIHelper() {
             if (data.success && data.reply) {
                 setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'model', content: data.reply }]);
             } else {
-                setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'model', content: "Sorry, I'm having trouble connecting to my brain right now! 🧠⚡" }]);
+                setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'model', content: `Error: ${data.error || "I'm having trouble connecting to my brain right now! 🧠⚡"}` }]);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('AI Chat error', error);
-            setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'model', content: "Network error! Make sure you are connected to the internet." }]);
+            setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'model', content: `Network error: ${error.message}` }]);
         } finally {
             setIsLoading(false);
             setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
@@ -108,83 +108,96 @@ export default function FloatingAIHelper() {
                 </TouchableOpacity>
             )}
 
-            {/* Chat Modal */}
-            <Modal visible={isVisible} animationType="slide" presentationStyle="formSheet">
-                <SafeAreaView className="flex-1 bg-slate-50 dark:bg-slate-900">
-                    {/* Header */}
-                    <View className="flex-row items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-                        <View className="flex-row items-center space-x-2">
-                            <View className="w-8 h-8 bg-indigo-100 rounded-full items-center justify-center">
-                                <Sparkles size={16} color="#4f46e5" />
-                            </View>
-                            <Text className="text-lg font-bold text-slate-800 dark:text-white">Dheeyudha AI Coach</Text>
-                        </View>
-                        <TouchableOpacity onPress={() => setIsVisible(false)} className="p-2">
-                            <X size={24} color="#64748b" />
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Chat Area */}
-                    <View className="flex-1">
-                        {isFetchingHistory ? (
-                            <View className="flex-1 items-center justify-center">
-                                <ActivityIndicator size="large" color="#4f46e5" />
-                                <Text className="text-slate-500 mt-4">Waking up AI...</Text>
-                            </View>
-                        ) : (
-                            <FlatList
-                                ref={flatListRef}
-                                data={messages}
-                                keyExtractor={(item) => item.id}
-                                contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
-                                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                                renderItem={({ item }) => {
-                                    const isUser = item.role === 'user';
-                                    return (
-                                        <View className={`mb-4 max-w-[85%] ${isUser ? 'self-end' : 'self-start'}`}>
-                                            <View className={`p-4 rounded-2xl ${isUser ? 'bg-indigo-600 rounded-tr-sm' : 'bg-white dark:bg-slate-800 rounded-tl-sm border border-slate-100 dark:border-slate-700 shadow-sm'}`}>
-                                                <Text className={`text-base ${isUser ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
-                                                    {item.content}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                    );
-                                }}
-                                ListEmptyComponent={() => (
-                                    <View className="items-center justify-center py-10 mt-10">
-                                        <MessageCircle size={48} color="#cbd5e1" />
-                                        <Text className="text-slate-400 mt-4 text-center px-8">Ask me anything about your points, battles, or how the app works!</Text>
+            {/* Chat Modal - Bottom Sheet Style */}
+            <Modal 
+                visible={isVisible} 
+                animationType="slide" 
+                transparent={true}
+                onRequestClose={() => setIsVisible(false)}
+            >
+                <KeyboardAvoidingView 
+                    style={{ flex: 1 }} 
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                >
+                    <View className="flex-1 justify-end bg-black/50">
+                        <View 
+                            className="bg-slate-50 dark:bg-slate-900 rounded-t-3xl overflow-hidden shadow-2xl border-t border-slate-200 dark:border-slate-800"
+                            style={{ height: '85%', paddingBottom: insets.bottom }}
+                        >
+                            {/* Header */}
+                            <View className="flex-row items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                                <View className="flex-row items-center space-x-2">
+                                    <View className="w-8 h-8 bg-indigo-100 rounded-full items-center justify-center">
+                                        <Sparkles size={16} color="#4f46e5" />
                                     </View>
-                                )}
-                            />
-                        )}
-                    </View>
+                                    <Text className="text-lg font-bold text-slate-800 dark:text-white">Dheeyudha AI Coach</Text>
+                                </View>
+                                <TouchableOpacity onPress={() => setIsVisible(false)} className="p-2">
+                                    <X size={24} color="#64748b" />
+                                </TouchableOpacity>
+                            </View>
 
-                    {/* Input Area */}
-                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                        <View className="flex-row items-center p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-                            <TextInput
-                                className="flex-1 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-white rounded-full px-4 py-3 mr-3 max-h-32"
-                                placeholder="Ask a question..."
-                                placeholderTextColor="#94a3b8"
-                                value={inputText}
-                                onChangeText={setInputText}
-                                multiline
-                            />
-                            <TouchableOpacity 
-                                onPress={sendMessage}
-                                disabled={isLoading || !inputText.trim()}
-                                className={`w-12 h-12 rounded-full items-center justify-center ${isLoading || !inputText.trim() ? 'bg-indigo-300' : 'bg-indigo-600'}`}
-                            >
-                                {isLoading ? (
-                                    <ActivityIndicator color="white" />
+                            {/* Chat Area */}
+                            <View className="flex-1">
+                                {isFetchingHistory ? (
+                                    <View className="flex-1 items-center justify-center">
+                                        <ActivityIndicator size="large" color="#4f46e5" />
+                                        <Text className="text-slate-500 mt-4">Waking up AI...</Text>
+                                    </View>
                                 ) : (
-                                    <Send size={18} color="white" style={{ marginLeft: 2 }} />
+                                    <FlatList
+                                        ref={flatListRef}
+                                        data={messages}
+                                        keyExtractor={(item) => item.id}
+                                        contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
+                                        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                                        renderItem={({ item }) => {
+                                            const isUser = item.role === 'user';
+                                            return (
+                                                <View className={`mb-4 max-w-[85%] ${isUser ? 'self-end' : 'self-start'}`}>
+                                                    <View className={`p-4 rounded-2xl ${isUser ? 'bg-indigo-600 rounded-tr-sm' : 'bg-white dark:bg-slate-800 rounded-tl-sm border border-slate-100 dark:border-slate-700 shadow-sm'}`}>
+                                                        <Text className={`text-base ${isUser ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
+                                                            {item.content}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            );
+                                        }}
+                                        ListEmptyComponent={() => (
+                                            <View className="items-center justify-center py-10 mt-10">
+                                                <MessageCircle size={48} color="#cbd5e1" />
+                                                <Text className="text-slate-400 mt-4 text-center px-8">Ask me anything about your points, battles, or how the app works!</Text>
+                                            </View>
+                                        )}
+                                    />
                                 )}
-                            </TouchableOpacity>
+                            </View>
+
+                            {/* Input Area */}
+                            <View className="flex-row items-center p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                                <TextInput
+                                    className="flex-1 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-white rounded-2xl px-4 py-3 mr-3 max-h-32"
+                                    placeholder="Ask a question..."
+                                    placeholderTextColor="#94a3b8"
+                                    value={inputText}
+                                    onChangeText={setInputText}
+                                    multiline
+                                />
+                                <TouchableOpacity 
+                                    onPress={sendMessage}
+                                    disabled={isLoading || !inputText.trim()}
+                                    className={`w-12 h-12 rounded-full items-center justify-center ${isLoading || !inputText.trim() ? 'bg-indigo-300' : 'bg-indigo-600'}`}
+                                >
+                                    {isLoading ? (
+                                        <ActivityIndicator color="white" />
+                                    ) : (
+                                        <Send size={18} color="white" style={{ marginLeft: 2 }} />
+                                    )}
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                    </KeyboardAvoidingView>
-                </SafeAreaView>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
         </>
     );
