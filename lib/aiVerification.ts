@@ -95,7 +95,7 @@ Respond ONLY with a valid JSON object matching this schema (no markdown formatti
 
         // Use the new Google GenAI SDK v1 syntax: ai.models.generateContent
         const response = await client.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.6-flash",
             contents: [{ role: 'user', parts: contents }],
             config: {
                 responseMimeType: "application/json",

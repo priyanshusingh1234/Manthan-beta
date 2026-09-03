@@ -9,11 +9,12 @@ export async function GET(request: Request) {
     if (!rawUsername) {
         return NextResponse.json({ error: 'Username is required' }, { status: 400 });
     }
-
+    
     const username = sanitizeUsernameInput(rawUsername);
     if (!username || !isValidUsername(username)) {
         return NextResponse.json({ error: 'Invalid username format' }, { status: 400 });
     }
+
 
     try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

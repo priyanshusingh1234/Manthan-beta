@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
             const { data: { user } } = await supabaseAdmin.auth.getUser(token);
             currentUserId = user?.id || null;
         }
-
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        
 
         // 1. Fire all DB calls in parallel:
         //    - Tag weights (for personalisation)

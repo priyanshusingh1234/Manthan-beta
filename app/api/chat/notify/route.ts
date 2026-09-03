@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createNotification } from '@/lib/createNotification';
 import supabaseAdmin from '@/lib/supabaseAdmin';
-
 export async function POST(req: Request) {
   try {
     const { receiverId, senderId, content, roomId, actorName } = await req.json();

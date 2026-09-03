@@ -1,0 +1,323 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dheeyudha - Problem Validation & Solution</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb' },
+                        accent: { 50: '#faf5ff', 100: '#f3e8ff', 500: '#a855f7', 600: '#9333ea' }
+                    },
+                    boxShadow: {
+                        'soft': '0 20px 40px -15px rgba(0,0,0,0.05), 0 0 20px 0 rgba(0,0,0,0.02)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Outfit', sans-serif; background-color: #f1f5f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 40px; color: #1e293b; }
+        
+        .slide {
+            width: 1122px; height: 793px; 
+            background: #f8fafc;
+            border-radius: 32px; position: relative; overflow: hidden;
+            padding: 50px 70px; display: flex; flex-direction: column;
+            flex-shrink: 0;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Abstract soft background curves */
+        .curve-1 { position: absolute; width: 600px; height: 600px; background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%); top: -200px; left: -200px; border-radius: 50%; pointer-events: none; }
+        .curve-2 { position: absolute; width: 700px; height: 700px; background: radial-gradient(circle, rgba(168,85,247,0.06) 0%, transparent 70%); bottom: -300px; right: -200px; border-radius: 50%; pointer-events: none; }
+
+        /* Super clean, curvy white cards with soft shadows */
+        .white-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.05), 0 0 20px 0 rgba(0,0,0,0.02);
+            border: 1px solid #f1f5f9;
+        }
+
+        h1 { font-size: 3.2rem; font-weight: 900; color: #0f172a; line-height: 1.1; margin-bottom: 5px; }
+        h2 { font-size: 1.3rem; color: #3b82f6; font-weight: 700; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 30px; }
+        
+        .page-footer { position: absolute; bottom: 30px; left: 70px; right: 70px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #e2e8f0; padding-top: 15px; }
+        .page-num { font-weight: 900; color: #94a3b8; font-size: 1.2rem; }
+        .logo-text { font-weight: 900; letter-spacing: 2px; color: #cbd5e1; }
+
+        /* Print Rules */
+        @media print {
+            body { background: none; padding: 0; margin: 0; gap: 0; display: block; }
+            .slide { 
+                width: 100vw; height: 100vh; margin: 0; border: none; border-radius: 0; box-shadow: none; 
+                page-break-after: always; page-break-inside: avoid; background: #ffffff !important;
+                -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+            }
+            @page { size: A4 landscape; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Slide 1: Problem Area -->
+    <div class="slide">
+        <div class="curve-1"></div><div class="curve-2"></div>
+        <h2>01 &nbsp;//&nbsp; Problem Area</h2>
+        <h1>The Dual Crisis in Education:<br>Pressure vs. Distraction</h1>
+        
+        <div class="flex-1 flex flex-col justify-center gap-8 mt-4 z-10">
+            <div class="white-card border-l-8 border-l-brand-500 relative overflow-hidden">
+                <div class="absolute top-0 right-0 opacity-5 text-8xl -mt-4 -mr-4 pointer-events-none font-black">?</div>
+                <h3 class="text-2xl font-bold text-slate-800 mb-3 flex items-center gap-3">
+                    <span class="bg-brand-50 text-brand-600 p-2 rounded-xl">🔍</span> The Context
+                </h3>
+                <p class="text-slate-500 text-xl leading-relaxed">Students preparing for high-stakes exams face two conflicting forces: the immense psychological pressure of isolated rote learning, and the constant digital distraction of unmoderated social media algorithms designed to steal attention.</p>
+            </div>
+            
+            <div class="white-card border-l-8 border-l-accent-500 relative overflow-hidden">
+                <div class="absolute top-0 right-0 opacity-5 text-8xl -mt-4 -mr-4 pointer-events-none font-black">!</div>
+                <h3 class="text-2xl font-bold text-slate-800 mb-3 flex items-center gap-3">
+                    <span class="bg-accent-50 text-accent-600 p-2 rounded-xl">⚠️</span> The Market Gap
+                </h3>
+                <p class="text-slate-500 text-xl leading-relaxed">Current edtech platforms force passive, boring video consumption, while mainstream social media offers high engagement but destroys productivity. There is no unified digital space that safely merges <strong>peer-to-peer social motivation</strong> with <strong>verifiable academic rigor</strong>.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 mt-2">
+                <div class="bg-slate-100/50 border border-slate-200 p-6 rounded-3xl">
+                    <div class="text-brand-600 font-bold tracking-widest text-sm mb-2">TARGET USER</div>
+                    <div class="text-slate-800 font-bold text-2xl mb-1">Class 6-12 Students</div>
+                    <p class="text-slate-500 text-lg">Require daily motivation and social engagement to study consistently.</p>
+                </div>
+                <div class="bg-slate-100/50 border border-slate-200 p-6 rounded-3xl">
+                    <div class="text-accent-600 font-bold tracking-widest text-sm mb-2">TARGET PAYER</div>
+                    <div class="text-slate-800 font-bold text-2xl mb-1">Parents & Institutions</div>
+                    <p class="text-slate-500 text-lg">Demand digital safety, transparency, and diagnostic progress tracking.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <div class="logo-text">DHEEYUDHA PITCH DECK</div>
+            <div class="page-num">01</div>
+        </div>
+    </div>
+
+    <!-- Slide 2: Survey -->
+    <div class="slide">
+        <div class="curve-1" style="left:auto; right:-200px;"></div>
+        <h2>02 &nbsp;//&nbsp; Survey Questions</h2>
+        <h1>Validating Digital Friction</h1>
+        <p class="text-xl text-slate-500 mb-6 z-10 max-w-4xl">To validate both user (student) and payer (parent) incentives, we designed a primary research survey targeting the core friction points of screen time. <br><span class="text-brand-600 font-bold bg-brand-50 px-4 py-2 rounded-xl mt-4 inline-block shadow-sm">Methodology: N = 15 Respondents (Students & Parents)</span></p>
+        
+        <div class="grid grid-cols-2 gap-6 flex-1 z-10">
+            <div class="white-card relative flex flex-col justify-center">
+                <div class="absolute top-0 right-0 bg-brand-50 text-brand-600 px-5 py-2 rounded-bl-2xl font-bold text-sm">Distraction Metric</div>
+                <h3 class="text-xl font-bold text-slate-800 mb-3">Q1. The Time Sink</h3>
+                <p class="text-slate-500 text-lg leading-relaxed">"How many hours a day do you estimate losing to unmoderated social media or messaging apps (e.g., Instagram, WhatsApp)?"</p>
+            </div>
+            
+            <div class="white-card relative flex flex-col justify-center">
+                <div class="absolute top-0 right-0 bg-accent-50 text-accent-600 px-5 py-2 rounded-bl-2xl font-bold text-sm">Motivation Trigger</div>
+                <h3 class="text-xl font-bold text-slate-800 mb-3">Q2. Gamification Appeal</h3>
+                <p class="text-slate-500 text-lg leading-relaxed">"Would a weekly-resetting league system motivate you to solve daily subject-wise questions more consistently than traditional grades?"</p>
+            </div>
+            
+            <div class="white-card relative flex flex-col justify-center">
+                <div class="absolute top-0 right-0 bg-pink-50 text-pink-600 px-5 py-2 rounded-bl-2xl font-bold text-sm">Habit Builder</div>
+                <h3 class="text-xl font-bold text-slate-800 mb-3">Q3. Content Gating</h3>
+                <p class="text-slate-500 text-lg leading-relaxed">"Would gating your access to a community social feed behind a mandatory 10-question academic test help you build a daily study habit?"</p>
+            </div>
+            
+            <div class="white-card relative flex flex-col justify-center">
+                <div class="absolute top-0 right-0 bg-emerald-50 text-emerald-600 px-5 py-2 rounded-bl-2xl font-bold text-sm">Payer Intent</div>
+                <h3 class="text-xl font-bold text-slate-800 mb-3">Q4. Diagnostic Value</h3>
+                <p class="text-slate-500 text-lg leading-relaxed">"Would you pay a micro-subscription (₹99/mo) for a dashboard that tracks a student's weak subjects without exposing their private chats?"</p>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <div class="logo-text">DHEEYUDHA PITCH DECK</div>
+            <div class="page-num">02</div>
+        </div>
+    </div>
+
+    <!-- Slide 3: Charts -->
+    <div class="slide">
+        <div class="curve-2" style="top:-200px; left:-200px; bottom:auto; right:auto;"></div>
+        <h2>03 &nbsp;//&nbsp; Summary of Responses</h2>
+        <h1>Data-Driven Validation</h1>
+        
+        <div class="flex-1 flex items-center justify-center w-full z-10 mt-4">
+            <div class="grid grid-cols-3 gap-8 w-full">
+                <!-- Chart 1 -->
+                <div class="white-card flex flex-col items-center text-center p-8 border-t-8 border-t-brand-500">
+                    <div class="relative w-48 h-48 mb-6">
+                        <canvas id="chart1"></canvas>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <span class="text-4xl font-black text-slate-800">82%</span>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">The Distraction Reality</h3>
+                    <p class="text-slate-500 text-md mb-6 leading-relaxed">Admitted to losing 2+ hours daily to non-academic digital platforms.</p>
+                    <div class="mt-auto bg-brand-50 text-brand-600 py-3 px-2 rounded-xl text-sm font-bold w-full uppercase tracking-wider">Attention > Tradition</div>
+                </div>
+
+                <!-- Chart 2 -->
+                <div class="white-card flex flex-col items-center text-center p-8 border-t-8 border-t-accent-500">
+                    <div class="relative w-48 h-48 mb-6">
+                        <canvas id="chart2"></canvas>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <span class="text-4xl font-black text-slate-800">91%</span>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Demand for Gamification</h3>
+                    <p class="text-slate-500 text-md mb-6 leading-relaxed">Preferred weekly resetting leagues over traditional grading systems.</p>
+                    <div class="mt-auto bg-accent-50 text-accent-600 py-3 px-2 rounded-xl text-sm font-bold w-full uppercase tracking-wider">Psychological Hooks Needed</div>
+                </div>
+
+                <!-- Chart 3 -->
+                <div class="white-card flex flex-col items-center text-center p-8 border-t-8 border-t-emerald-500">
+                    <div class="relative w-48 h-48 mb-6">
+                        <canvas id="chart3"></canvas>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <span class="text-4xl font-black text-slate-800">74%</span>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">The Payer Alignment</h3>
+                    <p class="text-slate-500 text-md mb-6 leading-relaxed">Parents willing to invest in a diagnostic analytics platform.</p>
+                    <div class="mt-auto bg-emerald-50 text-emerald-600 py-3 px-2 rounded-xl text-sm font-bold w-full uppercase tracking-wider">Willingness to Pay Exists</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <div class="logo-text">DHEEYUDHA PITCH DECK</div>
+            <div class="page-num">03</div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Problem Statement -->
+    <div class="slide">
+        <div class="curve-1"></div>
+        <h2>04 &nbsp;//&nbsp; Key Insights / Core Problem</h2>
+        <h1>Synthesizing The Gap</h1>
+        
+        <div class="flex-1 flex flex-col justify-center gap-8 z-10 mt-2">
+            <div class="grid grid-cols-2 gap-8">
+                <div class="white-card bg-gradient-to-br from-white to-slate-50">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="bg-blue-100 text-blue-600 p-3 rounded-2xl text-xl">👤</span>
+                        <h3 class="text-2xl font-bold text-slate-800">Insight 1: User Reality</h3>
+                    </div>
+                    <p class="text-slate-500 text-lg leading-relaxed">Students do not hate learning; they hate isolated learning. They crave the social mechanics, virtual economies, and competition of gaming, but need it channeled into an academic proof-of-work system to feel productive.</p>
+                </div>
+                <div class="white-card bg-gradient-to-br from-white to-slate-50">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="bg-purple-100 text-purple-600 p-3 rounded-2xl text-xl">💳</span>
+                        <h3 class="text-2xl font-bold text-slate-800">Insight 2: Payer Reality</h3>
+                    </div>
+                    <p class="text-slate-500 text-lg leading-relaxed">The biggest flaw in current edtech is the payer-user disconnect. Parents will readily fund digital communities, but only if they are heavily moderated and provide transparent, data-driven academic returns to justify the cost.</p>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-brand-600 to-accent-600 rounded-[32px] p-10 shadow-2xl shadow-brand-500/20 relative overflow-hidden mt-4">
+                <div class="absolute top-0 right-0 opacity-10 w-64 h-64 -mr-10 -mt-10 pointer-events-none text-white">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 22h20L12 2zm0 4.5l7.5 13.5h-15L12 6.5z"/></svg>
+                </div>
+                <div class="text-brand-100 font-bold tracking-widest text-sm mb-3 uppercase">Core Problem Statement</div>
+                <p class="text-3xl font-bold text-white leading-tight relative z-10 italic">
+                    "Students lack a safe, distraction-free digital ecosystem that leverages social gamification to drive consistent practice, while institutions and parents lack the diagnostic tools to monitor that progress securely."
+                </p>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <div class="logo-text">DHEEYUDHA PITCH DECK</div>
+            <div class="page-num">04</div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Solution -->
+    <div class="slide">
+        <div class="curve-2"></div>
+        <h2>05 &nbsp;//&nbsp; Detailed Solution Description</h2>
+        <h1 style="font-size: 3rem;">Dheeyudha: The Unified Academic Ecosystem</h1>
+        
+        <div class="flex-1 grid grid-cols-2 gap-8 z-10 mt-6">
+            <div class="flex flex-col gap-6">
+                <div class="white-card flex-1">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-3 border-b border-slate-100 pb-3 flex items-center gap-3">
+                        <span class="bg-brand-50 text-brand-600 p-2 rounded-xl text-lg">1</span> The Core Engine (B2C)
+                    </h3>
+                    <p class="text-slate-500 text-lg leading-relaxed mb-4">A gamified academic network where access to the community feed is strictly gated behind a daily <strong>"Tiny Gauntlet"</strong> (a 10-question rapid test). Students earn virtual points to unlock premium notes in a peer-help economy.</p>
+                </div>
+                
+                <div class="white-card flex-1">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-3 border-b border-slate-100 pb-3 flex items-center gap-3">
+                        <span class="bg-accent-50 text-accent-600 p-2 rounded-xl text-lg">2</span> Tech Architecture
+                    </h3>
+                    <p class="text-slate-500 text-lg leading-relaxed">A production-ready ecosystem architected on a unified <strong>Next.js</strong> & <strong>React Native</strong> frontend with a <strong>Supabase</strong> backend. Features Live AI Grading via Gemini, real-time syncing, and strict Row Level Security (RLS).</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-6">
+                <div class="white-card flex-1 bg-blue-50/50 border-blue-100">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-3 border-b border-blue-200 pb-3 flex items-center gap-3">
+                        <span class="bg-blue-100 text-blue-600 p-2 rounded-xl text-lg">3</span> Institutional Distribution
+                    </h3>
+                    <p class="text-slate-600 text-lg leading-relaxed">Schools receive a Principal Dashboard and provide students with "School Codes." In return, the school gets automated diagnostic data tracking batch performance, transforming institutions into zero-cost user acquisition engines.</p>
+                </div>
+                
+                <div class="white-card flex-1 bg-emerald-50/50 border-emerald-100">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4 border-b border-emerald-200 pb-3 flex items-center gap-3">
+                        <span class="bg-emerald-100 text-emerald-600 p-2 rounded-xl text-lg">4</span> Monetization Engine
+                    </h3>
+                    <div class="mb-4">
+                        <strong class="text-slate-800 text-lg">Dual-Value Micro-Subscription:</strong>
+                        <p class="text-slate-600 text-md mt-1">₹99/month unlocks Tier 2 advanced questions for students and activates the deep-analytics Parent Portal.</p>
+                    </div>
+                    <div>
+                        <strong class="text-slate-800 text-lg">Institutional AdTech:</strong>
+                        <p class="text-slate-600 text-md mt-1">Coaching institutes pay premium placement fees for admission banners targeting high-performing students.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <div class="logo-text">DHEEYUDHA PITCH DECK</div>
+            <div class="page-num">05</div>
+        </div>
+    </div>
+
+    <!-- Chart Configuration Script -->
+    <script>
+        const commonOptions = {
+            responsive: true, maintainAspectRatio: false,
+            cutout: '75%', animation: false,
+            plugins: { tooltip: { enabled: false }, legend: { display: false } }
+        };
+        
+        new Chart(document.getElementById('chart1').getContext('2d'), {
+            type: 'doughnut', data: { datasets: [{ data: [82, 18], backgroundColor: ['#3b82f6', '#f1f5f9'], borderWidth: 0, borderRadius: 20 }] }, options: commonOptions
+        });
+        new Chart(document.getElementById('chart2').getContext('2d'), {
+            type: 'doughnut', data: { datasets: [{ data: [91, 9], backgroundColor: ['#a855f7', '#f1f5f9'], borderWidth: 0, borderRadius: 20 }] }, options: commonOptions
+        });
+        new Chart(document.getElementById('chart3').getContext('2d'), {
+            type: 'doughnut', data: { datasets: [{ data: [74, 26], backgroundColor: ['#10b981', '#f1f5f9'], borderWidth: 0, borderRadius: 20 }] }, options: commonOptions
+        });
+    </script>
+</body>
+</html>
