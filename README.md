@@ -3,7 +3,7 @@
 Dheeyudha is a modern, gamified learning platform built to make academic problem-solving engaging and competitive. It supports peer-to-peer knowledge battles, co-op challenges, and an integrated **Live AI Tutor** to grade handwritten solutions instantly.
 
 The platform is divided into two primary clients sharing a single powerful backend:
-1. **Next.js Web Application** (Root directory)
+1. *Next.js Web Application** (Root directory)
 2. **React Native Mobile App** (dheeyudhha-rn directory)
 
 ---
@@ -34,7 +34,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # AI Configuration
 GOOGLE_GENAI_API_KEY=your_gemini_api_key
-AZURE_OPENAI_KEY=your_azure_openai_key
+AZURE_OPENAI_KEY=your azure key
 AZURE_OPENAI_ENDPOINT=your_azure_openai_endpoint
 AZURE_OPENAI_DEPLOYMENT=your_deployment_name
 
