@@ -53,3 +53,13 @@ firebase-service-account.json
 # Mobile builds
 android/
 ios/
+
+# Hidden Scripts
+*seed*.mjs
+*seed*.js
+test*.js
+test*.mjs
+scratch*.js
+scratch*.mjs
+scratch*.ts
+scratch/
