@@ -2,7 +2,7 @@
   "expo": {
     "name": "dheeyudha",
     "slug": "dheeyudhha-rn",
-    "version": "1.2.3",
+    "version": "1.2.4",
     "orientation": "portrait",
     "icon": "./assets/images/manthan-logo.png",
     "scheme": "dheeyudhharn",
@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "com.dheeyudha.app",
-      "versionCode": 123,
+      "versionCode": 124,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
@@ -103,7 +103,22 @@
           "url": "https://sentry.io/"
         }
       ],
-      "@sentry/react-native"
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "Leaderboard",
+              "label": "Dheeyudhha Rank",
+              "minWidth": "150dp",
+              "minHeight": "150dp",
+              "description": "View your current rank and points",
+              "previewImage": "./assets/images/manthan-logo.png",
+              "updatePeriodMillis": 3600000
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

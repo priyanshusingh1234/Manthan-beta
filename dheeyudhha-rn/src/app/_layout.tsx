@@ -174,32 +174,34 @@ function RootLayout() {
     };
   }, [session?.user?.id, lastNotificationResponse]);
 
-  useEffect(() => {
-    if ((fontsLoaded || error) && initialized) {
-      // Add a tiny delay to allow router.replace to finish its transition
-      // before we drop the splash screen, preventing any flash of the wrong route.
-      setTimeout(() => {
-        SplashScreen.hideAsync().catch(() => {});
-      }, 100);
-    }
-  }, [fontsLoaded, error, initialized]);
+  // Splash screen will be hidden inside the routing useEffect below
 
   useEffect(() => {
-    if (!initialized) return;
+    if (!initialized || (!fontsLoaded && !error)) return;
 
     // Define routes that do not require authentication
     const unprotectedRoutes = ['login', 'signup', 'index'];
     const currentSegment = segments[0] || 'index';
     const isUnprotected = unprotectedRoutes.includes(currentSegment);
 
+    let willRedirect = false;
+    
     if (session && isUnprotected) {
-      // User is logged in but on an unprotected page (login, signup, or landing page), redirect to home
+      // User is logged in but on an unprotected page, redirect to home
+      willRedirect = true;
       router.replace('/(tabs)');
     } else if (!session && !isUnprotected) {
-      // User is not logged in but trying to access protected routes, redirect to landing page
+      // User is not logged in but trying to access protected routes
+      willRedirect = true;
       router.replace('/');
     }
-  }, [session, initialized, segments]);
+
+    // Drop the splash screen only after the routing transition has a chance to execute
+    setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, willRedirect ? 300 : 0);
+
+  }, [session, initialized, segments, fontsLoaded, error]);
 
   return (
     <>
