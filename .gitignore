@@ -63,3 +63,14 @@ scratch*.js
 scratch*.mjs
 scratch*.ts
 scratch/
+
+# Hide all root level scratch scripts
+/*.js
+!/next.config.js
+!/postcss.config.js
+/*.mjs
+/*.sql
+/*.html
+/*.txt
+/*.jpg
+g.title)))
